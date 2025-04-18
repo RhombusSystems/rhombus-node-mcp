@@ -1,0 +1,46 @@
+{
+  "name": "rhombus-node-mcp",
+  "version": "0.1.1",
+  "description": "MCP server for Rhombus API",
+  "keywords": [
+    "ai",
+    "rhombus",
+    "mcp",
+    "modelcontextprotocol"
+  ],
+  "homepage": "https://modelcontextprotocol.io",
+  "bugs": {
+    "url": "https://github.com/modelcontextprotocol/servers/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modelcontextprotocol/servers.git"
+  },
+  "license": "MIT",
+  "author": "Model Context Protocol (https://modelcontextprotocol.io)",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-server-rhombus": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "prettier": "3.5.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,325 @@
+#!/usr/bin/env node
+
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+const FIVE_SECONDS_MS = 5 * 1000;
+
+const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
+
+if (!RHOMBUS_API_KEY) {
+  console.error("Missing RHOMBUS_API_KEY");
+  process.exit(1);
+}
+
+const BASE_URL = "https://api2.rhombussystems.com/api";
+
+const headers = {
+  "Content-Type": "application/json",
+  "x-auth-apikey": RHOMBUS_API_KEY,
+  "x-auth-scheme": "api-token",
+  accept: "application/json",
+};
+
+const server = new McpServer({
+  name: "rhombus",
+  version: "1.0.0",
+  capabilities: {
+    resources: {},
+    tools: {},
+  },
+});
+
+async function postApi(url: string, body: string) {
+  try {
+    const response = await fetch(url, { method: "POST", headers, body });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    return {
+      error: true,
+      status: `Request Error: ${error}`,
+    };
+  }
+}
+
+async function getOrg() {
+  const url = BASE_URL + "/org/getOrgV2";
+  return await postApi(url, "{}");
+}
+
+async function getLocations() {
+  const url = BASE_URL + "/location/getLocationsV2";
+  return await postApi(url, "{}");
+}
+
+async function getCameraList() {
+  const url = BASE_URL + "/camera/getMinimalCameraStateList";
+  return await postApi(url, "{}").then(response => {
+    return {
+      cameraStates: response.cameraStates.filter(
+        (camera: { locationUuid?: string }) => !!camera.locationUuid
+      ),
+    };
+  });
+}
+
+async function getAccessControlledDoors() {
+  const url = BASE_URL + "/component/findAccessControlledDoors";
+  return await postApi(url, "{}");
+}
+
+async function getFaceEvents(_locationUuid?: string) {
+  const nowMs = Date.now();
+  const rangeStartMs = nowMs - THREE_HOURS_MS;
+  const rangeEndMs = nowMs - FIVE_SECONDS_MS;
+  const body = JSON.stringify({
+    pageRequest: {
+      lastEvaluatedKey: undefined,
+      maxPageSize: 75,
+    },
+    searchFilter: {
+      deviceUuids: [],
+      faceNames: [],
+      labels: [],
+      locationUuids: [],
+      personUuids: [],
+      timestampFilter: {
+        rangeStart: rangeStartMs,
+        rangeEnd: rangeEndMs,
+      },
+    },
+  });
+  const response = await postApi(
+    BASE_URL + "/faceRecognition/faceEvent/findFaceEventsByOrg",
+    body
+  ).then(response => {
+    return {
+      faceEvents: (response.faceEvents || []).map((event: any) => ({
+        ...event,
+        eventTimestamp: new Date(event.eventTimestamp).toString(),
+      })),
+    };
+  });
+  return response;
+}
+
+async function getAccessControlEvents(doorUuid: string) {
+  const url = BASE_URL + "/component/findComponentEventsByAccessControlledDoor";
+  const body = JSON.stringify({
+    limit: 50,
+    accessControlledDoorUuid: doorUuid,
+  });
+  const response = await postApi(url, body).then(response => ({
+    componentEvents: (response.componentEvents || []).map((event: any) => ({
+      ...event,
+      timestamp: new Date(event.timestampMs).toString(),
+    })),
+  }));
+  return response;
+}
+
+async function rebootCameras(cameraUuids: string[]) {
+  const url = BASE_URL + "/camera/reboot";
+  let successCount = 0;
+  let errorCount = 0;
+  for (const cameraUuid in cameraUuids) {
+    try {
+      const body = JSON.stringify({ cameraUuid: cameraUuid });
+      const response = await postApi(url, body);
+      if (response.error) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    } catch (error) {
+      const ret = `Error rebooting cameras: ${error}`;
+      return { error: true, status: ret };
+    }
+
+    let status;
+    if (successCount === cameraUuids.length) status = "SUCCESS";
+    else if (successCount > 0 && successCount < cameraUuids.length) status = "PARTIAL_SUCCESS";
+    else status = "ERROR";
+
+    return { status, successCount, errorCount };
+  }
+}
+
+server.tool(
+  "get-org-information",
+  "Get general information about the organization including org name, camera configuration defaults, contact information, and org settings.",
+  {},
+  async ({}) => {
+    const org = await getOrg();
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(org),
+        },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "get-entity-tool",
+  "get a list of entities like cameras, access controlled doors, sensors, etc.",
+  {
+    entityType: z
+      .enum(["camera", "access-controlled-doors"])
+      .describe("The entity type to retreive.  Example: cameras."),
+  },
+  async ({ entityType }) => {
+    let ret;
+    switch (entityType) {
+      case "camera":
+        ret = await getCameraList();
+        break;
+      case "access-controlled-doors":
+        ret = await getAccessControlledDoors();
+        break;
+      default:
+        ret = {};
+        break;
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(ret),
+        },
+      ],
+    };
+  }
+);
+server.tool(
+  "events-tool",
+  "event data for certain types of information like faces and license plates",
+  {
+    eventType: z.enum(["faces", "people", "access-control"]),
+    locationUuid: z.optional(z.string()),
+    accessControlledDoorUuid: z.optional(z.string()),
+  },
+  async ({ eventType, locationUuid, accessControlledDoorUuid }) => {
+    if (eventType === "faces" || eventType === "people") {
+      const response = await getFaceEvents(locationUuid);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(response),
+          },
+        ],
+      };
+    }
+
+    if (eventType === "access-control") {
+      if (!accessControlledDoorUuid) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                needUserInput: true,
+                commandForUser: "Which door are you asking about?",
+              }),
+            },
+          ],
+        };
+      } else {
+        const events = await getAccessControlEvents(accessControlledDoorUuid);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(events),
+            },
+          ],
+        };
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({}),
+        },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "location-tool",
+  "contains basic operations for locations and response in JSON format.",
+  {
+    action: z.enum(["get"]),
+    locationUpdate: z.optional(z.object({ uuid: z.string(), name: z.optional(z.string()) })),
+  },
+  async ({ action, locationUpdate }) => {
+    let ret;
+    switch (action) {
+      case "get":
+        ret = await getLocations();
+        break;
+      default:
+        ret = { error: true, status: `unsupported location tool call: ${action}` };
+        break;
+    }
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(ret) }],
+    };
+  }
+);
+
+server.tool(
+  "reboot-cameras",
+  "this tool is for rebooting one or more cameras causing them to reconnect to the server, this is a helpful option when a camera is experiencing connectivity issues or is in need of troubleshooting",
+  {
+    cameraUuids: z
+      .array(z.string())
+      .describe("An array of camera UUID strings which are unique identifiers for cameras"),
+  },
+  async ({ cameraUuids }) => {
+    const cameraRebootData = await rebootCameras(cameraUuids);
+
+    if (!cameraRebootData) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Failed to reboot cameras",
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(cameraRebootData),
+        },
+      ],
+    };
+  }
+);
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+main().catch(error => {
+  console.error("Fatal error in main():", error);
+  process.exit(1);
+});
