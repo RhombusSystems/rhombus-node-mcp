@@ -23,9 +23,16 @@ An MCP server implementation that integrates the Rhombus API to provide Chatbot 
   "mcpServers": {
     "rhombus": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "RHOMBUS_API_KEY", "mcp-server-rhombus"],
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
+        "mcp-server-rhombus"
+      ],
       "env": {
-        "RHOMBUS_API_KEY": "YOUR_API_KEY"
+        "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -39,7 +46,7 @@ An MCP server implementation that integrates the Rhombus API to provide Chatbot 
   "mcpServers": {
     "rhombus": {
       "command": "npx",
-      "args": ["-y", "server-rhombus"],
+      "args": ["--yes", "--package", "rhombus-node-mcp", "mcp-server-rhombus"],
       "env": {
         "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
       }
