@@ -211,10 +211,10 @@ server.tool(
 
 server.tool(
   "get-entity-tool",
-  "get a list of entities like cameras, access controlled doors, sensors, images from cameras, etc.",
+  "get a list of entities like cameras, access controlled doors, sensors, etc",
   {
     entityType: z
-      .enum(["camera", "access-controlled-doors", "image-frame"])
+      .enum(["camera", "access-controlled-doors"])
       .describe("The entity type to retreive.  Example: cameras."),
   },
   async ({ entityType }) => {
