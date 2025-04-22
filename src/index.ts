@@ -36,6 +36,13 @@ async function postApi(url: string, body: string) {
   try {
     const response = await fetch(url, { method: "POST", headers, body });
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return {
+          error: true,
+          status:
+            "Sorry, I don't have permission to help with this request.  Consider upgrading my permissions by changing the role of the API Key I am using.",
+        };
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -150,6 +157,41 @@ async function rebootCameras(cameraUuids: string[]) {
   }
 }
 
+async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number) {
+  const url = BASE_URL + "/video/getExactFrameUri";
+  const body = JSON.stringify({
+    cameraUuid: cameraUuid,
+    downscaleFactor: 10,
+    jpgQuality: 70,
+    permyriadCropHeight: 10000,
+    permyriadCropWidth: 5625,
+    permyriadCropX: 2188,
+    permyriadCropY: 0,
+    timestampMs: timestampMs,
+  });
+  const base64Image = await postApi(url, body).then(async res => {
+    return await fetch(res.frameUri, { method: "GET", headers: headers }).then(async res => {
+      if (!res.ok) return null;
+      const arrayBuffer = await res.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64 = buffer.toString("base64");
+      return base64;
+    });
+  });
+  if (!base64Image) {
+    return {
+      success: false,
+      status: "failed to fetch image",
+    };
+  }
+  return {
+    success: true,
+    status: "successfully fetched image",
+    imageType: "base64",
+    imageData: base64Image,
+  };
+}
+
 server.tool(
   "get-org-information",
   "Get general information about the organization including org name, camera configuration defaults, contact information, and org settings.",
@@ -169,10 +211,10 @@ server.tool(
 
 server.tool(
   "get-entity-tool",
-  "get a list of entities like cameras, access controlled doors, sensors, etc.",
+  "get a list of entities like cameras, access controlled doors, sensors, images from cameras, etc.",
   {
     entityType: z
-      .enum(["camera", "access-controlled-doors"])
+      .enum(["camera", "access-controlled-doors", "image-frame"])
       .describe("The entity type to retreive.  Example: cameras."),
   },
   async ({ entityType }) => {
@@ -199,6 +241,82 @@ server.tool(
     };
   }
 );
+
+server.tool(
+  "camera-tool",
+  "get specific requested information about a camera such as an image snapshot, or detailed analytics info",
+  {
+    requestType: z.enum(["image"]),
+    timestampMs: z.optional(z.number()).describe("the timestamp in milliseconds"),
+    cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
+  },
+  async ({ cameraUuid, timestampMs, requestType }) => {
+    if (!cameraUuid) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              needUserInput: true,
+              commandForUser: "Which camera are you talking about?",
+            }),
+          },
+        ],
+      };
+    }
+    if (!timestampMs) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              needUserInput: true,
+              commandForUser: "At what time?",
+            }),
+          },
+        ],
+      };
+    }
+
+    let response;
+
+    switch (requestType) {
+      case "image":
+        response = await getImageForCameraAtTime(cameraUuid, timestampMs);
+        if (!response.success || !response.imageData) {
+          return {
+            content: [{ type: "text", text: JSON.stringify(response) }],
+          };
+        }
+        return {
+          content: [
+            {
+              type: "image",
+              data: response.imageData,
+              mimeType: "image/jpeg",
+            },
+          ],
+        };
+        break;
+      default:
+        response = {
+          error: true,
+          status: "mising unknown type from tool call",
+        };
+        break;
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ response }),
+        },
+      ],
+    };
+  }
+);
+
 server.tool(
   "events-tool",
   "event data for certain types of information like faces and license plates",
