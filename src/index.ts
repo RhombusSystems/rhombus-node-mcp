@@ -11,16 +11,19 @@ const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
 if (!RHOMBUS_API_KEY) {
   console.error("Missing RHOMBUS_API_KEY");
-  process.exit(1);
 }
 
 const BASE_URL = "https://api2.rhombussystems.com/api";
 
-const headers = {
+const STATIC_HEADERS = {
   "Content-Type": "application/json",
+  accept: "application/json",
+};
+
+const AUTH_HEADERS = {
   "x-auth-apikey": RHOMBUS_API_KEY,
   "x-auth-scheme": "api-token",
-  accept: "application/json",
+  "x-rhombus-agent": "chatbot",
 };
 
 const server = new McpServer({
@@ -32,7 +35,28 @@ const server = new McpServer({
   },
 });
 
-async function postApi(url: string, body: string) {
+const STATIC_ARGS = {
+  headers: z
+    .optional(z.any())
+    .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
+};
+
+const shouldUseCustomHeaders = (headers: any) => {
+  let valid = true;
+  if (!headers) return false;
+
+  Object.keys(headers).forEach(key => {
+    if (headers[key].length === 0) valid = false;
+  });
+  return valid;
+};
+
+async function postApi(url: string, body: string, customHeaders: any) {
+  let headers = {
+    ...(shouldUseCustomHeaders(customHeaders) ? customHeaders : AUTH_HEADERS),
+    ...STATIC_HEADERS,
+  };
+
   try {
     const response = await fetch(url, { method: "POST", headers, body });
     if (!response.ok) {
@@ -54,19 +78,20 @@ async function postApi(url: string, body: string) {
   }
 }
 
-async function getOrg() {
+async function getOrg(headers?: any) {
   const url = BASE_URL + "/org/getOrgV2";
-  return await postApi(url, "{}");
+  return await postApi(url, "{}", headers);
 }
 
-async function getLocations() {
+async function getLocations(headers?: any) {
   const url = BASE_URL + "/location/getLocationsV2";
-  return await postApi(url, "{}");
+  console.error("headers:", JSON.stringify(headers));
+  return await postApi(url, "{}", headers);
 }
 
-async function getCameraList() {
+async function getCameraList(headers?: any) {
   const url = BASE_URL + "/camera/getMinimalCameraStateList";
-  return await postApi(url, "{}").then(response => {
+  return await postApi(url, "{}", headers).then(response => {
     return {
       cameraStates: response.cameraStates.filter(
         (camera: { locationUuid?: string }) => !!camera.locationUuid
@@ -75,12 +100,12 @@ async function getCameraList() {
   });
 }
 
-async function getAccessControlledDoors() {
+async function getAccessControlledDoors(headers?: any) {
   const url = BASE_URL + "/component/findAccessControlledDoors";
-  return await postApi(url, "{}");
+  return await postApi(url, "{}", headers);
 }
 
-async function getFaceEvents(_locationUuid?: string) {
+async function getFaceEvents(_locationUuid?: string, headers?: any) {
   const nowMs = Date.now();
   const rangeStartMs = nowMs - THREE_HOURS_MS;
   const rangeEndMs = nowMs - FIVE_SECONDS_MS;
@@ -103,7 +128,8 @@ async function getFaceEvents(_locationUuid?: string) {
   });
   const response = await postApi(
     BASE_URL + "/faceRecognition/faceEvent/findFaceEventsByOrg",
-    body
+    body,
+    headers
   ).then(response => {
     return {
       faceEvents: (response.faceEvents || []).map((event: any) => ({
@@ -115,13 +141,13 @@ async function getFaceEvents(_locationUuid?: string) {
   return response;
 }
 
-async function getAccessControlEvents(doorUuid: string) {
+async function getAccessControlEvents(doorUuid: string, headers?: any) {
   const url = BASE_URL + "/component/findComponentEventsByAccessControlledDoor";
   const body = JSON.stringify({
     limit: 50,
     accessControlledDoorUuid: doorUuid,
   });
-  const response = await postApi(url, body).then(response => ({
+  const response = await postApi(url, body, headers).then(response => ({
     componentEvents: (response.componentEvents || []).map((event: any) => ({
       ...event,
       timestamp: new Date(event.timestampMs).toString(),
@@ -130,14 +156,14 @@ async function getAccessControlEvents(doorUuid: string) {
   return response;
 }
 
-async function rebootCameras(cameraUuids: string[]) {
+async function rebootCameras(cameraUuids: string[], headers?: any) {
   const url = BASE_URL + "/camera/reboot";
   let successCount = 0;
   let errorCount = 0;
   for (const cameraUuid in cameraUuids) {
     try {
       const body = JSON.stringify({ cameraUuid: cameraUuid });
-      const response = await postApi(url, body);
+      const response = await postApi(url, body, headers);
       if (response.error) {
         errorCount++;
       } else {
@@ -157,7 +183,7 @@ async function rebootCameras(cameraUuids: string[]) {
   }
 }
 
-async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number) {
+async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number, headers?: any) {
   const url = BASE_URL + "/video/getExactFrameUri";
   const body = JSON.stringify({
     cameraUuid: cameraUuid,
@@ -169,7 +195,7 @@ async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number) 
     permyriadCropY: 0,
     timestampMs: timestampMs,
   });
-  const base64Image = await postApi(url, body).then(async res => {
+  const base64Image = await postApi(url, body, headers).then(async res => {
     return await fetch(res.frameUri, { method: "GET", headers: headers }).then(async res => {
       if (!res.ok) return null;
       const arrayBuffer = await res.arrayBuffer();
@@ -195,9 +221,9 @@ async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number) 
 server.tool(
   "get-org-information",
   "Get general information about the organization including org name, camera configuration defaults, contact information, and org settings.",
-  {},
-  async ({}) => {
-    const org = await getOrg();
+  { ...STATIC_ARGS },
+  async ({ headers }) => {
+    const org = await getOrg(headers);
     return {
       content: [
         {
@@ -216,15 +242,16 @@ server.tool(
     entityType: z
       .enum(["camera", "access-controlled-doors"])
       .describe("The entity type to retreive.  Example: cameras."),
+    ...STATIC_ARGS,
   },
-  async ({ entityType }) => {
+  async ({ entityType, headers }) => {
     let ret;
     switch (entityType) {
       case "camera":
-        ret = await getCameraList();
+        ret = await getCameraList(headers);
         break;
       case "access-controlled-doors":
-        ret = await getAccessControlledDoors();
+        ret = await getAccessControlledDoors(headers);
         break;
       default:
         ret = {};
@@ -244,13 +271,14 @@ server.tool(
 
 server.tool(
   "camera-tool",
-  "get specific requested information about a camera such as an image snapshot, or detailed analytics info",
+  "get specific requested information about a camera such as an image snapshot, or detailed analytics info.  this can be used to answer questions about tracking people across cameras",
   {
     requestType: z.enum(["image"]),
     timestampMs: z.optional(z.number()).describe("the timestamp in milliseconds"),
     cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
+    ...STATIC_ARGS,
   },
-  async ({ cameraUuid, timestampMs, requestType }) => {
+  async ({ cameraUuid, timestampMs, requestType, headers }) => {
     if (!cameraUuid) {
       return {
         content: [
@@ -282,7 +310,7 @@ server.tool(
 
     switch (requestType) {
       case "image":
-        response = await getImageForCameraAtTime(cameraUuid, timestampMs);
+        response = await getImageForCameraAtTime(cameraUuid, timestampMs, headers);
         if (!response.success || !response.imageData) {
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
@@ -324,10 +352,11 @@ server.tool(
     eventType: z.enum(["faces", "people", "access-control"]),
     locationUuid: z.optional(z.string()),
     accessControlledDoorUuid: z.optional(z.string()),
+    ...STATIC_ARGS,
   },
-  async ({ eventType, locationUuid, accessControlledDoorUuid }) => {
+  async ({ eventType, locationUuid, accessControlledDoorUuid, headers }) => {
     if (eventType === "faces" || eventType === "people") {
-      const response = await getFaceEvents(locationUuid);
+      const response = await getFaceEvents(locationUuid, headers);
       return {
         content: [
           {
@@ -352,7 +381,7 @@ server.tool(
           ],
         };
       } else {
-        const events = await getAccessControlEvents(accessControlledDoorUuid);
+        const events = await getAccessControlEvents(accessControlledDoorUuid, headers);
         return {
           content: [
             {
@@ -381,12 +410,13 @@ server.tool(
   {
     action: z.enum(["get"]),
     locationUpdate: z.optional(z.object({ uuid: z.string(), name: z.optional(z.string()) })),
+    ...STATIC_ARGS,
   },
-  async ({ action, locationUpdate }) => {
+  async ({ action, locationUpdate, headers }) => {
     let ret;
     switch (action) {
       case "get":
-        ret = await getLocations();
+        ret = await getLocations(headers);
         break;
       default:
         ret = { error: true, status: `unsupported location tool call: ${action}` };
@@ -406,9 +436,10 @@ server.tool(
     cameraUuids: z
       .array(z.string())
       .describe("An array of camera UUID strings which are unique identifiers for cameras"),
+    ...STATIC_ARGS,
   },
-  async ({ cameraUuids }) => {
-    const cameraRebootData = await rebootCameras(cameraUuids);
+  async ({ cameraUuids, headers }) => {
+    const cameraRebootData = await rebootCameras(cameraUuids, headers);
 
     if (!cameraRebootData) {
       return {
