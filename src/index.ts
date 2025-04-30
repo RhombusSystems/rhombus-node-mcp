@@ -41,19 +41,9 @@ const STATIC_ARGS = {
     .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
 };
 
-const shouldUseCustomHeaders = (headers: any) => {
-  let valid = true;
-  if (!headers) return false;
-
-  Object.keys(headers).forEach(key => {
-    if (headers[key].length === 0) valid = false;
-  });
-  return valid;
-};
-
 async function postApi(url: string, body: string, customHeaders: any) {
   let headers = {
-    ...(shouldUseCustomHeaders(customHeaders) ? customHeaders : AUTH_HEADERS),
+    ...(customHeaders || AUTH_HEADERS),
     ...STATIC_HEADERS,
   };
 
@@ -85,7 +75,6 @@ async function getOrg(headers?: any) {
 
 async function getLocations(headers?: any) {
   const url = BASE_URL + "/location/getLocationsV2";
-  console.error("headers:", JSON.stringify(headers));
   return await postApi(url, "{}", headers);
 }
 
