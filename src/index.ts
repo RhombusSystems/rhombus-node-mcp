@@ -97,7 +97,7 @@ async function postApi(
     const response = await fetch(url, { method: "POST", headers: requestHeaders, body });
     log(`[POSTAPI] RESPONSE - ${JSON.stringify(response)}`);
     if (!response.ok) {
-      // console.error(`❌ RESPONSE - ${response.ok} - ${response.status}`);
+      log(`❌ RESPONSE - ${response.ok} - ${response.status}`);
       if (response.status === 401 || response.status === 403) {
         return {
           error: true,
@@ -108,7 +108,7 @@ async function postApi(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const ret = await response.json();
-    // console.error(`❌ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
+    log(`❌ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
     return ret;
   } catch (error) {
     log(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
@@ -240,7 +240,6 @@ async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
     },
   });
   const response = await postApi(url, body, headers);
-  // console.error("Create wall response: ", JSON.stringify(response));
   return response;
 }
 
