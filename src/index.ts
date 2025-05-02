@@ -48,6 +48,7 @@ async function postApi(url: string, body: string, customHeaders: any) {
   };
 
   try {
+    console.error(`[POSTAPI] - ${url} - ${body} - ${JSON.stringify(customHeaders)}`);
     const response = await fetch(url, { method: "POST", headers, body });
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
