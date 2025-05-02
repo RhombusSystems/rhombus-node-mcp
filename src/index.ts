@@ -14,18 +14,21 @@ if (!RHOMBUS_API_KEY) {
 }
 
 const enableLogs = process.env.ENABLE_LOGS;
+const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
-const BASE_URL = "https://api2.rhombussystems.com/api";
+console.error("🌐 Using server url", serverUrl);
+
+const BASE_URL = `https://${serverUrl}/api`;
 
 const STATIC_HEADERS = {
   "Content-Type": "application/json",
+  "x-rhombus-agent": "chatbot",
   accept: "application/json",
 };
 
 const AUTH_HEADERS = {
   "x-auth-apikey": RHOMBUS_API_KEY,
   "x-auth-scheme": "api-token",
-  "x-rhombus-agent": "chatbot",
 };
 
 const server = new McpServer({
@@ -38,8 +41,13 @@ const server = new McpServer({
 });
 
 const STATIC_ARGS = {
-  headers: z
-    .optional(z.any())
+  requestModifiers: z
+    .optional(
+      z.object({
+        headers: z.optional(z.any()),
+        query: z.optional(z.any()),
+      })
+    )
     .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
 };
 
@@ -48,16 +56,42 @@ const log = (msg: string) => {
   console.error(msg);
 };
 
-async function postApi(url: string, body: string, customHeaders: any) {
-  let headers = {
-    ...(customHeaders || AUTH_HEADERS),
+const appendQueryParams = (url: string, params: object | undefined): string => {
+  if (!params || typeof params !== "object") return url;
+
+  const urlObj = new URL(url);
+
+  const existingSearchParams = new URLSearchParams(urlObj.search);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      existingSearchParams.append(key, String(value));
+    }
+  }
+  const baseUrl = url.split("?")[0];
+  const queryString = existingSearchParams.toString();
+
+  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+};
+
+async function postApi(
+  url: string,
+  body: string,
+  modifiers: { headers: any; query: any } | undefined
+) {
+  let requestHeaders = {
+    ...(modifiers?.headers || AUTH_HEADERS),
     ...STATIC_HEADERS,
   };
 
+  if (modifiers?.query) {
+    url = appendQueryParams(url, modifiers.query);
+  }
+
   try {
-    log(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(customHeaders)}`);
-    const response = await fetch(url, { method: "POST", headers, body });
-    log(`[POSTAPI] RESPONSE - ${JSON.stringify(response || {})}`);
+    log(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(requestHeaders)}`);
+    const response = await fetch(url, { method: "POST", headers: requestHeaders, body });
+    log(`[POSTAPI] RESPONSE - ${JSON.stringify(response)}`);
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         return {
@@ -70,6 +104,7 @@ async function postApi(url: string, body: string, customHeaders: any) {
     }
     return await response.json();
   } catch (error) {
+    log(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
     return {
       error: true,
       status: `Request Error: ${error}`,
@@ -77,19 +112,19 @@ async function postApi(url: string, body: string, customHeaders: any) {
   }
 }
 
-async function getOrg(headers?: any) {
+async function getOrg(requestModifiers?: any) {
   const url = BASE_URL + "/org/getOrgV2";
-  return await postApi(url, "{}", headers);
+  return await postApi(url, "{}", requestModifiers);
 }
 
-async function getLocations(headers?: any) {
+async function getLocations(requestModifiers?: any) {
   const url = BASE_URL + "/location/getLocationsV2";
-  return await postApi(url, "{}", headers);
+  return await postApi(url, "{}", requestModifiers);
 }
 
-async function getCameraList(headers?: any) {
+async function getCameraList(requestModifiers?: any) {
   const url = BASE_URL + "/camera/getMinimalCameraStateList";
-  return await postApi(url, "{}", headers).then(response => {
+  return await postApi(url, "{}", requestModifiers).then(response => {
     return {
       cameraStates: response.cameraStates.filter(
         (camera: { locationUuid?: string }) => !!camera.locationUuid
@@ -98,12 +133,12 @@ async function getCameraList(headers?: any) {
   });
 }
 
-async function getAccessControlledDoors(headers?: any) {
+async function getAccessControlledDoors(requestModifiers?: any) {
   const url = BASE_URL + "/component/findAccessControlledDoors";
-  return await postApi(url, "{}", headers);
+  return await postApi(url, "{}", requestModifiers);
 }
 
-async function getFaceEvents(_locationUuid?: string, headers?: any) {
+async function getFaceEvents(_locationUuid?: string, requestModifiers?: any) {
   const nowMs = Date.now();
   const rangeStartMs = nowMs - THREE_HOURS_MS;
   const rangeEndMs = nowMs - FIVE_SECONDS_MS;
@@ -127,7 +162,7 @@ async function getFaceEvents(_locationUuid?: string, headers?: any) {
   const response = await postApi(
     BASE_URL + "/faceRecognition/faceEvent/findFaceEventsByOrg",
     body,
-    headers
+    requestModifiers
   ).then(response => {
     return {
       faceEvents: (response.faceEvents || []).map((event: any) => ({
@@ -139,13 +174,13 @@ async function getFaceEvents(_locationUuid?: string, headers?: any) {
   return response;
 }
 
-async function getAccessControlEvents(doorUuid: string, headers?: any) {
+async function getAccessControlEvents(doorUuid: string, requestModifiers?: any) {
   const url = BASE_URL + "/component/findComponentEventsByAccessControlledDoor";
   const body = JSON.stringify({
     limit: 50,
     accessControlledDoorUuid: doorUuid,
   });
-  const response = await postApi(url, body, headers).then(response => ({
+  const response = await postApi(url, body, requestModifiers).then(response => ({
     componentEvents: (response.componentEvents || []).map((event: any) => ({
       ...event,
       timestamp: new Date(event.timestampMs).toString(),
@@ -154,14 +189,14 @@ async function getAccessControlEvents(doorUuid: string, headers?: any) {
   return response;
 }
 
-async function rebootCameras(cameraUuids: string[], headers?: any) {
+async function rebootCameras(cameraUuids: string[], requestModifiers?: any) {
   const url = BASE_URL + "/camera/reboot";
   let successCount = 0;
   let errorCount = 0;
   for (const cameraUuid in cameraUuids) {
     try {
       const body = JSON.stringify({ cameraUuid: cameraUuid });
-      const response = await postApi(url, body, headers);
+      const response = await postApi(url, body, requestModifiers);
       if (response.error) {
         errorCount++;
       } else {
@@ -181,7 +216,11 @@ async function rebootCameras(cameraUuids: string[], headers?: any) {
   }
 }
 
-async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number, headers?: any) {
+async function getImageForCameraAtTime(
+  cameraUuid: string,
+  timestampMs: number,
+  requestModifiers?: any
+) {
   const url = BASE_URL + "/video/getExactFrameUri";
   const body = JSON.stringify({
     cameraUuid: cameraUuid,
@@ -193,8 +232,12 @@ async function getImageForCameraAtTime(cameraUuid: string, timestampMs: number, 
     permyriadCropY: 0,
     timestampMs: timestampMs,
   });
-  const base64Image = await postApi(url, body, headers).then(async res => {
-    return await fetch(res.frameUri, { method: "GET", headers: headers }).then(async res => {
+  const base64Image = await postApi(url, body, requestModifiers).then(async res => {
+    let requestHeaders = {
+      ...(requestModifiers?.headers || AUTH_HEADERS),
+      ...STATIC_HEADERS,
+    };
+    return await fetch(res.frameUri, { method: "GET", headers: requestHeaders }).then(async res => {
       if (!res.ok) return null;
       const arrayBuffer = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -220,8 +263,8 @@ server.tool(
   "get-org-information",
   "Get general information about the organization including org name, camera configuration defaults, contact information, and org settings.",
   { ...STATIC_ARGS },
-  async ({ headers }) => {
-    const org = await getOrg(headers);
+  async ({ requestModifiers }) => {
+    const org = await getOrg(requestModifiers);
     return {
       content: [
         {
@@ -242,14 +285,14 @@ server.tool(
       .describe("The entity type to retreive.  Example: cameras."),
     ...STATIC_ARGS,
   },
-  async ({ entityType, headers }) => {
+  async ({ entityType, requestModifiers }) => {
     let ret;
     switch (entityType) {
       case "camera":
-        ret = await getCameraList(headers);
+        ret = await getCameraList(requestModifiers);
         break;
       case "access-controlled-doors":
-        ret = await getAccessControlledDoors(headers);
+        ret = await getAccessControlledDoors(requestModifiers);
         break;
       default:
         ret = {};
@@ -276,7 +319,7 @@ server.tool(
     cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
     ...STATIC_ARGS,
   },
-  async ({ cameraUuid, timestampMs, requestType, headers }) => {
+  async ({ cameraUuid, timestampMs, requestType, requestModifiers }) => {
     if (!cameraUuid) {
       return {
         content: [
@@ -308,7 +351,7 @@ server.tool(
 
     switch (requestType) {
       case "image":
-        response = await getImageForCameraAtTime(cameraUuid, timestampMs, headers);
+        response = await getImageForCameraAtTime(cameraUuid, timestampMs, requestModifiers);
         if (!response.success || !response.imageData) {
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
@@ -352,9 +395,9 @@ server.tool(
     accessControlledDoorUuid: z.optional(z.string()),
     ...STATIC_ARGS,
   },
-  async ({ eventType, locationUuid, accessControlledDoorUuid, headers }) => {
+  async ({ eventType, locationUuid, accessControlledDoorUuid, requestModifiers }) => {
     if (eventType === "faces" || eventType === "people") {
-      const response = await getFaceEvents(locationUuid, headers);
+      const response = await getFaceEvents(locationUuid, requestModifiers);
       return {
         content: [
           {
@@ -379,7 +422,7 @@ server.tool(
           ],
         };
       } else {
-        const events = await getAccessControlEvents(accessControlledDoorUuid, headers);
+        const events = await getAccessControlEvents(accessControlledDoorUuid, requestModifiers);
         return {
           content: [
             {
@@ -410,11 +453,11 @@ server.tool(
     locationUpdate: z.optional(z.object({ uuid: z.string(), name: z.optional(z.string()) })),
     ...STATIC_ARGS,
   },
-  async ({ action, locationUpdate, headers }) => {
+  async ({ action, locationUpdate, requestModifiers }) => {
     let ret;
     switch (action) {
       case "get":
-        ret = await getLocations(headers);
+        ret = await getLocations(requestModifiers);
         break;
       default:
         ret = { error: true, status: `unsupported location tool call: ${action}` };
@@ -436,8 +479,8 @@ server.tool(
       .describe("An array of camera UUID strings which are unique identifiers for cameras"),
     ...STATIC_ARGS,
   },
-  async ({ cameraUuids, headers }) => {
-    const cameraRebootData = await rebootCameras(cameraUuids, headers);
+  async ({ cameraUuids, requestModifiers }) => {
+    const cameraRebootData = await rebootCameras(cameraUuids, requestModifiers);
 
     if (!cameraRebootData) {
       return {
