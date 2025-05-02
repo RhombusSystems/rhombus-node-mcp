@@ -13,6 +13,8 @@ if (!RHOMBUS_API_KEY) {
   console.error("Missing RHOMBUS_API_KEY");
 }
 
+const enableLogs = process.env.ENABLE_LOGS;
+
 const BASE_URL = "https://api2.rhombussystems.com/api";
 
 const STATIC_HEADERS = {
@@ -41,6 +43,11 @@ const STATIC_ARGS = {
     .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
 };
 
+const log = (msg: string) => {
+  if (!enableLogs) return;
+  console.error(msg);
+};
+
 async function postApi(url: string, body: string, customHeaders: any) {
   let headers = {
     ...(customHeaders || AUTH_HEADERS),
@@ -48,8 +55,9 @@ async function postApi(url: string, body: string, customHeaders: any) {
   };
 
   try {
-    console.error(`[POSTAPI] - ${url} - ${body} - ${JSON.stringify(customHeaders)}`);
+    log(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(customHeaders)}`);
     const response = await fetch(url, { method: "POST", headers, body });
+    log(`[POSTAPI] RESPONSE - ${JSON.stringify(response || {})}`);
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         return {
