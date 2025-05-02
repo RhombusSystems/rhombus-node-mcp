@@ -3,6 +3,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "./types.js";
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { parse } from "chrono-node";
+import { DateTime } from "luxon";
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const FIVE_SECONDS_MS = 5 * 1000;
@@ -93,6 +97,7 @@ async function postApi(
     const response = await fetch(url, { method: "POST", headers: requestHeaders, body });
     log(`[POSTAPI] RESPONSE - ${JSON.stringify(response)}`);
     if (!response.ok) {
+      // console.error(`❌ RESPONSE - ${response.ok} - ${response.status}`);
       if (response.status === 401 || response.status === 403) {
         return {
           error: true,
@@ -102,7 +107,9 @@ async function postApi(
       }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return await response.json();
+    const ret = await response.json();
+    // console.error(`❌ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
+    return ret;
   } catch (error) {
     log(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
     return {
@@ -216,6 +223,27 @@ async function rebootCameras(cameraUuids: string[], requestModifiers?: any) {
   }
 }
 
+async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
+  const url = BASE_URL + "/camera/createVideoWall";
+  const body = JSON.stringify({
+    videoWall: {
+      displayName: options?.displayName,
+      deviceList: options?.deviceList,
+      othersCanEdit: true,
+      orgUuid: options?.orgUuid,
+      shared: true,
+      settings: {
+        gridSize: { width: options?.settings.columnCount, height: options?.settings.columnCount },
+        gridLayout: "1 2\n3 4",
+        intervalSeconds: options?.settings.intervalSeconds || 5,
+      },
+    },
+  });
+  const response = await postApi(url, body, headers);
+  // console.error("Create wall response: ", JSON.stringify(response));
+  return response;
+}
+
 async function getImageForCameraAtTime(
   cameraUuid: string,
   timestampMs: number,
@@ -276,6 +304,132 @@ server.tool(
   }
 );
 
+async function handleCreateVideoWallRequest(
+  videoWallCreateOptions: CreateVideoWallOptionsT,
+  headers: any
+): Promise<CallToolResult> {
+  let text = "Unable to create video wall!";
+  // console.error("🔨 Creating video wall");
+  if (!videoWallCreateOptions?.displayName) {
+    text = JSON.stringify({
+      needUserInput: true,
+      commandForUser: "What should the name of the video wall be?",
+    });
+  } else if ((videoWallCreateOptions?.deviceList || []).length === 0) {
+    text = JSON.stringify({
+      needUserInput: true,
+      commandForUser: "Which cameras would you like on this video wall?",
+    });
+  } else {
+    // console.error("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
+    text = JSON.stringify(await createVideoWall(videoWallCreateOptions, headers));
+  }
+  return Promise.resolve({
+    content: [
+      {
+        type: "text",
+        text,
+      },
+    ],
+  });
+}
+server.tool(
+  "create-tool",
+  "Tool for creating many entity types such as video walls.",
+  {
+    entityType: z.enum(["video-wall"]).describe("The entity type to create.  Example: video wall."),
+    videoWallCreateOptions: CreateVideoWallOptions,
+    ...STATIC_ARGS,
+  },
+  async ({ entityType, videoWallCreateOptions, requestModifiers }) => {
+    switch (entityType) {
+      case "video-wall":
+        return await handleCreateVideoWallRequest(videoWallCreateOptions, requestModifiers);
+      default:
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: "",
+        },
+      ],
+    };
+  }
+);
+
+function nullToUndefined(value: number | null): number | undefined {
+  return value === null ? undefined : value;
+}
+
+server.tool(
+  "time-tool",
+  "Tool for converting a natural language time description into a timestamp in milliseconds.",
+  {
+    time_description: z
+      .string()
+      .describe(
+        "A natural language description of the time (e.g., '2pm today', 'tomorrow at noon')."
+      ),
+    timezone: z
+      .optional(z.string())
+      .describe(
+        "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Defaults to system timezone."
+      ),
+  },
+  async ({ time_description, timezone }) => {
+    // console.error(`🕛 handling tool call for time ${time_description} using timezone ${timezone}`);
+    const now = DateTime.now()
+      .setZone(timezone || undefined)
+      .toJSDate();
+    const parsed = parse(time_description, now, { forwardDate: true });
+
+    if (!parsed || parsed.length === 0) {
+      throw new Error(`Could not parse time description: ${time_description}`);
+    }
+
+    const dateComponents = parsed[0].start;
+    if (!dateComponents) {
+      throw new Error("Parsed time has no start component");
+    }
+
+    const dt = DateTime.fromObject(
+      {
+        year: nullToUndefined(dateComponents.get("year")),
+        month: nullToUndefined(dateComponents.get("month")),
+        day: nullToUndefined(dateComponents.get("day")),
+        hour: nullToUndefined(dateComponents.get("hour")),
+        minute: nullToUndefined(dateComponents.get("minute")),
+        second: nullToUndefined(dateComponents.get("second")),
+        millisecond: 0,
+      },
+      {
+        zone: timezone || "local",
+      }
+    );
+
+    if (!dt.isValid) {
+      throw new Error(`Could not construct valid DateTime: ${dt.invalidReason}`);
+    }
+
+    const timestamp = dt.toMillis();
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            timestamp,
+            iso: dt.toISO(),
+            timezone: dt.zoneName,
+          }),
+        },
+      ],
+    };
+  }
+);
+
 server.tool(
   "get-entity-tool",
   "get a list of entities like cameras, access controlled doors, sensors, etc",
@@ -312,10 +466,12 @@ server.tool(
 
 server.tool(
   "camera-tool",
-  "get specific requested information about a camera such as an image snapshot, or detailed analytics info.  this can be used to answer questions about tracking people across cameras",
+  'This tool captures and returns a real-time snapshot from a designated security camera. The image reflects the current scene in the camera\'s field of view and serves as a contextual input source for downstream tasks such as object recognition, anomaly detection, incident investigation, or situational assessment. When invoked, the tool provides the following: \n •	Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects. \n•	Scene Context: Metadata such as camera ID, location name, timestamp, and motion detection status if available. \n•	Enriched Data Potential: The image can be paired with AI models or downstream analytics to extract insights such as: \n•	Number and type of objects in frame (e.g., humans, cars, packages) \n•	Unusual behaviors (e.g., loitering, unauthorized access) \n•	Environmental conditions (e.g., lighting, obstruction, cleanliness) \nUse Cases: \n•	Verify what triggered a motion alert or analytic rule. \n•	Provide visual context for access events or alarms. \n•	Support live incident triage or retrospective investigations. \n•	Feed contextual imagery to agents making security or operational decisions. \nInvocation Notes: \nTo use this tool correctly, the agent should provide the specific camera identifier or location name. If possible, include the intent (e.g., "verify unauthorized access", "identify vehicle", "check for obstructions") to enhance downstream processing or summarization.',
   {
     requestType: z.enum(["image"]),
-    timestampMs: z.optional(z.number()).describe("the timestamp in milliseconds"),
+    timestampMs: z
+      .optional(z.number())
+      .describe("the timestamp in milliseconds which should always be obtained using time-tool"),
     cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
     ...STATIC_ARGS,
   },
@@ -449,7 +605,7 @@ server.tool(
   "location-tool",
   "contains basic operations for locations and response in JSON format.",
   {
-    action: z.enum(["get"]),
+    action: z.enum(["get", "update"]),
     locationUpdate: z.optional(z.object({ uuid: z.string(), name: z.optional(z.string()) })),
     ...STATIC_ARGS,
   },
