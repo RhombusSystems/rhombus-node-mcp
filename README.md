@@ -2,6 +2,25 @@
 
 Unleash the power of the Rhombus API with this cutting-edge MCP server implementation! Transform your chatbot experience with advanced security and surveillance capabilities at your fingertips.
 
+## 🔍 About Rhombus
+
+Rhombus is the #1 rated commercial security system, built to protect and designed to adapt! We deliver enterprise-grade physical security with a cybersecurity focus, combining:
+
+* 💡 **Smart Cameras** - Innovative dome, fisheye, bullet, and multisensor security cameras
+* 🚪 **Access Control** - Secure door controllers, readers, and intercoms with mobile, card, and fob access
+* 📡 **IoT Sensors** - Advanced audio, environmental, motion, entry, and multipurpose panic sensors
+* 🔒 **Alarm Monitoring** - TMA 5-diamond certified live agent verification and dispatch
+
+Our platform is powered by actionable AI insights that help you respond faster with real-time detections, all while being rooted in strong cybersecurity principles.
+
+## 🧪 Join Our Beta Test!
+
+**We're thrilled to be part of the AI Generation!** Help us shape the future of AI-powered security by testing our MCP server implementation and providing valuable feedback.
+
+👉 **[Fill out our beta test form here](https://rhmbs.link/beta_test)** 👈
+
+Your insights will directly influence our development roadmap and help us create the most powerful AI security tools on the market!
+
 ## 🔧 Quick Setup
 
 ### Step 1: Get Your Rhombus Superpowers
@@ -77,8 +96,19 @@ Check out Claude's fantastic [troubleshooting guide](https://modelcontextprotoco
 
 * Email us: developer@rhombus.com 📧
 * [Report a bug](https://github.com/ppl-ai/api-discussion/issues) and help us improve 🐛
+* Share your feedback via our [beta test form](https://rhmbs.link/beta_test) 🌟
 
-We're committed to making your experience absolutely seamless!
+We're committed to making your experience absolutely seamless and are SUPER excited to hear what amazing applications you're building with our tools!
+
+## 🤝 We Want Your Feedback!
+
+As pioneers in the AI Generation, we're passionate about pushing the boundaries of what's possible when combining advanced physical security with cutting-edge AI tools. Your feedback is invaluable as we continue to innovate and improve.
+
+* What features would make your workflow even better?
+* How are you using our MCP server in your projects?
+* What integrations would you like to see next?
+
+Share your thoughts, ideas, and success stories with us! Together, we're creating the future of intelligent security.
 
 ## 📜 License
 
