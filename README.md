@@ -1,4 +1,5 @@
 # 🚀 Rhombus MCP Server - Supercharge Your AI Tools!
+[![smithery badge](https://smithery.ai/badge/@RhombusSystems/rhombus-node-mcp)](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp)
 
 Unleash the power of the Rhombus API with this cutting-edge MCP server implementation! Transform your chatbot experience with advanced security and surveillance capabilities at your fingertips.
 
@@ -22,6 +23,14 @@ Our platform is powered by actionable AI insights that help you respond faster w
 Your insights will directly influence our development roadmap and help us create the most powerful AI security tools on the market!
 
 ## 🔧 Quick Setup
+
+### Installing via Smithery
+
+To install Rhombus MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp):
+
+```bash
+npx -y @smithery/cli install @RhombusSystems/rhombus-node-mcp --client claude
+```
 
 ### Step 1: Give Your Rhombus Console Superpowers
 
