@@ -23,9 +23,9 @@ Your insights will directly influence our development roadmap and help us create
 
 ## 🔧 Quick Setup
 
-### Step 1: Get Your Rhombus Superpowers
+### Step 1: Give Your Rhombus Console Superpowers
 
-1. Join the Rhombus revolution - [Create your account now](https://console.rhombus.com)! 🔐
+1. Login to your Rhombus Console  - [Login Here](https://console.rhombus.com)! 🔐
 2. Generate your magic key at [API Key Settings](https://console.rhombus.com/settings/api-management) ✨
 3. Activate your powers by setting `RHOMBUS_API_KEY` in your environment 💪
 
@@ -95,7 +95,6 @@ If they're visible, YOU'VE DONE IT! 🎉 Your integration is live and ready to r
 Check out Claude's fantastic [troubleshooting guide](https://modelcontextprotocol.io/docs/tools/debugging) for quick fixes! Still stuck? Our team of experts is ready to help!
 
 * Email us: developer@rhombus.com 📧
-* [Report a bug](https://github.com/ppl-ai/api-discussion/issues) and help us improve 🐛
 * Share your feedback via our [beta test form](https://rhmbs.link/beta_test) 🌟
 
 We're committed to making your experience absolutely seamless and are SUPER excited to hear what amazing applications you're building with our tools!
