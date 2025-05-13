@@ -2,11 +2,11 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "./types.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { parse } from "chrono-node";
-import { DateTime } from "luxon";
+import { z } from "zod";
+import { AUTH_HEADERS, BASE_URL, postApi, STATIC_HEADERS } from "./network.js";
+import { getTools } from "./tools/getTools.js";
+import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "./types.js";
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const FIVE_SECONDS_MS = 5 * 1000;
@@ -17,25 +17,10 @@ if (!RHOMBUS_API_KEY) {
   console.error("Missing RHOMBUS_API_KEY");
 }
 
-const enableLogs = process.env.ENABLE_LOGS;
 const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
 console.error("🌐 Using server url", serverUrl);
-
-const BASE_URL = `https://${serverUrl}/api`;
-
-const STATIC_HEADERS = {
-  "Content-Type": "application/json",
-  "x-rhombus-agent": "chatbot",
-  accept: "application/json",
-};
-
-const AUTH_HEADERS = {
-  "x-auth-apikey": RHOMBUS_API_KEY,
-  "x-auth-scheme": "api-token",
-};
-
-const server = new McpServer({
+export const server = new McpServer({
   name: "rhombus",
   version: "1.0.0",
   capabilities: {
@@ -55,70 +40,6 @@ const STATIC_ARGS = {
     .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
 };
 
-const log = (msg: string) => {
-  if (!enableLogs) return;
-  console.error(msg);
-};
-
-const appendQueryParams = (url: string, params: object | undefined): string => {
-  if (!params || typeof params !== "object") return url;
-
-  const urlObj = new URL(url);
-
-  const existingSearchParams = new URLSearchParams(urlObj.search);
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      existingSearchParams.append(key, String(value));
-    }
-  }
-  const baseUrl = url.split("?")[0];
-  const queryString = existingSearchParams.toString();
-
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
-};
-
-async function postApi(
-  url: string,
-  body: string,
-  modifiers: { headers: any; query: any } | undefined
-) {
-  let requestHeaders = {
-    ...(modifiers?.headers || AUTH_HEADERS),
-    ...STATIC_HEADERS,
-  };
-
-  if (modifiers?.query) {
-    url = appendQueryParams(url, modifiers.query);
-  }
-
-  try {
-    log(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(requestHeaders)}`);
-    const response = await fetch(url, { method: "POST", headers: requestHeaders, body });
-    log(`[POSTAPI] RESPONSE - ${JSON.stringify(response)}`);
-    if (!response.ok) {
-      log(`❌ RESPONSE - ${response.ok} - ${response.status}`);
-      if (response.status === 401 || response.status === 403) {
-        return {
-          error: true,
-          status:
-            "Sorry, I don't have permission to help with this request.  Consider upgrading my permissions by changing the role of the API Key I am using.",
-        };
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const ret = await response.json();
-    log(`❌ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
-    return ret;
-  } catch (error) {
-    log(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
-    return {
-      error: true,
-      status: `Request Error: ${error}`,
-    };
-  }
-}
-
 async function getOrg(requestModifiers?: any) {
   const url = BASE_URL + "/org/getOrgV2";
   return await postApi(url, "{}", requestModifiers);
@@ -126,22 +47,6 @@ async function getOrg(requestModifiers?: any) {
 
 async function getLocations(requestModifiers?: any) {
   const url = BASE_URL + "/location/getLocationsV2";
-  return await postApi(url, "{}", requestModifiers);
-}
-
-async function getCameraList(requestModifiers?: any) {
-  const url = BASE_URL + "/camera/getMinimalCameraStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
-    return {
-      cameraStates: response.cameraStates.filter(
-        (camera: { locationUuid?: string }) => !!camera.locationUuid
-      ),
-    };
-  });
-}
-
-async function getAccessControlledDoors(requestModifiers?: any) {
-  const url = BASE_URL + "/component/findAccessControlledDoors";
   return await postApi(url, "{}", requestModifiers);
 }
 
@@ -358,111 +263,6 @@ server.tool(
   }
 );
 
-function nullToUndefined(value: number | null): number | undefined {
-  return value === null ? undefined : value;
-}
-
-server.tool(
-  "time-tool",
-  "Tool for converting a natural language time description into a timestamp in milliseconds.",
-  {
-    time_description: z
-      .string()
-      .describe(
-        "A natural language description of the time (e.g., '2pm today', 'tomorrow at noon')."
-      ),
-    timezone: z
-      .optional(z.string())
-      .describe(
-        "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Defaults to system timezone."
-      ),
-  },
-  async ({ time_description, timezone }) => {
-    // console.error(`🕛 handling tool call for time ${time_description} using timezone ${timezone}`);
-    const now = DateTime.now()
-      .setZone(timezone || undefined)
-      .toJSDate();
-    const parsed = parse(time_description, now, { forwardDate: true });
-
-    if (!parsed || parsed.length === 0) {
-      throw new Error(`Could not parse time description: ${time_description}`);
-    }
-
-    const dateComponents = parsed[0].start;
-    if (!dateComponents) {
-      throw new Error("Parsed time has no start component");
-    }
-
-    const dt = DateTime.fromObject(
-      {
-        year: nullToUndefined(dateComponents.get("year")),
-        month: nullToUndefined(dateComponents.get("month")),
-        day: nullToUndefined(dateComponents.get("day")),
-        hour: nullToUndefined(dateComponents.get("hour")),
-        minute: nullToUndefined(dateComponents.get("minute")),
-        second: nullToUndefined(dateComponents.get("second")),
-        millisecond: 0,
-      },
-      {
-        zone: timezone || "local",
-      }
-    );
-
-    if (!dt.isValid) {
-      throw new Error(`Could not construct valid DateTime: ${dt.invalidReason}`);
-    }
-
-    const timestamp = dt.toMillis();
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            timestamp,
-            iso: dt.toISO(),
-            timezone: dt.zoneName,
-          }),
-        },
-      ],
-    };
-  }
-);
-
-server.tool(
-  "get-entity-tool",
-  "get a list of entities like cameras, access controlled doors, sensors, etc",
-  {
-    entityType: z
-      .enum(["camera", "access-controlled-doors"])
-      .describe("The entity type to retreive.  Example: cameras."),
-    ...STATIC_ARGS,
-  },
-  async ({ entityType, requestModifiers }) => {
-    let ret;
-    switch (entityType) {
-      case "camera":
-        ret = await getCameraList(requestModifiers);
-        break;
-      case "access-controlled-doors":
-        ret = await getAccessControlledDoors(requestModifiers);
-        break;
-      default:
-        ret = {};
-        break;
-    }
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(ret),
-        },
-      ],
-    };
-  }
-);
-
 server.tool(
   "camera-tool",
   'This tool captures and returns a real-time snapshot from a designated security camera. The image reflects the current scene in the camera\'s field of view and serves as a contextual input source for downstream tasks such as object recognition, anomaly detection, incident investigation, or situational assessment. When invoked, the tool provides the following: \n •	Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects. \n•	Scene Context: Metadata such as camera ID, location name, timestamp, and motion detection status if available. \n•	Enriched Data Potential: The image can be paired with AI models or downstream analytics to extract insights such as: \n•	Number and type of objects in frame (e.g., humans, cars, packages) \n•	Unusual behaviors (e.g., loitering, unauthorized access) \n•	Environmental conditions (e.g., lighting, obstruction, cleanliness) \nUse Cases: \n•	Verify what triggered a motion alert or analytic rule. \n•	Provide visual context for access events or alarms. \n•	Support live incident triage or retrospective investigations. \n•	Feed contextual imagery to agents making security or operational decisions. \nInvocation Notes: \nTo use this tool correctly, the agent should provide the specific camera identifier or location name. If possible, include the intent (e.g., "verify unauthorized access", "identify vehicle", "check for obstructions") to enhance downstream processing or summarization.',
@@ -660,6 +460,14 @@ server.tool(
 );
 
 async function main() {
+  const tools = await getTools();
+
+  console.error(`got ${tools.length} tools`);
+
+  for (const tool of tools) {
+    tool(server);
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
