@@ -1,4 +1,5 @@
 import { logger } from "./logger.js";
+import { RequestModifiers } from "./util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
@@ -27,7 +28,7 @@ const log = (msg: any) => {
   console.error(msg);
 };
 
-const appendQueryParams = (url: string, params: object | undefined): string => {
+export const appendQueryParams = (url: string, params: object | undefined): string => {
   if (!params || typeof params !== "object") return url;
 
   const urlObj = new URL(url);
@@ -48,7 +49,7 @@ const appendQueryParams = (url: string, params: object | undefined): string => {
 export async function postApi(
   url: string,
   body: string,
-  modifiers: { headers: any; query: any } | undefined
+  modifiers: RequestModifiers
 ) {
   let requestHeaders = {
     ...(modifiers?.headers ?? AUTH_HEADERS),

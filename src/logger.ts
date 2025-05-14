@@ -8,7 +8,7 @@ log4js.configure({
       filename: path.resolve(process.env.LOG_FOLDER ?? process.cwd(), "rhombus-node-mcp.log"),
       maxLogSize: "1K",
       layout: {
-        type: "colored",
+        type: "basic",
       }
     },
     stderr: { type: "stderr" },
