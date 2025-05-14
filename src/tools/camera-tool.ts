@@ -29,6 +29,7 @@ async function getImageForCameraAtTime(
     let requestHeaders = {
       ...(requestModifiers?.headers || AUTH_HEADERS),
       ...STATIC_HEADERS,
+      "Content-Type": "image/jpeg",
     };
 
     if (requestModifiers?.query)
