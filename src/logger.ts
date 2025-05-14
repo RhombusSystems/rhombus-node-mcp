@@ -1,0 +1,26 @@
+import log4js from "log4js";
+import path from "path";
+
+log4js.configure({
+  appenders: {
+    mcp: {
+      type: "file",
+      filename: path.resolve(process.env.LOG_FOLDER ?? process.cwd(), "rhombus-node-mcp.log"),
+      maxLogSize: "1K",
+      layout: {
+        type: "colored",
+      }
+    },
+    stderr: { type: "stderr" },
+  },
+  categories: {
+    default: {
+      appenders: ["mcp", "stderr"],
+      level: "trace",
+    }
+  },
+});
+
+export const getLogger = log4js.getLogger;
+
+export const logger = log4js.getLogger("mcp");
