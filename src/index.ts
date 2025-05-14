@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
+import 'dotenv/config'
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-import { BASE_URL, postApi } from "./network.js";
 import getTools from "./tools/getTools.js";
-import { CreateVideoWallOptionsT } from "./types.js";
+
+import { logger } from './logger.js';
 
 const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
 if (!RHOMBUS_API_KEY) {
-  console.error("Missing RHOMBUS_API_KEY");
+  logger.info("Missing RHOMBUS_API_KEY");
 }
 
 const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
-console.error("🌐 Using server url", serverUrl);
+logger.info("🌐 Using server url", serverUrl);
 export const server = new McpServer({
   name: "rhombus",
   version: "1.0.0",
@@ -28,14 +28,17 @@ export const server = new McpServer({
 async function main() {
   const tools = await getTools();
 
-  console.error(`got ${tools.length} tools`);
+  logger.info(`🛠️ Registering ${tools.length} tools`);
 
   for (const tool of tools) {
-    tool(server);
+    tool.create(server);
+    logger.debug(`🔧 Registered tool ${tool.name}`);
   }
 
   const transport = new StdioServerTransport();
+  logger.info(`🚙 Starting stdio transport`);
   await server.connect(transport);
+  logger.info(`🚙🌬️ Connected.`);
 }
 
 main().catch(error => {

@@ -8,13 +8,19 @@ async function getTools() {
 
   const fileNames = fs.readdirSync(currentDir);
 
-  const tools: ((server: McpServer) => void)[] = [];
+  const tools: {
+    name: string;
+    create: (server: McpServer) => void;
+  }[] = [];
   for (const fileName of fileNames) {
     const imported = (await import(`./${fileName}`)) as {
       createTool: ((server: McpServer) => void) | undefined;
     };
     if (imported.createTool !== undefined) {
-        tools.push(imported.createTool);
+      tools.push({
+        name: fileName,
+        create: imported.createTool,
+      });
     }
   }
 

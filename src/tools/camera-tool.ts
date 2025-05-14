@@ -2,6 +2,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createToolArgs } from "../util.js";
 import { AUTH_HEADERS, BASE_URL, postApi, STATIC_HEADERS } from "../network.js";
+import { getLogger } from "../logger.js";
+
+const logger = getLogger("camera-tool");
 
 async function getImageForCameraAtTime(
   cameraUuid: string,
@@ -19,13 +22,21 @@ async function getImageForCameraAtTime(
     permyriadCropY: 0,
     timestampMs: timestampMs,
   });
+  logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
   const base64Image = await postApi(url, body, requestModifiers).then(async res => {
+    logger.debug(`Received frameUri ${res.frameUri}`);
+
     let requestHeaders = {
       ...(requestModifiers?.headers || AUTH_HEADERS),
       ...STATIC_HEADERS,
     };
+
     return await fetch(res.frameUri, { method: "GET", headers: requestHeaders }).then(async res => {
-      if (!res.ok) return null;
+      if (!res.ok) {
+        logger.error("Failed to fetch image");
+        logger.error(res);
+        return null;
+      }
       const arrayBuffer = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const base64 = buffer.toString("base64");

@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
 if (!RHOMBUS_API_KEY) {
@@ -58,11 +60,10 @@ export async function postApi(
   }
 
   try {
-    log(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(requestHeaders)}`);
+    logger.info(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(requestHeaders)}`);
     const response = await fetch(url, { method: "POST", headers: requestHeaders, body });
-    log(`[POSTAPI] RESPONSE - ${JSON.stringify(response)}`);
     if (!response.ok) {
-      log(`❌ RESPONSE - ${response.ok} - ${response.status}`);
+      logger.debug(`❌ RESPONSE - ${response.ok} - ${response.status}`);
       if (response.status === 401 || response.status === 403) {
         return {
           error: true,
@@ -73,10 +74,10 @@ export async function postApi(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const ret = await response.json();
-    log(`❌ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
+    logger.debug(`✅ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
     return ret;
   } catch (error) {
-    log(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
+    logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
     return {
       error: true,
       status: `Request Error: ${error}`,
