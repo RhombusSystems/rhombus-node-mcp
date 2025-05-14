@@ -10,6 +10,7 @@ const STATIC_ARGS = {
     )
     .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
 };
+export type RequestModifiers = z.infer<typeof STATIC_ARGS["requestModifiers"]>;
 
 export function createToolArgs<TArgs extends object>(args: TArgs): TArgs & typeof STATIC_ARGS {
   return {

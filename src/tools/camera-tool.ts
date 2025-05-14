@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createToolArgs } from "../util.js";
-import { AUTH_HEADERS, BASE_URL, postApi, STATIC_HEADERS } from "../network.js";
+import { createToolArgs, RequestModifiers } from "../util.js";
+import { appendQueryParams, AUTH_HEADERS, BASE_URL, postApi, STATIC_HEADERS } from "../network.js";
 import { getLogger } from "../logger.js";
 
 const logger = getLogger("camera-tool");
@@ -9,7 +9,7 @@ const logger = getLogger("camera-tool");
 async function getImageForCameraAtTime(
   cameraUuid: string,
   timestampMs: number,
-  requestModifiers?: any
+  requestModifiers?: RequestModifiers,
 ) {
   const url = BASE_URL + "/video/getExactFrameUri";
   const body = JSON.stringify({
@@ -31,9 +31,14 @@ async function getImageForCameraAtTime(
       ...STATIC_HEADERS,
     };
 
+    if (requestModifiers?.query)
+      res.frameUri = appendQueryParams(res.frameUri, requestModifiers.query);
+
+    logger.trace(`Fetching with headers\n${JSON.stringify(requestHeaders)}`);
+
     return await fetch(res.frameUri, { method: "GET", headers: requestHeaders }).then(async res => {
       if (!res.ok) {
-        logger.error("Failed to fetch image");
+        logger.error(`Failed to fetch image: ${await res.text()}`);
         logger.error(res);
         return null;
       }
