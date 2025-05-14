@@ -3,7 +3,7 @@ import fs from "fs";
 import { fileURLToPath } from "node:url";
 import path from "path";
 
-export async function getTools() {
+async function getTools() {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
   const fileNames = fs.readdirSync(currentDir);
@@ -20,3 +20,5 @@ export async function getTools() {
 
   return tools;
 }
+
+export default getTools;
