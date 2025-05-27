@@ -1,9 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createToolArgs, createToolTextContent } from "../util.js";
-import { BASE_URL, postApi } from "../network.js";
-import { getLogger } from "../logger.js";
-import { request } from "node:http";
+import { BASE_URL, postApi } from "../../network.js";
+import { createToolArgs, createToolTextContent } from "../../util.js";
 
 export enum DeviceType {
   CAMERA = "camera",

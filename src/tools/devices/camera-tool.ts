@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createToolArgs, RequestModifiers } from "../util.js";
-import { appendQueryParams, AUTH_HEADERS, BASE_URL, postApi, STATIC_HEADERS } from "../network.js";
-import { getLogger } from "../logger.js";
+import { createToolArgs, RequestModifiers } from "../../util.js";
+import { appendQueryParams, AUTH_HEADERS, BASE_URL, postApi, STATIC_HEADERS } from "../../network.js";
+import { getLogger } from "../../logger.js";
 
 const logger = getLogger("camera-tool");
 
