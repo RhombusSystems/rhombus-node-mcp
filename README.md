@@ -1,4 +1,5 @@
 # 🚀 Rhombus MCP Server - Supercharge Your AI Tools!
+[![smithery badge](https://smithery.ai/badge/@RhombusSystems/rhombus-node-mcp1)](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp1)
 
 Unleash the power of the Rhombus API with this cutting-edge MCP server implementation! Transform your chatbot experience with advanced security and surveillance capabilities at your fingertips.
 
