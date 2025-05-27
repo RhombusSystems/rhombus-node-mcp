@@ -18,7 +18,7 @@ export function createTool(server: McpServer) {
           "A natural language description of the time (e.g., '2pm today', 'tomorrow at noon')."
         ),
       timezone: z
-        .optional(z.string())
+        .nullable(z.string())
         .describe(
           "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Defaults to system timezone."
         ),

@@ -73,9 +73,9 @@ export function createTool(server: McpServer) {
     createToolArgs({
       requestType: z.enum(["image"]),
       timestampMs: z
-        .optional(z.number())
+        .nullable(z.number())
         .describe("the timestamp in milliseconds which should always be obtained using time-tool"),
-      cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
+      cameraUuid: z.nullable(z.string()).describe("the camera uuid requested"),
     }),
     async ({ cameraUuid, timestampMs, requestType, requestModifiers }) => {
       if (!cameraUuid) {

@@ -46,7 +46,7 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
 
-export async function postApi(url: string, body: string, modifiers: RequestModifiers) {
+export async function postApi(url: string, body: string, modifiers: RequestModifiers = null) {
   let requestHeaders = {
     ...(modifiers?.headers ?? AUTH_HEADERS),
     ...STATIC_HEADERS,

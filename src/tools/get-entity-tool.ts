@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createToolArgs, createToolTextContent } from "../util.js";
 import { BASE_URL, postApi } from "../network.js";
 import { getLogger } from "../logger.js";
+import { request } from "node:http";
 
 export enum DeviceType {
   CAMERA = "camera",
@@ -143,67 +144,42 @@ export function createTool(server: McpServer) {
         .describe("What type of entities to retrieve."),
     }),
     async ({ entityTypes, requestModifiers }) => {
-      let ret = {};
+      const promises = [];
       if (entityTypes.includes(DeviceType.CAMERA)) {
-        ret = {
-          ...ret,
-          ...(await getCameraList(requestModifiers)),
-        };
+        promises.push(getCameraList(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.DOORBELL_CAMERA)) {
-        ret = {
-          ...ret,
-          ...(await getDoorbellCameras(requestModifiers)),
-        };
+        promises.push(getDoorbellCameras(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.BADGE_READER)) {
-        ret = {
-          ...ret,
-          ...(await getBadgeReaders(requestModifiers)),
-        };
+        promises.push(getBadgeReaders(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.ACCESS_CONTROL_DOOR)) {
-        ret = {
-          ...ret,
-          ...(await getAccessControlledDoors(requestModifiers)),
-        };
+        promises.push(getAccessControlledDoors(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.AUDIO_GATEWAY)) {
-        ret = {
-          ...ret,
-          ...(await getAudioGateways(requestModifiers)),
-        };
+        promises.push(getAudioGateways(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.DOOR_SENSOR)) {
-        ret = {
-          ...ret,
-          ...(await getDoorSensors(requestModifiers)),
-        };
+        promises.push(getDoorSensors(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.ENVIRONMENTAL_SENSOR)) {
-        ret = {
-          ...ret,
-          ...(await getEnvironmentalSensors(requestModifiers)),
-        };
+        promises.push(getEnvironmentalSensors(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.MOTION_SENSOR)) {
-        ret = {
-          ...ret,
-          ...(await getMotionSensors(requestModifiers)),
-        };
+        promises.push(getMotionSensors(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.BUTTON)) {
-        ret = {
-          ...ret,
-          ...(await getButtons(requestModifiers)),
-        };
+        promises.push(getButtons(requestModifiers));
       }
       if (entityTypes.includes(DeviceType.KEYPAD)) {
-        ret = {
-          ...ret,
-          ...(await getKeypads(requestModifiers)),
-        };
+        promises.push(getKeypads(requestModifiers));
       }
+      const responses = Promise.all<object>(promises);
+      const ret = (await responses).reduce((prev, curr) => ({
+        ...prev,
+        ...curr
+      }), {})
 
       return createToolTextContent(JSON.stringify(ret));
     }

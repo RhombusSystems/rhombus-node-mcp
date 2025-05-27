@@ -3,10 +3,10 @@ import { z } from "zod";
 
 const STATIC_ARGS = {
   requestModifiers: z
-    .optional(
+    .nullable(
       z.object({
-        headers: z.optional(z.record(z.string(), z.string())),
-        query: z.optional(z.record(z.string(), z.string())),
+        headers: z.nullable(z.record(z.string(), z.string())),
+        query: z.nullable(z.record(z.string(), z.string())),
       })
     )
     .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),

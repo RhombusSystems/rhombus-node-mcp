@@ -4,7 +4,7 @@ import { createToolArgs } from "../util.js";
 import { BASE_URL, postApi } from "../network.js";
 import { THREE_HOURS_MS, FIVE_SECONDS_MS } from "../constants.js";
 
-async function getFaceEvents(_locationUuid?: string, requestModifiers?: any) {
+async function getFaceEvents(_locationUuid: string | null, requestModifiers?: any) {
   const nowMs = Date.now();
   const rangeStartMs = nowMs - THREE_HOURS_MS;
   const rangeEndMs = nowMs - FIVE_SECONDS_MS;
@@ -61,8 +61,8 @@ export function createTool(server: McpServer) {
     "event data for certain types of information like faces, license plates, and access-control events",
     createToolArgs({
       eventType: z.enum(["faces", "people", "access-control"]),
-      locationUuid: z.optional(z.string()),
-      accessControlledDoorUuid: z.optional(z.string()),
+      locationUuid: z.nullable(z.string()),
+      accessControlledDoorUuid: z.nullable(z.string()),
     }),
     async ({ eventType, locationUuid, accessControlledDoorUuid, requestModifiers }) => {
       if (eventType === "faces" || eventType === "people") {

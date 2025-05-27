@@ -14,7 +14,7 @@ export function createTool(server: McpServer) {
     "contains basic operations for locations and response in JSON format.",
     createToolArgs({
       action: z.enum(["get", "update"]),
-      locationUpdate: z.optional(z.object({ uuid: z.string(), name: z.optional(z.string()) })),
+      locationUpdate: z.nullable(z.object({ uuid: z.string(), name: z.nullable(z.string()) })),
     }),
     async ({ action, locationUpdate, requestModifiers }) => {
       let ret;
