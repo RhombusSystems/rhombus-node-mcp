@@ -9,7 +9,7 @@ const logger = getLogger("camera-tool");
 async function getImageForCameraAtTime(
   cameraUuid: string,
   timestampMs: number,
-  requestModifiers?: RequestModifiers,
+  requestModifiers?: RequestModifiers
 ) {
   const url = BASE_URL + "/video/getExactFrameUri";
   const body = JSON.stringify({
@@ -29,7 +29,7 @@ async function getImageForCameraAtTime(
     let requestHeaders = {
       ...(requestModifiers?.headers || AUTH_HEADERS),
       ...STATIC_HEADERS,
-      "accept": "image/jpeg",
+      accept: "image/jpeg",
     };
 
     if (requestModifiers?.query)
@@ -37,7 +37,10 @@ async function getImageForCameraAtTime(
 
     logger.trace(`Fetching with headers\n${JSON.stringify(requestHeaders)}`);
 
-    return await fetch(res.frameUri, { method: "GET", headers: requestHeaders }).then(async res => {
+    return await fetch(res.frameUri, {
+      method: "GET",
+      headers: requestHeaders as HeadersInit,
+    }).then(async res => {
       if (!res.ok) {
         logger.error(`Failed to fetch image: ${await res.text()}`);
         logger.error(res);

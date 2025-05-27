@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-import 'dotenv/config'
+import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import getTools from "./tools/getTools.js";
+import fs from "fs";
 
-import { logger } from './logger.js';
+import { logger } from "./logger.js";
+import getResources from "./resources/getResources.js";
 
 const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
@@ -26,8 +28,17 @@ export const server = new McpServer({
 });
 
 async function main() {
-  const tools = await getTools();
+  const resources = await getResources();
 
+  logger.info(`🛠️ Registering ${resources.length} resources`);
+
+  for (const resource of resources) {
+    resource.create(server);
+    logger.debug(`🔧 Registered resource ${resource.name}`);
+  }
+
+  const tools = await getTools();
+  
   logger.info(`🛠️ Registering ${tools.length} tools`);
 
   for (const tool of tools) {
