@@ -5,6 +5,7 @@ import { createToolArgs } from "../util.js";
 import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "../types.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { postApi, BASE_URL } from "../network.js";
+import { logger } from "../logger.js";
 
 async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
   const url = BASE_URL + "/camera/createVideoWall";
@@ -31,7 +32,7 @@ async function handleCreateVideoWallRequest(
   headers: any
 ): Promise<CallToolResult> {
   let text = "Unable to create video wall!";
-  // console.error("🔨 Creating video wall");
+  logger.error("🔨 Creating video wall");
   if (!videoWallCreateOptions?.displayName) {
     text = JSON.stringify({
       needUserInput: true,
@@ -43,7 +44,7 @@ async function handleCreateVideoWallRequest(
       commandForUser: "Which cameras would you like on this video wall?",
     });
   } else {
-    // console.error("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
+    logger.error("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
     text = JSON.stringify(await createVideoWall(videoWallCreateOptions, headers));
   }
   return Promise.resolve({

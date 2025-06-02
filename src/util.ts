@@ -65,3 +65,53 @@ export function createToolTextContent(content: string): CallToolResult {
     ],
   };
 }
+
+/**
+ * Recursively removes fields with null values from a JavaScript object.
+ * If a nested object becomes empty after removing nulls, it will also be removed.
+ *
+ * @param {unknown} obj The object or array to clean.
+ * @returns {object | unknown[] | undefined} The cleaned object/array, or undefined if the input was null/undefined or an empty object/array resulted.
+ */
+export function removeNullFields(obj: unknown): object | unknown[] | undefined {
+  if (obj === null || obj === undefined) {
+    return undefined;
+  }
+
+  if (Array.isArray(obj)) {
+    const cleanedArray: unknown[] = [];
+    for (const item of obj) {
+      const cleanedItem = removeNullFields(item);
+      if (cleanedItem !== undefined) {
+        cleanedArray.push(cleanedItem);
+      }
+    }
+    return cleanedArray.length > 0 ? cleanedArray : undefined;
+  }
+
+  if (typeof obj !== 'object') {
+    return obj as any; // Cast to any for primitive types
+  }
+
+  const cleanedObject: { [key: string]: unknown } = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = (obj as { [key: string]: unknown })[key];
+
+      if (value === null) {
+        continue;
+      }
+
+      if (typeof value === 'object') {
+        const cleanedValue = removeNullFields(value);
+        if (cleanedValue !== undefined) {
+          cleanedObject[key] = cleanedValue;
+        }
+      } else {
+        cleanedObject[key] = value;
+      }
+    }
+  }
+
+  return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
+}

@@ -72,13 +72,17 @@ export async function postApi(url: string, body: string, modifiers: RequestModif
             "Sorry, I don't have permission to help with this request.  Consider upgrading my permissions by changing the role of the API Key I am using.",
         };
       }
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw {
+        body: JSON.parse(body),
+        error: await response.text(),
+      };
+      // throw new Error(`HTTP error! status: ${response.status}`);
     }
     const ret = await response.json();
     logger.debug(`✅ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
     return ret;
   } catch (error) {
-    logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {})}`);
+    logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {}, null, 4)}`);
     return {
       error: true,
       status: `Request Error: ${error}`,

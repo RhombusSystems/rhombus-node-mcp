@@ -2,19 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { BASE_URL, postApi } from "../../network.js";
 import { createToolArgs, createToolTextContent } from "../../util.js";
-
-export enum DeviceType {
-  CAMERA = "camera",
-  DOORBELL_CAMERA = "doorbell-camera",
-  BADGE_READER = "badge-reader",
-  ACCESS_CONTROL_DOOR = "access-control-door",
-  AUDIO_GATEWAY = "audio-gateway",
-  DOOR_SENSOR = "door-sensor",
-  ENVIRONMENTAL_SENSOR = "environmental-sensor",
-  MOTION_SENSOR = "motion-sensor",
-  BUTTON = "button",
-  KEYPAD = "keypad",
-}
+import DeviceType from "../../types/deviceType.js";
 
 async function getCameraList(requestModifiers?: any) {
   const url = BASE_URL + "/camera/getMinimalCameraStateList";
