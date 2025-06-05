@@ -167,11 +167,13 @@ You can call call this tool with requestType "get-settings" and/or with "image" 
 This tool will update the configuration for a camera with the "configUpdate" parameter passed into the tool.
 Thus, "configUpdate' is a necessary parameter if updating settings.
 Please make sure you only update the necessary fields, since any unnecessary changes may cause the camera to behave improperly.
+It may be a good idea to call "image" on this tool again after updating settings to make sure the new settings were effective in fulfilling
+the user's request.
 `,
     createToolArgs({
       requestType: z.enum(["image", "get-settings", "update-settings"]),
       timestampMs: z.nullable(z.number()).describe(`
-          the timestamp in milliseconds which should always be obtained using time-tool.
+          the timestamp in milliseconds. You can default to the current time if the user didn't specify a time, or you can call time-tool to parse the user's time description
           `),
       cameraUuid: z.nullable(z.string()).describe("the camera uuid requested"),
       configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable(),

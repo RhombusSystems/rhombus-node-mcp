@@ -123,7 +123,11 @@ async function getKeypads(requestModifiers?: any) {
 export function createTool(server: McpServer) {
   server.tool(
     "get-entity-tool",
-    "Retrieves entities (or devices) of certain types. Can request multiple entity types at once. The return structure is a JSON string that continues the states of the requested entities. This data is exact. Whatever entities exist will be returned here.",
+    `
+    Retrieves entities (or devices) of certain types.
+    Can request multiple entity types at once.
+    The return structure is a JSON string that continues the states of the requested entities.
+    This data is exact. Whatever entities exist will be returned here.`,
     createToolArgs({
       entityTypes: z
         .array(z.nativeEnum(DeviceType).describe("The entity type to retreive"))
@@ -162,10 +166,12 @@ export function createTool(server: McpServer) {
         promises.push(getKeypads(requestModifiers));
       }
       const responses = Promise.all<object>(promises);
-      const ret = (await responses).reduce((prev, curr) => ({
-        ...prev,
-        ...curr
-      }), {})
+      const ret = {
+        ...(await responses).reduce((prev, curr) => ({
+          ...prev,
+          ...curr
+        }), {})
+      } 
 
       return createToolTextContent(JSON.stringify(ret));
     }
