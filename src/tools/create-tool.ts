@@ -6,6 +6,7 @@ import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "../types.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { postApi, BASE_URL } from "../network.js";
 import { logger } from "../logger.js";
+import { addConfirmationParams, requireConfirmation } from "../utils/confirmation.js";
 
 async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
   const url = BASE_URL + "/camera/createVideoWall";
@@ -61,27 +62,35 @@ export function createTool(server: McpServer) {
   server.tool(
     "create-tool",
     "Tool for creating many entity types such as video walls.",
-    createToolArgs({
-      entityType: z
-        .enum(["video-wall"])
-        .describe("The entity type to create.  Example: video wall."),
-      videoWallCreateOptions: CreateVideoWallOptions,
-    }),
-    async ({ entityType, videoWallCreateOptions, requestModifiers }) => {
-      switch (entityType) {
-        case "video-wall":
-          return await handleCreateVideoWallRequest(videoWallCreateOptions, requestModifiers);
-        default:
-      }
+    addConfirmationParams(
+      createToolArgs({
+        entityType: z
+          .enum(["video-wall"])
+          .describe("The entity type to create.  Example: video wall."),
+        videoWallCreateOptions: CreateVideoWallOptions,
+      })
+    ),
+    async ({ entityType, videoWallCreateOptions, requestModifiers, confirmationId }) => {
+      const confirmation = requireConfirmation(confirmationId);
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: "",
-          },
-        ],
-      };
+      if (confirmation === true) {
+        switch (entityType) {
+          case "video-wall":
+            return await handleCreateVideoWallRequest(videoWallCreateOptions, requestModifiers);
+          default:
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: "",
+            },
+          ],
+        };
+      } else {
+        return confirmation;
+      }
     }
   );
 }

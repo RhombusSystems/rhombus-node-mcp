@@ -1,6 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createToolArgs, createToolTextContent, removeNullFields, RequestModifiers } from "../../../util.js";
+import {
+  createToolArgs,
+  createToolTextContent,
+  removeNullFields,
+  RequestModifiers,
+} from "../../../util.js";
 import {
   appendQueryParams,
   AUTH_HEADERS,
@@ -13,6 +18,11 @@ import {
   ExternalUpdateableFacetedUserConfig,
   ExternalUpdateableFacetedUserConfigSchema,
 } from "./types.js";
+import {
+  addConfirmationParams,
+  isConfirmed,
+  requireConfirmation,
+} from "../../../utils/confirmation.js";
 
 const logger = getLogger("camera-tool");
 
@@ -153,6 +163,8 @@ or situational assessment. When invoked, the tool provides the following: \n
  
 If the requestType is "get-settings":
 
+THIS TOOL UPDATES AND SETS DATA.
+
 This tool will return a JSON object that represents the current configuration for a camera.
 This often includes information such as:
 - device settings
@@ -163,6 +175,8 @@ In general, the JSON object's keys are self-explanatory of what the value does
 
 If the requestType is "update-settings":
 
+THIS TOOL UPDATES AND SETS DATA.
+
 You can call call this tool with requestType "get-settings" and/or with "image" first to get a better idea of what needs to be updated.
 This tool will update the configuration for a camera with the "configUpdate" parameter passed into the tool.
 Thus, "configUpdate' is a necessary parameter if updating settings.
@@ -170,15 +184,17 @@ Please make sure you only update the necessary fields, since any unnecessary cha
 It may be a good idea to call "image" on this tool again after updating settings to make sure the new settings were effective in fulfilling
 the user's request.
 `,
-    createToolArgs({
-      requestType: z.enum(["image", "get-settings", "update-settings"]),
-      timestampMs: z.nullable(z.number()).describe(`
+    addConfirmationParams(
+      createToolArgs({
+        requestType: z.enum(["image", "get-settings", "update-settings"]),
+        timestampMs: z.nullable(z.number()).describe(`
           the timestamp in milliseconds. You can default to the current time if the user didn't specify a time, or you can call time-tool to parse the user's time description
           `),
-      cameraUuid: z.nullable(z.string()).describe("the camera uuid requested"),
-      configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable(),
-    }),
-    async ({ cameraUuid, timestampMs, requestType, configUpdate, requestModifiers }) => {
+        cameraUuid: z.nullable(z.string()).describe("the camera uuid requested"),
+        configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable(),
+      })
+    ),
+    async ({ cameraUuid, timestampMs, requestType, configUpdate, requestModifiers, confirmationId }) => {
       if (!cameraUuid) {
         return {
           content: [
@@ -233,6 +249,12 @@ the user's request.
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         case "update-settings":
+          const confirmation = requireConfirmation(confirmationId);
+
+          if (!isConfirmed(confirmation)) {
+            return confirmation;
+          }
+
           if (!configUpdate) {
             return createToolTextContent("Missing configUpdate");
           }

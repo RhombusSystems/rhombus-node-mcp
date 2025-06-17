@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createToolArgs } from "../util.js";
 import { BASE_URL, postApi } from "../network.js";
+import { addConfirmationParams, isConfirmed, requireConfirmation } from "../utils/confirmation.js";
 
 async function rebootCameras(cameraUuids: string[], requestModifiers?: any) {
   const url = BASE_URL + "/camera/reboot";
@@ -33,13 +34,21 @@ async function rebootCameras(cameraUuids: string[], requestModifiers?: any) {
 export function createTool(server: McpServer) {
   server.tool(
     "reboot-cameras",
-    "this tool is for rebooting one or more cameras causing them to reconnect to the server, this is a helpful option when a camera is experiencing connectivity issues or is in need of troubleshooting",
-    createToolArgs({
-      cameraUuids: z
-        .array(z.string())
-        .describe("An array of camera UUID strings which are unique identifiers for cameras"),
-    }),
-    async ({ cameraUuids, requestModifiers }) => {
+    "this tool is for rebooting one or more cameras causing them to reconnect to the server, this is a helpful option when a camera is experiencing connectivity issues or is in need of troubleshooting. THIS TOOL PERFORMS AN ACTION.",
+    addConfirmationParams(
+      createToolArgs({
+        cameraUuids: z
+          .array(z.string())
+          .describe("An array of camera UUID strings which are unique identifiers for cameras"),
+      })
+    ),
+    async ({ cameraUuids, requestModifiers, confirmationId }) => {
+      const confirmation = requireConfirmation(confirmationId);
+
+      if (!isConfirmed(confirmation)) {
+        return confirmation;
+      }
+
       const cameraRebootData = await rebootCameras(cameraUuids, requestModifiers);
 
       if (!cameraRebootData) {

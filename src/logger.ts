@@ -9,7 +9,7 @@ log4js.configure({
       maxLogSize: "1K",
       layout: {
         type: "basic",
-      }
+      },
     },
     stderr: { type: "stderr" },
   },
@@ -17,7 +17,11 @@ log4js.configure({
     default: {
       appenders: ["mcp", "stderr"],
       level: "trace",
-    }
+    },
+    mcp: {
+      appenders: ["mcp", "stderr"],
+      level: "trace",
+    },
   },
 });
 
