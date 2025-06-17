@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/rhombussystems-rhombus-node-mcp-badge.png)](https://mseep.ai/app/rhombussystems-rhombus-node-mcp)
+
 # 🚀 Rhombus MCP Server - Supercharge Your AI Tools!
 
 Unleash the power of the Rhombus API with this cutting-edge MCP server implementation! Transform your chatbot experience with advanced security and surveillance capabilities at your fingertips.
