@@ -1,4 +1,12 @@
 import { z } from "zod";
+
+export const UUID = z
+  .string()
+  .describe(
+    "This describes the UUID of some entity (device, location, etc.) and is unique and must come from data. This can not be fabricated. It is always 22 characters long"
+  );
+export type UUID = z.infer<typeof UUID>;
+
 export const CreateVideoWallOptions = z.nullable(
   z.object({
     displayName: z.nullable(z.string()).describe("What to call the video wall"),

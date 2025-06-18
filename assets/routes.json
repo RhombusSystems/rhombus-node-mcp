@@ -400,22 +400,6 @@
         "description": null
       },
       {
-        "path": "?modal=[ModalType.CLIP_DETAIL]/:clipUuid/",
-        "description": null
-      },
-      {
-        "path": "?modal=[ModalType.DELETE_USER]/:userUuid/",
-        "description": "This modal is used to delete a specific user from the system."
-      },
-      {
-        "path": "?modal=[ModalType.DELETE_PARTNER_USER]/:userUuid/",
-        "description": null
-      },
-      {
-        "path": "?modal=[ModalType.DELETE_LOCATION]/:locationUuid/",
-        "description": null
-      },
-      {
         "path": "/devices/access-control-doors/:uuid/",
         "description": "Aliases: doors. You can open or close doors at these pages. This is an individual door page."
       },
