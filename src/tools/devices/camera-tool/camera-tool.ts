@@ -144,7 +144,7 @@ export function createTool(server: McpServer) {
   server.tool(
     "camera-tool",
     `
-This tool can perform some action pertaining to the video stream of a camera. There are two types of requests
+This tool can perform some action pertaining to the video stream of a camera. There are three types of requests
 that can be passed into "requestType":
 - image
 - get-settings
@@ -158,31 +158,27 @@ This tool captures and returns a real-time snapshot from a designated security c
 The image reflects the current scene in the camera\'s field of view and serves as a contextual
 input source for downstream tasks such as object recognition, anomaly detection, incident investigation,
 or situational assessment. When invoked, the tool provides the following: \n
- •	Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects. \n
- •	Scene Context: Metadata such as camera ID, location name, timestamp, and motion detection status if available. \n•	Enriched Data Potential: The image can be paired with AI models or downstream analytics to extract insights such as: \n•	Number and type of objects in frame (e.g., humans, cars, packages) \n•	Unusual behaviors (e.g., loitering, unauthorized access) \n•	Environmental conditions (e.g., lighting, obstruction, cleanliness) \nUse Cases: \n•	Verify what triggered a motion alert or analytic rule. \n•	Provide visual context for access events or alarms. \n•	Support live incident triage or retrospective investigations. \n•	Feed contextual imagery to agents making security or operational decisions. \nInvocation Notes: \nTo use this tool correctly, the agent should provide the specific camera identifier or location name. If possible, include the intent (e.g., "verify unauthorized access", "identify vehicle", "check for obstructions") to enhance downstream processing or summarization.
+ •  Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects. \n
+ •  Enriched Data Potential: The image can be paired with AI models or downstream analytics to extract insights such as: \n•  Number and type of objects in frame (e.g., humans, cars, packages) \n•  Unusual behaviors (e.g., loitering, unauthorized access) \n•  Environmental conditions (e.g., lighting, obstruction, cleanliness) \nUse Cases: \n•  Verify what triggered a motion alert or analytic rule. \n•  Provide visual context for access events or alarms. \n• Support live incident triage or retrospective investigations. \n• Feed contextual imagery to agents making security or operational decisions. \nInvocation Notes: \nTo use this tool correctly, the agent should provide the specific camera identifier or location name. If possible, include the intent (e.g., "verify unauthorized access", "identify vehicle", "check for obstructions") to enhance downstream processing or summarization.
  
 If the requestType is "get-settings":
 
 THIS TOOL UPDATES AND SETS DATA.
 
-This tool will return a JSON object that represents the current configuration for a camera.
-This often includes information such as:
-- device settings
-- associated sensor settings
-- camera settings
-
-In general, the JSON object's keys are self-explanatory of what the value does
+This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations.
+Use Cases: Retrieve the current resolution of Camera A.
 
 If the requestType is "update-settings":
 
 THIS TOOL UPDATES AND SETS DATA.
 
 You can call call this tool with requestType "get-settings" and/or with "image" first to get a better idea of what needs to be updated.
-This tool will update the configuration for a camera with the "configUpdate" parameter passed into the tool.
+This tool updates the configuration for a camera or associated device using the "configUpdate" parameter, which must be a JSON object containing the specific fields and their new values. For example, you can modify streaming parameters.
 Thus, "configUpdate' is a necessary parameter if updating settings.
 Please make sure you only update the necessary fields, since any unnecessary changes may cause the camera to behave improperly.
 It may be a good idea to call "image" on this tool again after updating settings to make sure the new settings were effective in fulfilling
 the user's request.
+Use Cases: Adjust streaming parameters for Camera E.
 `,
     addConfirmationParams(
       createToolArgs({
@@ -194,7 +190,14 @@ the user's request.
         configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable(),
       })
     ),
-    async ({ cameraUuid, timestampMs, requestType, configUpdate, requestModifiers, confirmationId }) => {
+    async ({
+      cameraUuid,
+      timestampMs,
+      requestType,
+      configUpdate,
+      requestModifiers,
+      confirmationId,
+    }) => {
       if (!cameraUuid) {
         return {
           content: [
