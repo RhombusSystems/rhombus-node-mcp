@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 import { createToolArgs } from "../util.js";
 
 const ClipsArgs = z.object({
@@ -36,8 +36,7 @@ const ClipsArgs = z.object({
 type ClipsArgs = z.infer<typeof ClipsArgs>;
 
 async function getSavedClips(args: ClipsArgs, requestModifiers?: any) {
-  const url = BASE_URL + "/event/getClipsWithProgress";
-  return await postApi(url, JSON.stringify(args), requestModifiers);
+  return await postApi("/event/getClipsWithProgress", args, requestModifiers);
 }
 
 export function createTool(server: McpServer) {

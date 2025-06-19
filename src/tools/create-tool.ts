@@ -4,13 +4,12 @@ import { createToolArgs } from "../util.js";
 
 import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "../types.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { postApi, BASE_URL } from "../network.js";
+import { postApi } from "../network.js";
 import { logger } from "../logger.js";
 import { addConfirmationParams, requireConfirmation } from "../utils/confirmation.js";
 
 async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
-  const url = BASE_URL + "/camera/createVideoWall";
-  const body = JSON.stringify({
+  const body = {
     videoWall: {
       displayName: options?.displayName,
       deviceList: options?.deviceList,
@@ -23,8 +22,8 @@ async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
         intervalSeconds: options?.settings.intervalSeconds || 5,
       },
     },
-  });
-  const response = await postApi(url, body, headers);
+  };
+  const response = await postApi("/camera/createVideoWall", body, headers);
   return response;
 }
 

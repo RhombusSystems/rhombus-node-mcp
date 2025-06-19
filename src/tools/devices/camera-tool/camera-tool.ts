@@ -9,7 +9,6 @@ import {
 import {
   appendQueryParams,
   AUTH_HEADERS,
-  BASE_URL,
   postApi,
   STATIC_HEADERS,
 } from "../../../network.js";
@@ -31,8 +30,7 @@ async function getImageForCameraAtTime(
   timestampMs: number,
   requestModifiers?: RequestModifiers
 ) {
-  const url = BASE_URL + "/video/getExactFrameUri";
-  const body = JSON.stringify({
+  const body = {
     cameraUuid: cameraUuid,
     downscaleFactor: 10,
     jpgQuality: 70,
@@ -41,9 +39,9 @@ async function getImageForCameraAtTime(
     permyriadCropX: 2188,
     permyriadCropY: 0,
     timestampMs: timestampMs,
-  });
+  };
   logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
-  const base64Image = await postApi(url, body, requestModifiers).then(async res => {
+  const base64Image = await postApi("/video/getExactFrameUri", body, requestModifiers).then(async res => {
     logger.debug(`Received frameUri ${res.frameUri}`);
 
     let requestHeaders = {
@@ -88,10 +86,10 @@ async function getImageForCameraAtTime(
 
 export async function getCameraSettings(cameraUuid: string, requestModifiers?: RequestModifiers) {
   const res = await postApi(
-    `${BASE_URL}/camera/getFacetedConfig`,
-    JSON.stringify({
+    "/camera/getFacetedConfig",
+    {
       deviceUuid: cameraUuid,
-    }),
+    },
     requestModifiers
   );
 
@@ -116,13 +114,13 @@ export async function updateCameraSettings(
 ) {
   // remove any "null" values
   const res = await postApi(
-    `${BASE_URL}/camera/updateFacetedConfig`,
-    JSON.stringify({
+    "/camera/updateFacetedConfig",
+    {
       configUpdate: {
         deviceUuid: cameraUuid,
         ...removeNullFields(update),
       },
-    }),
+    },
     requestModifiers
   );
 

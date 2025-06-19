@@ -1,17 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createToolArgs } from "../util.js";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 import { addConfirmationParams, isConfirmed, requireConfirmation } from "../utils/confirmation.js";
 
 async function rebootCameras(cameraUuids: string[], requestModifiers?: any) {
-  const url = BASE_URL + "/camera/reboot";
   let successCount = 0;
   let errorCount = 0;
   for (const cameraUuid in cameraUuids) {
     try {
-      const body = JSON.stringify({ cameraUuid: cameraUuid });
-      const response = await postApi(url, body, requestModifiers);
+      const body = { cameraUuid };
+      const response = await postApi("/camera/reboot", body, requestModifiers);
       if (response.error) {
         errorCount++;
       } else {
