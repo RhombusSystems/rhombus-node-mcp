@@ -49,7 +49,7 @@ Your insights will directly influence our development roadmap and help us create
         "--rm",
         "-e",
         "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
-        "mcp-server-rhombus"
+        "johnrhombusdocker/mcp-server-rhombus"
       ],
       "env": {
         "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
@@ -90,6 +90,44 @@ Time to see the magic happen! Let's verify that Claude for Desktop is detecting 
 3. Spot the Filesystem MCP Server tools in the list
 
 If they're visible, YOU'VE DONE IT! 🎉 Your integration is live and ready to rock! Claude can now communicate directly with Rhombus systems, giving you the same incredible capabilities as the Rhombus web app, but with the added power of Claude's intelligence!
+
+## 🚀 Running Locally: Unleash Your Inner Developer!
+
+Want to get hands-on and test out the Rhombus MCP server right on your machine? Follow these steps to build and run a local Docker image, then connect it to your MCP client of choice!
+
+### 1. Build Your Local Docker Image 🛠️
+First, let's get that Docker image built. This will allow you to run the MCP server in a local environment.
+
+```bash
+npm install
+docker build -t mcp-server-rhombus .
+```
+
+### 2. Update Your Claude Config for Local Use ⚡
+Now, you'll need to adjust your `claude_desktop_config.json` to point to your newly built local Docker image.
+
+> ***Note:*** When running locally, the Docker image name changes to `mcp-server-rhombus` from `johnrhombusdocker/mcp-server-rhombus`. Make sure to update this in your configuration!
+
+```json
+{
+  "mcpServers": {
+    "rhombus": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
+        "mcp-server-rhombus"
+      ],
+      "env": {
+        "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
 
 ### Hitting a Snag? We've Got You! 🛟
 
