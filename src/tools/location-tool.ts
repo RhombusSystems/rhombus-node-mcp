@@ -1,11 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createToolArgs } from "../util.js";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 
 async function getLocations(requestModifiers?: any) {
-  const url = BASE_URL + "/location/getLocationsV2";
-  return await postApi(url, "{}", requestModifiers);
+  return await postApi("/location/getLocationsV2", {}, requestModifiers);
 }
 
 export function createTool(server: McpServer) {

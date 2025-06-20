@@ -1,14 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createToolArgs } from "../util.js";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 import { THREE_HOURS_MS, FIVE_SECONDS_MS } from "../constants.js";
 
 async function getFaceEvents(_locationUuid: string | null, requestModifiers?: any) {
   const nowMs = Date.now();
   const rangeStartMs = nowMs - THREE_HOURS_MS;
   const rangeEndMs = nowMs - FIVE_SECONDS_MS;
-  const body = JSON.stringify({
+  const body = {
     pageRequest: {
       lastEvaluatedKey: undefined,
       maxPageSize: 75,
@@ -24,12 +24,9 @@ async function getFaceEvents(_locationUuid: string | null, requestModifiers?: an
         rangeEnd: rangeEndMs,
       },
     },
-  });
-  const response = await postApi(
-    BASE_URL + "/faceRecognition/faceEvent/findFaceEventsByOrg",
-    body,
-    requestModifiers
-  ).then(response => {
+  };
+  const response = await postApi("/faceRecognition/faceEvent/findFaceEventsByOrg", body, requestModifiers).then(
+    response => {
     return {
       faceEvents: (response.faceEvents || []).map((event: any) => ({
         ...event,
@@ -41,12 +38,11 @@ async function getFaceEvents(_locationUuid: string | null, requestModifiers?: an
 }
 
 async function getAccessControlEvents(doorUuid: string, requestModifiers?: any) {
-  const url = BASE_URL + "/component/findComponentEventsByAccessControlledDoor";
-  const body = JSON.stringify({
+  const body = {
     limit: 50,
     accessControlledDoorUuid: doorUuid,
-  });
-  const response = await postApi(url, body, requestModifiers).then(response => ({
+  };
+  const response = await postApi("/component/findComponentEventsByAccessControlledDoor", body, requestModifiers).then(response => ({
     componentEvents: (response.componentEvents || []).map((event: any) => ({
       ...event,
       timestamp: new Date(event.timestampMs).toString(),

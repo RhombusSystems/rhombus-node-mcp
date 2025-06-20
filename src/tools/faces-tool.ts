@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 import { createToolArgs } from "../util.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
@@ -88,15 +88,13 @@ type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
 // --- Extracted PostAPI Calls into Functions ---
 
 async function getFaceEvents(args: GetFaceEventsArgs, requestModifiers?: any) {
-  const url = BASE_URL + "/faceRecognition/faceEvent/findFaceEventsByOrg";
   // Directly pass the args object as requested by the user
-  return await postApi(url, JSON.stringify(args), requestModifiers);
+  return await postApi("/faceRecognition/faceEvent/findFaceEventsByOrg", args, requestModifiers);
 }
 
 async function getRegisteredFaces(args: GetRegisteredFacesArgs, requestModifiers?: any) {
-  const url = BASE_URL + "/faceRecognition/person/findPeopleByOrg";
   // No specific arguments for this API call, so send an empty object.
-  return await postApi(url, JSON.stringify({}), requestModifiers);
+  return await postApi("/faceRecognition/person/findPeopleByOrg", {}, requestModifiers);
 }
 
 // --- Main Tool Definition ---

@@ -1,10 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createToolArgs } from "../util.js";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 
 async function getOrg(requestModifiers?: any) {
-  const url = BASE_URL + "/org/getOrgV2";
-  return await postApi(url, "{}", requestModifiers);
+  return await postApi("/org/getOrgV2", {}, requestModifiers);
 }
 
 export function createTool(server: McpServer) {

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { BASE_URL, postApi } from "../network.js";
+import { postApi } from "../network.js";
 import { createToolArgs } from "../util.js";
 
 const PolicyAlertsArgs = z.object({
@@ -42,8 +42,7 @@ const PolicyAlertsArgs = z.object({
 type PolicyAlertsArgs = z.infer<typeof PolicyAlertsArgs>;
 
 async function getPolicyAlerts(args: PolicyAlertsArgs, requestModifiers?: any) {
-  const url = BASE_URL + "/event/getPolicyAlertsV2";
-  return await postApi(url, JSON.stringify(args), requestModifiers);
+  return await postApi("/event/getPolicyAlertsV2", args, requestModifiers);
 }
 
 export function createTool(server: McpServer) {

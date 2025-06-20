@@ -5,26 +5,23 @@ import { createToolArgs, createToolTextContent } from "../../util.js";
 import DeviceType from "../../types/deviceType.js";
 
 async function getCameraList(requestModifiers?: any) {
-  const url = BASE_URL + "/camera/getMinimalCameraStateList";
   return {
-    cameras: (await postApi(url, "{}", requestModifiers)).cameraStates.filter(
+    cameras: (await postApi("/camera/getMinimalCameraStateList", "{}", requestModifiers)).cameraStates.filter(
       (camera: { locationUuid?: string }) => !!camera.locationUuid
     ),
   };
 }
 
 async function getDoorbellCameras(requestModifiers?: any) {
-  const url = BASE_URL + "/doorbellcamera/getMinimalStateList";
   return {
-    doorbellCameras: (await postApi(url, "{}", requestModifiers)).minimalStates.filter(
+    doorbellCameras: (await postApi("/doorbellcamera/getMinimalStateList", "{}", requestModifiers)).minimalStates.filter(
       (doorbellCamera: { locationUuid?: string }) => !!doorbellCamera.locationUuid
     ),
   };
 }
 
 async function getBadgeReaders(requestModifiers?: any) {
-  const url = BASE_URL + "/badgereader/getMinimalStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/badgereader/getMinimalStateList", "{}", requestModifiers).then(response => {
     return {
       badgeReaders: response.minimalStates.filter(
         (badgeReader: { locationUuid?: string }) => !!badgeReader.locationUuid
@@ -34,13 +31,11 @@ async function getBadgeReaders(requestModifiers?: any) {
 }
 
 async function getAccessControlledDoors(requestModifiers?: any) {
-  const url = BASE_URL + "/component/findAccessControlledDoors";
-  return await postApi(url, "{}", requestModifiers);
+  return await postApi("/component/findAccessControlledDoors", "{}", requestModifiers);
 }
 
 async function getAudioGateways(requestModifiers?: any) {
-  const url = BASE_URL + "/audiogateway/getMinimalAudioGatewayStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/audiogateway/getMinimalAudioGatewayStateList", "{}", requestModifiers).then(response => {
     return {
       audioGateways: response.audioGatewayStates.filter(
         (camera: { locationUuid?: string }) => !!camera.locationUuid
@@ -50,8 +45,7 @@ async function getAudioGateways(requestModifiers?: any) {
 }
 
 async function getDoorSensors(requestModifiers?: any) {
-  const url = BASE_URL + "/door/getMinimalDoorStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/door/getMinimalDoorStateList", "{}", requestModifiers).then(response => {
     return {
       doorStates: response.doorStates.filter(
         (door: { locationUuid?: string }) => !!door.locationUuid
@@ -61,8 +55,7 @@ async function getDoorSensors(requestModifiers?: any) {
 }
 
 async function getEnvironmentalSensors(requestModifiers?: any) {
-  const url = BASE_URL + "/climate/getMinimalClimateStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/climate/getMinimalClimateStateList", "{}", requestModifiers).then(response => {
     return {
       climateStates: response.climateStates.filter(
         (sensor: { locationUuid?: string }) => !!sensor.locationUuid
@@ -72,8 +65,7 @@ async function getEnvironmentalSensors(requestModifiers?: any) {
 }
 
 async function getMotionSensors(requestModifiers?: any) {
-  const url = BASE_URL + "/occupancy/getMinimalOccupancySensorStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/occupancy/getMinimalOccupancySensorStateList", "{}", requestModifiers).then(response => {
     return {
       occupancySensorStates: response.occupancySensorStates.filter(
         (occupancySensor: { locationUuid?: string }) => !!occupancySensor.locationUuid
@@ -83,8 +75,7 @@ async function getMotionSensors(requestModifiers?: any) {
 }
 
 async function getButtons(requestModifiers?: any) {
-  const url = BASE_URL + "/button/getMinimalButtonStateList";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/button/getMinimalButtonStateList", "{}", requestModifiers).then(response => {
     return {
       buttonStates: response.states.filter(
         (button: { locationUuid?: string }) => !!button.locationUuid
@@ -94,8 +85,7 @@ async function getButtons(requestModifiers?: any) {
 }
 
 async function getKeypads(requestModifiers?: any) {
-  const url = BASE_URL + "/keypad/getKeypadsForOrg";
-  return await postApi(url, "{}", requestModifiers).then(response => {
+  return await postApi("/keypad/getKeypadsForOrg", "{}", requestModifiers).then(response => {
     return {
       keypadStates: response.keypads.filter(
         (keypad: { locationUuid?: string }) => !!keypad.locationUuid
@@ -103,22 +93,6 @@ async function getKeypads(requestModifiers?: any) {
     };
   });
 }
-
-// async function getAssetTags(requestModifiers?: any) {
-//   const url = BASE_URL + "/camera/getMinimalCameraStateList";
-//   return await postApi(url, "{}", requestModifiers).then(response => {
-//     return {
-//       cameraStates: response.cameraStates.filter(
-//         (camera: { locationUuid?: string }) => !!camera.locationUuid
-//       ),
-//     };
-//   });
-// }
-
-// async function getGreetKiosks(requestModifiers?: any) {
-//   const url = BASE_URL + "/component/findAccessControlledDoors";
-//   return await postApi(url, "{}", requestModifiers);
-// }
 
 export function createTool(server: McpServer) {
   server.tool(

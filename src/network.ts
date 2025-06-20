@@ -46,16 +46,18 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
 
-export async function postApi(url: string, body: string, modifiers: RequestModifiers = null) {
+export async function postApi(route: string, body: object | string, modifiers: RequestModifiers = null) {
   let requestHeaders = {
     ...(modifiers?.headers ?? AUTH_HEADERS),
     ...STATIC_HEADERS,
   };
-
+  let url = BASE_URL + route;
   if (modifiers?.query) {
     url = appendQueryParams(url, modifiers.query);
   }
-
+  if (typeof body === "object") {
+    body = JSON.stringify(body);
+  }
   try {
     logger.info(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(requestHeaders)}`);
     const response = await fetch(url, {
