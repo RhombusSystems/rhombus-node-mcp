@@ -49,7 +49,7 @@ Your insights will directly influence our development roadmap and help us create
         "--rm",
         "-e",
         "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
-        "johnrhombusdocker/mcp-server-rhombus"
+        "rhombussystems/mcp-server-rhombus"
       ],
       "env": {
         "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
@@ -106,7 +106,7 @@ docker build -t mcp-server-rhombus .
 ### 2. Update Your Claude Config for Local Use ⚡
 Now, you'll need to adjust your `claude_desktop_config.json` to point to your newly built local Docker image.
 
-> ***Note:*** When running locally, the Docker image name changes to `mcp-server-rhombus` from `johnrhombusdocker/mcp-server-rhombus`. Make sure to update this in your configuration!
+> ***Note:*** When running locally, the Docker image name changes to `mcp-server-rhombus` from `rhombussystems/mcp-server-rhombus`. Make sure to update this in your configuration!
 
 ```json
 {

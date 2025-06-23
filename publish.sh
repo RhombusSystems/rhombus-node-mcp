@@ -4,7 +4,7 @@ set -euo pipefail
 
 # --- CONFIGURATION ---
 NPM_PACKAGE_NAME="rhombus-node-mcp"
-DOCKER_IMAGE_NAME="johnrhombusdocker/mcp-server-rhombus"
+DOCKER_IMAGE_NAME="rhombussystems/mcp-server-rhombus"
 VERSION=$(node -p "require('./package.json').version")
 
 # --- STEP 1: Build the TypeScript Project ---
@@ -12,7 +12,7 @@ echo "📦 Building MCP server..."
 npm install
 npm run build
 
-# --- STEP 2: Publish to npm ---
+# # --- STEP 2: Publish to npm ---
 echo "🚀 Publishing $NPM_PACKAGE_NAME@$VERSION to npm..."
 npm publish --access public
 
