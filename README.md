@@ -110,22 +110,22 @@ Now, you'll need to adjust your `claude_desktop_config.json` to point to your ne
 
 ```json
 {
-  "mcpServers": {
-    "rhombus": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
-        "mcp-server-rhombus"
-      ],
-      "env": {
-        "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
-      }
-    }
-  }
+  "mcpServers": {
+    "rhombus": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
+        "mcp-server-rhombus"
+      ],
+      "env": {
+        "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
 }
 ```
 

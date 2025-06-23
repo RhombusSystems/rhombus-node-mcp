@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { getLogger } from "../../../logger.js";
+import { appendQueryParams, AUTH_HEADERS, postApi, STATIC_HEADERS } from "../../../network.js";
 import {
   createToolArgs,
   createToolTextContent,
@@ -7,21 +9,14 @@ import {
   RequestModifiers,
 } from "../../../util.js";
 import {
-  appendQueryParams,
-  AUTH_HEADERS,
-  postApi,
-  STATIC_HEADERS,
-} from "../../../network.js";
-import { getLogger } from "../../../logger.js";
-import {
-  ExternalUpdateableFacetedUserConfig,
-  ExternalUpdateableFacetedUserConfigSchema,
-} from "./types.js";
-import {
   addConfirmationParams,
   isConfirmed,
   requireConfirmation,
 } from "../../../utils/confirmation.js";
+import {
+  ExternalUpdateableFacetedUserConfig,
+  ExternalUpdateableFacetedUserConfigSchema,
+} from "./types.js";
 
 const logger = getLogger("camera-tool");
 
@@ -41,35 +36,39 @@ async function getImageForCameraAtTime(
     timestampMs: timestampMs,
   };
   logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
-  const base64Image = await postApi("/video/getExactFrameUri", body, requestModifiers).then(async res => {
-    logger.debug(`Received frameUri ${res.frameUri}`);
+  const base64Image = await postApi("/video/getExactFrameUri", body, requestModifiers).then(
+    async res => {
+      logger.debug(`Received frameUri ${res.frameUri}`);
 
-    let requestHeaders = {
-      ...(requestModifiers?.headers || AUTH_HEADERS),
-      ...STATIC_HEADERS,
-      accept: "image/jpeg",
-    };
+      // construct request headers
+      let requestHeaders = {
+        ...(requestModifiers?.headers ?? AUTH_HEADERS),
+        ...STATIC_HEADERS,
+      };
 
-    if (requestModifiers?.query)
-      res.frameUri = appendQueryParams(res.frameUri, requestModifiers.query);
-
-    logger.trace(`Fetching with headers\n${JSON.stringify(requestHeaders)}`);
-
-    return await fetch(res.frameUri, {
-      method: "GET",
-      headers: requestHeaders as HeadersInit,
-    }).then(async res => {
-      if (!res.ok) {
-        logger.error(`Failed to fetch image: ${await res.text()}`);
-        logger.error(res);
-        return null;
+      // add query params
+      if (requestModifiers?.query) {
+        res.frameUri = appendQueryParams(res.frameUri, requestModifiers.query);
       }
-      const arrayBuffer = await res.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = buffer.toString("base64");
-      return base64;
-    });
-  });
+
+      logger.trace(`Fetching with headers\n${JSON.stringify(requestHeaders)}`);
+
+      return await fetch(res.frameUri, {
+        method: "GET",
+        headers: requestHeaders as HeadersInit,
+      }).then(async res => {
+        if (!res.ok) {
+          logger.error(`Failed to fetch image: ${await res.text()}`);
+          logger.error(res);
+          return null;
+        }
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString("base64");
+        return base64;
+      });
+    }
+  );
   if (!base64Image) {
     return {
       success: false,
@@ -181,11 +180,13 @@ Use Cases: Adjust streaming parameters for Camera E.
     addConfirmationParams(
       createToolArgs({
         requestType: z.enum(["image", "get-settings", "update-settings"]),
-        timestampMs: z.nullable(z.number()).describe(`
+        timestampMs: z.optional(z.number()).describe(`
           the timestamp in milliseconds. You can default to the current time if the user didn't specify a time, or you can call time-tool to parse the user's time description
           `),
-        cameraUuid: z.nullable(z.string()).describe("the camera uuid requested"),
-        configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable(),
+        cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
+        configUpdate: ExternalUpdateableFacetedUserConfigSchema.optional().describe(
+          'the config update that would be applied to the camera if the requestType is "update-settings"'
+        ),
       })
     ),
     async ({

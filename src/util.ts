@@ -15,7 +15,7 @@ export function generateRandomString(length: number): string {
 
 const STATIC_ARGS = {
   requestModifiers: z
-    .nullable(
+    .optional(
       z.object({
         headers: z.nullable(z.record(z.string(), z.string())),
         query: z.nullable(z.record(z.string(), z.string())),

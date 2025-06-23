@@ -18,9 +18,10 @@ export function createTool(server: McpServer) {
           "A natural language description of the time (e.g., '2pm today', 'tomorrow at noon')."
         ),
       timezone: z
-        .nullable(z.string())
+        .string()
+        .optional()
         .describe(
-          "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Defaults to system timezone."
+          "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Will default to system timezone if not provided."
         ),
     },
     async ({ time_description, timezone }) => {

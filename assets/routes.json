@@ -337,7 +337,7 @@
     "parameterized_paths": [
       {
         "path": "/locations/:locationUuid/",
-        "description": "This page can be used to pause notifications for a specific location."
+        "description": "This page can be used to view, manage, and monitor a location and its devices. Requires a location UUID to replace into :locationUuid"
       },
       {
         "path": "/locations/:locationUuid/access-control/",

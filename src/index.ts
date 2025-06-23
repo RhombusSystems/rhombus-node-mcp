@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import "dotenv/config";
 import getTools from "./tools/getTools.js";
-import fs from "fs";
 
 import { logger } from "./logger.js";
 import getResources from "./resources/getResources.js";
@@ -16,6 +15,9 @@ if (!RHOMBUS_API_KEY) {
 }
 
 const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
+
+logger.info(`Using API_KEY: ${RHOMBUS_API_KEY}`);
+logger.info(`To hit API server: ${serverUrl}`);
 
 logger.info("🌐 Using server url", serverUrl);
 export const server = new McpServer({

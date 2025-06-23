@@ -14,7 +14,7 @@ import { logger } from "../logger.js";
 //   }
 
 export const CONFIRMATION_ARGS = {
-  confirmationId: z.string().nullable(),
+  confirmationId: z.string().nullable().optional(),
 };
 
 export function addConfirmationParams<TInputArgs extends object>(
@@ -30,7 +30,7 @@ export function addConfirmationParams<TInputArgs extends object>(
 const confirmationStore = new Map<string, number>();
 const CONFIRMATION_MAX_AGE = 15 * 60 * 1000; // 15 minutes
 
-export function requireConfirmation(confirmationId: string | null) {
+export function requireConfirmation(confirmationId: string | null | undefined) {
   // remove any old confirmations
   for (const entry of confirmationStore) {
     if (Date.now() - entry[1] > CONFIRMATION_MAX_AGE) confirmationStore.delete(entry[0]);

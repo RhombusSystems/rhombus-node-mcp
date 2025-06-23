@@ -10,16 +10,25 @@ async function getLocations(requestModifiers?: any) {
 export function createTool(server: McpServer) {
   server.tool(
     "location-tool",
-    "contains basic operations for locations and response in JSON format.",
+    `This tool performs operations on locations.
+- 'get': Retrieves all locations.`,
     createToolArgs({
       action: z.enum(["get", "update"]),
-      locationUpdate: z.nullable(z.object({ uuid: z.string(), name: z.nullable(z.string()) })),
+      locationUpdate: z
+        .object({
+          uuid: z.string(),
+          name: z.string(),
+        })
+        .optional(),
     }),
-    async ({ action, locationUpdate, requestModifiers }) => {
+    async ({ action, requestModifiers }) => {
       let ret;
       switch (action) {
         case "get":
           ret = await getLocations(requestModifiers);
+          break;
+        case "update":
+          ret = { error: true, status: "not implemented" };
           break;
         default:
           ret = { error: true, status: `unsupported location tool call: ${action}` };

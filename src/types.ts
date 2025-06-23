@@ -7,9 +7,15 @@ export const UUID = z
   );
 export type UUID = z.infer<typeof UUID>;
 
-export const CreateVideoWallOptions = z.nullable(
-  z.object({
-    displayName: z.nullable(z.string()).describe("What to call the video wall"),
+export const VideoWallSettings = z.object({
+  rowCount: z.number(),
+  columnCount: z.number(),
+  intervalSeconds: z.number().optional(),
+  rotateStrategy: z.enum(["none", "motion", "interval"]),
+});
+export const CreateVideoWallOptions = z
+  .object({
+    displayName: z.string().optional().describe("What to call the video wall"),
     orgUuid: z.string().describe("The uuid of the organization"),
     deviceList: z
       .array(z.string())
@@ -17,15 +23,8 @@ export const CreateVideoWallOptions = z.nullable(
       .describe(
         "The list of camera uuids (unique identifiers) to exist in the video wall.  You must provide this manually by prompting the user at least once."
       ),
-    othersCanEdit: z
-      .nullable(z.boolean())
-      .describe("Whether or not other users can edit the wall, defaults to false"),
-    settings: z.object({
-      rowCount: z.number(),
-      columnCount: z.number(),
-      intervalSeconds: z.nullable(z.number()),
-      rotateStrategy: z.enum(["none", "motion", "interval"]),
-    }),
+    othersCanEdit: z.boolean().optional().describe("Whether or not other users can edit the wall, defaults to false"),
+    settings: VideoWallSettings,
   })
-);
+  .optional();
 export type CreateVideoWallOptionsT = z.infer<typeof CreateVideoWallOptions>;

@@ -6,38 +6,38 @@ import { createToolArgs } from "../util.js";
 const PolicyAlertsArgs = z.object({
   afterTimestampMs: z
     .number()
-    .nullable()
+    .optional()
     .describe(
       "The start of the time range (in milliseconds since epoch) for which to retrieve alerts. Only alerts that occurred AFTER this timestamp will be returned."
     ),
   beforeTimestampMs: z
     .number()
-    .nullable()
+    .optional()
     .describe(
       "The end of the time range (in milliseconds since epoch) for which to retrieve alerts. Only alerts that occurred BEFORE this timestamp will be returned."
     ),
   deviceFilter: z
     .array(z.string())
-    .nullable()
+    .optional()
     .describe(
       "A list of UUIDs representing the specific devices to filter alerts by. Only alerts emitted by these devices will be returned."
     ),
   locationFilter: z
     .array(z.string())
-    .nullable()
+    .optional()
     .describe(
       "A list of UUIDs representing the specific locations to filter alerts by. Only alerts associated with these locations will be returned."
     ),
   maxResults: z
     .number()
-    .nullable()
+    .optional()
     .describe(
       "The maximum number of policy alerts to return. The system may default to a reasonable number (e.g., 20) if not specified, but there is a hard cap (e.g., 100) on the maximum results the API will return."
     ),
 
   // these may be pagination args, we'll leave them out for now
-  // lastTimestampMs: z.number().nullable(),
-  // lastUuid: z.number().nullable(),
+  // lastTimestampMs: z.number().optional(),
+  // lastUuid: z.number().optional(),
 });
 type PolicyAlertsArgs = z.infer<typeof PolicyAlertsArgs>;
 
