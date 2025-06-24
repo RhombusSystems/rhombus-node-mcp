@@ -32,7 +32,7 @@ async function handleCreateVideoWallRequest(
   headers: any
 ): Promise<CallToolResult> {
   let text = "Unable to create video wall!";
-  logger.error("🔨 Creating video wall");
+  logger.info("🔨 Creating video wall");
   if (!videoWallCreateOptions?.displayName) {
     text = JSON.stringify({
       needUserInput: true,
@@ -44,7 +44,7 @@ async function handleCreateVideoWallRequest(
       commandForUser: "Which cameras would you like on this video wall?",
     });
   } else {
-    logger.error("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
+    logger.info("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
     text = JSON.stringify(await createVideoWall(videoWallCreateOptions, headers));
   }
   return Promise.resolve({
