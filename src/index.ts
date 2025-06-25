@@ -1,57 +1,47 @@
 #!/usr/bin/env node
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import "dotenv/config";
-import getTools from "./tools/getTools.js";
 
+import { serverInit } from "./createServer.js";
 import { logger } from "./logger.js";
-import getResources from "./resources/getResources.js";
+import stdioTransport from "./transports/stdio.js";
+import streamableHttpTransport from "./transports/streamable-http.js";
 
 const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
-
-if (!RHOMBUS_API_KEY) {
-  logger.info("Missing RHOMBUS_API_KEY");
-}
-
-const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
-
-logger.info(`Using API_KEY: ${RHOMBUS_API_KEY}`);
-logger.info(`To hit API server: ${serverUrl}`);
-
-logger.info("🌐 Using server url", serverUrl);
-export const server = new McpServer({
-  name: "rhombus",
-  version: "1.0.0",
-  capabilities: {
-    resources: {},
-    tools: {},
-  },
-});
+const TRANSPORT_TYPE: "stdio" | "streamable-http" =
+  (process.env.TRANSPORT_TYPE as "stdio" | "streamable-http") || "stdio";
 
 async function main() {
-  const resources = await getResources();
-
-  logger.info(`🛠️ Registering ${resources.length} resources`);
-
-  for (const resource of resources) {
-    resource.create(server);
-    logger.debug(`🔧 Registered resource ${resource.name}`);
+  if (!RHOMBUS_API_KEY) {
+    logger.info("Missing RHOMBUS_API_KEY");
   }
 
-  const tools = await getTools();
-  
-  logger.info(`🛠️ Registering ${tools.length} tools`);
+  const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
-  for (const tool of tools) {
-    tool.create(server);
-    logger.debug(`🔧 Registered tool ${tool.name}`);
+  logger.info(`Using API_KEY: ${RHOMBUS_API_KEY}`);
+  logger.info(`To hit API server: ${serverUrl}`);
+
+  logger.info("🌐 Using server url", serverUrl);
+
+  await serverInit();
+
+  const server = new McpServer({
+    name: "rhombus",
+    version: "1.0.0",
+    capabilities: {
+      resources: {},
+      tools: {},
+    },
+  });
+
+  if (TRANSPORT_TYPE === "stdio") {
+    await stdioTransport();
+  } else if (TRANSPORT_TYPE === "streamable-http") {
+    await streamableHttpTransport();
+  } else {
+    throw new Error(`Invalid transport type: ${TRANSPORT_TYPE}`);
   }
-
-  const transport = new StdioServerTransport();
-  logger.info(`🚙 Starting stdio transport`);
-  await server.connect(transport);
-  logger.info(`🚙🌬️ Connected.`);
 }
 
 main().catch(error => {

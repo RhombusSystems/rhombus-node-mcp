@@ -13,17 +13,11 @@ export function generateRandomString(length: number): string {
   return result;
 }
 
-const STATIC_ARGS = {
-  requestModifiers: z
-    .optional(
-      z.object({
-        headers: z.nullable(z.record(z.string(), z.string())),
-        query: z.nullable(z.record(z.string(), z.string())),
-      })
-    )
-    .describe("Optional headers accepted by tools.  LLM should never ever use this. 😅"),
-};
-export type RequestModifiers = z.infer<(typeof STATIC_ARGS)["requestModifiers"]>;
+export const RequestModifiers = z.object({
+  headers: z.optional(z.record(z.string(), z.string())),
+  query: z.optional(z.record(z.string(), z.string())),
+}).optional();
+export type RequestModifiers = z.infer<typeof RequestModifiers>;
 
 /**
  * Get all file paths in a directory in a directory
@@ -53,13 +47,6 @@ export function getFilePathsInDirectory(dirPath: string): string[] {
   }
 
   return filePaths;
-}
-
-export function createToolArgs<TArgs extends object>(args: TArgs): TArgs & typeof STATIC_ARGS {
-  return {
-    ...args,
-    ...STATIC_ARGS,
-  };
 }
 
 /**

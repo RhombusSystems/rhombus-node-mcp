@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 import { parse } from "chrono-node";
 import { DateTime } from "luxon";
+import { z } from "zod";
+import { logger } from "../logger.js";
 
 function nullToUndefined(value: number | null): number | undefined {
   return value === null ? undefined : value;
@@ -24,7 +25,9 @@ export function createTool(server: McpServer) {
           "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Will default to system timezone if not provided."
         ),
     },
-    async ({ time_description, timezone }) => {
+    async ({ time_description, timezone }, extra) => {
+      logger.info("EXTRA", extra);
+
       // console.error(`🕛 handling tool call for time ${time_description} using timezone ${timezone}`);
       const now = DateTime.now()
         .setZone(timezone || undefined)

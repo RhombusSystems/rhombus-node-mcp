@@ -1,14 +1,17 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createToolArgs } from "../util.js";
+import { RequestModifiers } from "../util.js";
 
-import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "../types.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { postApi } from "../network.js";
 import { logger } from "../logger.js";
+import { postApi } from "../network.js";
+import { CreateVideoWallOptions, CreateVideoWallOptionsT } from "../types.js";
 import { addConfirmationParams, requireConfirmation } from "../utils/confirmation.js";
 
-async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
+async function createVideoWall(
+  options: CreateVideoWallOptionsT,
+  requestModifiers: RequestModifiers
+) {
   const body = {
     videoWall: {
       displayName: options?.displayName,
@@ -23,13 +26,13 @@ async function createVideoWall(options: CreateVideoWallOptionsT, headers: any) {
       },
     },
   };
-  const response = await postApi("/camera/createVideoWall", body, headers);
+  const response = await postApi("/camera/createVideoWall", body, requestModifiers);
   return response;
 }
 
 async function handleCreateVideoWallRequest(
   videoWallCreateOptions: CreateVideoWallOptionsT,
-  headers: any
+  requestModifiers: RequestModifiers
 ): Promise<CallToolResult> {
   let text = "Unable to create video wall!";
   logger.info("🔨 Creating video wall");
@@ -45,7 +48,7 @@ async function handleCreateVideoWallRequest(
     });
   } else {
     logger.info("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
-    text = JSON.stringify(await createVideoWall(videoWallCreateOptions, headers));
+    text = JSON.stringify(await createVideoWall(videoWallCreateOptions, requestModifiers));
   }
   return Promise.resolve({
     content: [
@@ -61,21 +64,22 @@ export function createTool(server: McpServer) {
   server.tool(
     "create-tool",
     "Tool for creating many entity types such as video walls.",
-    addConfirmationParams(
-      createToolArgs({
-        entityType: z
-          .enum(["video-wall"])
-          .describe("The entity type to create.  Example: video wall."),
-        videoWallCreateOptions: CreateVideoWallOptions,
-      })
-    ),
-    async ({ entityType, videoWallCreateOptions, requestModifiers, confirmationId }) => {
+    addConfirmationParams({
+      entityType: z
+        .enum(["video-wall"])
+        .describe("The entity type to create.  Example: video wall."),
+      videoWallCreateOptions: CreateVideoWallOptions,
+    }),
+    async ({ entityType, videoWallCreateOptions, confirmationId }, extra) => {
       const confirmation = requireConfirmation(confirmationId);
 
       if (confirmation === true) {
         switch (entityType) {
           case "video-wall":
-            return await handleCreateVideoWallRequest(videoWallCreateOptions, requestModifiers);
+            return await handleCreateVideoWallRequest(
+              videoWallCreateOptions,
+              extra._meta?.requestModifiers as RequestModifiers
+            );
           default:
         }
 

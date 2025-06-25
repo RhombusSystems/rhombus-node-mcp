@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { BASE_URL, postApi } from "../../network.js";
-import { createToolArgs, createToolTextContent } from "../../util.js";
+import { postApi } from "../../network.js";
 import DeviceType from "../../types/deviceType.js";
+import { createToolTextContent, RequestModifiers } from "../../util.js";
 
 async function getCameraList(requestModifiers?: any) {
   return {
@@ -102,12 +102,14 @@ export function createTool(server: McpServer) {
     Can request multiple entity types at once.
     The return structure is a JSON string that continues the states of the requested entities.
     This data is exact. Whatever entities exist will be returned here.`,
-    createToolArgs({
+    {
       entityTypes: z
         .array(z.nativeEnum(DeviceType).describe("The entity type to retreive"))
         .describe("What type of entities to retrieve."),
-    }),
-    async ({ entityTypes, requestModifiers }) => {
+    },
+    async ({ entityTypes }, extra) => {
+      const requestModifiers = extra._meta?.requestModifiers as RequestModifiers;
+
       const promises = [];
       if (entityTypes.includes(DeviceType.CAMERA)) {
         promises.push(getCameraList(requestModifiers));

@@ -18,7 +18,7 @@ export const STATIC_HEADERS = {
 };
 
 export const AUTH_HEADERS = {
-  "x-auth-apikey": RHOMBUS_API_KEY,
+  "x-auth-apikey": RHOMBUS_API_KEY!,
   "x-auth-scheme": "api-token",
 };
 
@@ -46,21 +46,21 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
 
-export async function postApi(
-  route: string,
-  body: object | string,
-  modifiers: RequestModifiers = undefined
-) {
-  let requestHeaders = {
-    ...(modifiers?.headers ?? AUTH_HEADERS),
+export async function postApi(route: string, body: object | string, modifiers?: RequestModifiers) {
+  // merge headers
+  let requestHeaders: Record<string, string> = {
     ...STATIC_HEADERS,
+    ...AUTH_HEADERS,
+    ...(modifiers?.headers ?? {}),
   };
   let url = BASE_URL + route;
 
+  // attach query params if provided
   if (modifiers?.query) {
     url = appendQueryParams(url, modifiers.query);
   }
 
+  // stringify body if it's not already a string
   if (typeof body === "object") {
     body = JSON.stringify(body);
   }

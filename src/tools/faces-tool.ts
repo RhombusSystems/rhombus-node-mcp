@@ -1,7 +1,7 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { postApi } from "../network.js";
-import { createToolArgs } from "../util.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { RequestModifiers } from "../util.js";
 
 enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
@@ -145,7 +145,7 @@ If the requestType is "get-registered-faces":
 
 `,
     // FacesToolArgs directly passed here
-    createToolArgs({
+    {
       requestType: z.nativeEnum(RequestType),
       args: z.union([
         z.object({
@@ -156,15 +156,15 @@ If the requestType is "get-registered-faces":
           args: GetRegisteredFacesArgsSchema,
         }),
       ]),
-    }),
-    async ({ requestModifiers, requestType, args }) => {
+    },
+    async ({ requestType, args }, extra) => {
       let ret;
       if (requestType === "get-face-events") {
         // Pass the args directly, as requested
-        ret = await getFaceEvents(args as unknown as GetFaceEventsArgs, requestModifiers);
+        ret = await getFaceEvents(args as unknown as GetFaceEventsArgs, extra._meta?.requestModifiers as RequestModifiers);
       } else if (requestType === "get-registered-faces") {
         // Pass the args (will effectively be an empty object for this call)
-        ret = await getRegisteredFaces(args as unknown as GetRegisteredFacesArgs, requestModifiers);
+        ret = await getRegisteredFaces(args as unknown as GetRegisteredFacesArgs, extra._meta?.requestModifiers as RequestModifiers);
       }
 
       return {

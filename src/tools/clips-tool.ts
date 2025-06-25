@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { postApi } from "../network.js";
-import { createToolArgs } from "../util.js";
+import { RequestModifiers } from "../util.js";
 
 const ClipsArgs = z.object({
   deviceUuidFilters: z
@@ -68,12 +68,12 @@ The tool returns a JSON object with the following structure and important fields
     * **userUuid (string | null):** The UUID of the user associated with the clip, if applicable.
     * **sourceAlertUuid (string | null):** The UUID of the alert that triggered the creation of this clip, if any.
 `,
-    createToolArgs({
+    {
       ...ClipsArgs.shape,
-    }),
-    async ({ requestModifiers, ...args }) => {
+    },
+    async ({ ...args }, extra) => {
       let ret;
-      ret = await getSavedClips(args, requestModifiers);
+      ret = await getSavedClips(args, extra._meta?.requestModifiers as RequestModifiers);
 
       return {
         content: [{ type: "text", text: JSON.stringify(ret) }],
