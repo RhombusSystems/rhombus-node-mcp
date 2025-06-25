@@ -2,12 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getLogger } from "../../../logger.js";
 import { appendQueryParams, AUTH_HEADERS, postApi, STATIC_HEADERS } from "../../../network.js";
-import {
-  createToolArgs,
-  createToolTextContent,
-  removeNullFields,
-  RequestModifiers,
-} from "../../../util.js";
+import { createToolTextContent, removeNullFields, RequestModifiers } from "../../../util.js";
 import {
   addConfirmationParams,
   isConfirmed,
@@ -177,26 +172,17 @@ It may be a good idea to call "image" on this tool again after updating settings
 the user's request.
 Use Cases: Adjust streaming parameters for Camera E.
 `,
-    addConfirmationParams(
-      createToolArgs({
-        requestType: z.enum(["image", "get-settings", "update-settings"]),
-        timestampMs: z.optional(z.number()).describe(`
+    addConfirmationParams({
+      requestType: z.enum(["image", "get-settings", "update-settings"]),
+      timestampMs: z.optional(z.number()).describe(`
           the timestamp in milliseconds. You can default to the current time if the user didn't specify a time, or you can call time-tool to parse the user's time description
           `),
-        cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
-        configUpdate: ExternalUpdateableFacetedUserConfigSchema.optional().describe(
-          'the config update that would be applied to the camera if the requestType is "update-settings"'
-        ),
-      })
-    ),
-    async ({
-      cameraUuid,
-      timestampMs,
-      requestType,
-      configUpdate,
-      requestModifiers,
-      confirmationId,
-    }) => {
+      cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
+      configUpdate: ExternalUpdateableFacetedUserConfigSchema.optional().describe(
+        'the config update that would be applied to the camera if the requestType is "update-settings"'
+      ),
+    }),
+    async ({ cameraUuid, timestampMs, requestType, configUpdate, confirmationId }, extra) => {
       if (!cameraUuid) {
         return {
           content: [
@@ -229,7 +215,11 @@ Use Cases: Adjust streaming parameters for Camera E.
             };
           }
 
-          response = await getImageForCameraAtTime(cameraUuid, timestampMs, requestModifiers);
+          response = await getImageForCameraAtTime(
+            cameraUuid,
+            timestampMs,
+            extra._meta?.requestModifiers as RequestModifiers
+          );
           if (!response.success || !response.imageData) {
             return {
               content: [{ type: "text", text: JSON.stringify(response) }],
@@ -246,7 +236,10 @@ Use Cases: Adjust streaming parameters for Camera E.
           };
 
         case "get-settings":
-          response = await getCameraSettings(cameraUuid, requestModifiers);
+          response = await getCameraSettings(
+            cameraUuid,
+            extra._meta?.requestModifiers as RequestModifiers
+          );
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
@@ -260,7 +253,11 @@ Use Cases: Adjust streaming parameters for Camera E.
           if (!configUpdate) {
             return createToolTextContent("Missing configUpdate");
           }
-          response = await updateCameraSettings(cameraUuid, configUpdate, requestModifiers);
+          response = await updateCameraSettings(
+            cameraUuid,
+            configUpdate,
+            extra._meta?.requestModifiers as RequestModifiers
+          );
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };

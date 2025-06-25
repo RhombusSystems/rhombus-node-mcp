@@ -6,13 +6,6 @@ import { z } from "zod";
 import { createToolTextContent, generateRandomString } from "../util.js";
 import { logger } from "../logger.js";
 
-// export function createToolArgs<TArgs extends object>(args: TArgs): TArgs & typeof STATIC_ARGS {
-//     return {
-//       ...args,
-//       ...STATIC_ARGS,
-//     };
-//   }
-
 export const CONFIRMATION_ARGS = {
   confirmationId: z.string().nullable().optional(),
 };

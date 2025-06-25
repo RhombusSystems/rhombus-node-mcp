@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { postApi } from "../network.js";
-import { createToolArgs } from "../util.js";
+import { RequestModifiers } from "../util.js";
 
 const PolicyAlertsArgs = z.object({
   afterTimestampMs: z
@@ -64,12 +64,12 @@ This tool allows you to filter existing alerts by a specific time range (before 
 by a list of device UUIDs, or by a list of location UUIDs.
 You can also specify the maximum number of results to return.
 The output is provided in JSON format.`,
-    createToolArgs({
+    {
       ...PolicyAlertsArgs.shape,
-    }),
-    async ({ requestModifiers, ...args }) => {
+    },
+    async ({ ...args }, extra) => {
       let ret;
-      ret = await getPolicyAlerts(args, requestModifiers);
+      ret = await getPolicyAlerts(args, extra._meta?.requestModifiers as RequestModifiers);
 
       return {
         content: [{ type: "text", text: JSON.stringify(ret) }],

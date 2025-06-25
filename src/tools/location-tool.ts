@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createToolArgs } from "../util.js";
 import { postApi } from "../network.js";
+import { RequestModifiers } from "../util.js";
 
 async function getLocations(requestModifiers?: any) {
   return await postApi("/location/getLocationsV2", {}, requestModifiers);
@@ -12,7 +12,7 @@ export function createTool(server: McpServer) {
     "location-tool",
     `This tool performs operations on locations.
 - 'get': Retrieves all locations.`,
-    createToolArgs({
+    {
       action: z.enum(["get", "update"]),
       locationUpdate: z
         .object({
@@ -20,12 +20,12 @@ export function createTool(server: McpServer) {
           name: z.string(),
         })
         .optional(),
-    }),
-    async ({ action, requestModifiers }) => {
+    },
+    async ({ action }, extra) => {
       let ret;
       switch (action) {
         case "get":
-          ret = await getLocations(requestModifiers);
+          ret = await getLocations(extra._meta?.requestModifiers as RequestModifiers);
           break;
         case "update":
           ret = { error: true, status: "not implemented" };
