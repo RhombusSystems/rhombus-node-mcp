@@ -21,23 +21,23 @@ export default function streamableHttpTransport() {
 
     // check JWT
     const token = req.headers.authorization?.split(" ")[1];
-    let auth: RequestModifiers | undefined;
+    let authRequestModifiers: RequestModifiers | undefined;
     if (token) {
       try {
         const decoded = RequestModifiers.parse(jwt.verify(token, JWT_SECRET));
         // if successful (did not throw)
-        auth = decoded;
+        authRequestModifiers = decoded;
 
         // inject auth into request body's meta object
         // to be made available to MCP tools
         if (req.body.params) {
           req.body.params._meta = {
             ...(req.body.params._meta ?? {}),
-            auth,
+            requestModifiers: authRequestModifiers,
           };
         }
         logger.info(
-          `🔒 MCP request authenticated with x-auth-session: ${auth?.headers?.["x-auth-session"]} and x-auth-chat: ${auth?.headers?.["x-auth-chat"]}`
+          `🔒 MCP request authenticated with x-auth-session: ${authRequestModifiers?.headers?.["x-auth-session"]} and x-auth-chat: ${authRequestModifiers?.headers?.["x-auth-chat"]}`
         );
       } catch (err) {
         logger.error(`Error verifying JWT: ${token}, err: ${err}`);
