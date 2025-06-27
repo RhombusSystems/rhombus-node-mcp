@@ -35,8 +35,13 @@ const ClipsArgs = z.object({
 });
 type ClipsArgs = z.infer<typeof ClipsArgs>;
 
-async function getSavedClips(args: ClipsArgs, requestModifiers?: any) {
-  return await postApi("/event/getClipsWithProgress", args, requestModifiers);
+async function getSavedClips(args: ClipsArgs, requestModifiers?: any, sessionId?: string) {
+  return await postApi({
+    route: "/event/getClipsWithProgress",
+    body: args,
+    modifiers: requestModifiers,
+    sessionId,
+  });
 }
 
 export function createTool(server: McpServer) {
@@ -73,7 +78,7 @@ The tool returns a JSON object with the following structure and important fields
     },
     async ({ ...args }, extra) => {
       let ret;
-      ret = await getSavedClips(args, extra._meta?.requestModifiers as RequestModifiers);
+      ret = await getSavedClips(args, extra._meta?.requestModifiers as RequestModifiers, extra.sessionId);
 
       return {
         content: [{ type: "text", text: JSON.stringify(ret) }],

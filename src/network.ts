@@ -1,4 +1,5 @@
 import { logger } from "./logger.js";
+import { authStore } from "./transports/streamable-http.js";
 import { RequestModifiers } from "./util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
@@ -45,17 +46,55 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
 
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
+export async function postApi({
+  route,
+  body,
+  modifiers,
+  sessionId,
+}: {
+  route: string;
+  body: object | string;
+  modifiers?: RequestModifiers;
+  sessionId?: string;
+}) {
+  let url = BASE_URL + route;
 
-export async function postApi(route: string, body: object | string, modifiers?: RequestModifiers) {
+  // construct auth headers
+  let authHeaders: Record<string, string> = {};
+  if (!sessionId) {
+    // if no sessionId, we fall back to the api key in our environment variables
+    authHeaders = AUTH_HEADERS;
+  } else {
+    // use sessionId to get auth
+
+    const auth = authStore.get(sessionId);
+    if (!auth) {
+      logger.error(`No auth found for sessionId: ${sessionId}`);
+      throw new Error(`No auth found for sessionId: ${sessionId}`);
+    }
+
+    if ("apiKey" in auth) {
+      authHeaders = {
+        "x-auth-apikey": auth.apiKey,
+        "x-auth-scheme": "api-token",
+      };
+    } else if ("sessionId" in auth) {
+      authHeaders = {
+        "x-auth-session": auth.sessionId,
+        "x-auth-chat": auth.latestRecordUuid,
+        "x-auth-scheme": "chatbot",
+      };
+      url = appendQueryParams(url, { _rs: auth.sessionId });
+    }
+  }
+
   // merge headers
   let requestHeaders: Record<string, string> = {
     ...STATIC_HEADERS,
-    ...AUTH_HEADERS,
+    ...authHeaders,
     ...(modifiers?.headers ?? {}),
   };
-  let url = BASE_URL + route;
 
-  // attach query params if provided
   if (modifiers?.query) {
     url = appendQueryParams(url, modifiers.query);
   }

@@ -1,12 +1,28 @@
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import cors from "cors";
 import express from "express";
-import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import { IncomingMessage } from "node:http";
 import createServer from "../createServer.js";
 import { logger } from "../logger.js";
-import { RequestModifiers } from "../util.js";
 
 const JWT_SECRET = process.env.SECRET;
+
+export const authStore = new Map<
+  string,
+  | {
+      sessionId: string;
+      latestRecordUuid: string;
+      createdMs: number;
+    }
+  | {
+      apiKey: string;
+      createdMs: number;
+    }
+>();
+
+const transports = new Map<string, StreamableHTTPServerTransport>();
 
 export default function streamableHttpTransport() {
   if (!JWT_SECRET) {
@@ -16,66 +32,112 @@ export default function streamableHttpTransport() {
   const app = express();
   app.use(express.json());
 
+  app.use(
+    cors({
+      // TODO: domain
+      origin: ["*"],
+      exposedHeaders: ["mcp-session-id"],
+      allowedHeaders: ["Content-Type", "mcp-session-id"],
+    })
+  );
+
   app.post("/mcp", async (req, res) => {
     logger.info(`Received MCP request`, req.body);
 
-    // check JWT
-    const token = req.headers.authorization?.split(" ")[1];
-    let authRequestModifiers: RequestModifiers | undefined;
-    if (token) {
-      try {
-        const decoded = RequestModifiers.parse(jwt.verify(token, JWT_SECRET));
-        // if successful (did not throw)
-        authRequestModifiers = decoded;
+    // Check for existing session ID
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    let transport: StreamableHTTPServerTransport;
 
-        // inject auth into request body's meta object
-        // to be made available to MCP tools
-        if (req.body.params) {
-          req.body.params._meta = {
-            ...(req.body.params._meta ?? {}),
-            requestModifiers: authRequestModifiers,
-          };
+    if (sessionId && transports.has(sessionId)) {
+      // Reuse existing transport
+      transport = transports.get(sessionId)!;
+    } else if (!sessionId && isInitializeRequest(req.body)) {
+      // New initialization request
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: crypto.randomUUID,
+        onsessioninitialized: sessionId => {
+          // Store the transport by session ID
+          transports.set(sessionId, transport);
+
+          logger.info(`🔒 MCP request initialized with sessionId: ${sessionId}`);
+
+          // if api key is provided
+          const authScheme = req.headers["x-auth-scheme"] ?? "api-token";
+          if (authScheme === "api-token") {
+            const apiKey =
+              "x-auth-apikey" in req.headers
+                ? (req.headers["x-auth-apikey"] as string)
+                : process.env.RHOMBUS_API_KEY;
+
+            if (!apiKey) {
+              logger.error(
+                "Invalid API Key provided! Please check the headers or environment variables"
+              );
+              throw new Error(
+                "Invalid API Key provided! Please check the headers or environment variables"
+              );
+            }
+
+            logger.info(`🔒 MCP request authenticated with api key: ${apiKey}`);
+
+            authStore.set(sessionId, {
+              apiKey: apiKey,
+              createdMs: Date.now(),
+            });
+          } else if (
+            authScheme === "chatbot" &&
+            "x-auth-session" in req.headers &&
+            "x-auth-chat" in req.headers
+          ) {
+            logger.info(
+              `🔒 MCP request authenticated with x-auth-session: ${req.headers["x-auth-session"]} and x-auth-chat: ${req.headers["x-auth-chat"]}`
+            );
+            // otherwise, store the sessionId and latestRecordUuid in authStore
+            authStore.set(sessionId, {
+              sessionId: req.headers["x-auth-session"] as string,
+              latestRecordUuid: req.headers["x-auth-chat"] as string,
+              createdMs: Date.now(),
+            });
+          } else {
+            logger.error(
+              `Invalid auth scheme provided! x-auth-scheme: ${req.headers["x-auth-scheme"]}, x-auth-session: ${req.headers["x-auth-session"]}, x-auth-chat: ${req.headers["x-auth-chat"]}`
+            );
+            throw new Error("Invalid auth scheme");
+          }
+        },
+        // DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
+        // locally, make sure to set:
+        // enableDnsRebindingProtection: true,
+        // allowedHosts: ['127.0.0.1'],
+      });
+
+      // Clean up transport when closed
+      transport.onclose = () => {
+        if (transport.sessionId) {
+          transports.delete(transport.sessionId);
+          authStore.delete(transport.sessionId);
         }
-        logger.info(
-          `🔒 MCP request authenticated with x-auth-session: ${authRequestModifiers?.headers?.["x-auth-session"]} and x-auth-chat: ${authRequestModifiers?.headers?.["x-auth-chat"]}`
-        );
-      } catch (err) {
-        logger.error(`Error verifying JWT: ${token}, err: ${err}`);
-        res.status(401).json({
-          jsonrpc: "2.0",
-          error: { code: -32000, message: "Unauthorized" },
-          id: null,
-        });
-        return;
-      }
-    }
+      };
 
-    const server = await createServer();
-    try {
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-      });
-
+      const server = await createServer();
+      // Connect to the MCP server
       await server.connect(transport);
-      await transport.handleRequest(req as IncomingMessage, res, req.body);
-      res.on("close", () => {
-        logger.log("Request closed");
-        transport.close();
-        server.close();
+      logger.info(`🔗 Transport connected with sessionId: ${sessionId}`);
+    } else {
+      // Invalid request
+      res.status(400).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Bad Request: No valid session ID provided",
+        },
+        id: null,
       });
-    } catch (error) {
-      logger.error("Error handling MCP request:", error);
-      if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32603,
-            message: "Internal server error",
-          },
-          id: null,
-        });
-      }
+      return;
     }
+
+    // Handle the request
+    await transport.handleRequest(req, res, req.body);
   });
 
   app.get("/mcp", async (req, res) => {

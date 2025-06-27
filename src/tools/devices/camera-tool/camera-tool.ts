@@ -18,7 +18,8 @@ const logger = getLogger("camera-tool");
 async function getImageForCameraAtTime(
   cameraUuid: string,
   timestampMs: number,
-  requestModifiers?: RequestModifiers
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ) {
   const body = {
     cameraUuid: cameraUuid,
@@ -31,7 +32,12 @@ async function getImageForCameraAtTime(
     timestampMs: timestampMs,
   };
   logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
-  const base64Image = await postApi("/video/getExactFrameUri", body, requestModifiers).then(
+  const base64Image = await postApi({
+    route: "/video/getExactFrameUri",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(
     async res => {
       logger.debug(`Received frameUri ${res.frameUri}`);
 
@@ -78,14 +84,15 @@ async function getImageForCameraAtTime(
   };
 }
 
-export async function getCameraSettings(cameraUuid: string, requestModifiers?: RequestModifiers) {
-  const res = await postApi(
-    "/camera/getFacetedConfig",
-    {
+export async function getCameraSettings(cameraUuid: string, requestModifiers?: RequestModifiers, sessionId?: string) {
+  const res = await postApi({
+    route: "/camera/getFacetedConfig",
+    body: {
       deviceUuid: cameraUuid,
     },
-    requestModifiers
-  );
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
   if (res.error) {
     return {
@@ -104,19 +111,21 @@ export async function getCameraSettings(cameraUuid: string, requestModifiers?: R
 export async function updateCameraSettings(
   cameraUuid: string,
   update: ExternalUpdateableFacetedUserConfig,
-  requestModifiers?: RequestModifiers
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ) {
   // remove any "null" values
-  const res = await postApi(
-    "/camera/updateFacetedConfig",
-    {
+  const res = await postApi({
+    route: "/camera/updateFacetedConfig",
+    body: {
       configUpdate: {
         deviceUuid: cameraUuid,
         ...removeNullFields(update),
       },
     },
-    requestModifiers
-  );
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
   if (res.error) {
     return {
@@ -218,7 +227,8 @@ Use Cases: Adjust streaming parameters for Camera E.
           response = await getImageForCameraAtTime(
             cameraUuid,
             timestampMs,
-            extra._meta?.requestModifiers as RequestModifiers
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
           );
           if (!response.success || !response.imageData) {
             return {
@@ -238,7 +248,8 @@ Use Cases: Adjust streaming parameters for Camera E.
         case "get-settings":
           response = await getCameraSettings(
             cameraUuid,
-            extra._meta?.requestModifiers as RequestModifiers
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
           );
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
@@ -256,7 +267,8 @@ Use Cases: Adjust streaming parameters for Camera E.
           response = await updateCameraSettings(
             cameraUuid,
             configUpdate,
-            extra._meta?.requestModifiers as RequestModifiers
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
           );
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],

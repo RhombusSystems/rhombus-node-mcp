@@ -10,7 +10,8 @@ import { addConfirmationParams, requireConfirmation } from "../utils/confirmatio
 
 async function createVideoWall(
   options: CreateVideoWallOptionsT,
-  requestModifiers: RequestModifiers
+  requestModifiers: RequestModifiers,
+  sessionId?: string
 ) {
   const body = {
     videoWall: {
@@ -26,13 +27,19 @@ async function createVideoWall(
       },
     },
   };
-  const response = await postApi("/camera/createVideoWall", body, requestModifiers);
+  const response = await postApi({
+    route: "/camera/createVideoWall",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
   return response;
 }
 
 async function handleCreateVideoWallRequest(
   videoWallCreateOptions: CreateVideoWallOptionsT,
-  requestModifiers: RequestModifiers
+  requestModifiers: RequestModifiers,
+  sessionId?: string
 ): Promise<CallToolResult> {
   let text = "Unable to create video wall!";
   logger.info("🔨 Creating video wall");
@@ -48,7 +55,7 @@ async function handleCreateVideoWallRequest(
     });
   } else {
     logger.info("Creating video wall with options: ", JSON.stringify(videoWallCreateOptions));
-    text = JSON.stringify(await createVideoWall(videoWallCreateOptions, requestModifiers));
+    text = JSON.stringify(await createVideoWall(videoWallCreateOptions, requestModifiers, sessionId));
   }
   return Promise.resolve({
     content: [
@@ -78,7 +85,8 @@ export function createTool(server: McpServer) {
           case "video-wall":
             return await handleCreateVideoWallRequest(
               videoWallCreateOptions,
-              extra._meta?.requestModifiers as RequestModifiers
+              extra._meta?.requestModifiers as RequestModifiers,
+              extra.sessionId
             );
           default:
         }

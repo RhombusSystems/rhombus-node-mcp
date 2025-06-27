@@ -87,14 +87,24 @@ type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
 
 // --- Extracted PostAPI Calls into Functions ---
 
-async function getFaceEvents(args: GetFaceEventsArgs, requestModifiers?: any) {
+async function getFaceEvents(args: GetFaceEventsArgs, requestModifiers?: any, sessionId?: string) {
   // Directly pass the args object as requested by the user
-  return await postApi("/faceRecognition/faceEvent/findFaceEventsByOrg", args, requestModifiers);
+  return await postApi({
+    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+    body: args,
+    modifiers: requestModifiers,
+    sessionId,
+  });
 }
 
-async function getRegisteredFaces(args: GetRegisteredFacesArgs, requestModifiers?: any) {
+async function getRegisteredFaces(args: GetRegisteredFacesArgs, requestModifiers?: any, sessionId?: string) {
   // No specific arguments for this API call, so send an empty object.
-  return await postApi("/faceRecognition/person/findPeopleByOrg", {}, requestModifiers);
+  return await postApi({
+    route: "/faceRecognition/person/findPeopleByOrg",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
 }
 
 // --- Main Tool Definition ---
@@ -161,10 +171,10 @@ If the requestType is "get-registered-faces":
       let ret;
       if (requestType === "get-face-events") {
         // Pass the args directly, as requested
-        ret = await getFaceEvents(args as unknown as GetFaceEventsArgs, extra._meta?.requestModifiers as RequestModifiers);
+        ret = await getFaceEvents(args as unknown as GetFaceEventsArgs, extra._meta?.requestModifiers as RequestModifiers, extra.sessionId);
       } else if (requestType === "get-registered-faces") {
         // Pass the args (will effectively be an empty object for this call)
-        ret = await getRegisteredFaces(args as unknown as GetRegisteredFacesArgs, extra._meta?.requestModifiers as RequestModifiers);
+        ret = await getRegisteredFaces(args as unknown as GetRegisteredFacesArgs, extra._meta?.requestModifiers as RequestModifiers, extra.sessionId);
       }
 
       return {

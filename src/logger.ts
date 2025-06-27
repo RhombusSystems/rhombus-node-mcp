@@ -5,7 +5,7 @@ log4js.configure({
   appenders: {
     mcp: {
       type: "file",
-      filename: path.resolve(process.env.LOG_FOLDER ?? process.cwd(), "rhombus-node-mcp.log"),
+      filename: path.resolve(process.env.LOG_FOLDER ?? process.cwd(), "./logs/rhombus-node-mcp.log"),
       maxLogSize: "1M",
       layout: {
         type: "basic",

@@ -3,8 +3,13 @@ import { z } from "zod";
 import { postApi } from "../network.js";
 import { RequestModifiers } from "../util.js";
 
-async function getLocations(requestModifiers?: any) {
-  return await postApi("/location/getLocationsV2", {}, requestModifiers);
+async function getLocations(requestModifiers?: any, sessionId?: string) {
+  return await postApi({
+    route: "/location/getLocationsV2",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
 }
 
 export function createTool(server: McpServer) {
@@ -25,7 +30,7 @@ export function createTool(server: McpServer) {
       let ret;
       switch (action) {
         case "get":
-          ret = await getLocations(extra._meta?.requestModifiers as RequestModifiers);
+          ret = await getLocations(extra._meta?.requestModifiers as RequestModifiers, extra.sessionId);
           break;
         case "update":
           ret = { error: true, status: "not implemented" };

@@ -41,8 +41,13 @@ const PolicyAlertsArgs = z.object({
 });
 type PolicyAlertsArgs = z.infer<typeof PolicyAlertsArgs>;
 
-async function getPolicyAlerts(args: PolicyAlertsArgs, requestModifiers?: any) {
-  return await postApi("/event/getPolicyAlertsV2", args, requestModifiers);
+async function getPolicyAlerts(args: PolicyAlertsArgs, requestModifiers?: any, sessionId?: string) {
+  return await postApi({
+    route: "/event/getPolicyAlertsV2",
+    body: args,
+    modifiers: requestModifiers,
+    sessionId,
+  });
 }
 
 export function createTool(server: McpServer) {
@@ -69,7 +74,7 @@ The output is provided in JSON format.`,
     },
     async ({ ...args }, extra) => {
       let ret;
-      ret = await getPolicyAlerts(args, extra._meta?.requestModifiers as RequestModifiers);
+      ret = await getPolicyAlerts(args, extra._meta?.requestModifiers as RequestModifiers, extra.sessionId);
 
       return {
         content: [{ type: "text", text: JSON.stringify(ret) }],

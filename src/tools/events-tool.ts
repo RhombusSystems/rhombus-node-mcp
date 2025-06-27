@@ -4,7 +4,7 @@ import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { postApi } from "../network.js";
 import { RequestModifiers } from "../util.js";
 
-async function getFaceEvents(_locationUuid: string | null | undefined, requestModifiers?: any) {
+async function getFaceEvents(_locationUuid: string | null | undefined, requestModifiers?: any, sessionId?: string) {
   const nowMs = Date.now();
   const rangeStartMs = nowMs - THREE_HOURS_MS;
   const rangeEndMs = nowMs - FIVE_SECONDS_MS;
@@ -25,11 +25,12 @@ async function getFaceEvents(_locationUuid: string | null | undefined, requestMo
       },
     },
   };
-  const response = await postApi(
-    "/faceRecognition/faceEvent/findFaceEventsByOrg",
+  const response = await postApi({
+    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
     body,
-    requestModifiers
-  ).then(response => {
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => {
     return {
       faceEvents: (response.faceEvents || []).map((event: any) => ({
         ...event,
@@ -40,16 +41,17 @@ async function getFaceEvents(_locationUuid: string | null | undefined, requestMo
   return response;
 }
 
-async function getAccessControlEvents(doorUuid: string, requestModifiers?: any) {
+async function getAccessControlEvents(doorUuid: string, requestModifiers?: any, sessionId?: string) {
   const body = {
     limit: 50,
     accessControlledDoorUuid: doorUuid,
   };
-  const response = await postApi(
-    "/component/findComponentEventsByAccessControlledDoor",
+  const response = await postApi({
+    route: "/component/findComponentEventsByAccessControlledDoor",
     body,
-    requestModifiers
-  ).then(response => ({
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => ({
     componentEvents: (response.componentEvents || []).map((event: any) => ({
       ...event,
       timestamp: new Date(event.timestampMs).toString(),
@@ -71,7 +73,8 @@ export function createTool(server: McpServer) {
       if (eventType === "faces" || eventType === "people") {
         const response = await getFaceEvents(
           locationUuid,
-          extra._meta?.requestModifiers as RequestModifiers
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
         );
         return {
           content: [
@@ -99,7 +102,8 @@ export function createTool(server: McpServer) {
         } else {
           const events = await getAccessControlEvents(
             accessControlledDoorUuid,
-            extra._meta?.requestModifiers as RequestModifiers
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
           );
           return {
             content: [
