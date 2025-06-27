@@ -41,6 +41,10 @@ export default function streamableHttpTransport() {
     })
   );
 
+  /**
+   * STATEFUL ENDPOINT
+   */
+
   app.post("/mcp", async (req, res) => {
     logger.info(`Received MCP request`, req.body);
 
@@ -155,6 +159,56 @@ export default function streamableHttpTransport() {
   });
 
   app.delete("/mcp", async (req, res) => {
+    logger.warn("Received Not Allowed DELETE MCP request");
+    res.writeHead(405).end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Method not allowed.",
+        },
+        id: null,
+      })
+    );
+  });
+
+  /**
+   * STATELESS ENDPOINT
+   */
+
+  app.post("/mcp-stateless", async (req, res) => {
+    logger.info(`Received stateless MCP request`, req.body);
+
+    let transport: StreamableHTTPServerTransport;
+
+    transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
+
+    const server = await createServer();
+    // Connect to the MCP server
+    await server.connect(transport);
+    logger.info(`🔗 Stateless Transport connected`);
+
+    // Handle the request
+    await transport.handleRequest(req, res, req.body);
+  });
+
+  app.get("/mcp-stateless", async (req, res) => {
+    logger.warn("Received Not Allowed GET MCP request");
+    res.writeHead(405).end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Method not allowed.",
+        },
+        id: null,
+      })
+    );
+  });
+
+  app.delete("/mcp-stateless", async (req, res) => {
     logger.warn("Received Not Allowed DELETE MCP request");
     res.writeHead(405).end(
       JSON.stringify({
