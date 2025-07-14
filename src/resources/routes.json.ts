@@ -18,7 +18,7 @@ The paths are categorized into "common_paths", "parameterized_paths", and "exter
 
 It is in the form of a JSON file.
 
-Use these paths to help the user navigate to the correct that they may want to go to. However, try not directly reference the path itself, rather describe it, and make sure to show the user a button to help navigate with.
+Use these paths to help the user navigate to the correct page that they may want to go to. However, try not directly reference the path itself, rather describe it, and make sure to show the user a button to help navigate with.
 When providing a path, make sure to be very exact. You're only allowed to substitute in path segments that begin with : or are surrounded by brackets []. For example, /locations/:locationUuid, you need to get a location's UUID and replace :locationUuid with the actual UUID`,
     },
     async uri => {
