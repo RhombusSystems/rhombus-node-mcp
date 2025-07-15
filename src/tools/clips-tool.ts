@@ -1,53 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { postApi } from "../network.js";
 import { RequestModifiers } from "../util.js";
+import { TOOL_ARGS, ToolArgs } from "../types/clips-tool-types.js";
+import { getSavedClips } from "../api/clips-tool-api.js";
 
-const ClipsArgs = z.object({
-  deviceUuidFilters: z
-    .array(z.string())
-    .optional()
-    .describe(
-      "A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned."
-    ),
-  locationUuidFilters: z
-    .array(z.string())
-    .optional()
-    .describe(
-      "A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned."
-    ),
+const TOOL_NAME = "clips-tool";
 
-  searchFilter: z
-    .string()
-    .optional()
-    .describe("A simple string to search for within the names of the clips."),
-
-  timestampMsAfter: z
-    .number()
-    .describe(
-      "The start of the time range (in milliseconds since epoch) for which to retrieve clips. Only clips that occurred AFTER this timestamp will be returned."
-    ),
-  timestampMsBefore: z
-    .number()
-    .describe(
-      "The end of the time range (in milliseconds since epoch) for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned."
-    ),
-});
-type ClipsArgs = z.infer<typeof ClipsArgs>;
-
-async function getSavedClips(args: ClipsArgs, requestModifiers?: any, sessionId?: string) {
-  return await postApi({
-    route: "/event/getClipsWithProgress",
-    body: args,
-    modifiers: requestModifiers,
-    sessionId,
-  });
-}
-
-export function createTool(server: McpServer) {
-  server.tool(
-    "clips-tool",
-    `
+const TOOL_DESCRIPTION = `
 Retrieves saved video clips from the Rhombus system. Saved clips can be viewed for up to 2 years and are typically found in the "Clips" tab of the "Saved Video" section of the Rhombus Console.
 
 This tool allows you to filter clips by:
@@ -72,17 +30,21 @@ The tool returns a JSON object with the following structure and important fields
     * **status (string):** The current processing status of the clip, with possible values such as INITIATING, UPLOADING, RENDERING, FAILED, COMPLETE, OFFLINE, or UNKNOWN.
     * **userUuid (string | null):** The UUID of the user associated with the clip, if applicable.
     * **sourceAlertUuid (string | null):** The UUID of the alert that triggered the creation of this clip, if any.
-`,
-    {
-      ...ClipsArgs.shape,
-    },
-    async ({ ...args }, extra) => {
-      let ret;
-      ret = await getSavedClips(args, extra._meta?.requestModifiers as RequestModifiers, extra.sessionId);
+`;
 
-      return {
-        content: [{ type: "text", text: JSON.stringify(ret) }],
-      };
-    }
+const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
+  let ret;
+  ret = await getSavedClips(
+    args,
+    extra._meta?.requestModifiers as RequestModifiers,
+    extra.sessionId
   );
+
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(ret) }],
+  };
+};
+
+export function createTool(server: McpServer) {
+  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
 }
