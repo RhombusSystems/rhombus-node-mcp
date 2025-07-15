@@ -1,129 +1,105 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
-import { postApi } from "../network.js";
 import { RequestModifiers } from "../util.js";
+import { TOOL_ARGS, ToolArgs } from "../types/events-tools-types.js";
+import { getAccessControlEvents, getHumanMotionEvents } from "../api/events-tool-api.js";
 
-async function getFaceEvents(_locationUuid: string | null | undefined, requestModifiers?: any, sessionId?: string) {
-  const nowMs = Date.now();
-  const rangeStartMs = nowMs - THREE_HOURS_MS;
-  const rangeEndMs = nowMs - FIVE_SECONDS_MS;
-  const body = {
-    pageRequest: {
-      lastEvaluatedKey: undefined,
-      maxPageSize: 75,
-    },
-    searchFilter: {
-      deviceUuids: [],
-      faceNames: [],
-      labels: [],
-      locationUuids: [],
-      personUuids: [],
-      timestampFilter: {
-        rangeStart: rangeStartMs,
-        rangeEnd: rangeEndMs,
-      },
-    },
-  };
-  const response = await postApi({
-    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
-    body,
-    modifiers: requestModifiers,
-    sessionId,
-  }).then(response => {
-    return {
-      faceEvents: (response.faceEvents || []).map((event: any) => ({
-        ...event,
-        eventTimestamp: new Date(event.eventTimestamp).toString(),
-      })),
-    };
-  });
-  return response;
-}
+const TOOL_NAME = "events_tool";
 
-async function getAccessControlEvents(doorUuid: string, requestModifiers?: any, sessionId?: string) {
-  const body = {
-    limit: 50,
-    accessControlledDoorUuid: doorUuid,
-  };
-  const response = await postApi({
-    route: "/component/findComponentEventsByAccessControlledDoor",
-    body,
-    modifiers: requestModifiers,
-    sessionId,
-  }).then(response => ({
-    componentEvents: (response.componentEvents || []).map((event: any) => ({
-      ...event,
-      timestamp: new Date(event.timestampMs).toString(),
-    })),
-  }));
-  return response;
-}
+const TOOL_DESCRIPTION = "A tool for use in reporting on events.";
 
-export function createTool(server: McpServer) {
-  server.tool(
-    "events-tool",
-    "event data for certain types of information like faces, license plates, and access-control events",
-    {
-      eventType: z.enum(["faces", "people", "access-control"]),
-      locationUuid: z.optional(z.string()),
-      accessControlledDoorUuid: z.optional(z.string()),
-    },
-    async ({ eventType, locationUuid, accessControlledDoorUuid }, extra) => {
-      if (eventType === "faces" || eventType === "people") {
-        const response = await getFaceEvents(
-          locationUuid,
-          extra._meta?.requestModifiers as RequestModifiers,
-          extra.sessionId
-        );
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(response),
-            },
-          ],
-        };
-      }
-
-      if (eventType === "access-control") {
-        if (!accessControlledDoorUuid) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  needUserInput: true,
-                  commandForUser: "Which door are you asking about?",
-                }),
-              },
-            ],
-          };
-        } else {
-          const events = await getAccessControlEvents(
-            accessControlledDoorUuid,
-            extra._meta?.requestModifiers as RequestModifiers,
-            extra.sessionId
-          );
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(events),
-              },
-            ],
-          };
-        }
-      }
-
+const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
+  const { eventType, accessControlledDoorUuid, cameraUuids, startTime, duration } = args;
+  if (eventType === "human" || eventType === "people") {
+    if (!cameraUuids) {
       return {
         content: [
           {
-            type: "text",
-            text: JSON.stringify({}),
+            type: "text" as const,
+            text: JSON.stringify({
+              needUserInput: true,
+              commandForUser: "Please specify a camera, or a location.",
+            }),
           },
         ],
       };
     }
-  );
+    if (startTime && duration) {
+      const responses = await Promise.all(
+        cameraUuids.map(async cameraUuid => {
+          return getHumanMotionEvents(
+            cameraUuid,
+            duration / 1000,
+            startTime / 1000,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
+          );
+        })
+      );
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(responses),
+          },
+        ],
+      };
+    } else {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              needUserInput: true,
+              commandForUser:
+                "Please define a time frame and camera for which to search human events.",
+            }),
+          },
+        ],
+      };
+    }
+  }
+
+  if (eventType === "access-control") {
+    if (!accessControlledDoorUuid) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              needUserInput: true,
+              commandForUser: "Which door are you asking about?",
+            }),
+          },
+        ],
+      };
+    } else {
+      const events = await getAccessControlEvents(
+        accessControlledDoorUuid,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(events),
+          },
+        ],
+      };
+    }
+  }
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({}),
+      },
+    ],
+  };
+};
+
+export function createTool(server: McpServer) {
+  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
 }

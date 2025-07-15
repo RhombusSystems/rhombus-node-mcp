@@ -1,30 +1,32 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { postApi } from "../../network.js";
-import DeviceType from "../../types/deviceType.js";
-import { createToolTextContent, RequestModifiers } from "../../util.js";
+import { postApi } from "../network.js";
+import DeviceType from "../types/deviceType.js";
+import { createToolTextContent, RequestModifiers } from "../util.js";
 
 async function getCameraList(requestModifiers?: any, sessionId?: string) {
   return {
-    cameras: (await postApi({
-      route: "/camera/getMinimalCameraStateList",
-      body: {},
-      modifiers: requestModifiers,
-      sessionId,
-    })).cameraStates.filter(
-      (camera: { locationUuid?: string }) => !!camera.locationUuid
-    ),
+    cameras: (
+      await postApi({
+        route: "/camera/getMinimalCameraStateList",
+        body: {},
+        modifiers: requestModifiers,
+        sessionId,
+      })
+    ).cameraStates.filter((camera: { locationUuid?: string }) => !!camera.locationUuid),
   };
 }
 
 async function getDoorbellCameras(requestModifiers?: any, sessionId?: string) {
   return {
-    doorbellCameras: (await postApi({
-      route: "/doorbellcamera/getMinimalStateList",
-      body: {},
-      modifiers: requestModifiers,
-      sessionId,
-    })).minimalStates.filter(
+    doorbellCameras: (
+      await postApi({
+        route: "/doorbellcamera/getMinimalStateList",
+        body: {},
+        modifiers: requestModifiers,
+        sessionId,
+      })
+    ).minimalStates.filter(
       (doorbellCamera: { locationUuid?: string }) => !!doorbellCamera.locationUuid
     ),
   };
@@ -194,11 +196,14 @@ export function createTool(server: McpServer) {
       }
       const responses = Promise.all<object>(promises);
       const ret = {
-        ...(await responses).reduce((prev, curr) => ({
-          ...prev,
-          ...curr
-        }), {})
-      } 
+        ...(await responses).reduce(
+          (prev, curr) => ({
+            ...prev,
+            ...curr,
+          }),
+          {}
+        ),
+      };
 
       return createToolTextContent(JSON.stringify(ret));
     }

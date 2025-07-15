@@ -1,0 +1,98 @@
+import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
+import { postApi } from "../network.js";
+
+export async function getFaceEvents(
+  _locationUuid: string | null | undefined,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const nowMs = Date.now();
+  const rangeStartMs = nowMs - THREE_HOURS_MS;
+  const rangeEndMs = nowMs - FIVE_SECONDS_MS;
+  const body = {
+    pageRequest: {
+      lastEvaluatedKey: undefined,
+      maxPageSize: 75,
+    },
+    searchFilter: {
+      deviceUuids: [],
+      faceNames: [],
+      labels: [],
+      locationUuids: [],
+      personUuids: [],
+      timestampFilter: {
+        rangeStart: rangeStartMs,
+        rangeEnd: rangeEndMs,
+      },
+    },
+  };
+  const response = await postApi({
+    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => {
+    return {
+      faceEvents: (response.faceEvents || []).map((event: any) => ({
+        ...event,
+        eventTimestamp: new Date(event.eventTimestamp).toString(),
+      })),
+    };
+  });
+  return response;
+}
+
+export async function getAccessControlEvents(
+  doorUuid: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    limit: 50,
+    accessControlledDoorUuid: doorUuid,
+  };
+  const response = await postApi({
+    route: "/component/findComponentEventsByAccessControlledDoor",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => ({
+    componentEvents: (response.componentEvents || []).map((event: any) => ({
+      ...event,
+      timestamp: new Date(event.timestampMs).toString(),
+    })),
+  }));
+  return response;
+}
+
+export async function getHumanMotionEvents(
+  cameraUuid: string,
+  duration: number,
+  startTime: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    cameraUuid,
+    duration,
+    startTime,
+  };
+  const response = await postApi({
+    route: "/camera/getFootageSeekpointsV2",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => {
+    const seekPoints = response.footageSeekPoints || [];
+
+    const uniqueHumanEvents = seekPoints.reduceRight((acc: any[], point: any) => {
+      if (point.a === "MOTION_HUMAN" && !acc.some((existing: any) => existing.id === point.id)) {
+        acc.unshift({ timestamp: point.ts, id: point.id });
+      }
+      return acc;
+    }, []);
+
+    return { cameraUuid, uniqueHumanEvents };
+  });
+  return response;
+}
