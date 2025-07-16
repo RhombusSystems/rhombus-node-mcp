@@ -44,12 +44,17 @@ export async function getFaceEvents(
 
 export async function getAccessControlEvents(
   doorUuid: string,
+  createdAfterMs: number | undefined,
+  createdBeforeMs: number | undefined,
   requestModifiers?: any,
   sessionId?: string
 ) {
   const body = {
     limit: 50,
     accessControlledDoorUuid: doorUuid,
+    ...(createdAfterMs ? { createdAfterMs } : {}),
+    ...(createdBeforeMs ? { createdBeforeMs } : {}),
+    typeFilter: ["CredentialReceivedEvent"],
   };
   const response = await postApi({
     route: "/component/findComponentEventsByAccessControlledDoor",
@@ -58,7 +63,14 @@ export async function getAccessControlEvents(
     sessionId,
   }).then(response => ({
     componentEvents: (response.componentEvents || []).map((event: any) => ({
-      ...event,
+      authenticationResult: event.authenticationResult,
+      authorizationResult: event.authorizationResult,
+      doorUuid: event.componentCompositeUuid,
+      locationUuid: event.locationUuid,
+      credentials: event.credentials,
+      originator: event.originator,
+      credentialUuid: event.credentialUuid,
+      credSource: event.credSource,
       timestamp: new Date(event.timestampMs).toString(),
     })),
   }));

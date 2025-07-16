@@ -8,6 +8,16 @@ export const TOOL_ARGS = {
   startTime: z
     .optional(z.number())
     .describe("A timestamp in milliseconds in the past to begin the event search from"),
+  createdAfterMs: z
+    .optional(z.number())
+    .describe(
+      "A timestamp in milliseconds representing the start or earliest time of access controll events."
+    ),
+  createdBeforeMs: z
+    .optional(z.number())
+    .describe(
+      "A timestamp in milliseconds representing the end or latest time of access controll events."
+    ),
   duration: z
     .optional(z.number())
     .describe("A time stamp in milliseconds for the duration of the search window"),
