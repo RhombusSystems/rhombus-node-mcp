@@ -1,29 +1,17 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
 import { TOOL_ARGS, ToolArgs } from "../types/events-tools-types.js";
-import { getAccessControlEvents, getHumanMotionEvents } from "../api/events-tool-api.js";
+import { getAccessControlEvents } from "../api/events-tool-api.js";
 
 const TOOL_NAME = "events_tool";
 
 // "faces" | "people" | "human" | "access-control"
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 4 modes of operation, determined by the "eventType" parameter:
+This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 1 mode of operation, determined by the "eventType" parameter: access-control
 
-This tool should should be used any time someone is asking for reports, or simply for information about happenings in their org like how many people showed up, or how many people badge in.  
+This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc.
 
-If the eventType is "human" or "people":
-
-  This tool retrieves detailed human movement events such as detections and recognitions. It provides an array containing an entry for each unique human sighting.  There is an "id" and "timestamp" for each entry.
-
-  The tool returns a JSON object with the following structure and important fields:
-  * **cameraUuid the cameraUuid for which the human movement events were seen
-  * **uniqueHumanEvents (array of objects | null):** An array where each object represents a single human sighting. Each object contains the following important fields:
-      * **id (string):** The unique identifier for this specific face event.
-      * **timestamp (int64):** The timestamp (in milliseconds since epoch) when the face event occurred.
-
-If the eventType is "access-control":
-
-  This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
+This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
 
   This tool takes 3 arguments:
   * **accessControlledDoorUuid (string):** The unique identifier for the access controlled door.
@@ -46,68 +34,12 @@ If the eventType is "access-control":
       * **credSource (string):** The source of the credential.
       * **timestamp (int64):** The timestamp (in milliseconds since epoch) when the event occurred.
 
+  
+
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const {
-    eventType,
-    accessControlledDoorUuid,
-    cameraUuids,
-    startTime,
-    duration,
-    createdAfterMs,
-    createdBeforeMs,
-  } = args;
-  if (eventType === "human" || eventType === "people") {
-    if (!cameraUuids) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              needUserInput: true,
-              commandForUser: "Please specify a camera, or a location.",
-            }),
-          },
-        ],
-      };
-    }
-    if (startTime && duration) {
-      const responses = await Promise.all(
-        cameraUuids.map(async cameraUuid => {
-          return getHumanMotionEvents(
-            cameraUuid,
-            duration / 1000,
-            startTime / 1000,
-            extra._meta?.requestModifiers as RequestModifiers,
-            extra.sessionId
-          );
-        })
-      );
-
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(responses),
-          },
-        ],
-      };
-    } else {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              needUserInput: true,
-              commandForUser:
-                "Please define a time frame and camera for which to search human events.",
-            }),
-          },
-        ],
-      };
-    }
-  }
+  const { eventType, accessControlledDoorUuid, createdAfterMs, createdBeforeMs } = args;
 
   if (eventType === "access-control") {
     if (!accessControlledDoorUuid) {
