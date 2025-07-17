@@ -9,6 +9,17 @@ export function nullToUndefined(value: number | null): number | undefined {
 function normalizeTimeDescription(description: string): string {
   const normalized = description.toLowerCase().trim();
 
+  // Handle plain day references as start of day
+  if (normalized === "today") {
+    return "today at 00:00";
+  }
+  if (normalized === "yesterday") {
+    return "yesterday at 00:00";
+  }
+  if (normalized === "tomorrow") {
+    return "tomorrow at 00:00";
+  }
+
   if (normalized.includes("start of today") || normalized.includes("beginning of today")) {
     return "today at 00:00";
   }
