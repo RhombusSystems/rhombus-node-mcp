@@ -2,15 +2,15 @@ import { z } from "zod";
 
 export const TOOL_ARGS = {
   eventType: z.enum(["access-control"]),
-  createdAfterMs: z
+  startTime: z
     .optional(z.number())
     .describe(
-      "A timestamp in milliseconds representing the start or earliest time of access controll events."
+      "A timestamp in milliseconds representing when to start the search for access controll events."
     ),
-  createdBeforeMs: z
+  endTime: z
     .optional(z.number())
     .describe(
-      "A timestamp in milliseconds representing the end or latest time of access controll events."
+      "A timestamp in milliseconds representing when to end the search for access controll events."
     ),
   accessControlledDoorUuid: z.optional(z.string()),
 };

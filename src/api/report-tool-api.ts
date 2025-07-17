@@ -59,6 +59,20 @@ export async function getSummaryCountReport(
         delete processedDataPoint.dateUtc;
       }
 
+      if (processedDataPoint.maxEventCountMap) {
+        Object.keys(processedDataPoint.maxEventCountMap).forEach(key => {
+          const uuid = processedDataPoint.maxEventCountMap[key].uuid;
+          if (scope === "LOCATION") {
+            processedDataPoint.maxEventCountMap[key].locationUuid = uuid;
+          } else if (scope === "DEVICE") {
+            processedDataPoint.maxEventCountMap[key].cameraUuid = uuid;
+          } else if (scope === "ORG") {
+            processedDataPoint.maxEventCountMap[key].orgUuid = uuid;
+          }
+          delete processedDataPoint.maxEventCountMap[key].uuid;
+        });
+      }
+
       return processedDataPoint;
     });
   }

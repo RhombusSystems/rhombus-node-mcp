@@ -15,8 +15,8 @@ This tool retrieves a list of events captured by the access control door system 
 
   This tool takes 3 arguments:
   * **accessControlledDoorUuid (string):** The unique identifier for the access controlled door.
-  * **createdAfterMs (int64):** The timestamp (in milliseconds since epoch) representing the start or earliest time of access controll events.
-  * **createdBeforeMs (int64):** The timestamp (in milliseconds since epoch) representing the end or latest time of access controll events.
+  * **startTime (int64):** The timestamp (in milliseconds since epoch) representing the start or earliest time of access controll events.
+  * **endTime (int64):** The timestamp (in milliseconds since epoch) representing the end or latest time of access controll events.
 
   The tool returns a JSON object with the following structure and important fields:
   * **componentEvents (array of objects | null):** An array where each object represents a single access control event. Each event object contains the following important fields:
@@ -39,7 +39,7 @@ This tool retrieves a list of events captured by the access control door system 
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { eventType, accessControlledDoorUuid, createdAfterMs, createdBeforeMs } = args;
+  const { eventType, accessControlledDoorUuid, startTime, endTime } = args;
 
   if (eventType === "access-control") {
     if (!accessControlledDoorUuid) {
@@ -57,8 +57,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     } else {
       const events = await getAccessControlEvents(
         accessControlledDoorUuid,
-        createdAfterMs,
-        createdBeforeMs,
+        startTime,
+        endTime,
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );

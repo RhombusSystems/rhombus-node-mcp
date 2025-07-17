@@ -18,7 +18,9 @@ It should only be used if someone is specifically asking about faces.  If they a
 
 If the requestType is "get-face-events":
 
-  This tool retrieves detailed face events recorded by your Rhombus cameras, such as detections and recognitions. It provides comprehensive information about each event, including details about the detected face, the person matched (if any), and the event context.
+  Use this tool to answer questions about face sightings, including questions like "who was in the office" or "who was seen today".  Can be used for reporting, to generate a report on who was seen by the camera system.
+
+  This tool retrieves detailed face events such as detections and recognitions. It provides comprehensive information about each event, including details about the detected face, the person matched (if any), and the event context.
 
   You can filter face events using parameters like 'deviceUuids', 'faceNameContains', 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
 

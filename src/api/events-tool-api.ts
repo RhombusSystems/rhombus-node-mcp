@@ -44,16 +44,15 @@ export async function getFaceEvents(
 
 export async function getAccessControlEvents(
   doorUuid: string,
-  createdAfterMs: number | undefined,
-  createdBeforeMs: number | undefined,
+  startTime: number | undefined,
+  endTime: number | undefined,
   requestModifiers?: any,
   sessionId?: string
 ) {
   const body = {
-    limit: 50,
     accessControlledDoorUuid: doorUuid,
-    ...(createdAfterMs ? { createdAfterMs } : {}),
-    ...(createdBeforeMs ? { createdBeforeMs } : {}),
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
     typeFilter: ["CredentialReceivedEvent"],
   };
   const response = await postApi({

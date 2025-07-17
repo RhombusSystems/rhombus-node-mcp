@@ -23,6 +23,10 @@ that can be passed into "requestType":
 
 What follows is a description of the behavior of this tool given the requestType "image"
 
+This tool should be used any time someone wants to specify a subset of cameras to use for a task, based on some features that the camera sees.  For example, interior cameras, cameras facing the street, cameras with a view of X, Y, Z, etc.
+
+For instance if someone says "I want X using cameras with Y" then this tool should get a snapshot of the image to answer the question of if the camera satisfies the Y predicate.
+
 This tool captures and returns a real-time snapshot from a designated security camera.
 The image reflects the current scene in the camera's field of view and serves as a contextual
 input source for downstream tasks such as object recognition, anomaly detection, incident investigation,
