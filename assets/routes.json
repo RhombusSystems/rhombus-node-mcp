@@ -616,6 +616,10 @@
         "description": null
       },
       {
+        "path": "/alerts/?modal=alert/:uuid",
+        "description": "Aliases: Policy alerts. This is a link to a specific policy alert where a user can view the details of the alert including video."
+      },
+      {
         "path": "/devices/cameras/:uuid",
         "description": "This path is used for aiming Rhombus cameras, providing details on best practices and specific camera models like R100/R120, R2/R200/R2-180, R360, R400, R500, and R600. It also contains camera and image settings. Aliases: cameras. This is an individual camera page."
       },

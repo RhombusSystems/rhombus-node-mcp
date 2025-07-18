@@ -81,7 +81,7 @@ export async function getFaceEvents(
         currentArgs = {
           ...currentArgs,
           pageRequest: {
-            ...currentArgs.pageRequest,
+            maxPageSize: currentArgs.pageRequest?.maxPageSize || 100,
             lastEvaluatedKey: response.lastEvaluatedKey,
           },
         };

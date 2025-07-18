@@ -4,7 +4,7 @@ import { TOOL_ARGS, type ToolArgs } from "../types/time-tool-types.js";
 
 const TOOL_NAME = "time-tool";
 const TOOL_DESCRIPTION =
-  "Tool for converting a natural language time description into a timestamp in milliseconds.";
+  "This tool is capable of returning the time from a natural language query.  If the user asks about the 'current time' use this tool.";
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { time_description, timezone } = args;

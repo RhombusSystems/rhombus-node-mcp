@@ -17,7 +17,11 @@ export const GetFaceEventsArgs = z.object({
         .string()
         .optional()
         .describe("The last evaluated key from a previous pagination request"),
-      maxPageSize: z.number().optional().describe("Maximum number of results to return per page"),
+      maxPageSize: z
+        .number()
+        .optional()
+        .describe("Maximum number of results to return per page")
+        .default(100),
     })
     .optional()
     .describe("Pagination parameters for the request"),
@@ -94,30 +98,7 @@ export type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
 
 export const TOOL_ARGS = {
   requestType: z.nativeEnum(RequestType),
-  pageRequest: z
-    .object({
-      lastEvaluatedKey: z.string().optional(),
-      maxPageSize: z.number().optional(),
-    })
-    .optional(),
-  searchFilter: z
-    .object({
-      deviceUuids: z.array(z.string()).optional(),
-      faceNameContains: z.string().optional(),
-      faceNames: z.array(z.string()).optional(),
-      hasEmbedding: z.boolean().optional(),
-      hasName: z.boolean().optional(),
-      labels: z.array(z.string()).optional(),
-      locationUuids: z.array(z.string()).optional(),
-      personUuids: z.array(z.string()).optional(),
-      timestampFilter: z
-        .object({
-          rangeEnd: z.string().optional(),
-          rangeStart: z.string().optional(),
-        })
-        .optional(),
-    })
-    .optional(),
+  faceEventFilter: GetFaceEventsArgs,
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);

@@ -9,6 +9,10 @@ export function nullToUndefined(value: number | null): number | undefined {
 function normalizeTimeDescription(description: string): string {
   const normalized = description.toLowerCase().trim();
 
+  if (normalized.includes("current time")) {
+    return "now";
+  }
+
   // Handle plain day references as start of day
   if (normalized === "today") {
     return "today at 00:00";
@@ -18,6 +22,20 @@ function normalizeTimeDescription(description: string): string {
   }
   if (normalized === "tomorrow") {
     return "tomorrow at 00:00";
+  }
+
+  // Handle "this" time periods - always refer to today
+  if (normalized === "this morning") {
+    return "today at 06:00";
+  }
+  if (normalized === "this afternoon") {
+    return "today at 12:00";
+  }
+  if (normalized === "this evening") {
+    return "today at 18:00";
+  }
+  if (normalized === "this night" || normalized === "tonight") {
+    return "today at 20:00";
   }
 
   if (normalized.includes("start of today") || normalized.includes("beginning of today")) {
@@ -47,13 +65,15 @@ export function parseTimeDescription(time_description: string, timezone?: string
   logger.info("EXTRA", extra);
 
   const now = DateTime.now()
-    .setZone(timezone || undefined)
+    .setZone(timezone || "America/Los_Angeles")
     .toJSDate();
 
   const normalizedDescription = normalizeTimeDescription(time_description);
-  logger.info(`TIME TOOL: Normalized "${time_description}" to "${normalizedDescription}"`);
+  logger.info(
+    `TIME TOOL ${timezone}: Normalized "${time_description}" to "${normalizedDescription}"`
+  );
 
-  const parsed = parse(normalizedDescription, now, { forwardDate: true });
+  const parsed = parse(normalizedDescription);
 
   if (!parsed || parsed.length === 0) {
     throw new Error(`Could not parse time description: ${time_description}`);
