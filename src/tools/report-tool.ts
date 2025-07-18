@@ -24,9 +24,9 @@ The tool takes the following parameters:
   - "DEVICE" - Device-level scope
   - "ORG" - Organization-wide scope
 
-* **type (string):** The type of data to include in the summary count report. Must be one of:
+* **types (string):** The types of data to include in the summary count report. Any of the following:
   - "CROWD" - Crowd detection events
-  - "PEOPLE" - People detection events
+  - "PEOPLE" - People detection events, not unique person counts
   - "FACES" - Face detection events
   - "MOTION" - Motion detection events
   - "BANDWIDTH" - Bandwidth usage data
@@ -36,22 +36,27 @@ The tool takes the following parameters:
   - "AM_VERIFICATION" - Access management verification events
   - "DWELL" - Dwell time analysis
 
+* **uuid (string):** The uuid of the device, or location, or organization depending on what scope is.  If scope is DEVICE, this is the device uuid.  If scope is LOCATION, this is the location uuid.  If scope is ORG, this is the organization uuid.
+
 * **startTimeMs (number):** A timestamp in milliseconds representing the start time of the report period.
 
 * **endTimeMs (number):** A timestamp in milliseconds representing the end time of the report period.
 
 The tool returns a JSON object containing the aggregated count data for the specified parameters and time range.
 
-This tool should be used when users need summary reports, analytics, or aggregated counts of system events and activities.
+This tool should be used when users need high levelsummary reports, analytics, or aggregated counts of system events and activities.
+
+If types containers PEOPLE please understand that this is not a unique person count, it is a count of people detection events.  It's useful for getting a high level count of people, but not for getting a unique person count.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { interval, scope, type, startTimeMs, endTimeMs } = args;
+  const { interval, scope, types, startTimeMs, endTimeMs, uuid } = args;
 
   const report = await getSummaryCountReport(
     interval,
     scope,
-    type,
+    types,
+    uuid,
     endTimeMs,
     startTimeMs,
     extra._meta?.requestModifiers as RequestModifiers,

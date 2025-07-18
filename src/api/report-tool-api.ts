@@ -2,9 +2,9 @@ import { logger } from "../logger.js";
 import { postApi } from "../network.js";
 
 export async function getSummaryCountReport(
-  interval: "MINUTELY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
+  interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
   scope: "REGION" | "LOCATION" | "DEVICE" | "ORG",
-  type:
+  types: (
     | "CROWD"
     | "PEOPLE"
     | "FACES"
@@ -14,7 +14,9 @@ export async function getSummaryCountReport(
     | "LICENSEPLATES"
     | "ALERTS"
     | "AM_VERIFICATION"
-    | "DWELL",
+    | "DWELL"
+  )[],
+  uuid: string | undefined,
   endTimeMs: number,
   startTimeMs: number,
   requestModifiers?: any,
@@ -25,9 +27,10 @@ export async function getSummaryCountReport(
     JSON.stringify({
       interval,
       scope,
-      type,
+      types,
       endTimeMs,
       startTimeMs,
+      uuid,
     })
   );
   const body = {
@@ -35,10 +38,11 @@ export async function getSummaryCountReport(
     interval,
     scope,
     startTimeMs,
-    type,
+    types,
+    ...(uuid ? { uuid } : {}),
   };
   const response = await postApi({
-    route: "/report/getSummaryCountReport",
+    route: "/report/getCountReportV2",
     body,
     modifiers: requestModifiers,
     sessionId,
