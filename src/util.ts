@@ -112,3 +112,59 @@ export function removeNullFields(obj: unknown): object | unknown[] | undefined {
 
   return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
 }
+
+export function filterIncludedFields(
+  obj: any,
+  fieldsToInclude: string[]
+): any {
+  if (!fieldsToInclude || fieldsToInclude.length === 0) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj
+      .map(item => filterIncludedFields(item, fieldsToInclude))
+      .filter(item => {
+        if (item === undefined || item === null) {
+          return false;
+        }
+        if (Array.isArray(item)) {
+          return item.length > 0;
+        }
+        if (typeof item === 'object') {
+          return Object.keys(item).length > 0;
+        }
+        // Keep primitives
+        return true;
+      });
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        if (fieldsToInclude.includes(key)) {
+          newObj[key] = obj[key];
+        } else {
+          const result = filterIncludedFields(obj[key], fieldsToInclude);
+          if (result !== undefined && result !== null) {
+            if (Array.isArray(result)) {
+              if (result.length > 0) {
+                newObj[key] = result;
+              }
+            } else if (typeof result === 'object') {
+              if (Object.keys(result).length > 0) {
+                newObj[key] = result;
+              }
+            } else {
+              newObj[key] = result;
+            }
+          }
+        }
+      }
+    }
+    return Object.keys(newObj).length > 0 ? newObj : undefined;
+  }
+
+  return undefined;
+}
