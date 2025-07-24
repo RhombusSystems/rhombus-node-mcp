@@ -3,11 +3,8 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import cors from "cors";
 import express from "express";
 import crypto from "node:crypto";
-import { IncomingMessage } from "node:http";
 import createServer from "../createServer.js";
 import { logger } from "../logger.js";
-
-const JWT_SECRET = process.env.SECRET;
 
 export const authStore = new Map<
   string,
@@ -25,9 +22,6 @@ export const authStore = new Map<
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 export default function streamableHttpTransport() {
-  if (!JWT_SECRET) {
-    throw new Error("SECRET is not set");
-  }
 
   const app = express();
   app.use(express.json());

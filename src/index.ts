@@ -13,15 +13,12 @@ const TRANSPORT_TYPE: "stdio" | "streamable-http" =
   (process.env.TRANSPORT_TYPE as "stdio" | "streamable-http") || "stdio";
 
 async function main() {
-  if (!RHOMBUS_API_KEY) {
-    logger.info("Missing RHOMBUS_API_KEY");
-  }
 
   const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
-  logger.info(`Using API_KEY: ${RHOMBUS_API_KEY}`);
-  logger.info(`To hit API server: ${serverUrl}`);
-
+  if (RHOMBUS_API_KEY) {
+    logger.info(`🔑 Using API_KEY: ${RHOMBUS_API_KEY}`);
+  }
   logger.info("🌐 Using server url", serverUrl);
 
   await serverInit();
