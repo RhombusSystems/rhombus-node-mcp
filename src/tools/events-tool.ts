@@ -33,9 +33,6 @@ This tool retrieves a list of events captured by the access control door system 
       * **credentialUuid (string):** The unique identifier for the credential.
       * **credSource (string):** The source of the credential.
       * **timestamp (int64):** The timestamp (in milliseconds since epoch) when the event occurred.
-
-  
-
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -57,8 +54,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     } else {
       const events = await getAccessControlEvents(
         accessControlledDoorUuid,
-        startTime,
-        endTime,
+        startTime ?? undefined,
+        endTime ?? undefined,
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );

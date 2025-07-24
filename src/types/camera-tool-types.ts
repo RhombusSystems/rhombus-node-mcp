@@ -190,12 +190,12 @@ export type ExternalUpdateableFacetedUserConfig = z.infer<
 >;
 
 export const BASE_TOOL_ARGS = {
-  cameraUuid: z.optional(z.string()).describe("the camera uuid requested"),
-  timestampMs: z.optional(z.number()).describe(`
+  cameraUuid: z.string().nullable().describe("the camera uuid requested"),
+  timestampMs: z.number().nullable().describe(`
       the timestamp in milliseconds. You can default to the current time if the user didn't specify a time, or you can call time-tool to parse the user's time description
       `),
   requestType: z.enum(["image", "get-settings", "update-settings"]),
-  configUpdate: ExternalUpdateableFacetedUserConfigSchema.optional().describe(
+  configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable().describe(
     'the config update that would be applied to the camera if the requestType is "update-settings"'
   ),
 };

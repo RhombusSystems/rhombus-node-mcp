@@ -7,7 +7,7 @@ export const TOOL_ARGS = {
       uuid: z.string(),
       name: z.string(),
     })
-    .optional(),
+    .nullable(),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);

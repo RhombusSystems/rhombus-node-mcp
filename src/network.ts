@@ -23,12 +23,6 @@ export const AUTH_HEADERS = {
   "x-auth-scheme": "api-token",
 };
 
-const enableLogs = process.env.ENABLE_LOGS;
-const log = (msg: any) => {
-  if (!enableLogs) return;
-  console.error(msg);
-};
-
 export const appendQueryParams = (url: string, params: object | undefined): string => {
   if (!params || typeof params !== "object") return url;
 

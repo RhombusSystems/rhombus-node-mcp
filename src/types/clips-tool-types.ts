@@ -3,19 +3,19 @@ import { z } from "zod";
 export const TOOL_ARGS = {
   deviceUuidFilters: z
     .array(z.string())
-    .optional()
+    .nullable()
     .describe(
       "A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned."
     ),
   locationUuidFilters: z
     .array(z.string())
-    .optional()
+    .nullable()
     .describe(
       "A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned."
     ),
   searchFilter: z
     .string()
-    .optional()
+    .nullable()
     .describe("A simple string to search for within the names of the clips."),
   timestampMsAfter: z
     .number()

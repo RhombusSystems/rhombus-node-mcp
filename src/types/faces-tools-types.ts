@@ -15,61 +15,60 @@ export const GetFaceEventsArgs = z.object({
     .object({
       lastEvaluatedKey: z
         .string()
-        .optional()
+        .nullable()
         .describe("The last evaluated key from a previous pagination request"),
       maxPageSize: z
         .number()
-        .optional()
-        .describe("Maximum number of results to return per page")
-        .default(100),
+        .nullable()
+        .describe("Maximum number of results to return per page. Default to around 100.")
     })
-    .optional()
+    .nullable()
     .describe("Pagination parameters for the request"),
   searchFilter: z
     .object({
       deviceUuids: z
         .array(z.string())
-        .optional()
+        .nullable()
         .describe(
           "Optional filter by a set of device UUIDs. Only face events from these devices will be returned."
         ),
       faceNameContains: z
         .string()
-        .optional()
+        .nullable()
         .describe(
           "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified."
         ),
       faceNames: z
         .array(z.string())
-        .optional()
+        .nullable()
         .describe(
           "Optional filter by a set of specific person names. Only face events associated with these names will be returned."
         ),
       hasEmbedding: z
         .boolean()
-        .optional()
+        .nullable()
         .describe(
           "Optional filter by the presence (true) or absence (false) of a face embedding associated with the event."
         ),
       hasName: z
         .boolean()
-        .optional()
+        .nullable()
         .describe(
           "Optional filter by the presence (true) or absence (false) of a person name associated with the face event."
         ),
       labels: z
         .array(z.string())
-        .optional()
+        .nullable()
         .describe("Optional filter by a set of labels associated with the face event."),
       locationUuids: z
         .array(z.string())
-        .optional()
+        .nullable()
         .describe(
           "Optional filter by a set of location UUIDs. Only face events from these locations will be returned."
         ),
       personUuids: z
         .array(z.string())
-        .optional()
+        .nullable()
         .describe(
           "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned."
         ),
@@ -77,21 +76,21 @@ export const GetFaceEventsArgs = z.object({
         .object({
           rangeEnd: z
             .string()
-            .optional()
+            .nullable()
             .describe(
               "The end of the time range (inclusive) for filtering face events. Expected format is ISO 8601 timestamp. If not specified, the filter defaults to the last 7 days."
             ),
           rangeStart: z
             .string()
-            .optional()
+            .nullable()
             .describe(
               "The start of the time range (inclusive) for filtering face events. Expected format is ISO 8601 timestamp. If not specified, the filter defaults to the last 7 days."
             ),
         })
-        .optional()
+        .nullable()
         .describe("Time range filter for face events"),
     })
-    .optional()
+    .nullable()
     .describe("Search criteria for filtering face events"),
 });
 export type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
