@@ -4,18 +4,20 @@ import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-
 // https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
 // nice :)
 type PickNullable<T> = {
-  [P in keyof T as null extends T[P] ? P : never]: T[P]
-}
+  [P in keyof T as null extends T[P] ? P : never]: T[P];
+};
 
 type PickNotNullable<T> = {
-  [P in keyof T as null extends T[P] ? never : P]: T[P]
-}
+  [P in keyof T as null extends T[P] ? never : P]: T[P];
+};
 
-type OptionalNullable<T> = T extends object ? {
-  [K in keyof PickNullable<T>]?: OptionalNullable<Exclude<T[K], null>>
-} & {
-  [K in keyof PickNotNullable<T>]: OptionalNullable<T[K]>
-} : T;
+type OptionalNullable<T> = T extends object
+  ? {
+      [K in keyof PickNullable<T>]?: OptionalNullable<Exclude<T[K], null>>;
+    } & {
+      [K in keyof PickNotNullable<T>]: OptionalNullable<T[K]>;
+    }
+  : T;
 
 export async function getFaceEvents(
   args: GetFaceEventsArgs,
@@ -44,12 +46,15 @@ export async function getFaceEvents(
         filteredArgs.searchFilter.deviceUuids &&
         filteredArgs.searchFilter.deviceUuids.length === 0
       ) {
+        // @ts-expect-error - we can break typing
         delete filteredArgs.searchFilter.deviceUuids;
       }
       if (filteredArgs.searchFilter.faceNames && filteredArgs.searchFilter.faceNames.length === 0) {
+        // @ts-expect-error - we can break typing
         delete filteredArgs.searchFilter.faceNames;
       }
       if (filteredArgs.searchFilter.labels && filteredArgs.searchFilter.labels.length === 0) {
+        // @ts-expect-error - we can break typing
         delete filteredArgs.searchFilter.labels;
       }
 
@@ -64,6 +69,27 @@ export async function getFaceEvents(
       }
       if (filteredArgs.searchFilter.hasName === false) {
         delete filteredArgs.searchFilter.hasName;
+      }
+
+      // if there is a timestampFilter, convert milliseconds to ISO 8601 datetime string
+      if (filteredArgs.searchFilter.timestampFilter) {
+        if (filteredArgs.searchFilter.timestampFilter.rangeEnd) {
+          // @ts-expect-error - we can break typing
+          filteredArgs.searchFilter.timestampFilter.rangeEnd = new Date(
+            filteredArgs.searchFilter.timestampFilter.rangeEnd
+          ).toISOString();
+        } else if (filteredArgs.searchFilter.timestampFilter.rangeEnd === null) {
+          delete filteredArgs.searchFilter.timestampFilter.rangeEnd;
+        }
+
+        if (filteredArgs.searchFilter.timestampFilter.rangeStart) {
+          // @ts-expect-error - we can break typing
+          filteredArgs.searchFilter.timestampFilter.rangeStart = new Date(
+            filteredArgs.searchFilter.timestampFilter.rangeStart
+          ).toISOString();
+        } else if (filteredArgs.searchFilter.timestampFilter.rangeStart === null) {
+          delete filteredArgs.searchFilter.timestampFilter.rangeStart;
+        }
       }
     }
 

@@ -3,7 +3,7 @@ import { RequestModifiers } from "../util.js";
 import { TOOL_ARGS, ToolArgs } from "../types/events-tools-types.js";
 import { getAccessControlEvents } from "../api/events-tool-api.js";
 
-const TOOL_NAME = "events_tool";
+const TOOL_NAME = "events-tool";
 
 // "faces" | "people" | "human" | "access-control"
 const TOOL_DESCRIPTION = `

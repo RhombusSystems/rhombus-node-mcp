@@ -1,17 +1,18 @@
 import { z } from "zod";
+import { UUID } from "../types.js";
 
 export const TOOL_ARGS = {
   deviceUuidFilters: z
     .array(z.string())
     .nullable()
     .describe(
-      "A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned."
+      "A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned. Please truncate any facets, such as .v0"
     ),
   locationUuidFilters: z
     .array(z.string())
     .nullable()
     .describe(
-      "A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned."
+      "A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned. Please truncate any facets, such as .v0"
     ),
   searchFilter: z
     .string()

@@ -28,9 +28,8 @@ export const GetFaceEventsArgs = z.object({
     .object({
       deviceUuids: z
         .array(z.string())
-        .nullable()
         .describe(
-          "Optional filter by a set of device UUIDs. Only face events from these devices will be returned."
+          "Optional filter by a set of device UUIDs. Only face events from these devices will be returned. An empty array will be the same as omitting the filter."
         ),
       faceNameContains: z
         .string()
@@ -40,9 +39,8 @@ export const GetFaceEventsArgs = z.object({
         ),
       faceNames: z
         .array(z.string())
-        .nullable()
         .describe(
-          "Optional filter by a set of specific person names. Only face events associated with these names will be returned."
+          "Optional filter by a set of specific person names. Only face events associated with these names will be returned. An empty array will be the same as omitting the filter."
         ),
       hasEmbedding: z
         .boolean()
@@ -58,33 +56,32 @@ export const GetFaceEventsArgs = z.object({
         ),
       labels: z
         .array(z.string())
-        .nullable()
-        .describe("Optional filter by a set of labels associated with the face event."),
+        .describe(
+          "Optional filter by a set of labels associated with the face event. An empty array will be the same as omitting the filter."
+        ),
       locationUuids: z
         .array(z.string())
-        .nullable()
         .describe(
-          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned."
+          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. An empty array will be the same as omitting the filter."
         ),
       personUuids: z
         .array(z.string())
-        .nullable()
         .describe(
-          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned."
+          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. An empty array will be the same as omitting the filter."
         ),
       timestampFilter: z
         .object({
           rangeEnd: z
-            .string()
+            .number()
             .nullable()
             .describe(
-              "The end of the time range (inclusive) for filtering face events. Expected format is ISO 8601 timestamp. If not specified, the filter defaults to the last 7 days."
+              "The end of the time range (inclusive) for filtering face events. Expected format is a timestamp in milliseconds. If not specified, the filter defaults to the last 7 days."
             ),
           rangeStart: z
-            .string()
+            .number()
             .nullable()
             .describe(
-              "The start of the time range (inclusive) for filtering face events. Expected format is ISO 8601 timestamp. If not specified, the filter defaults to the last 7 days."
+              "The start of the time range (inclusive) for filtering face events. Expected format is a timestamp in milliseconds. If not specified, the filter defaults to the last 7 days."
             ),
         })
         .nullable()
