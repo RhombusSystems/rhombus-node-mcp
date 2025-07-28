@@ -7,7 +7,7 @@ import { createToolTextContent, generateRandomString } from "../util.js";
 import { logger } from "../logger.js";
 
 export const CONFIRMATION_ARGS = {
-  confirmationId: z.string().nullable().optional(),
+  confirmationId: z.string().nullable(),
 };
 
 export function addConfirmationParams<TInputArgs extends object>(

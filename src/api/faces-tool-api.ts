@@ -1,6 +1,22 @@
 import { postApi } from "../network.js";
 import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-types.js";
 
+// https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
+// nice :)
+type PickNullable<T> = {
+  [P in keyof T as null extends T[P] ? P : never]: T[P]
+}
+
+type PickNotNullable<T> = {
+  [P in keyof T as null extends T[P] ? never : P]: T[P]
+}
+
+type OptionalNullable<T> = T extends object ? {
+  [K in keyof PickNullable<T>]?: OptionalNullable<Exclude<T[K], null>>
+} & {
+  [K in keyof PickNotNullable<T>]: OptionalNullable<T[K]>
+} : T;
+
 export async function getFaceEvents(
   args: GetFaceEventsArgs,
   requestModifiers?: any,
@@ -13,7 +29,8 @@ export async function getFaceEvents(
 
   while (hasMore) {
     // Filter out empty/undefined fields from currentArgs
-    const filteredArgs = { ...currentArgs };
+    // OptionalNullable so that we can remove some fields before returning them to the MCP client
+    const filteredArgs = { ...currentArgs } as OptionalNullable<typeof currentArgs>;
 
     if (filteredArgs.pageRequest) {
       if (filteredArgs.pageRequest.lastEvaluatedKey === "") {

@@ -8,7 +8,7 @@ const TOOL_DESCRIPTION =
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { time_description, timezone } = args;
-  const result = parseTimeDescription(time_description, timezone, extra);
+  const result = parseTimeDescription(time_description ?? undefined, timezone ?? undefined, extra);
 
   return {
     content: [

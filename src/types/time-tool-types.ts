@@ -8,7 +8,7 @@ export const TOOL_ARGS = {
     ),
   timezone: z
     .string()
-    .optional()
+    .nullable()
     .describe(
       "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Will default to system timezone if not provided."
     ),

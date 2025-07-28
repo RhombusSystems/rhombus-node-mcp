@@ -5,7 +5,7 @@ export const TOOL_ARGS = {
     .enum(["MINUTELY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"])
     .describe("The time interval for the report aggregation"),
   uuid: z
-    .optional(z.string())
+    .nullable(z.string())
     .describe(
       "The uuid of the device, or location, or organization depending on what scope is.  If scope is DEVICE, this is the device uuid.  If scope is LOCATION, this is the location uuid.  If scope is ORG, this is the organization uuid."
     ),

@@ -1,16 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createToolTextContent, RequestModifiers } from "../util.js";
-import { addConfirmationParams, isConfirmed, requireConfirmation } from "../utils/confirmation.js";
 import {
-  ExternalUpdateableFacetedUserConfig,
-  BASE_TOOL_ARGS,
-  ToolArgs,
-} from "../types/camera-tool-types.js";
-import {
-  getImageForCameraAtTime,
   getCameraSettings,
+  getImageForCameraAtTime,
   updateCameraSettings,
 } from "../api/camera-tool-api.js";
+import {
+  BASE_TOOL_ARGS,
+  ToolArgs
+} from "../types/camera-tool-types.js";
+import { createToolTextContent, RequestModifiers } from "../util.js";
+import { addConfirmationParams, isConfirmed, requireConfirmation } from "../utils/confirmation.js";
 
 const TOOL_NAME = "camera-tool";
 
