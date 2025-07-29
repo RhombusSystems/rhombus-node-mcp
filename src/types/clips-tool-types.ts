@@ -6,13 +6,13 @@ export const TOOL_ARGS = {
     .array(z.string())
     .nullable()
     .describe(
-      "A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned. Please truncate any facets, such as .v0"
+      "A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned. Please truncate any facets, such as .v0. It is always 22 characters long."
     ),
   locationUuidFilters: z
     .array(z.string())
     .nullable()
     .describe(
-      "A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned. Please truncate any facets, such as .v0"
+      "A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned. Please truncate any facets, such as .v0. It is always 22 characters long."
     ),
   searchFilter: z
     .string()

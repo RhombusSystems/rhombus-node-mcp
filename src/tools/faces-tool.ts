@@ -22,7 +22,7 @@ If the requestType is "get-face-events":
 
   This tool retrieves detailed face events such as detections and recognitions. It provides comprehensive information about each event, including details about the detected face, the person matched (if any), and the event context.
 
-  You can filter face events using parameters like 'deviceUuids', 'faceNameContains', 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
+  You can filter face events using parameters like 'deviceUuids', 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
 
   The tool returns a JSON object with the following structure and important fields:
   * **lastEvaluatedKey (string | null):** A key for pagination; if not null, it can be used to retrieve the next page of results.

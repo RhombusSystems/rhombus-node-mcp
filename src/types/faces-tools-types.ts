@@ -29,14 +29,14 @@ export const GetFaceEventsArgs = z.object({
       deviceUuids: z
         .array(z.string())
         .describe(
-          "Optional filter by a set of device UUIDs. Only face events from these devices will be returned. An empty array will be the same as omitting the filter."
+          "Optional filter by a set of device UUIDs. Only face events from these devices will be returned. An empty array will be the same as omitting the filter. These are always 22 characters long."
         ),
-      faceNameContains: z
-        .string()
-        .nullable()
-        .describe(
-          "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified."
-        ),
+      // faceNameContains: z
+      //   .string()
+      //   .nullable()
+      //   .describe(
+      //     "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified."
+      //   ),
       faceNames: z
         .array(z.string())
         .describe(
@@ -62,12 +62,12 @@ export const GetFaceEventsArgs = z.object({
       locationUuids: z
         .array(z.string())
         .describe(
-          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. An empty array will be the same as omitting the filter."
+          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. An empty array will be the same as omitting the filter. These are always 22 characters long."
         ),
       personUuids: z
         .array(z.string())
         .describe(
-          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. An empty array will be the same as omitting the filter."
+          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. An empty array will be the same as omitting the filter. These are always 22 characters long."
         ),
       timestampFilter: z
         .object({
@@ -81,7 +81,7 @@ export const GetFaceEventsArgs = z.object({
             .number()
             .nullable()
             .describe(
-              "The start of the time range (inclusive) for filtering face events. Expected format is a timestamp in milliseconds. If not specified, the filter defaults to the last 7 days."
+              "The start of the time range (inclusive) for filtering face events. Expected format is ISO 8601 timestamp. If not specified, the filter defaults to the last 7 days."
             ),
         })
         .nullable()

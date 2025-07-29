@@ -59,9 +59,9 @@ export async function getFaceEvents(
       }
 
       // Remove empty strings
-      if (filteredArgs.searchFilter.faceNameContains === "") {
-        delete filteredArgs.searchFilter.faceNameContains;
-      }
+      // if (filteredArgs.searchFilter.faceNameContains === "") {
+      //   delete filteredArgs.searchFilter.faceNameContains;
+      // }
 
       // Remove false booleans
       if (filteredArgs.searchFilter.hasEmbedding === false) {

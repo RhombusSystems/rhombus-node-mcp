@@ -1,14 +1,10 @@
 import { z } from "zod";
 
-export const createUUID = () => {
-  return z
-    .string()
-    .describe(
-      "This describes the UUID of some entity (device, location, etc.) and is unique and must come from data. This can not be fabricated. It is always 22 characters long. Truncate any facet ids, such as .v0"
-    );
-};
-
-export const UUID = createUUID();
+export const UUID = z
+  .string()
+  .describe(
+    "This describes the UUID of some entity (device, location, etc.) and is unique and must come from data. This can not be fabricated. It is always 22 characters long. Truncate any facet ids, such as .v0"
+  );
 export type UUID = z.infer<typeof UUID>;
 
 export const VideoWallSettings = z.object({
