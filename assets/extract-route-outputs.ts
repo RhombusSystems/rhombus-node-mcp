@@ -1,4 +1,4 @@
-// run with `npx tsx extract-route-outputs.ts`
+// run with `npm run extract-route-outputs`
 
 import * as fs from 'fs';
 import * as path from 'path';
