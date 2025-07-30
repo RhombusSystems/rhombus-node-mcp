@@ -13,10 +13,12 @@ This tool should should be used any time someone is asking for specifics or repo
 
 This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
 
+This tool can return a lot of data. Please make sure the time range provided is not too large.
+
   This tool takes 3 arguments:
   * **accessControlledDoorUuid (string):** The unique identifier for the access controlled door.
-  * **startTime (int64):** The timestamp (in milliseconds since epoch) representing the start or earliest time of access controll events.
-  * **endTime (int64):** The timestamp (in milliseconds since epoch) representing the end or latest time of access controll events.
+  * **startTime (int64):** The timestamp (in milliseconds since epoch) representing the start or earliest time of access control events.
+  * **endTime (int64):** The timestamp (in milliseconds since epoch) representing the end or latest time of access control events.
 
   The tool returns a JSON object with the following structure and important fields:
   * **componentEvents (array of objects | null):** An array where each object represents a single access control event. Each event object contains the following important fields:

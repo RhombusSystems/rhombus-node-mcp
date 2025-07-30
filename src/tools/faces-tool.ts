@@ -11,6 +11,7 @@ import { getFaceEvents, getRegisteredFaces } from "../api/faces-tool-api.js";
 
 const TOOL_NAME = "faces-tool";
 
+// TODO: deviceUuids filter was removed, see TOOL_ARGS for reason
 const TOOL_DESCRIPTION = `
 This tool interacts with the Rhombus face recognition system to retrieve information about face sightings and registered faces. It has two primary modes of operation, determined by the "requestType" parameter:
 
@@ -22,7 +23,9 @@ If the requestType is "get-face-events":
 
   This tool retrieves detailed face events such as detections and recognitions. It provides comprehensive information about each event, including details about the detected face, the person matched (if any), and the event context.
 
-  You can filter face events using parameters like 'deviceUuids', 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
+  You can filter face events using parameters like 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
+
+  If you'd like to know about all face events at a location, pass in a location UUID and no device UUIDs. This will correctly return all face events at that location.
 
   The tool returns a JSON object with the following structure and important fields:
   * **lastEvaluatedKey (string | null):** A key for pagination; if not null, it can be used to retrieve the next page of results.
@@ -46,6 +49,9 @@ If the requestType is "get-registered-faces":
 
   This tool retrieves a list of all people (registered faces) currently known to the Rhombus system for your organization. This list includes information about each registered person.
 
+  This is useful to call before calling "get-face-events" to get a list of all people that have been seen by the camera system, and then you can use personUuids or the name *in the system*
+  to filter face events.
+
   This tool takes no arguments.
 
   The tool returns a JSON object with the following structure and important fields:
@@ -55,7 +61,6 @@ If the requestType is "get-registered-faces":
       * **createdOn (date-time | null):** The date and time when the person was registered.
       * **updatedOn (date-time | null):** The date and time when the person's information was last updated.
       * **orgUuid (string | null):** The UUID of the organization to which the person belongs.
-
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {

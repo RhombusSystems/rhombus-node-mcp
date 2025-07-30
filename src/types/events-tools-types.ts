@@ -4,13 +4,11 @@ export const TOOL_ARGS = {
   eventType: z.enum(["access-control"]),
   startTime: z
     .number()
-    .nullable()
     .describe(
       "A timestamp in milliseconds representing when to start the search for access controll events."
     ),
   endTime: z
     .number()
-    .nullable()
     .describe(
       "A timestamp in milliseconds representing when to end the search for access controll events."
     ),

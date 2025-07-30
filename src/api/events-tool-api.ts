@@ -70,7 +70,7 @@ export async function getAccessControlEvents(
       originator: event.originator,
       credentialUuid: event.credentialUuid,
       credSource: event.credSource,
-      timestamp: new Date(event.timestampMs).toString(),
+      timestamp: event.timestampMs,
     })),
   }));
   return response;

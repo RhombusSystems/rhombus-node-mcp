@@ -22,7 +22,6 @@ export const authStore = new Map<
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 export default function streamableHttpTransport() {
-
   const app = express();
   app.use(express.json());
 
@@ -38,7 +37,7 @@ export default function streamableHttpTransport() {
   /**
    * STATEFUL ENDPOINT
    */
-
+  const authRequired = ["tools/call"];
   app.post("/mcp", async (req, res) => {
     logger.info(`Received MCP request`, req.body);
 
@@ -59,48 +58,57 @@ export default function streamableHttpTransport() {
 
           logger.info(`🔒 MCP request initialized with sessionId: ${sessionId}`);
 
-          // if api key is provided
-          const authScheme = req.headers["x-auth-scheme"] ?? "api-token";
-          if (authScheme === "api-token") {
-            const apiKey =
-              "x-auth-apikey" in req.headers
-                ? (req.headers["x-auth-apikey"] as string)
-                : process.env.RHOMBUS_API_KEY;
+          try {
+            const authScheme = req.headers["x-auth-scheme"] ?? "api-token";
 
-            if (!apiKey) {
-              logger.error(
-                "Invalid API Key provided! Please check the headers or environment variables"
+            // if api key is provided
+            if (authScheme === "api-token") {
+              const apiKey =
+                "x-auth-apikey" in req.headers
+                  ? (req.headers["x-auth-apikey"] as string)
+                  : process.env.RHOMBUS_API_KEY;
+
+              if (!apiKey) {
+                throw new Error(
+                  "Invalid API Key provided! Please check the headers or environment variables"
+                );
+              }
+
+              logger.info(`🔒 MCP request authenticated with api key: ${apiKey}`);
+
+              authStore.set(sessionId, {
+                apiKey: apiKey,
+                createdMs: Date.now(),
+              });
+            } else if (
+              authScheme === "chatbot" &&
+              "x-auth-session" in req.headers &&
+              "x-auth-chat" in req.headers
+            ) {
+              logger.info(
+                `🔒 MCP request authenticated with x-auth-session: ${req.headers["x-auth-session"]} and x-auth-chat: ${req.headers["x-auth-chat"]}`
               );
+              // otherwise, store the sessionId and latestRecordUuid in authStore
+              authStore.set(sessionId, {
+                sessionId: req.headers["x-auth-session"] as string,
+                latestRecordUuid: req.headers["x-auth-chat"] as string,
+                createdMs: Date.now(),
+              });
+            } else {
               throw new Error(
-                "Invalid API Key provided! Please check the headers or environment variables"
+                `Invalid auth scheme provided! x-auth-scheme: ${req.headers["x-auth-scheme"]}, x-auth-session: ${req.headers["x-auth-session"]}, x-auth-chat: ${req.headers["x-auth-chat"]}`
               );
             }
-
-            logger.info(`🔒 MCP request authenticated with api key: ${apiKey}`);
-
-            authStore.set(sessionId, {
-              apiKey: apiKey,
-              createdMs: Date.now(),
-            });
-          } else if (
-            authScheme === "chatbot" &&
-            "x-auth-session" in req.headers &&
-            "x-auth-chat" in req.headers
-          ) {
-            logger.info(
-              `🔒 MCP request authenticated with x-auth-session: ${req.headers["x-auth-session"]} and x-auth-chat: ${req.headers["x-auth-chat"]}`
-            );
-            // otherwise, store the sessionId and latestRecordUuid in authStore
-            authStore.set(sessionId, {
-              sessionId: req.headers["x-auth-session"] as string,
-              latestRecordUuid: req.headers["x-auth-chat"] as string,
-              createdMs: Date.now(),
-            });
-          } else {
-            logger.error(
-              `Invalid auth scheme provided! x-auth-scheme: ${req.headers["x-auth-scheme"]}, x-auth-session: ${req.headers["x-auth-session"]}, x-auth-chat: ${req.headers["x-auth-chat"]}`
-            );
-            throw new Error("Invalid auth scheme");
+          } catch (e) {
+            // only throw if this is an auth required call
+            if (authRequired.includes(req.body.method)) {
+              if (e instanceof Error) {
+                logger.error(e.message);
+              } else {
+                logger.error(e);
+              }
+              throw e;
+            }
           }
         },
         // DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
@@ -138,7 +146,7 @@ export default function streamableHttpTransport() {
     await transport.handleRequest(req, res, req.body);
   });
 
-  app.get("/mcp", async (req, res) => {
+  app.get("/mcp", async (_, res) => {
     logger.warn("Received Not Allowed GET MCP request");
     res.writeHead(405).end(
       JSON.stringify({

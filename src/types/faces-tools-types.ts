@@ -26,21 +26,24 @@ export const GetFaceEventsArgs = z.object({
     .describe("Pagination parameters for the request"),
   searchFilter: z
     .object({
-      deviceUuids: z
-        .array(z.string())
-        .describe(
-          "Optional filter by a set of device UUIDs. Only face events from these devices will be returned. An empty array will be the same as omitting the filter. These are always 22 characters long."
-        ),
-      // faceNameContains: z
-      //   .string()
-      //   .nullable()
+      // TODO: this is causing the AI to call the tool incorrectly and always pass in deviceUUIDs. We'll leave
+      // the filtering of this to the AI for now.
+      // deviceUuids: z
+      //   .array(z.string())
       //   .describe(
-      //     "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified."
+      //     "Optional filter by a set of device UUIDs. Only face events from these devices will be returned. An empty array will be the same as omitting the filter. The strings are always 22 characters long."
       //   ),
+      faceNameContains: z
+        .string()
+        .nullable()
+        .describe(
+          "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified. This is case-sensitive."
+        ),
       faceNames: z
         .array(z.string())
         .describe(
-          "Optional filter by a set of specific person names. Only face events associated with these names will be returned. An empty array will be the same as omitting the filter."
+          `Optional filter by a set of specific person names. Only face events associated with these names will be returned. An empty array will be the same as omitting the filter.
+          This is case-sensitive.`
         ),
       hasEmbedding: z
         .boolean()
@@ -81,7 +84,7 @@ export const GetFaceEventsArgs = z.object({
             .number()
             .nullable()
             .describe(
-              "The start of the time range (inclusive) for filtering face events. Expected format is ISO 8601 timestamp. If not specified, the filter defaults to the last 7 days."
+              "The start of the time range (inclusive) for filtering face events. Expected format is a timestamp in milliseconds. If not specified, the filter defaults to the last 7 days."
             ),
         })
         .nullable()

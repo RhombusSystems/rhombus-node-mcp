@@ -42,13 +42,13 @@ export async function getFaceEvents(
 
     if (filteredArgs.searchFilter) {
       // Remove empty arrays
-      if (
-        filteredArgs.searchFilter.deviceUuids &&
-        filteredArgs.searchFilter.deviceUuids.length === 0
-      ) {
-        // @ts-expect-error - we can break typing
-        delete filteredArgs.searchFilter.deviceUuids;
-      }
+      // if (
+      //   filteredArgs.searchFilter.deviceUuids &&
+      //   filteredArgs.searchFilter.deviceUuids.length === 0
+      // ) {
+      //   // @ts-expect-error - we can break typing
+      //   delete filteredArgs.searchFilter.deviceUuids;
+      // }
       if (filteredArgs.searchFilter.faceNames && filteredArgs.searchFilter.faceNames.length === 0) {
         // @ts-expect-error - we can break typing
         delete filteredArgs.searchFilter.faceNames;
