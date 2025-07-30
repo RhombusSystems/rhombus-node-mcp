@@ -17,13 +17,13 @@ export const TOOL_ARGS = {
     .array(z.string())
     .nullable()
     .describe(
-      "A list of UUIDs representing the specific devices to filter alerts by. Only alerts emitted by these devices will be returned. Please truncate any facets, such as .v0"
+      "A list of UUIDs representing the specific devices to filter alerts by. Only alerts emitted by these devices will be returned."
     ),
   locationFilter: z
     .array(z.string())
     .nullable()
     .describe(
-      "A list of UUIDs representing the specific locations to filter alerts by. Only alerts associated with these locations will be returned. Please truncate any facets, such as .v0"
+      "A list of UUIDs representing the specific locations to filter alerts by. Only alerts associated with these locations will be returned."
     ),
   maxResults: z
     .number()

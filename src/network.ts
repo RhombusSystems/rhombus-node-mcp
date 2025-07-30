@@ -4,6 +4,10 @@ import { RequestModifiers } from "./util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
+if (!RHOMBUS_API_KEY) {
+  console.error("Missing RHOMBUS_API_KEY");
+}
+
 export const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
 export const BASE_URL = `https://${serverUrl}/api`;
