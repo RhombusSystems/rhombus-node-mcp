@@ -24,7 +24,7 @@
     "mcp-server-rhombus": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/*.js",
+    "build": "rm -rf dist && tsc && chmod +x dist/*.js",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "extract-route-outputs": "npx tsx assets/extract-route-outputs.ts"

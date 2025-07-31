@@ -14,7 +14,6 @@ This tool should should be used any time someone is asking for specifics or repo
 This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
 
 This tool can return a lot of data. Please make sure the time range provided is not too large.
-
   This tool takes 3 arguments:
   * **accessControlledDoorUuid (string):** The unique identifier for the access controlled door.
   * **startTime (int64):** The timestamp (in milliseconds since epoch) representing the start or earliest time of access control events.
@@ -33,9 +32,14 @@ This tool can return a lot of data. Please make sure the time range provided is 
           * **originator (string):** The originator of the event.
       * **originator (string):** The originator of the event.
       * **credentialUuid (string):** The unique identifier for the credential.
-      * **credSource (string):** The source of the credential.
-      * **timestamp (int64):** The timestamp (in milliseconds since epoch) when the event occurred.
+      * **credSource (string):** The source of the credential. Is what generated the event.
+        - "BLE_WAVE" is a user badging in by physically waving their hand over the reader. This is presented as "Credential Received" in the web console.
+        - "NFC" is a user badging in by tapping their badge or their phone on the reader. This is presented as "Credential Received" in the web console.
+        - "REMOTE" is unlocking the door remotely through the Rhombus app. This is presented as "Mobile Remote Unlock" in the web console.
+      * **datetime:** Datetime string of when the event occured.
 `;
+// * **timestampMs:** The timestamp (in milliseconds since epoch) when the event occurred.
+// * **datetime:** Datetime string of when the event occured.
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { eventType, accessControlledDoorUuid, startTime, endTime } = args;

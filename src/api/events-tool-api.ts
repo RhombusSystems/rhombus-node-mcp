@@ -1,4 +1,5 @@
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
+import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
 
 export async function getFaceEvents(
@@ -55,6 +56,7 @@ export async function getAccessControlEvents(
     ...(endTime ? { createdBeforeMs: endTime } : {}),
     typeFilter: ["CredentialReceivedEvent"],
   };
+
   const response = await postApi({
     route: "/component/findComponentEventsByAccessControlledDoor",
     body,
@@ -70,7 +72,7 @@ export async function getAccessControlEvents(
       originator: event.originator,
       credentialUuid: event.credentialUuid,
       credSource: event.credSource,
-      timestamp: event.timestampMs,
+      datetime: new Date(event.timestampMs).toString(),
     })),
   }));
   return response;
