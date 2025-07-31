@@ -39,7 +39,7 @@ export default function streamableHttpTransport() {
    */
   const authRequired = ["tools/call"];
   app.post("/mcp", async (req, res) => {
-    logger.info(`Received MCP request`, req.body);
+    logger.info(`Received MCP request`, JSON.stringify(req.body));
 
     // Check for existing session ID
     const sessionId = req.headers["mcp-session-id"] as string | undefined;

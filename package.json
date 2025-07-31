@@ -26,7 +26,8 @@
   "scripts": {
     "build": "rm -rf dist && tsc && chmod +x dist/*.js",
     "prepare": "npm run build",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "extract-route-outputs": "npx tsx assets/extract-route-outputs.ts"
   },
   "files": [
     "dist"
