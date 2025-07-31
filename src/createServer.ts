@@ -49,7 +49,12 @@ export default async function createServer() {
   logger.info(`🛠️ Registered ${resources.length} resources`);
 
   for (const tool of tools) {
-    tool.create(server);
+    try {
+      await tool.create(server);
+    } catch (error) {
+      logger.error(`Failed to register tool ${tool.name}:`, error);
+      // Continue with other tools instead of failing completely
+    }
   }
   logger.info(`🛠️ Registered ${tools.length} tools`);
 

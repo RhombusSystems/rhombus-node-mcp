@@ -94,6 +94,14 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   }
 };
 
-export function createTool(server: McpServer) {
-  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
+export async function createTool(server: McpServer) {
+  try {
+    // Verify search service can be initialized and also save it into the cached variable
+    await getSearchService();
+    server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
+  } catch (error) {
+    logger.error('Failed to initialize semantic search tool:', error);
+    logger.error('Make sure you have the index and embeddings files in rhombus-node-mcp/data/embeddings/');
+    throw error;
+  }
 }

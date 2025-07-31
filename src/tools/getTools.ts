@@ -11,14 +11,14 @@ async function getTools() {
 
   const tools: {
     name: string;
-    create: (server: McpServer) => void;
+    create: (server: McpServer) => void | Promise<void>;
   }[] = [];
   for (const filePath of filePaths) {
     // ensure it's a js file
     if (!filePath.endsWith(".js")) continue;
 
     const imported = (await import(filePath)) as {
-      createTool: ((server: McpServer) => void) | undefined;
+      createTool: ((server: McpServer) => void | Promise<void>) | undefined;
     };
     if (imported.createTool !== undefined) {
       tools.push({
