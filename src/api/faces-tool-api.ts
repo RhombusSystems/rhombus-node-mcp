@@ -1,6 +1,7 @@
 import { postApi } from "../network.js";
 import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-types.js";
-
+import { logger } from "./../logger.js";
+import { formatTimestamp } from "../util.js";
 // https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
 // nice :)
 type PickNullable<T> = {
@@ -106,7 +107,8 @@ export async function getFaceEvents(
     if (response && response.faceEvents) {
       const filteredEvents = response.faceEvents.map((event: any) => ({
         deviceUuid: event.deviceUuid,
-        eventTimestamp: event.eventTimestamp,
+        eventTimestampMs: event.eventTimestamp,
+        eventTimestamp: formatTimestamp(event.eventTimestamp),
         faceName: event.faceName,
         locationUuid: event.locationUuid,
         personUuid: event.personUuid,
@@ -136,11 +138,7 @@ export async function getFaceEvents(
     }
   }
 
-  // Return the response with all combined face events
-  return {
-    ...lastResponse,
-    faceEvents: allFaceEvents,
-  };
+  return allFaceEvents;
 }
 
 export async function getRegisteredFaces(

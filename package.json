@@ -24,7 +24,7 @@
     "mcp-server-rhombus": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/*.js",
+    "build": "rm -rf dist && tsc && chmod +x dist/*.js",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "scrape-sitemaps": "npx tsx scripts/scrape-sitemaps.ts",
@@ -33,7 +33,8 @@
     "generate-embeddings": "npx tsx scripts/generate-embeddings.ts",
     "embedding-progress": "npx tsx scripts/generate-embeddings.ts --progress",
     "estimate-cost": "npx tsx scripts/generate-embeddings.ts --estimate-only",
-    "build-faiss-index": "npx tsx scripts/build-faiss-index.ts"
+    "build-faiss-index": "npx tsx scripts/build-faiss-index.ts",
+    "extract-route-outputs": "npx tsx assets/extract-route-outputs.ts"
   },
   "files": [
     "dist"
