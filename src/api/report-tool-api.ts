@@ -1,5 +1,6 @@
 import { logger } from "../logger.js";
 import { postApi } from "../network.js";
+import { formatTimestamp } from "../util.js";
 
 export async function getSummaryCountReport(
   interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
@@ -54,13 +55,19 @@ export async function getSummaryCountReport(
       const processedDataPoint = { ...dataPoint };
 
       if (processedDataPoint.dateLocal) {
-        processedDataPoint.dateLocalMs = new Date(processedDataPoint.dateLocal + "Z").getTime();
-        delete processedDataPoint.dateLocal;
+        try {
+          processedDataPoint.dateLocalMs = new Date(processedDataPoint.dateLocal + "Z").getTime();
+          processedDataPoint.dateLocalString = formatTimestamp(processedDataPoint.dateLocalMs);
+          delete processedDataPoint.dateLocal;
+        } catch (e) {}
       }
 
       if (processedDataPoint.dateUtc) {
-        processedDataPoint.dateUtcMs = new Date(processedDataPoint.dateUtc + "Z").getTime();
-        delete processedDataPoint.dateUtc;
+        try {
+          processedDataPoint.dateUtcMs = new Date(processedDataPoint.dateUtc + "Z").getTime();
+          processedDataPoint.dateUtcString = formatTimestamp(processedDataPoint.dateUtcMs);
+          delete processedDataPoint.dateUtc;
+        } catch (e) {}
       }
 
       if (processedDataPoint.maxEventCountMap) {

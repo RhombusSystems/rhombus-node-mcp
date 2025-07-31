@@ -20,7 +20,7 @@ export const GetFaceEventsArgs = z.object({
       maxPageSize: z
         .number()
         .nullable()
-        .describe("Maximum number of results to return per page. Default to around 100.")
+        .describe("Maximum number of results to return per page. Default to around 100."),
     })
     .nullable()
     .describe("Pagination parameters for the request"),
@@ -39,12 +39,10 @@ export const GetFaceEventsArgs = z.object({
         .describe(
           "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified. This is case-sensitive."
         ),
-      faceNames: z
-        .array(z.string())
-        .describe(
-          `Optional filter by a set of specific person names. Only face events associated with these names will be returned. An empty array will be the same as omitting the filter.
+      faceNames: z.array(z.string()).describe(
+        `Optional filter by a set of specific person names. Only face events associated with these names will be returned. An empty array will be the same as omitting the filter.
           This is case-sensitive.`
-        ),
+      ),
       hasEmbedding: z
         .boolean()
         .nullable()
@@ -102,3 +100,57 @@ export const TOOL_ARGS = {
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+export const OUTPUT_SCHEMA = z.object({
+  requestType: z.nativeEnum(RequestType),
+  getFaceEventsResponse: z
+    .optional(
+      z.array(
+        z.object({
+          deviceUuid: z.optional(z.string()),
+          eventTimestampMs: z.number(),
+          eventTimestamp: z.optional(z.string()),
+          faceName: z.optional(z.string()),
+          locationUuid: z.optional(z.string()),
+          personUuid: z.optional(z.string()),
+          selectedPersonMatch: z.optional(
+            z.object({
+              confidence: z.number(),
+              faceId: z.optional(z.string()),
+              name: z.optional(z.string()),
+              uuid: z.optional(z.string()),
+            })
+          ),
+          thumbnailS3Key: z.optional(z.string()),
+          topPersonMatches: z.optional(
+            z.array(
+              z.object({
+                confidence: z.number(),
+                faceId: z.optional(z.string()),
+                name: z.optional(z.string()),
+                uuid: z.optional(z.string()),
+              })
+            )
+          ),
+          uuid: z.optional(z.string()),
+        })
+      )
+    )
+    .describe("A list of all people seen over the given time period."),
+  getSavedFacesResponse: z
+    .optional(
+      z.array(
+        z.object({
+          createdOn: z.optional(z.string()),
+          name: z.optional(z.string()),
+          orgUuid: z.optional(z.string()),
+          updatedOn: z.optional(z.string()),
+          uuid: z.optional(z.string()),
+        })
+      )
+    )
+    .describe(
+      "A list of all people (registered faces) currently known to the Rhombus system for your organization."
+    ),
+  error: z.optional(z.string()),
+});

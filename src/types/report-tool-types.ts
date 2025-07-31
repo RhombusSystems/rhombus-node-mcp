@@ -7,7 +7,7 @@ export const TOOL_ARGS = {
   uuid: z
     .nullable(z.string())
     .describe(
-      "The uuid of the device, or location, or organization depending on what scope is.  If scope is DEVICE, this is the device uuid.  If scope is LOCATION, this is the location uuid.  If scope is ORG, this is the organization uuid."
+      "The uuid of the device, or location, or organization depending on what scope is.  If scope is DEVICE, this is the device uuid.  If scope is LOCATION, this is the location uuid.  If scope is ORG, this is the organization uuid. This UUID is *always* 22 characters long"
     ),
   scope: z
     .enum(["REGION", "LOCATION", "DEVICE", "ORG"])
@@ -38,3 +38,29 @@ export const TOOL_ARGS = {
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+export const OUTPUT_SCHEMA = z.object({
+  error: z.optional(z.boolean()),
+  errorMsg: z.optional(z.string()),
+  timeSeriesDataPoints: z.optional(
+    z.array(
+      z.object({
+        dateLocalMs: z.optional(z.number()),
+        dateUtcMs: z.optional(
+          z.preprocess(val => {
+            // Handle string "nan" or actual NaN values
+            if (val === "nan" || (typeof val === "number" && isNaN(val))) {
+              return undefined;
+            }
+            return val;
+          }, z.number())
+        ),
+        dateLocalString: z.optional(z.string()),
+        dateUtcString: z.optional(z.string()),
+        eventCountMap: z.optional(z.record(z.any())),
+        maxEventCountMap: z.optional(z.record(z.any())),
+      })
+    )
+  ),
+});
+export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

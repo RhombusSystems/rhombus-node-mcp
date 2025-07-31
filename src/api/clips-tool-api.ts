@@ -7,5 +7,14 @@ export async function getSavedClips(args: ToolArgs, requestModifiers?: any, sess
     body: args,
     modifiers: requestModifiers,
     sessionId,
+  }).then(response => {
+    if (response.error) return response;
+    else
+      return (
+        response.savedClips?.map((clip: any) => ({
+          ...clip,
+          createdAtTimestamp: clip.createdAtMs ? new Date(clip.createdAtMs).toISOString() : null,
+        })) ?? []
+      );
   });
 }

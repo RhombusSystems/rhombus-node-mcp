@@ -2,6 +2,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
+import { DateTime } from "luxon";
 
 export function generateRandomString(length: number): string {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -13,10 +14,12 @@ export function generateRandomString(length: number): string {
   return result;
 }
 
-export const RequestModifiers = z.object({
-  headers: z.optional(z.record(z.string(), z.string())),
-  query: z.optional(z.record(z.string(), z.string())),
-}).optional();
+export const RequestModifiers = z
+  .object({
+    headers: z.optional(z.record(z.string(), z.string())),
+    query: z.optional(z.record(z.string(), z.string())),
+  })
+  .optional();
 export type RequestModifiers = z.infer<typeof RequestModifiers>;
 
 /**
@@ -111,4 +114,15 @@ export function removeNullFields(obj: unknown): object | unknown[] | undefined {
   }
 
   return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
+}
+
+/**
+ * Formats a timestamp in milliseconds to a human-readable date string
+ * Format: "February 24, 2025 at 3:23 PM"
+ *
+ * @param timestampMs - Timestamp in milliseconds
+ * @returns Formatted date string
+ */
+export function formatTimestamp(timestampMs: number): string {
+  return DateTime.fromMillis(timestampMs).toFormat("MMMM d, yyyy 'at' h:mm a");
 }
