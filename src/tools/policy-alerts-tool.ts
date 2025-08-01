@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
 import { getPolicyAlerts } from "../api/policy-alerts-tool-api.js";
-import { TOOL_ARGS, type ToolArgs } from "../types/policy-alerts-tool-types.js";
+import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/policy-alerts-tool-types.js";
 
 const TOOL_NAME = "policy-alerts-tool";
 const TOOL_DESCRIPTION = `
@@ -30,9 +30,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
   return {
     content: [{ type: "text" as const, text: JSON.stringify(ret) }],
+    structuredContent: ret,
   };
 };
 
 export function createTool(server: McpServer) {
-  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
+  server.registerTool(
+    TOOL_NAME,
+    {
+      description: TOOL_DESCRIPTION,
+      inputSchema: TOOL_ARGS,
+      outputSchema: OUTPUT_SCHEMA.shape,
+    },
+    TOOL_HANDLER
+  );
 }

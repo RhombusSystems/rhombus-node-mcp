@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { schemas } from "./zod-schemas.js";
 
 export const TOOL_ARGS = {
   afterTimestampMs: z
@@ -35,3 +36,14 @@ export const TOOL_ARGS = {
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+const ExtendedPolicyAlertType = schemas.BasePolicyAlertType.extend({
+  createdOnString: z
+    .string()
+    .optional()
+    .describe("Human-readable formatted timestamp (e.g., 'January 24, 2025 at 5:32 PM')"),
+});
+
+export const OUTPUT_SCHEMA = schemas.Event_GetPolicyAlertsWSResponse.extend({
+  policyAlerts: z.array(ExtendedPolicyAlertType).nullable(),
+});

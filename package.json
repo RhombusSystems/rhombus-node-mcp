@@ -63,6 +63,7 @@
     "@types/jwt-express": "^1.1.6",
     "@types/luxon": "^3.6.2",
     "@types/node": "^22.14.0",
+    "openapi-zod-client": "^1.18.3",
     "prettier": "3.5.3",
     "typescript": "^5.8.3"
   },
