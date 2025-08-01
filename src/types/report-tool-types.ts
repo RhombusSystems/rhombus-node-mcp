@@ -46,32 +46,7 @@ export const OUTPUT_SCHEMA = z.object({
     z.array(
       z.object({
         dateLocalMs: z.optional(z.number()),
-        dateUtcMs: z
-          .unknown()
-          .transform(val => {
-            // Handle all problematic values: string "nan", actual NaN, null, undefined, or literal nan type
-            if (
-              val === "nan" ||
-              val === null ||
-              val === undefined ||
-              (typeof val === "number" && isNaN(val)) ||
-              String(val) === "NaN"
-            ) {
-              return undefined;
-            }
-            // Try to convert string to number if it's a valid number string
-            if (typeof val === "string") {
-              const num = Number(val);
-              return isNaN(num) ? undefined : num;
-            }
-            // Return number as-is if it's already a valid number
-            if (typeof val === "number" && !isNaN(val)) {
-              return val;
-            }
-            // Fallback to undefined for any other unexpected types
-            return undefined;
-          })
-          .optional(),
+        dateUtcMs: z.optional(z.any()),
         dateLocalString: z.optional(z.string()),
         dateUtcString: z.optional(z.string()),
         eventCountMap: z.optional(z.record(z.any())),
