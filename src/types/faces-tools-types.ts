@@ -141,10 +141,10 @@ export const OUTPUT_SCHEMA = z.object({
     .optional(
       z.array(
         z.object({
-          createdOn: z.optional(z.string()),
+          createdOn: z.optional(z.number()),
           name: z.optional(z.string()),
           orgUuid: z.optional(z.string()),
-          updatedOn: z.optional(z.string()),
+          updatedOn: z.optional(z.number()),
           uuid: z.optional(z.string()),
         })
       )
