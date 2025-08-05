@@ -4422,6 +4422,9 @@ export interface paths {
     /** Get count reports by device for a specified location */
     post: operations["getCountReportsForDevicesAtLocation"];
   };
+  "/report/getCustomLLMCounts": {
+    post: operations["getCustomLLMCounts"];
+  };
   "/report/getDiagnosticFeed": {
     /** Get the latest diagnostic logs for organization */
     post: operations["getDiagnosticFeed"];
@@ -9393,6 +9396,7 @@ export interface components {
     ChangeType: ChangeTypeEnum;
     ChatRecord: {
       contextId?: string | null;
+      llmInfo?: string | null;
       orgUuid?: string | null;
       principalUuid?: string | null;
       queriedAtMs?: number | null;
@@ -22258,6 +22262,19 @@ export interface components {
           | components["schemas"]["TimeSeriesDataPointV2Type"][]
           | null;
       } | null;
+    };
+    Report_GetCustomLLMWSRequest: {
+      endTimeMs?: number | null;
+      interval?: GetCustomLLMWSRequestIntervalEnum | null;
+      promptUuid?: string | null;
+      startTimeMs?: number | null;
+    };
+    Report_GetCustomLLMWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      timeSeriesDataPoints?:
+        | components["schemas"]["TimeSeriesDataPointV2Type"][]
+        | null;
     };
     Report_GetDiagnosticFeedWSRequest: {
       timestampMsAfter?: number | null;
@@ -43778,6 +43795,21 @@ export interface operations {
       };
     };
   };
+  getCustomLLMCounts: {
+    responses: {
+      /** default response */
+      default: {
+        content: {
+          "application/json": components["schemas"]["Report_GetCustomLLMWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetCustomLLMWSRequest"];
+      };
+    };
+  };
   /** Get the latest diagnostic logs for organization */
   getDiagnosticFeed: {
     responses: {
@@ -50646,6 +50678,10 @@ export enum QueryStatusEnum {
   INITIATED = "INITIATED",
   QUEUED = "QUEUED",
   IN_PROGRESS = "IN_PROGRESS",
+  CALLING_TOOLS = "CALLING_TOOLS",
+  GENERATING_RESPONSE = "GENERATING_RESPONSE",
+  GENERATING_REPORT_OUTLINE = "GENERATING_REPORT_OUTLINE",
+  GENERATING_REPORT_SECTIONS = "GENERATING_REPORT_SECTIONS",
   NOT_UNDERSTOOD = "NOT_UNDERSTOOD",
   INVALID_REQUEST = "INVALID_REQUEST",
   UNAUTHORIZED = "UNAUTHORIZED",
@@ -52214,6 +52250,15 @@ export enum GetCountReportsWSRequestTypeEnum {
   ALERTS = "ALERTS",
   AM_VERIFICATION = "AM_VERIFICATION",
   DWELL = "DWELL",
+}
+
+export enum GetCustomLLMWSRequestIntervalEnum {
+  MINUTELY = "MINUTELY",
+  QUARTERHOURLY = "QUARTERHOURLY",
+  HOURLY = "HOURLY",
+  DAILY = "DAILY",
+  WEEKLY = "WEEKLY",
+  MONTHLY = "MONTHLY",
 }
 
 export enum GetLicensePlatesByDeviceWSRequestIntervalEnum {

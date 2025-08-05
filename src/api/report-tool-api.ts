@@ -1,6 +1,41 @@
 import { logger } from "../logger.js";
 import { postApi } from "../network.js";
 import { formatTimestamp } from "../util.js";
+import schema from "../types/schema.js";
+
+export async function getOccupancyCountReport(
+  deviceUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  interval: "MINUTELY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    deviceUuid,
+    startTimeMs,
+    endTimeMs,
+    interval,
+  };
+
+  const response: schema["Report_GetOccupancyCountsWSResponse"] = await postApi({
+    route: "/report/getOccupancyCounts",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  response.timeSeriesDataPoints = (response.timeSeriesDataPoints || []).map(dataPoint => {
+    const dateLocalMs = new Date(dataPoint.dateLocal || "").getTime();
+    const dateUtcMs = new Date(dataPoint.dateUtc || "").getTime();
+    logger.info("timeSeriesDataPoints dataPoint:", JSON.stringify(dataPoint));
+    return {
+      ...dataPoint,
+      dateLocalString: formatTimestamp(dateLocalMs),
+      dateUtcString: formatTimestamp(dateUtcMs),
+    };
+  });
+  return response;
+}
 
 export async function getSummaryCountReport(
   interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",

@@ -116,10 +116,7 @@ export function removeNullFields(obj: unknown): object | unknown[] | undefined {
   return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
 }
 
-export function filterIncludedFields(
-  obj: any,
-  fieldsToInclude: string[]
-): any {
+export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
   if (!fieldsToInclude || fieldsToInclude.length === 0) {
     return obj;
   }
@@ -134,7 +131,7 @@ export function filterIncludedFields(
         if (Array.isArray(item)) {
           return item.length > 0;
         }
-        if (typeof item === 'object') {
+        if (typeof item === "object") {
           return Object.keys(item).length > 0;
         }
         // Keep primitives
@@ -142,7 +139,7 @@ export function filterIncludedFields(
       });
   }
 
-  if (typeof obj === 'object' && obj !== null) {
+  if (typeof obj === "object" && obj !== null) {
     const newObj: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -155,7 +152,7 @@ export function filterIncludedFields(
               if (result.length > 0) {
                 newObj[key] = result;
               }
-            } else if (typeof result === 'object') {
+            } else if (typeof result === "object") {
               if (Object.keys(result).length > 0) {
                 newObj[key] = result;
               }
@@ -179,5 +176,9 @@ export function filterIncludedFields(
  * @returns Formatted date string
  */
 export function formatTimestamp(timestampMs: number): string {
-  return DateTime.fromMillis(timestampMs).toFormat("MMMM d, yyyy 'at' h:mm a");
+  return DateTime.fromMillis(timestampMs)
+    .setZone("America/Los_Angeles")
+    .toFormat("MMMM d, yyyy 'at' h:mm a", {
+      locale: "en-US",
+    });
 }

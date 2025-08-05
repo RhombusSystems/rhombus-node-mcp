@@ -27,6 +27,7 @@
     "build": "rm -rf dist && tsc && chmod +x dist/*.js",
     "prepare": "npm run build",
     "watch": "tsc --watch",
+    "generate-schemas": "npx tsx scripts/generate-zod-schemas.ts",
     "scrape-sitemaps": "npx tsx scripts/scrape-sitemaps.ts",
     "scrape-content": "npx tsx scripts/scrape-content.ts",
     "scrape-progress": "npx tsx scripts/scrape-content.ts --progress",
@@ -63,7 +64,8 @@
     "@types/jwt-express": "^1.1.6",
     "@types/luxon": "^3.6.2",
     "@types/node": "^22.14.0",
-    "openapi-zod-client": "^1.18.3",
+    "openapi-typescript-codegen": "^0.29.0",
+    "openapi-zod-client": "^1.17.0",
     "prettier": "3.5.3",
     "typescript": "^5.8.3"
   },

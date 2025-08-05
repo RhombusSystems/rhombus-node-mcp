@@ -11,14 +11,14 @@ export async function getPolicyAlerts(
   sessionId?: string
 ) {
   return await postApi({
-    route: "/event/getPolicyAlertsV2",
+    route: "/event/getPolicyAlerts",
     body: args,
     modifiers: requestModifiers,
     sessionId,
   }).then(response => {
     return {
       ...response,
-      policyAlerts: response.policyAlerts.map((alert: PolicyAlert) => ({
+      policyAlerts: (response.policyAlerts || []).map((alert: PolicyAlert) => ({
         ...alert,
         createdOnString: alert.timestampMs ? formatTimestamp(alert.timestampMs) : undefined,
       })),
