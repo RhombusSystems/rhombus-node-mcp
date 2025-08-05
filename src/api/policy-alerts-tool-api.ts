@@ -1,12 +1,12 @@
 import { postApi } from "../network.js";
 import { formatTimestamp, RequestModifiers } from "../util.js";
-import { ToolArgs } from "../types/policy-alerts-tool-types.js";
+import { ApiPayload } from "../types/policy-alerts-tool-types.js";
 import { components } from "../types/schema-components.js";
 
 type PolicyAlert = components["schemas"]["PolicyAlertV2Type"];
 
 export async function getPolicyAlerts(
-  args: ToolArgs,
+  args: ApiPayload,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {

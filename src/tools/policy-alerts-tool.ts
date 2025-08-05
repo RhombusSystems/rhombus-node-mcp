@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
 import { getPolicyAlerts } from "../api/policy-alerts-tool-api.js";
-import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/policy-alerts-tool-types.js";
+import { ApiPayloadSchema, OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/policy-alerts-tool-types.js";
 
 const TOOL_NAME = "policy-alerts-tool";
 const TOOL_DESCRIPTION = `
@@ -16,14 +16,17 @@ policies configured in the Rhombus Console. These policies trigger alerts when s
 Please note, this is not an exhaustive list, and there may be other types of triggers or events that generate
 policy alerts within the Rhombus system.
 
-This tool allows you to filter existing alerts by a specific time range (before or after a timestamp in milliseconds),
+This tool allows you to filter existing alerts by a specific time range (before or after a timestamp in ISO 8601 format),
 by a list of device UUIDs, or by a list of location UUIDs.
 You can also specify the maximum number of results to return.
 The output is provided in JSON format.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
+
+  const payload = ApiPayloadSchema.parse(args);
+
   const ret = await getPolicyAlerts(
-    args,
+    payload,
     extra._meta?.requestModifiers as RequestModifiers,
     extra.sessionId
   );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export const VideoFacetSettings = z
   .object({
@@ -191,9 +192,12 @@ export type ExternalUpdateableFacetedUserConfig = z.infer<
 
 export const BASE_TOOL_ARGS = {
   cameraUuid: z.string().nullable().describe("the camera uuid requested"),
-  timestampMs: z.number().nullable().describe(`
-      the timestamp in milliseconds. You can default to the current time if the user didn't specify a time, or you can call time-tool to parse the user's time description
-      `),
+  timestampISO: z.string().datetime({ message: "Invalid ISO 8601 date format." })
+    .nullable()
+    .describe(`
+      the timestamp for the image. This will default to 5 minutes before the current time. You can also call time-tool to parse the user's time description.
+      ` + ISOTimestampFormatDescription
+    ),
   requestType: z.enum(["image", "get-settings", "update-settings"]),
   configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable().describe(
     'the config update that would be applied to the camera if the requestType is "update-settings"'

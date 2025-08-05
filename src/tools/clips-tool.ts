@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
-import { TOOL_ARGS, ToolArgs } from "../types/clips-tool-types.js";
+import { ApiPayloadSchema, TOOL_ARGS, ToolArgs } from "../types/clips-tool-types.js";
 import { getSavedClips } from "../api/clips-tool-api.js";
 
 const TOOL_NAME = "clips-tool";
@@ -12,7 +12,7 @@ This tool allows you to filter clips by:
 * Specific devices using their UUIDs.
 * Specific locations using their UUIDs.
 * A simple string search on clip names.
-* A time range, specifying a start (timestampMsAfter) and/or end (timestampMsBefore) timestamp in milliseconds since epoch.
+* A time range, specifying a start (timestampISOAfter) and/or end (timestampISOBefore) timestamp in ISO 8601 format.
 
 The tool returns a JSON object with the following structure and important fields:
 * **errorMsg (string | null):** An error message if the request failed.
@@ -24,6 +24,7 @@ The tool returns a JSON object with the following structure and important fields
     * **description (string | null):** An optional description for the clip.
     * **timestampMs (int64):** The start time of the video clip in milliseconds since epoch.
     * **createdAtMs (int64):** The creation timestamp of the clip in milliseconds since epoch.
+    * **createdAtTimestamp (string):** The creation timestamp of the clip in ISO 8601 format.
     * **deviceUuid (string):** The UUID of the primary device (e.g., camera) that recorded the clip.
     * **deviceUuids (array of strings or null):** A list of UUIDs for all devices associated with the clip.
     * **durationSec (int32):** The length of the video clip in seconds.
@@ -34,8 +35,11 @@ The tool returns a JSON object with the following structure and important fields
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   let ret;
+
+  const payload = ApiPayloadSchema.parse(args);
+
   ret = await getSavedClips(
-    args,
+    payload,
     extra._meta?.requestModifiers as RequestModifiers,
     extra.sessionId
   );

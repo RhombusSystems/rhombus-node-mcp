@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
@@ -73,16 +74,20 @@ export const GetFaceEventsArgs = z.object({
       timestampFilter: z
         .object({
           rangeEnd: z
-            .number()
+            .string()
+            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
             .nullable()
             .describe(
-              "The end of the time range (inclusive) for filtering face events. Expected format is a timestamp in milliseconds. If not specified, the filter defaults to the last 7 days."
+              "The end of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days."
+              + ISOTimestampFormatDescription
             ),
           rangeStart: z
-            .number()
+            .string()
+            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
             .nullable()
             .describe(
-              "The start of the time range (inclusive) for filtering face events. Expected format is a timestamp in milliseconds. If not specified, the filter defaults to the last 7 days."
+              "The start of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days."
+              + ISOTimestampFormatDescription
             ),
         })
         .nullable()
