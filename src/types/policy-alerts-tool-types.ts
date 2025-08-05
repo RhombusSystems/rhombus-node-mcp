@@ -1,18 +1,23 @@
 import { z } from "zod";
 import { schemas } from "./zod-schemas.js";
+import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export const TOOL_ARGS = {
-  afterTimestampMs: z
-    .number()
+  afterTimestampISO: z
+    .string()
+    .datetime( {message: "Invalid ISO 8601 date format."} )
     .nullable()
     .describe(
-      "The start of the time range (in milliseconds since epoch) for which to retrieve alerts. Only alerts that occurred AFTER this timestamp will be returned."
+      "The start of the time range for which to retrieve alerts. Only alerts that occurred AFTER this timestamp will be returned."
+      + ISOTimestampFormatDescription
     ),
-  beforeTimestampMs: z
-    .number()
+  beforeTimestampISO: z
+    .string()
+    .datetime( {message: "Invalid ISO 8601 date format."} )
     .nullable()
     .describe(
-      "The end of the time range (in milliseconds since epoch) for which to retrieve alerts. Only alerts that occurred BEFORE this timestamp will be returned."
+      "The end of the time range for which to retrieve alerts. Only alerts that occurred BEFORE this timestamp will be returned."
+      + ISOTimestampFormatDescription
     ),
   deviceFilter: z
     .array(z.string())
@@ -36,6 +41,19 @@ export const TOOL_ARGS = {
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
+  const { afterTimestampISO, beforeTimestampISO, ...rest } = args;
+  const afterTimestampMs = createEpochSchema().parse(afterTimestampISO);
+  const beforeTimestampMs = createEpochSchema().parse(beforeTimestampISO);
+
+  return {
+    ...rest,
+    afterTimestampMs,
+    beforeTimestampMs,
+  };
+});
+export type ApiPayload = z.infer<typeof ApiPayloadSchema>;
 
 const ExtendedPolicyAlertType = schemas.BasePolicyAlertType.extend({
   createdOnString: z

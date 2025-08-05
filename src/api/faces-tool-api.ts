@@ -72,23 +72,13 @@ export async function getFaceEvents(
         delete filteredArgs.searchFilter.hasName;
       }
 
-      // if there is a timestampFilter, convert milliseconds to ISO 8601 datetime string
+      // if there is no timestampFilter, we can remove it
+      // rangeEnd and rangeStart are ISO 8601 strings
       if (filteredArgs.searchFilter.timestampFilter) {
-        if (filteredArgs.searchFilter.timestampFilter.rangeEnd) {
-          // @ts-expect-error - we can break typing
-          filteredArgs.searchFilter.timestampFilter.rangeEnd = new Date(
-            filteredArgs.searchFilter.timestampFilter.rangeEnd
-          ).toISOString();
-        } else if (filteredArgs.searchFilter.timestampFilter.rangeEnd === null) {
+        if (filteredArgs.searchFilter.timestampFilter.rangeEnd === null) {
           delete filteredArgs.searchFilter.timestampFilter.rangeEnd;
         }
-
-        if (filteredArgs.searchFilter.timestampFilter.rangeStart) {
-          // @ts-expect-error - we can break typing
-          filteredArgs.searchFilter.timestampFilter.rangeStart = new Date(
-            filteredArgs.searchFilter.timestampFilter.rangeStart
-          ).toISOString();
-        } else if (filteredArgs.searchFilter.timestampFilter.rangeStart === null) {
+        if (filteredArgs.searchFilter.timestampFilter.rangeStart === null) {
           delete filteredArgs.searchFilter.timestampFilter.rangeStart;
         }
       }

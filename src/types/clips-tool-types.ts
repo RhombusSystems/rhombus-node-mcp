@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UUID } from "../types.js";
+import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export const TOOL_ARGS = {
   deviceUuidFilters: z
@@ -18,17 +18,34 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe("A simple string to search for within the names of the clips."),
-  timestampMsAfter: z
-    .number()
+  timestampISOAfter: z
+    .string()
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
     .describe(
-      "The start of the time range (in milliseconds since epoch) for which to retrieve clips. Only clips that occurred AFTER this timestamp will be returned."
+      "The start of the time range for which to retrieve clips. Only clips that occurred AFTER this timestamp will be returned."
+      + ISOTimestampFormatDescription
     ),
-  timestampMsBefore: z
-    .number()
+  timestampISOBefore: z
+    .string()
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
     .describe(
-      "The end of the time range (in milliseconds since epoch) for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned."
+      "The end of the time range for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned."
+      + ISOTimestampFormatDescription
     ),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
+  const { timestampISOAfter, timestampISOBefore, ...rest } = args;
+  const timestampMsAfter = createEpochSchema().parse(timestampISOAfter);
+  const timestampMsBefore = createEpochSchema().parse(timestampISOBefore);
+
+  return {
+    ...rest,
+    timestampMsAfter,
+    timestampMsBefore,
+  };
+});
+export type ApiPayload = z.infer<typeof ApiPayloadSchema>;

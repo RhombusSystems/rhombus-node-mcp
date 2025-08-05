@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { FaissSearchService } from '../services/faiss-search-service.js';
 import { createToolTextContent } from '../util.js';
 import { logger } from '../logger.js';
-import { TOOL_ARGS, ToolArgs } from '../types/semantic-search-tool-args.js';
+import { TOOL_ARGS, ToolArgs } from '../types/semantic-search-tool-types.js';
 
 // Constants following coding style guidelines
 const DEFAULT_SEARCH_LIMIT = 10;

@@ -1,16 +1,21 @@
 import { z } from "zod";
+import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export const TOOL_ARGS = {
   eventType: z.enum(["access-control"]),
   startTime: z
-    .number()
+    .string()
+    .datetime( { message: "Invalid datetime string. Expected ISO 8601 format." } )
     .describe(
-      "A timestamp in milliseconds representing when to start the search for access controll events."
+      "A timestamp representing when to start the search for access control events."
+      + ISOTimestampFormatDescription
     ),
   endTime: z
-    .number()
+    .string()
+    .datetime( { message: "Invalid datetime string. Expected ISO 8601 format." } )
     .describe(
-      "A timestamp in milliseconds representing when to end the search for access controll events."
+      "A timestamp representing when to end the search for access control events."
+      + ISOTimestampFormatDescription
     ),
   accessControlledDoorUuid: z.string().nullable(),
 };

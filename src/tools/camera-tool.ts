@@ -44,7 +44,7 @@ This tool updates the configuration for a camera or associated device using the 
 const TOOL_ARGS = addConfirmationParams(BASE_TOOL_ARGS);
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { cameraUuid, timestampMs, requestType, configUpdate, confirmationId } = args;
+  const { cameraUuid, timestampISO, requestType, configUpdate, confirmationId } = args;
 
   if (!cameraUuid) {
     return {
@@ -61,12 +61,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   }
 
   let response;
+  const timestampMs = timestampISO ? new Date(timestampISO).getTime() : new Date().getTime() - 1000 * 60 * 5;
 
   switch (requestType) {
     case "image":
       response = await getImageForCameraAtTime(
         cameraUuid,
-        timestampMs || Date.now() - 1000 * 60 * 5,
+        timestampMs,
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
