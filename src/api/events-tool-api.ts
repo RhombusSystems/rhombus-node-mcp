@@ -2,6 +2,7 @@ import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
 import { formatTimestamp } from "../util.js";
+import schema from "../types/schema.js";
 
 export async function getFaceEvents(
   _locationUuid: string | null | undefined,
@@ -130,7 +131,7 @@ export async function getEventsForEnvironmentalGateway(
     body,
     modifiers: requestModifiers,
     sessionId,
-  }).then(response => {
+  }).then((response: schema["Climate_GetEventsForEnvironmentalGatewayWSResponse"]) => {
     return {
       events: (response.events || []).map((event: any) => ({
         ...event,

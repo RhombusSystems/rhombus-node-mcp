@@ -28,7 +28,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "The UUID of the environmental gateway device. Required when eventType is 'environmental-gateway'."
+      "The UUID of the environmental gateway device. Required when eventType is 'environmental-gateway'  Can be obtained from the get-entity-tool for ENVIRONMENTAL_GATEWAY."
     ),
 };
 
