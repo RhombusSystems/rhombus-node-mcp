@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
+import { createUuidSchema, UUID } from "../types.js";
 
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
@@ -62,14 +63,14 @@ export const GetFaceEventsArgs = z.object({
           "Optional filter by a set of labels associated with the face event. An empty array will be the same as omitting the filter."
         ),
       locationUuids: z
-        .array(z.string())
+        .array(createUuidSchema())
         .describe(
-          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. An empty array will be the same as omitting the filter. These are always 22 characters long."
+          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. An empty array will be the same as omitting the filter."
         ),
       personUuids: z
-        .array(z.string())
+        .array(createUuidSchema())
         .describe(
-          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. An empty array will be the same as omitting the filter. These are always 22 characters long."
+          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. An empty array will be the same as omitting the filter."
         ),
       timestampFilter: z
         .object({

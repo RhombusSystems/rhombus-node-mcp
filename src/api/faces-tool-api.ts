@@ -2,6 +2,7 @@ import { postApi } from "../network.js";
 import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-types.js";
 import { logger } from "./../logger.js";
 import { formatTimestamp } from "../util.js";
+import { removeNulls } from "../utils/remove-nulls.js";
 // https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
 // nice :)
 type PickNullable<T> = {
@@ -33,7 +34,7 @@ export async function getFaceEvents(
   while (hasMore) {
     // Filter out empty/undefined fields from currentArgs
     // OptionalNullable so that we can remove some fields before returning them to the MCP client
-    const filteredArgs = { ...currentArgs } as OptionalNullable<typeof currentArgs>;
+    let filteredArgs = { ...currentArgs } as OptionalNullable<typeof currentArgs>;
 
     if (filteredArgs.pageRequest) {
       if (filteredArgs.pageRequest.lastEvaluatedKey === "") {
@@ -83,6 +84,10 @@ export async function getFaceEvents(
         }
       }
     }
+
+    // one last sweep of null values
+    console.log("filteredArgs", filteredArgs);
+    filteredArgs = removeNulls(filteredArgs);
 
     const response = await postApi({
       route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
