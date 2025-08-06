@@ -9,6 +9,7 @@ enum DeviceType {
   MOTION_SENSOR = "motion-sensor",
   BUTTON = "button",
   KEYPAD = "keypad",
+  ENVIRONMENTAL_GATEWAY = "environmental-gateway",
 }
 
 export default DeviceType;

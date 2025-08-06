@@ -1,6 +1,7 @@
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
+import { formatTimestamp } from "../util.js";
 
 export async function getFaceEvents(
   _locationUuid: string | null | undefined,
@@ -107,5 +108,37 @@ export async function getHumanMotionEvents(
 
     return { cameraUuid, uniqueHumanEvents };
   });
+  return response;
+}
+
+export async function getEventsForEnvironmentalGateway(
+  deviceUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    deviceUuid,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+    maxPageSize: 100,
+  };
+
+  const response = await postApi({
+    route: "/climate/getEventsForEnvironmentalGateway",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => {
+    return {
+      events: (response.events || []).map((event: any) => ({
+        ...event,
+        timestampString: event.timestampMs ? formatTimestamp(event.timestampMs) : undefined,
+      })),
+      lastEvaluatedKey: response.lastEvaluatedKey,
+    };
+  });
+
   return response;
 }

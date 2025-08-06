@@ -14,6 +14,7 @@ import {
   getMotionSensors,
   getButtons,
   getKeypads,
+  getEnvironmentalGateways,
 } from "../api/get-entity-tool-api.js";
 
 const TOOL_NAME = "get-entity-tool";
@@ -29,6 +30,7 @@ const ENDPOINT_MAP = {
   MOTION_SENSOR: "POST /api/occupancy/getMinimalOccupancySensorStateList",
   BUTTON: "POST /api/button/getMinimalButtonStateList",
   KEYPAD: "POST /api/keypad/getKeypadsForOrg",
+  ENVIRONMENTAL_GATEWAY: "POST /api/climate/getMinimalEnvironmentalGatewayStates",
 };
 
 const WORKFLOW_TEXT = generateEndpointToKeysWorkflowText(ENDPOINT_MAP);
@@ -77,6 +79,9 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   if (entityTypes.includes(DeviceType.KEYPAD)) {
     promises.push(getKeypads(requestModifiers, sessionId));
   }
+  if (entityTypes.includes(DeviceType.ENVIRONMENTAL_GATEWAY)) {
+    promises.push(getEnvironmentalGateways(requestModifiers, sessionId));
+  }
   const responses = Promise.all<object>(promises);
   const ret = {
     ...(await responses).reduce(
@@ -89,9 +94,9 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   };
 
   return createToolTextContent(
-    JSON.stringify(includeFields && includeFields.length > 0
-      ? filterIncludedFields(ret, includeFields)
-      : ret)
+    JSON.stringify(
+      includeFields && includeFields.length > 0 ? filterIncludedFields(ret, includeFields) : ret
+    )
   );
 };
 

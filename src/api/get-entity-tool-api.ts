@@ -1,4 +1,5 @@
 import { postApi } from "../network.js";
+import { formatTimestamp } from "../util.js";
 
 export async function getCameraList(requestModifiers?: any, sessionId?: string) {
   return {
@@ -60,9 +61,14 @@ export async function getAudioGateways(requestModifiers?: any, sessionId?: strin
     sessionId,
   }).then(response => {
     return {
-      audioGateways: response.audioGatewayStates.filter(
-        (camera: { locationUuid?: string }) => !!camera.locationUuid
-      ),
+      audioGateways: response.audioGatewayStates
+        .filter((camera: { locationUuid?: string }) => !!camera.locationUuid)
+        .map((gateway: any) => ({
+          ...gateway,
+          createdAtString: gateway.createdAtMillis
+            ? formatTimestamp(gateway.createdAtMillis)
+            : undefined,
+        })),
     };
   });
 }
@@ -90,9 +96,14 @@ export async function getEnvironmentalSensors(requestModifiers?: any, sessionId?
     sessionId,
   }).then(response => {
     return {
-      climateStates: response.climateStates.filter(
-        (sensor: { locationUuid?: string }) => !!sensor.locationUuid
-      ),
+      climateStates: response.climateStates
+        .filter((sensor: { locationUuid?: string }) => !!sensor.locationUuid)
+        .map((sensor: any) => ({
+          ...sensor,
+          createdAtString: sensor.createdAtMillis
+            ? formatTimestamp(sensor.createdAtMillis)
+            : undefined,
+        })),
     };
   });
 }
@@ -120,9 +131,14 @@ export async function getButtons(requestModifiers?: any, sessionId?: string) {
     sessionId,
   }).then(response => {
     return {
-      buttonStates: response.states.filter(
-        (button: { locationUuid?: string }) => !!button.locationUuid
-      ),
+      buttonStates: response.states
+        .filter((button: { locationUuid?: string }) => !!button.locationUuid)
+        .map((button: any) => ({
+          ...button,
+          createdAtString: button.createdAtMillis
+            ? formatTimestamp(button.createdAtMillis)
+            : undefined,
+        })),
     };
   });
 }
@@ -138,6 +154,27 @@ export async function getKeypads(requestModifiers?: any, sessionId?: string) {
       keypadStates: response.keypads.filter(
         (keypad: { locationUuid?: string }) => !!keypad.locationUuid
       ),
+    };
+  });
+}
+
+export async function getEnvironmentalGateways(requestModifiers?: any, sessionId?: string) {
+  return await postApi({
+    route: "/climate/getMinimalEnvironmentalGatewayStates",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => {
+    return {
+      minimalEnvironmentalGatewayStates: response.minimalEnvironmentalGatewayStates
+        .filter((gateway: { locationUuid?: string }) => !!gateway.locationUuid)
+        .map((gateway: any) => ({
+          ...gateway,
+          createdAtString: gateway.createdAtMillis
+            ? formatTimestamp(gateway.createdAtMillis)
+            : undefined,
+          timestampString: gateway.timestampMs ? formatTimestamp(gateway.timestampMs) : undefined,
+        })),
     };
   });
 }
