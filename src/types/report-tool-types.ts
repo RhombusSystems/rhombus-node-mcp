@@ -90,23 +90,25 @@ export const OUTPUT_SCHEMA = z.object({
       )
   ),
   occupancyCountReport: z
-    .object({
-      error: z.optional(z.boolean()),
-      errorMsg: z.optional(z.string()),
-      timeSeriesDataPoints: z.optional(
-        z.array(
-          z.object({
-            approximateTimestampMsMap: z.optional(z.record(z.unknown())),
-            dateLocal: z.optional(z.string()),
-            dateUtc: z.optional(z.string()),
-            dateLocalString: z.optional(z.string()),
-            dateUtcString: z.optional(z.string()),
-            eventCountMap: z.optional(z.record(z.unknown())),
-            timestampMs: z.optional(z.number()),
-          })
-        )
-      ),
-    })
+    .optional(
+      z.object({
+        error: z.optional(z.boolean()),
+        errorMsg: z.optional(z.string()),
+        timeSeriesDataPoints: z.optional(
+          z.array(
+            z.object({
+              approximateTimestampMsMap: z.optional(z.record(z.unknown())),
+              dateLocal: z.optional(z.string()),
+              dateUtc: z.optional(z.string()),
+              dateLocalString: z.optional(z.string()),
+              dateUtcString: z.optional(z.string()),
+              eventCountMap: z.optional(z.record(z.unknown())),
+              timestampMs: z.optional(z.number()),
+            })
+          )
+        ),
+      })
+    )
     .nullable(),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;
