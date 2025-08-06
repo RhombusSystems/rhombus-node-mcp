@@ -10,7 +10,13 @@ import { getOccupancyCountReport, getSummaryCountReport } from "../api/report-to
 
 const TOOL_NAME = "report_tool";
 
-const TOOL_DESCRIPTION = `This tool generates summary count reports for various types of data within the Rhombus system. It provides aggregated counts over specified time intervals and scopes. This tool should be used when users need high level summary reports, analytics, or aggregated counts of system events and activities. If types contains PEOPLE please understand that this is not a unique person count, it is a count of people detection events.  It's useful for getting a high level count of people, but not for getting a unique person count.`;
+const TOOL_DESCRIPTION = `
+This tool generates summary count reports for various types of data within the Rhombus system.
+It provides aggregated counts over specified time intervals and scopes.
+This tool should be used when users need high level summary reports, analytics, or aggregated counts of system events and activities.
+If types contains PEOPLE please understand that this is not a unique person count, it is a count of people detection events. 
+It's useful for getting a high level count of people, but not for getting a unique person count.
+`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { requestType } = args;
