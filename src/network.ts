@@ -36,7 +36,7 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
 
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
-export async function postApi({
+export async function postApi<T>({
   route,
   body,
   modifiers,
@@ -108,7 +108,7 @@ export async function postApi({
           error: true,
           status:
             "Sorry, I don't have permission to help with this request.  Consider upgrading my permissions by changing the role of the API Key I am using.",
-        };
+        } as T & { error?: boolean; status?: string };
       }
       throw {
         body: JSON.parse(body),
@@ -118,12 +118,12 @@ export async function postApi({
     }
     const ret = await response.json();
     logger.debug(`✅ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
-    return ret;
+    return ret as T & { error?: boolean; status?: string };
   } catch (error) {
     logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {}, null, 4)}`);
     return {
       error: true,
       status: `Request Error: ${error}`,
-    };
+    } as T & { error?: boolean; status?: string };
   }
 }

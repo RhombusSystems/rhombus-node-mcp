@@ -22,7 +22,7 @@ export async function getImageForCameraAtTime(
     timestampMs: timestampMs,
   };
   logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
-  const base64Image = await postApi({
+  const base64Image = await postApi<any>({
     route: "/video/getExactFrameUri",
     body,
     modifiers: requestModifiers,
@@ -77,7 +77,7 @@ export async function getCameraSettings(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const res = await postApi({
+  const res = await postApi<any>({
     route: "/camera/getFacetedConfig",
     body: {
       deviceUuid: cameraUuid,
@@ -107,7 +107,7 @@ export async function updateCameraSettings(
   sessionId?: string
 ) {
   // remove any "null" values
-  const res = await postApi({
+  const res = await postApi<any>({
     route: "/camera/updateFacetedConfig",
     body: {
       configUpdate: {

@@ -23,7 +23,7 @@ export async function createVideoWall(
       },
     },
   };
-  const response = await postApi({
+  const response = await postApi<any>({
     route: "/camera/createVideoWall",
     body,
     modifiers: requestModifiers,

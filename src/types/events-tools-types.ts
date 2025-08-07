@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
-import { schemas } from "./zod-schemas.js";
 
 export const TOOL_ARGS = {
   eventType: z.enum(["access-control", "environmental-gateway"]),
@@ -35,8 +34,14 @@ export const TOOL_ARGS = {
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
-const ExtendedE50ClimateEventType = schemas.E50ClimateEventType.extend({
+const StrippedEnvironmentalEvent = z.object({
   timestampString: z.string().optional().describe("Human-readable formatted timestamp"),
+  temp: z.number().optional().describe("Temperature from CO2 sensor in Celsius"),
+  probeTemp: z.number().optional().describe("Temperature from probe sensor in Celsius"),
+  humidity: z.number().optional().describe("Relative humidity percentage"),
+  pm25: z.number().optional().describe("PM2.5 particulate matter reading"),
+  co2: z.number().optional().describe("CO2 concentration in PPM"),
+  vapeDetected: z.boolean().optional().describe("Whether vape was detected"),
 });
 
 export const OUTPUT_SCHEMA = z.object({
@@ -75,7 +80,7 @@ export const OUTPUT_SCHEMA = z.object({
   environmentalGatewayEvents: z.optional(
     z
       .object({
-        events: z.array(ExtendedE50ClimateEventType).optional(),
+        events: z.array(StrippedEnvironmentalEvent).optional(),
         lastEvaluatedKey: z.string().optional(),
       })
       .nullable()

@@ -29,7 +29,7 @@ export async function getFaceEvents(
       },
     },
   };
-  const response = await postApi({
+  const response = await postApi<any>({
     route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
     body,
     modifiers: requestModifiers,
@@ -59,7 +59,7 @@ export async function getAccessControlEvents(
     typeFilter: ["CredentialReceivedEvent"],
   };
 
-  const response = await postApi({
+  const response = await postApi<any>({
     route: "/component/findComponentEventsByAccessControlledDoor",
     body,
     modifiers: requestModifiers,
@@ -92,7 +92,7 @@ export async function getHumanMotionEvents(
     duration,
     startTime,
   };
-  const response = await postApi({
+  const response = await postApi<any>({
     route: "/camera/getFootageSeekpointsV2",
     body,
     modifiers: requestModifiers,
@@ -112,6 +112,8 @@ export async function getHumanMotionEvents(
   return response;
 }
 
+const EVENT_COUNT_MAX_PER_RESPONSE = 2000;
+
 export async function getEventsForEnvironmentalGateway(
   deviceUuid: string,
   startTime: number | undefined,
@@ -119,27 +121,60 @@ export async function getEventsForEnvironmentalGateway(
   requestModifiers?: any,
   sessionId?: string
 ) {
-  const body = {
-    deviceUuid,
-    ...(startTime ? { createdAfterMs: startTime } : {}),
-    ...(endTime ? { createdBeforeMs: endTime } : {}),
-    maxPageSize: 100,
-  };
+  let allEvents: any[] = [];
+  let hasMore = true;
+  let lastEvaluatedKey: string | undefined = undefined;
 
-  const response = await postApi({
-    route: "/climate/getEventsForEnvironmentalGateway",
-    body,
-    modifiers: requestModifiers,
-    sessionId,
-  }).then((response: schema["Climate_GetEventsForEnvironmentalGatewayWSResponse"]) => {
-    return {
-      events: (response.events || []).map((event: any) => ({
-        ...event,
-        timestampString: event.timestampMs ? formatTimestamp(event.timestampMs) : undefined,
-      })),
-      lastEvaluatedKey: response.lastEvaluatedKey,
+  while (hasMore) {
+    const body: schema["Climate_GetEventsForEnvironmentalGatewayWSRequest"] = {
+      deviceUuid,
+      ...(startTime ? { createdAfterMs: startTime } : {}),
+      ...(endTime ? { createdBeforeMs: endTime } : {}),
+      maxPageSize: EVENT_COUNT_MAX_PER_RESPONSE,
+      ...(lastEvaluatedKey ? { lastEvaluatedKey } : {}),
     };
-  });
 
-  return response;
+    const response = await postApi<schema["Climate_GetEventsForEnvironmentalGatewayWSResponse"]>({
+      route: "/climate/getEventsForEnvironmentalGateway",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    }).then(response => {
+      return {
+        events: (response.events || []).map(event => ({
+          timestampString: event.timestampMs ? formatTimestamp(event.timestampMs) : undefined,
+          temp: event.co2Sense?.tempC,
+          probeTemp: event.tempProbe?.tempC,
+          humidity: event.co2Sense?.relHumid,
+          pm25: event.pmSense?.pm2p5,
+          co2: event.co2Sense?.co2Ppm,
+          vapeDetected: event.derivedValues?.vapeDetected,
+        })),
+        lastEvaluatedKey: response.lastEvaluatedKey,
+      };
+    });
+
+    // Accumulate the events
+    if (response.events) {
+      allEvents.push(...response.events);
+    }
+
+    // Check if we should continue pagination
+    if (
+      response.events &&
+      response.events.length === EVENT_COUNT_MAX_PER_RESPONSE &&
+      response.lastEvaluatedKey &&
+      response.lastEvaluatedKey !== null
+    ) {
+      // Update the lastEvaluatedKey for the next iteration
+      lastEvaluatedKey = response.lastEvaluatedKey;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return {
+    events: allEvents,
+    lastEvaluatedKey: undefined, // Don't return lastEvaluatedKey since we've fetched all pages
+  };
 }

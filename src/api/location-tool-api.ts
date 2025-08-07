@@ -2,7 +2,7 @@ import { postApi } from "../network.js";
 import { RequestModifiers } from "../util.js";
 
 export async function getLocations(requestModifiers?: RequestModifiers, sessionId?: string) {
-  return await postApi({
+  return await postApi<any>({
     route: "/location/getLocationsV2",
     body: {},
     modifiers: requestModifiers,

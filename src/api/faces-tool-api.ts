@@ -3,6 +3,7 @@ import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-
 import { logger } from "./../logger.js";
 import { formatTimestamp } from "../util.js";
 import { removeNulls } from "../utils/remove-nulls.js";
+import schema from "../types/schema.js";
 // https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
 // nice :)
 type PickNullable<T> = {
@@ -89,7 +90,9 @@ export async function getFaceEvents(
     console.log("filteredArgs", filteredArgs);
     filteredArgs = removeNulls(filteredArgs);
 
-    const response = await postApi({
+    const response = await postApi<
+      schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]
+    >({
       route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
       body: filteredArgs,
       modifiers: requestModifiers,
@@ -141,7 +144,7 @@ export async function getRegisteredFaces(
   requestModifiers?: any,
   sessionId?: string
 ) {
-  return await postApi({
+  return await postApi<schema["Facerecognition_person_FindPeopleByOrgWSResponse"]>({
     route: "/faceRecognition/person/findPeopleByOrg",
     body: {},
     modifiers: requestModifiers,

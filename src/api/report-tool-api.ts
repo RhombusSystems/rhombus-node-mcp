@@ -77,7 +77,7 @@ export async function getSummaryCountReport(
     types,
     ...(uuid ? { uuid } : {}),
   };
-  const response = await postApi({
+  const response = await postApi<schema["Report_GetCountReportWSResponse"]>({
     route: "/report/getCountReportV2",
     body,
     modifiers: requestModifiers,

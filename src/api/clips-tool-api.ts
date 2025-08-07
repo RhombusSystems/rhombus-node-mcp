@@ -1,8 +1,9 @@
 import { postApi } from "../network.js";
 import { ApiPayload } from "../types/clips-tool-types.js";
+import schema from "../types/schema.js";
 
 export async function getSavedClips(args: ApiPayload, requestModifiers?: any, sessionId?: string) {
-  return await postApi({
+  return await postApi<schema["Event_GetClipsWithProgressWSResponse"]>({
     route: "/event/getClipsWithProgress",
     body: args,
     modifiers: requestModifiers,

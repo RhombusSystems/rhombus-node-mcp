@@ -11,7 +11,7 @@ export async function rebootCameras(
   for (const cameraUuid of cameraUuids) {
     try {
       const body = { cameraUuid };
-      const response = await postApi({
+      const response = await postApi<any>({
         route: "/camera/reboot",
         body,
         modifiers: requestModifiers,
