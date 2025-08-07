@@ -64,17 +64,7 @@ function normalizeTimeDescription(description: string): string {
 export function parseTimeDescription(time_description: string, timezone?: string, extra?: any) {
   logger.info("EXTRA", extra);
 
-  // const now = DateTime.local()
-  //   .setZone(timezone || "America/Los_Angeles")
-  //   .toJSDate();
-
-  const nowInTimezone = DateTime.local().setZone(timezone || "America/Los_Angeles");
-
-  const timezoneFormattedString = nowInTimezone.toFormat("yyyy-MM-dd HH:mm:ss");
-
-  const fakedNowTime = DateTime.fromFormat(timezoneFormattedString, "yyyy-MM-dd HH:mm:ss", {
-    zone: "America/Los_Angeles",
-  }).toJSDate();
+  const now = new Date(DateTime.now().setZone(timezone).toISO({ includeOffset: false })!);
 
   const normalizedDescription = normalizeTimeDescription(time_description);
   logger.info(
@@ -82,7 +72,7 @@ export function parseTimeDescription(time_description: string, timezone?: string
   );
 
   // Use the timezone-adjusted date as the reference date for chrono-node
-  const parsed = parse(normalizedDescription, fakedNowTime);
+  const parsed = parse(normalizedDescription, now);
 
   if (!parsed || parsed.length === 0) {
     throw new Error(`Could not parse time description: ${time_description}`);
