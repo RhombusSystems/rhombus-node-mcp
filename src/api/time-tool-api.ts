@@ -64,7 +64,7 @@ function normalizeTimeDescription(description: string): string {
 export function parseTimeDescription(time_description: string, timezone?: string, extra?: any) {
   logger.info("EXTRA", extra);
 
-  const now = new Date(DateTime.now().setZone(timezone).toISO({ includeOffset: false })!);
+  const now = new Date(DateTime.now().setZone(timezone || "America/Los_Angeles").toISO({ includeOffset: false })!);
 
   const normalizedDescription = normalizeTimeDescription(time_description);
   logger.info(
