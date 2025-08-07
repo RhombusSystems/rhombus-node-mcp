@@ -54,7 +54,7 @@ class ZodSchemaGenerator {
     switch (schema.type) {
       case "string":
         let stringSchema = "z.string()";
-        if (schema.format === "date-time") stringSchema += ".datetime()";
+        if (schema.format === "date-time") stringSchema += ".datetime({ offset: true })";
         if (schema.format === "email") stringSchema += ".email()";
         if (schema.format === "uuid") stringSchema += ".uuid()";
         if (schema.minLength !== undefined) stringSchema += `.min(${schema.minLength})`;

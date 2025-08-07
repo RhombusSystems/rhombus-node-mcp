@@ -5,14 +5,14 @@ export const TOOL_ARGS = {
   eventType: z.enum(["access-control", "environmental-gateway"]),
   startTime: z
     .string()
-    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .describe(
       "A timestamp representing when to start the search for access control events." +
         ISOTimestampFormatDescription
     ),
   endTime: z
     .string()
-    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .describe(
       "A timestamp representing when to end the search for access control events." +
         ISOTimestampFormatDescription
@@ -69,7 +69,7 @@ export const OUTPUT_SCHEMA = z.object({
               originator: z.string().optional(),
               credentialUuid: z.string().optional(),
               credSource: z.string().optional(),
-              datetime: z.string().optional(),
+              datetime: z.string().datetime({ offset: true }).optional(),
             })
           )
           .optional(),

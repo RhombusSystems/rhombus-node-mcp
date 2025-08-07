@@ -5,7 +5,7 @@ import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/times
 export const TOOL_ARGS = {
   afterTimestampISO: z
     .string()
-    .datetime( {message: "Invalid ISO 8601 date format."} )
+    .datetime( {message: "Invalid ISO 8601 date format.", offset: true} )
     .nullable()
     .describe(
       "The start of the time range for which to retrieve alerts. Only alerts that occurred AFTER this timestamp will be returned."
@@ -13,7 +13,7 @@ export const TOOL_ARGS = {
     ),
   beforeTimestampISO: z
     .string()
-    .datetime( {message: "Invalid ISO 8601 date format."} )
+    .datetime( {message: "Invalid ISO 8601 date format.", offset: true} )
     .nullable()
     .describe(
       "The end of the time range for which to retrieve alerts. Only alerts that occurred BEFORE this timestamp will be returned."

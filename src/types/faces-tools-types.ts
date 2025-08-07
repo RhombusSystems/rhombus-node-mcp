@@ -76,7 +76,7 @@ export const GetFaceEventsArgs = z.object({
         .object({
           rangeEnd: z
             .string()
-            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
+            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
             .nullable()
             .describe(
               "The end of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days."
@@ -84,7 +84,7 @@ export const GetFaceEventsArgs = z.object({
             ),
           rangeStart: z
             .string()
-            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
+            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
             .nullable()
             .describe(
               "The start of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days."
@@ -95,7 +95,7 @@ export const GetFaceEventsArgs = z.object({
         .describe("Time range filter for face events"),
     })
     .nullable()
-    .describe("Search criteria for filtering face events"),
+    .describe("Search criteria for filtering face events. Only applies to tool calls with requestType 'get-face-events'."),
 });
 export type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
 

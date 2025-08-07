@@ -21,14 +21,14 @@ export const TOOL_ARGS = {
     .describe("A simple string to search for within the names of the clips."),
   timestampISOAfter: z
     .string()
-    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .describe(
       "The start of the time range for which to retrieve clips. Only clips that occurred AFTER this timestamp will be returned."
       + ISOTimestampFormatDescription
     ),
   timestampISOBefore: z
     .string()
-    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format." })
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .describe(
       "The end of the time range for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned."
       + ISOTimestampFormatDescription

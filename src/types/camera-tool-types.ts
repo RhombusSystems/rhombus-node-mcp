@@ -192,7 +192,7 @@ export type ExternalUpdateableFacetedUserConfig = z.infer<
 
 export const BASE_TOOL_ARGS = {
   cameraUuid: z.string().nullable().describe("the camera uuid requested"),
-  timestampISO: z.string().datetime({ message: "Invalid ISO 8601 date format." })
+  timestampISO: z.string().datetime({ message: "Invalid ISO 8601 date format.", offset: true })
     .nullable()
     .describe(`
       the timestamp for the image. This will default to 5 minutes before the current time. You can also call time-tool to parse the user's time description.

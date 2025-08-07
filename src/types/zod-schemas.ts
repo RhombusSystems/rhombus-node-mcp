@@ -11,18 +11,18 @@ const ACUDoorCatalogItem = z.object({
 });
 const ACUDoorLicenseType = z.object({
   claimKeyUuid: z.string().optional(),
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   doorUuid: z.string().optional(),
-  firstAssignedDate: z.string().datetime().optional(),
+  firstAssignedDate: z.string().datetime({ offset: true }).optional(),
   licenseToUnassignEmailState: z.string().optional(),
-  maxDeleteDate: z.string().datetime().optional(),
+  maxDeleteDate: z.string().datetime({ offset: true }).optional(),
   orgUuid: z.string().optional(),
   priorClaimKeyUuid: z.string().optional(),
   productCode: z.string().optional(),
   productType: z.string().optional(),
   state: z.string().optional(),
   trial: z.boolean().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const ShippedItemType = z.object({
@@ -36,7 +36,7 @@ const AITShipmentInfoType = z.object({
   depositorOrderNumber: z.string().optional(),
   destinationAddress: z.string().optional(),
   isIngramDistributorShipment: z.boolean().optional(),
-  shipmentDate: z.string().datetime().optional(),
+  shipmentDate: z.string().datetime({ offset: true }).optional(),
   shippedItems: z.array(ShippedItemType).optional(),
 });
 const AMSirenSettingsType = z.object({
@@ -1923,9 +1923,9 @@ const LicenseStateStats = z.object({
 const DeviceLicenseFamilyStats = z.object({
   assignedCount: z.number().int().optional(),
   deviceLicenseFamily: z.string().optional(),
-  lastEndDate: z.string().datetime().optional(),
+  lastEndDate: z.string().datetime({ offset: true }).optional(),
   nearExpirationCount: z.number().int().optional(),
-  nextEndDate: z.string().datetime().optional(),
+  nextEndDate: z.string().datetime({ offset: true }).optional(),
   stateStats: LicenseStateStats.optional(),
   totalCount: z.number().int().optional(),
 });
@@ -1933,9 +1933,9 @@ const AddOnLicenseStats = z.object({
   addOnLicenseType: AddOnLicense.optional(),
   assignedCount: z.number().int().optional(),
   deviceLicenseFamilyStats: z.array(DeviceLicenseFamilyStats).optional(),
-  lastEndDate: z.string().datetime().optional(),
+  lastEndDate: z.string().datetime({ offset: true }).optional(),
   nearExpirationCount: z.number().int().optional(),
-  nextEndDate: z.string().datetime().optional(),
+  nextEndDate: z.string().datetime({ offset: true }).optional(),
   stateStats: LicenseStateStats.optional(),
   totalCount: z.number().int().optional(),
 });
@@ -1976,13 +1976,13 @@ const License = z.string();
 const AlertMonitoringLicenseType = z.object({
   allowedDeviceCount: z.number().int().optional(),
   claimKeyUuid: z.string().optional(),
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   deviceUuids: z.array(z.string()).optional(),
-  firstAssignedDate: z.string().datetime().optional(),
+  firstAssignedDate: z.string().datetime({ offset: true }).optional(),
   licenseToUnassignEmailState: z.string().optional(),
   licenseType: License.optional(),
   locationUuid: z.string().optional(),
-  maxDeleteDate: z.string().datetime().optional(),
+  maxDeleteDate: z.string().datetime({ offset: true }).optional(),
   monthlyVerificationLimit: z.number().int().optional(),
   monthsReset: z.number().int().optional(),
   orgUuid: z.string().optional(),
@@ -1994,7 +1994,7 @@ const AlertMonitoringLicenseType = z.object({
   remainingVerifications: z.number().int().optional(),
   state: z.string().optional(),
   trial: z.boolean().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
   warningStage: z.number().int().optional(),
 });
@@ -3477,15 +3477,15 @@ const BaseCatalogItem = z.object({
 });
 const ClaimKeyReturnEvent = z.object({
   returnedProductQuantities: z.record(z.unknown()).optional(),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.string().datetime({ offset: true }).optional(),
 });
 const BaseClaimKey = z.object({
-  claimEndDate: z.string().datetime().optional(),
-  claimStartDate: z.string().datetime().optional(),
-  createdOn: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  claimEndDate: z.string().datetime({ offset: true }).optional(),
+  claimStartDate: z.string().datetime({ offset: true }).optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
   expirationEmailState: z.string().optional(),
-  gracePeriodEndDate: z.string().datetime().optional(),
+  gracePeriodEndDate: z.string().datetime({ offset: true }).optional(),
   maskedClaimCode: z.string().optional(),
   orgUuid: z.string().optional(),
   renewedByClaimKeyUuid: z.string().optional(),
@@ -3494,7 +3494,7 @@ const BaseClaimKey = z.object({
   state: z.string().optional(),
   trial: z.boolean().optional(),
   type: z.string().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const OsdpPhysicalPortEnumType = z.string();
@@ -3726,17 +3726,17 @@ const BaseComponentType = z.object({
 });
 const BaseLicenseType = z.object({
   claimKeyUuid: z.string().optional(),
-  createdOn: z.string().datetime().optional(),
-  firstAssignedDate: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
+  firstAssignedDate: z.string().datetime({ offset: true }).optional(),
   licenseToUnassignEmailState: z.string().optional(),
-  maxDeleteDate: z.string().datetime().optional(),
+  maxDeleteDate: z.string().datetime({ offset: true }).optional(),
   orgUuid: z.string().optional(),
   priorClaimKeyUuid: z.string().optional(),
   productCode: z.string().optional(),
   productType: z.string().optional(),
   state: z.string().optional(),
   trial: z.boolean().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const PolicyEventFaceType = z.object({
@@ -3988,13 +3988,13 @@ const ContentDisposition = z.object({
       registered: z.boolean().optional(),
     })
     .optional(),
-  creationDate: z.string().datetime().optional(),
+  creationDate: z.string().datetime({ offset: true }).optional(),
   filename: z.string().optional(),
   formData: z.boolean().optional(),
   inline: z.boolean().optional(),
-  modificationDate: z.string().datetime().optional(),
+  modificationDate: z.string().datetime({ offset: true }).optional(),
   name: z.string().optional(),
-  readDate: z.string().datetime().optional(),
+  readDate: z.string().datetime({ offset: true }).optional(),
   size: z.number().int().optional(),
   type: z.string().optional(),
 });
@@ -5509,12 +5509,12 @@ const ClaimKeyEntry = z.object({
   productQuantities: z.record(z.unknown()).optional(),
 });
 const ClaimKey = z.object({
-  claimEndDate: z.string().datetime().optional(),
-  claimStartDate: z.string().datetime().optional(),
-  createdOn: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  claimEndDate: z.string().datetime({ offset: true }).optional(),
+  claimStartDate: z.string().datetime({ offset: true }).optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
   expirationEmailState: z.string().optional(),
-  gracePeriodEndDate: z.string().datetime().optional(),
+  gracePeriodEndDate: z.string().datetime({ offset: true }).optional(),
   maskedClaimCode: z.string().optional(),
   orgUuid: z.string().optional(),
   renewedByClaimKeyUuid: z.string().optional(),
@@ -5523,7 +5523,7 @@ const ClaimKey = z.object({
   state: z.string().optional(),
   trial: z.boolean().optional(),
   type: z.string().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const ClaimKeySearchFilter = z.object({
@@ -7162,7 +7162,7 @@ const CustomerShipmentType = z.object({
   "ait-depositorOrderNumber": z.string().optional(),
   "ait-destinationAddress": z.string().optional(),
   "ait-isIngramDistributorShipment": z.boolean().optional(),
-  "ait-shipmentDate": z.string().datetime().optional(),
+  "ait-shipmentDate": z.string().datetime({ offset: true }).optional(),
   "ait-shippedItems": z.array(ShippedItemType).optional(),
   interchangeControlNumber: z.string().optional(),
   lastStateUpdateSec: z.number().int().optional(),
@@ -7574,9 +7574,9 @@ const Developer_GetEventListenersForDeviceWSResponse = z.object({
 const DeviceAssignableLicenseGroupStats = z.object({
   assignedCount: z.number().int().optional(),
   deviceLicenseFamilyStats: z.array(DeviceLicenseFamilyStats).optional(),
-  lastEndDate: z.string().datetime().optional(),
+  lastEndDate: z.string().datetime({ offset: true }).optional(),
   nearExpirationCount: z.number().int().optional(),
-  nextEndDate: z.string().datetime().optional(),
+  nextEndDate: z.string().datetime({ offset: true }).optional(),
   stateStats: LicenseStateStats.optional(),
   totalCount: z.number().int().optional(),
 });
@@ -7616,22 +7616,22 @@ const LicenseFeature = z.object({
 });
 const DeviceLicenseType = z.object({
   claimKeyUuid: z.string().optional(),
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   deviceType: DeviceTypeEnum.optional(),
   deviceUuid: z.string().optional(),
   features: z.array(LicenseFeature).optional(),
-  firstAssignedDate: z.string().datetime().optional(),
+  firstAssignedDate: z.string().datetime({ offset: true }).optional(),
   licenseFamily: z.string().optional(),
   licenseToUnassignEmailState: z.string().optional(),
   licenseType: License.optional(),
-  maxDeleteDate: z.string().datetime().optional(),
+  maxDeleteDate: z.string().datetime({ offset: true }).optional(),
   orgUuid: z.string().optional(),
   priorClaimKeyUuid: z.string().optional(),
   productCode: z.string().optional(),
   productType: z.string().optional(),
   state: z.string().optional(),
   trial: z.boolean().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const DeviceSchedule = z.object({
@@ -7955,7 +7955,7 @@ const DiagnosticEventType = z.object({
   reportingDeviceUuid: z.string().optional(),
   rssi: z.number().int().optional(),
   ssid: z.string().optional(),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
   wifiSignalStrength: z.number().int().optional(),
 });
@@ -7982,7 +7982,7 @@ const RtspEndpoint = z.object({
 });
 const DiscoveredThirdPartyCameraType = z.object({
   codec: z.string().optional(),
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   ipAddress: z.string().optional(),
   lastVisibleMs: z.record(z.unknown()).optional(),
   macAddress: z.string().optional(),
@@ -7995,7 +7995,7 @@ const DiscoveredThirdPartyCameraType = z.object({
   orgUuid: z.string().optional(),
   password: z.string().optional(),
   rtspEndpoints: z.array(RtspEndpoint).optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   username: z.string().optional(),
 });
 const DoorAjarActivityEventType = z.object({
@@ -9413,8 +9413,8 @@ const Facerecognition_faceevent_DeleteFaceEventWSRequest = z.object({
 });
 const Facerecognition_faceevent_DeleteFaceEventWSResponse = z.record(z.unknown());
 const TimestampFilter = z.object({
-  rangeEnd: z.string().datetime().optional(),
-  rangeStart: z.string().datetime().optional(),
+  rangeEnd: z.string().datetime({ offset: true }).optional(),
+  rangeStart: z.string().datetime({ offset: true }).optional(),
 });
 const Facerecognition_faceevent_ExternalFaceEventSearchFilter = z.object({
   deviceUuids: z.array(z.string()).optional(),
@@ -9469,7 +9469,7 @@ const Facerecognition_faceevent_ExternalFaceEventSimilaritySearchFilter = z.obje
   timestampFilter: TimestampFilter.optional(),
 });
 const Facerecognition_faceevent_ReportTimestampFilter = z.object({
-  rangeStart: z.string().datetime().optional(),
+  rangeStart: z.string().datetime({ offset: true }).optional(),
   reportInterval: z.string().optional(),
 });
 const Facerecognition_faceevent_FindFaceEventsByDeviceForReportingWSRequest = z.object({
@@ -9556,7 +9556,7 @@ const Facerecognition_matchmaker_CreateFaceMatchmakerFromSightingWSRequest = z.o
   personUuid: z.string().optional(),
 });
 const Facerecognition_matchmaker_ExternalFaceMatchmaker = z.object({
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   id: z.string().optional(),
   orgUuid: z.string().optional(),
   personUuid: z.string().optional(),
@@ -9566,10 +9566,10 @@ const Facerecognition_matchmaker_CreateFaceMatchmakerFromSightingWSResponse = z.
   faceMatchmaker: Facerecognition_matchmaker_ExternalFaceMatchmaker.optional(),
 });
 const Person = z.object({
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const Facerecognition_matchmaker_CreatePersonAndFaceMatchmakersWSResponse = z.object({
@@ -9665,10 +9665,10 @@ const Facerecognition_person_RemovePersonLabelWSRequest = z.object({
 });
 const Facerecognition_person_RemovePersonLabelWSResponse = z.record(z.unknown());
 const PersonSelectiveUpdate = z.object({
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional(),
   uuid: z.string().optional(),
 });
@@ -9763,12 +9763,12 @@ const FlicType = z.object({
   userUuid: z.string().optional(),
 });
 const FormDataContentDisposition = z.object({
-  creationDate: z.string().datetime().optional(),
+  creationDate: z.string().datetime({ offset: true }).optional(),
   fileName: z.string().optional(),
-  modificationDate: z.string().datetime().optional(),
+  modificationDate: z.string().datetime({ offset: true }).optional(),
   name: z.string().optional(),
   parameters: z.record(z.unknown()).optional(),
-  readDate: z.string().datetime().optional(),
+  readDate: z.string().datetime({ offset: true }).optional(),
   size: z.number().int().optional(),
   type: z.string().optional(),
 });
@@ -10412,7 +10412,7 @@ const Help_GetOpenTicketsV2WSRequest = z.object({
   startTimeMs: z.number().int().optional(),
 });
 const Help_TicketInformation = z.object({
-  createdAt: z.string().datetime().optional(),
+  createdAt: z.string().datetime({ offset: true }).optional(),
   id: z.number().int().optional(),
   status: z.string().optional(),
   subject: z.string().optional(),
@@ -11162,7 +11162,7 @@ const IntegrationDiagnosticEventType = z.object({
   orgUuid: z.string().optional(),
   thirdPartyDeviceId: z.string().optional(),
   thirdPartyDeviceName: z.string().optional(),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const Integration_BaseIntegrationWSRequest = z.record(z.unknown());
@@ -12761,9 +12761,9 @@ const LabelIdentificationActivityEventType = z.object({
 });
 const LicenseGroupStats = z.object({
   assignedCount: z.number().int().optional(),
-  lastEndDate: z.string().datetime().optional(),
+  lastEndDate: z.string().datetime({ offset: true }).optional(),
   nearExpirationCount: z.number().int().optional(),
-  nextEndDate: z.string().datetime().optional(),
+  nextEndDate: z.string().datetime({ offset: true }).optional(),
   stateStats: LicenseStateStats.optional(),
   totalCount: z.number().int().optional(),
 });
@@ -12775,9 +12775,9 @@ const LicenseUsageCatalogItem = z.object({
 const LicenseUsageStats = z.object({
   addOnLicenseStats: z.array(AddOnLicenseStats).optional(),
   assignedCount: z.number().int().optional(),
-  lastEndDate: z.string().datetime().optional(),
+  lastEndDate: z.string().datetime({ offset: true }).optional(),
   nearExpirationCount: z.number().int().optional(),
-  nextEndDate: z.string().datetime().optional(),
+  nextEndDate: z.string().datetime({ offset: true }).optional(),
   stateStats: LicenseStateStats.optional(),
   totalCount: z.number().int().optional(),
 });
@@ -12786,14 +12786,14 @@ const LicenseUsageType = z.object({
   additionalPerceptionFeatures: z.array(PerceptionType).optional(),
   claimKeyUuid: z.string().optional(),
   cloudArchiveDays: z.number().int().optional(),
-  createdOn: z.string().datetime().optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
   deviceType: DeviceTypeEnum.optional(),
   deviceUuid: z.string().optional(),
-  firstAssignedDate: z.string().datetime().optional(),
+  firstAssignedDate: z.string().datetime({ offset: true }).optional(),
   license: AddOnLicense.optional(),
   licenseFamily: z.string().optional(),
   licenseToUnassignEmailState: z.string().optional(),
-  maxDeleteDate: z.string().datetime().optional(),
+  maxDeleteDate: z.string().datetime({ offset: true }).optional(),
   orgUuid: z.string().optional(),
   perceptionTypes: z.array(PerceptionType).optional(),
   priorClaimKeyUuid: z.string().optional(),
@@ -12801,7 +12801,7 @@ const LicenseUsageType = z.object({
   productType: z.string().optional(),
   state: z.string().optional(),
   trial: z.boolean().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const License_AssignACUDoorLicenseWSRequest = z.object({
@@ -12840,10 +12840,10 @@ const OrgLicenseStats = z.object({
   alertMonitoringLicenseStats: LicenseGroupStats.optional(),
   assignedCount: z.number().int().optional(),
   deviceLicenseStats: DeviceAssignableLicenseGroupStats.optional(),
-  lastEndDate: z.string().datetime().optional(),
+  lastEndDate: z.string().datetime({ offset: true }).optional(),
   licenseUsageStats: LicenseUsageStats.optional(),
   nearExpirationCount: z.number().int().optional(),
-  nextEndDate: z.string().datetime().optional(),
+  nextEndDate: z.string().datetime({ offset: true }).optional(),
   stateStats: LicenseStateStats.optional(),
   totalCount: z.number().int().optional(),
 });
@@ -13009,10 +13009,10 @@ const License_claimkey_ClaimLicensesWSResponse = z.object({
   errorMsg: z.string().optional(),
 });
 const License_claimkey_CreateClaimKeyWSRequest = z.object({
-  endDate: z.string().datetime().optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
   entry: ClaimKeyEntry.optional(),
   requestId: z.string().optional(),
-  startDate: z.string().datetime().optional(),
+  startDate: z.string().datetime({ offset: true }).optional(),
   trial: z.boolean().optional(),
 });
 const License_claimkey_CreateClaimKeyWSResponse = z.object({
@@ -13022,7 +13022,7 @@ const License_claimkey_CreateClaimKeyWSResponse = z.object({
   uuid: z.string().optional(),
 });
 const License_claimkey_CreateRenewalClaimKeyWSRequest = z.object({
-  endDate: z.string().datetime().optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
   entries: z.record(z.unknown()).optional(),
   requestId: z.string().optional(),
 });
@@ -15587,12 +15587,12 @@ const Relay_UpdateNVRVWSResponse = z.object({
   errorMsg: z.string().optional(),
 });
 const RenewalClaimKey = z.object({
-  claimEndDate: z.string().datetime().optional(),
-  claimStartDate: z.string().datetime().optional(),
-  createdOn: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  claimEndDate: z.string().datetime({ offset: true }).optional(),
+  claimStartDate: z.string().datetime({ offset: true }).optional(),
+  createdOn: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
   expirationEmailState: z.string().optional(),
-  gracePeriodEndDate: z.string().datetime().optional(),
+  gracePeriodEndDate: z.string().datetime({ offset: true }).optional(),
   maskedClaimCode: z.string().optional(),
   orgUuid: z.string().optional(),
   renewedByClaimKeyUuid: z.string().optional(),
@@ -15601,7 +15601,7 @@ const RenewalClaimKey = z.object({
   state: z.string().optional(),
   trial: z.boolean().optional(),
   type: z.string().optional(),
-  updatedOn: z.string().datetime().optional(),
+  updatedOn: z.string().datetime({ offset: true }).optional(),
   uuid: z.string().optional(),
 });
 const Report_AuditEventWeb = z.object({
@@ -15622,7 +15622,7 @@ const Report_AuditEventWeb = z.object({
   sourceState: z.string().optional(),
   targetName: z.string().optional(),
   targetUuid: z.string().optional(),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.string().datetime({ offset: true }).optional(),
   userAgent: z.string().optional(),
   uuid: z.string().optional(),
 });
