@@ -7,8 +7,10 @@ import {
   RequestType,
 } from "../types/report-tool-types.js";
 import { getOccupancyCountReport, getSummaryCountReport } from "../api/report-tool-api.js";
+import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
+import { DateTime } from "luxon";
 
-const TOOL_NAME = "report_tool";
+const TOOL_NAME = "report-tool";
 
 const TOOL_DESCRIPTION = `
 This tool generates summary count reports for various types of data within the Rhombus system.
@@ -37,7 +39,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       endTimeMs,
       startTimeMs,
       extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
+      extra.sessionId,
+      args.summaryCountRequest.timeZone
     );
 
     return {

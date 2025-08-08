@@ -1,7 +1,32 @@
-import { logger } from "../logger.js";
+import { getLogger, logger } from "../logger.js";
 import { postApi } from "../network.js";
 import { formatTimestamp } from "../util.js";
 import schema from "../types/schema.js";
+import { OutputSchema, SanitizedTimeSeriesDataPoint } from "../types/report-tool-types.js";
+import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
+import { DateTime } from "luxon";
+
+const REPORT_TYPES_THAT_RETURN_UTC = new Set([
+  GetCountReportV2WSRequestTypesEnum.BANDWIDTH,
+  GetCountReportV2WSRequestTypesEnum.VEHICLES,
+  GetCountReportV2WSRequestTypesEnum.MOTION,
+  GetCountReportV2WSRequestTypesEnum.DWELL,
+]);
+
+const logger = getLogger();
+
+function getUtcTime(
+  datetime: string,
+  reportType: GetCountReportV2WSRequestTypesEnum,
+  timeZone?: string
+): string {
+  if (REPORT_TYPES_THAT_RETURN_UTC.has(reportType)) {
+    return datetime;
+  } else {
+    logger.info("timeZone", datetime);
+    return DateTime.fromISO(datetime, { zone: timeZone }).toUTC().toISO()!;
+  }
+}
 
 export async function getOccupancyCountReport(
   deviceUuid: string,
@@ -56,8 +81,9 @@ export async function getSummaryCountReport(
   endTimeMs: number,
   startTimeMs: number,
   requestModifiers?: any,
-  sessionId?: string
-) {
+  sessionId?: string,
+  timeZone?: string
+): Promise<OutputSchema["summaryCountReport"]> {
   logger.info(
     "📊 Getting summary count report",
     JSON.stringify({
@@ -85,43 +111,21 @@ export async function getSummaryCountReport(
   });
 
   // Process response to convert date strings to UTC milliseconds timestamps
+  let newTimeSeriesDataPoints: SanitizedTimeSeriesDataPoint[] | undefined = undefined;
   if (response && response.timeSeriesDataPoints && Array.isArray(response.timeSeriesDataPoints)) {
-    response.timeSeriesDataPoints = response.timeSeriesDataPoints.map((dataPoint: any) => {
-      const processedDataPoint = { ...dataPoint };
+    newTimeSeriesDataPoints = response.timeSeriesDataPoints.map((dataPoint: any) => {
+      const sanitizedDataPoint: SanitizedTimeSeriesDataPoint = {
+        eventCountMap: dataPoint.eventCountMap,
+        dateUtcString: getUtcTime(dataPoint.dateLocal, dataPoint.type, timeZone),
+      };
 
-      if (processedDataPoint.dateLocal) {
-        try {
-          processedDataPoint.dateLocalMs = new Date(processedDataPoint.dateLocal + "Z").getTime();
-          processedDataPoint.dateLocalString = formatTimestamp(processedDataPoint.dateLocalMs);
-          delete processedDataPoint.dateLocal;
-        } catch (e) {}
-      }
-
-      if (processedDataPoint.dateUtc) {
-        try {
-          processedDataPoint.dateUtcMs = new Date(processedDataPoint.dateUtc + "Z").getTime();
-          processedDataPoint.dateUtcString = formatTimestamp(processedDataPoint.dateUtcMs);
-          delete processedDataPoint.dateUtc;
-        } catch (e) {}
-      }
-
-      if (processedDataPoint.maxEventCountMap) {
-        Object.keys(processedDataPoint.maxEventCountMap).forEach(key => {
-          const uuid = processedDataPoint.maxEventCountMap[key].uuid;
-          if (scope === "LOCATION") {
-            processedDataPoint.maxEventCountMap[key].locationUuid = uuid;
-          } else if (scope === "DEVICE") {
-            processedDataPoint.maxEventCountMap[key].cameraUuid = uuid;
-          } else if (scope === "ORG") {
-            processedDataPoint.maxEventCountMap[key].orgUuid = uuid;
-          }
-          delete processedDataPoint.maxEventCountMap[key].uuid;
-        });
-      }
-
-      return processedDataPoint;
+      return sanitizedDataPoint;
     });
   }
 
-  return response;
+  return {
+    error: response.error,
+    errorMsg: response.errorMsg ?? undefined,
+    timeSeriesDataPoints: newTimeSeriesDataPoints,
+  };
 }

@@ -57,11 +57,22 @@ export const TOOL_ARGS = z.object({
     endTimeMs: z
       .number()
       .describe("A timestamp in milliseconds representing the end time of the report period"),
+    timeZone: z.string()
+      .describe(`The timezone of the requested locations or devices. This is necessary for the tool to produce
+      accurate UTC dates for the returned data.`),
   }),
 });
 
 const TOOL_ARGS_SCHEMA = TOOL_ARGS;
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+export const SanitizedTimeSeriesDataPoint = z.object({
+  dateUtcString: z
+    .optional(z.string())
+    .describe("The UTC date of the data point in ISO 8601 format"),
+  eventCountMap: z.optional(z.record(z.any())),
+});
+export type SanitizedTimeSeriesDataPoint = z.infer<typeof SanitizedTimeSeriesDataPoint>;
 
 export const OUTPUT_SCHEMA = z.object({
   error: z.optional(z.boolean()),
@@ -71,18 +82,7 @@ export const OUTPUT_SCHEMA = z.object({
       .object({
         error: z.optional(z.boolean()),
         errorMsg: z.optional(z.string()),
-        timeSeriesDataPoints: z.optional(
-          z.array(
-            z.object({
-              dateLocalMs: z.optional(z.number()),
-              dateUtcMs: z.optional(z.any()),
-              dateLocalString: z.optional(z.string()),
-              dateUtcString: z.optional(z.string()),
-              eventCountMap: z.optional(z.record(z.any())),
-              maxEventCountMap: z.optional(z.record(z.any())),
-            })
-          )
-        ),
+        timeSeriesDataPoints: z.optional(z.array(SanitizedTimeSeriesDataPoint)),
       })
       .nullable()
       .describe(
