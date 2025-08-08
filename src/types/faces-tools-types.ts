@@ -160,3 +160,4 @@ export const OUTPUT_SCHEMA = z.object({
     ),
   error: z.optional(z.string()),
 });
+export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

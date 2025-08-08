@@ -31,7 +31,9 @@ If the requestType is "get-registered-faces":
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  let ret: any = {};
+  let ret: OUTPUT_SCHEMA = {
+    requestType: args.requestType,
+  };
   if (args.requestType === RequestType.GET_FACE_EVENTS) {
     const response = await getFaceEvents(
       args.faceEventFilter as GetFaceEventsArgs,
@@ -51,12 +53,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     if (response.people) {
       ret = {
         requestType: RequestType.GET_REGISTERED_FACES,
-        getSavedFacesResponse: response.people,
+        getSavedFacesResponse: response.people.map(p => ({
+          createdOn: p.createdOn ? parseInt(p.createdOn) : undefined,
+          name: p.name ?? undefined,
+          orgUuid: p.orgUuid ?? undefined,
+          updatedOn: p.updatedOn ? parseInt(p.updatedOn) : undefined,
+          uuid: p.uuid ?? undefined,
+        })),
       };
     } else {
       ret = {
         requestType: RequestType.GET_REGISTERED_FACES,
-        error: response.error,
+        error: String(response.error),
       };
     }
   }
