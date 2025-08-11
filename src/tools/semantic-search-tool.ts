@@ -5,7 +5,7 @@ import { logger } from '../logger.js';
 import { TOOL_ARGS, ToolArgs } from '../types/semantic-search-tool-types.js';
 
 // Constants following coding style guidelines
-const DEFAULT_SEARCH_LIMIT = 10;
+const DEFAULT_SEARCH_LIMIT = 3;
 const DEFAULT_MIN_SIMILARITY = 0.3;
 
 const TOOL_NAME = "semantic-search";
