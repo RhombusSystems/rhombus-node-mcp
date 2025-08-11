@@ -1,4 +1,4 @@
-import { getLogger, logger } from "../logger.js";
+import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
 import { formatTimestamp } from "../util.js";
 import schema from "../types/schema.js";
