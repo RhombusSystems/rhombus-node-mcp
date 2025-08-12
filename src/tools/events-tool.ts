@@ -60,16 +60,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
   if (eventType === "access-control") {
     if (!accessControlledDoorUuid) {
+      const result = {
+        needUserInput: true,
+        commandForUser: "Which door are you asking about?",
+      };
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({
-              needUserInput: true,
-              commandForUser: "Which door are you asking about?",
-            }),
+            text: JSON.stringify(result),
           },
         ],
+        structuredContent: result,
       };
     } else {
       const events = await getAccessControlEvents(
@@ -95,16 +97,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     }
   } else if (eventType === "environmental-gateway") {
     if (!deviceUuid) {
+      const result = {
+        needUserInput: true,
+        commandForUser: "Which environmental gateway device are you asking about?",
+      };
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({
-              needUserInput: true,
-              commandForUser: "Which environmental gateway device are you asking about?",
-            }),
+            text: JSON.stringify(result),
           },
         ],
+        structuredContent: result,
       };
     } else {
       const events = await getEventsForEnvironmentalGateway(
@@ -130,13 +134,16 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     }
   }
 
+  // This should not happen, but return empty result if eventType is unknown
+  const result = {};
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify({}),
+        text: JSON.stringify(result),
       },
     ],
+    structuredContent: result,
   };
 };
 

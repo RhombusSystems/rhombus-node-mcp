@@ -30,14 +30,14 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       throw new Error("summaryCountRequest is required");
     }
 
-    const { interval, scope, types, startTimeMs, endTimeMs, uuid } = summaryCountRequest;
+    const { interval, scope, types, rangeStart, rangeEnd, uuid } = summaryCountRequest;
     const report = await getSummaryCountReport(
       interval,
       scope,
       types,
       uuid ?? undefined,
-      endTimeMs,
-      startTimeMs,
+      new Date(rangeEnd).getTime(),
+      new Date(rangeStart).getTime(),
       extra._meta?.requestModifiers as RequestModifiers,
       extra.sessionId,
       args.summaryCountRequest.timeZone
@@ -60,11 +60,11 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     if (!occupancyCountRequest) {
       throw new Error("occupancyCountRequest is required");
     }
-    const { deviceUuid, startTimeMs, endTimeMs, interval } = occupancyCountRequest;
+    const { deviceUuid, rangeStart, rangeEnd, interval } = occupancyCountRequest;
     const report = await getOccupancyCountReport(
       deviceUuid,
-      startTimeMs,
-      endTimeMs,
+      new Date(rangeStart).getTime(),
+      new Date(rangeEnd).getTime(),
       interval,
       extra._meta?.requestModifiers as RequestModifiers,
       extra.sessionId

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { schemas } from "./zod-schemas.js";
+import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export enum RequestType {
   GET_SUMMARY_COUNT_REPORT = "get-summary-count-report",
@@ -13,12 +14,20 @@ export const TOOL_ARGS = z.object({
   ]),
   occupancyCountRequest: z.object({
     deviceUuid: z.string().describe("The uuid of the device to get occupancy count for"),
-    startTimeMs: z
-      .number()
-      .describe("A timestamp in milliseconds representing the start time of the report period"),
-    endTimeMs: z
-      .number()
-      .describe("A timestamp in milliseconds representing the end time of the report period"),
+    rangeStart: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The start of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
+    rangeEnd: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The end of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
     interval: z
       .enum(["MINUTELY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"])
       .describe("The time interval for the report aggregation"),
@@ -51,12 +60,20 @@ export const TOOL_ARGS = z.object({
         ])
       )
       .describe("The types of data to include in the summary count report"),
-    startTimeMs: z
-      .number()
-      .describe("A timestamp in milliseconds representing the start time of the report period"),
-    endTimeMs: z
-      .number()
-      .describe("A timestamp in milliseconds representing the end time of the report period"),
+    rangeStart: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The start of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
+    rangeEnd: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The end of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
     timeZone: z.string()
       .describe(`The timezone of the requested locations or devices. This is necessary for the tool to produce
       accurate UTC dates for the returned data.`),

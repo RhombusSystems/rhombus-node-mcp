@@ -1,13 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { getLogger } from "../logger.js";
 import {
   getCameraSettings,
   getImageForCameraAtTime,
   updateCameraSettings,
 } from "../api/camera-tool-api.js";
-import {
-  BASE_TOOL_ARGS,
-  ToolArgs
-} from "../types/camera-tool-types.js";
+import { BASE_TOOL_ARGS, ToolArgs } from "../types/camera-tool-types.js";
 import { createToolTextContent, RequestModifiers } from "../util.js";
 import { addConfirmationParams, isConfirmed, requireConfirmation } from "../utils/confirmation.js";
 
@@ -41,6 +39,8 @@ What follows is a description of the behavior of this tool given the requestType
 This tool updates the configuration for a camera or associated device using the "configUpdate" parameter, which must be a JSON object containing the specific fields and their new values. For example, you can modify streaming parameters.
 `;
 
+const logger = getLogger("camera-tool");
+
 const TOOL_ARGS = addConfirmationParams(BASE_TOOL_ARGS);
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -61,7 +61,9 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   }
 
   let response;
-  const timestampMs = timestampISO ? new Date(timestampISO).getTime() : new Date().getTime() - 1000 * 60 * 5;
+  const timestampMs = timestampISO
+    ? new Date(timestampISO).getTime()
+    : new Date().getTime() - 1000 * 60 * 5;
 
   switch (requestType) {
     case "image":
@@ -71,17 +73,30 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
+
       if (!response.success || !response.imageData) {
         return {
           content: [{ type: "text" as const, text: JSON.stringify(response) }],
         };
       }
+
+      logger.debug(`Received image response:\n ${JSON.stringify(response)}`);
+
       return {
         content: [
           {
             type: "image" as const,
             data: response.imageData,
             mimeType: "image/jpeg",
+          },
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              success: true,
+              status: "image-attached",
+              cameraUuid,
+              timestampMs,
+            }),
           },
         ],
       };

@@ -55,6 +55,7 @@ export async function getImageForCameraAtTime(
       const arrayBuffer = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const base64 = buffer.toString("base64");
+      logger.debug(`Received image base64:\n ${base64}`);
       return base64;
     });
   });
