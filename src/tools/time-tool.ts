@@ -4,7 +4,7 @@ import { TOOL_ARGS, type ToolArgs } from "../types/time-tool-types.js";
 
 const TOOL_NAME = "time-tool";
 const TOOL_DESCRIPTION =
-  "This tool is capable of returning the time from a natural language query.  If the user asks about the 'current time' use this tool.";
+  "This tool is capable of returning the time from a natural language query.  If the user asks about the 'current time' use this tool.  Try to kee time_description as close to the users initial query as possible.  For example if someone says 'was X person seen today?' then time_description should be 'today'.";
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { time_description, timezone } = args;
