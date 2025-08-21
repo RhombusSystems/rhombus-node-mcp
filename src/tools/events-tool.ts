@@ -43,7 +43,8 @@ This tool can return a lot of data. Please make sure the time range provided is 
 
 When eventType is "environmental-gateway":
 
-This tool retrieves environmental gateway events for a specific environmental gateway device within a time range.
+This tool retrieves environmental gateway events for a specific environmental gateway device within a time range. The data returned will have a timestamp that is in
+the timezone of the **device**, not necessarily UTC time.
 
 This tool takes 3 arguments:
   * **deviceUuid (string):** The unique identifier for the environmental gateway device.
