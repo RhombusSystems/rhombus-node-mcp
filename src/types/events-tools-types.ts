@@ -1,6 +1,20 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
+// Define the originator structure to match the API response
+const EventOriginatorSchema = z.object({
+  type: z.string().optional(),
+  // Add other fields as needed based on the BaseEventOriginator structure
+}).passthrough(); // Allow additional properties
+
+// Define the credential structure to match the API response
+const CredentialSchema = z.object({
+  credSource: z.string().optional(),
+  credentialId: z.string().optional(),
+  firstInEligible: z.boolean().optional(),
+  originator: EventOriginatorSchema.optional(),
+}).passthrough(); // Allow additional properties
+
 export const TOOL_ARGS = {
   eventType: z.enum(["access-control", "environmental-gateway"]),
   startTime: z
@@ -57,16 +71,10 @@ export const OUTPUT_SCHEMA = z.object({
               doorUuid: z.string().optional(),
               locationUuid: z.string().optional(),
               credentials: z
-                .array(
-                  z.object({
-                    credSource: z.string().optional(),
-                    credentialId: z.string().optional(),
-                    firstInEligible: z.boolean().optional(),
-                    originator: z.string().optional(),
-                  })
-                )
+                .array(CredentialSchema.nullable().optional())
+                .nullable()
                 .optional(),
-              originator: z.string().optional(),
+              originator: EventOriginatorSchema.optional(),
               credentialUuid: z.string().optional(),
               credSource: z.string().optional(),
               datetime: z.string().datetime({ offset: true }).optional(),

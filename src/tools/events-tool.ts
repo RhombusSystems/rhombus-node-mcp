@@ -1,10 +1,10 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestModifiers } from "../util.js";
-import { TOOL_ARGS, ToolArgs, OUTPUT_SCHEMA } from "../types/events-tools-types.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   getAccessControlEvents,
   getEventsForEnvironmentalGateway,
 } from "../api/events-tool-api.js";
+import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/events-tools-types.js";
+import type { RequestModifiers } from "../util.js";
 
 const TOOL_NAME = "events-tool";
 
