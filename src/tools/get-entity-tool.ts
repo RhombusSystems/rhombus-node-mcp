@@ -26,7 +26,7 @@ The return structure is a JSON string that contains the states of the requested 
 This data is exact. Whatever entities exist will be returned here.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { entityTypes, includeFields } = args;
+  const { entityTypes, includeFields, timeZone } = args;
   const requestModifiers = extra._meta?.requestModifiers as RequestModifiers;
   const sessionId = extra.sessionId;
 
@@ -44,25 +44,25 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     promises.push(getAccessControlledDoors(requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.AUDIO_GATEWAY)) {
-    promises.push(getAudioGateways(requestModifiers, sessionId));
+    promises.push(getAudioGateways(timeZone, requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.DOOR_SENSOR)) {
     promises.push(getDoorSensors(requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.ENVIRONMENTAL_SENSOR)) {
-    promises.push(getEnvironmentalSensors(requestModifiers, sessionId));
+    promises.push(getEnvironmentalSensors(timeZone, requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.MOTION_SENSOR)) {
     promises.push(getMotionSensors(requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.BUTTON)) {
-    promises.push(getButtons(requestModifiers, sessionId));
+    promises.push(getButtons(timeZone, requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.KEYPAD)) {
     promises.push(getKeypads(requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.ENVIRONMENTAL_GATEWAY)) {
-    promises.push(getEnvironmentalGateways(requestModifiers, sessionId));
+    promises.push(getEnvironmentalGateways(timeZone, requestModifiers, sessionId));
   }
   const responses = Promise.all<object>(promises);
   const ret = {

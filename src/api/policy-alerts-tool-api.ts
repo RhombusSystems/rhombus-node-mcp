@@ -21,7 +21,9 @@ export async function getPolicyAlerts(
       ...response,
       policyAlerts: (response.policyAlerts || []).map((alert: PolicyAlert) => ({
         ...alert,
-        createdOnString: alert.timestampMs ? formatTimestamp(alert.timestampMs) : undefined,
+        createdOnString: alert.timestampMs
+          ? formatTimestamp(alert.timestampMs, args.timeZone)
+          : undefined,
       })),
     };
   });

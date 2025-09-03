@@ -23,18 +23,12 @@ This tool can return a lot of data. Please make sure the time range provided is 
   * **endTime (string):** The timestamp (in ISO 8601 format) representing the end or latest time of access control events.
 
   The tool returns a JSON object with the following structure and important fields:
-  * **componentEvents (array of objects | null):** An array where each object represents a single access control event. Each event object contains the following important fields:
+  * **accessControlEvents (array of objects | null):** An array where each object represents a single access control event. Each event object contains the following important fields:
       * **authenticationResult (string):** The result of the authentication process.
       * **authorizationResult (string):** The result of the authorization process.
       * **doorUuid (string):** The unique identifier for the access controlled door.
       * **locationUuid (string):** The unique identifier for the location where the event occurred.
-      * **credentials (array of objects | null):** An array where each object represents a single credential. Each credential object contains the following important fields:
-          * **credSource (string):** The source of the credential.
-          * **credentialId (string):** The unique identifier for the credential.
-          * **firstInEligible (boolean):** Whether the credential is eligible for first in.
-          * **originator (string):** The originator of the event.
-      * **originator (string):** The originator of the event.
-      * **credentialUuid (string):** The unique identifier for the credential.
+      * **user (string):** The username of the person who triggered the event.
       * **credSource (string):** The source of the credential. Is what generated the event.
         - "BLE_WAVE" is a user badging in by physically waving their hand over the reader. This is presented as "Credential Received" in the web console.
         - "NFC" is a user badging in by tapping their badge or their phone on the reader. This is presented as "Credential Received" in the web console.
@@ -57,10 +51,10 @@ The tool returns a JSON object with the following structure:
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { eventType, accessControlledDoorUuid, deviceUuid, startTime, endTime } = args;
+  const { eventType, accessControlledDoorUuids, deviceUuid, startTime, endTime, timeZone } = args;
 
   if (eventType === "access-control") {
-    if (!accessControlledDoorUuid) {
+    if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
       const result = {
         needUserInput: true,
         commandForUser: "Which door are you asking about?",
@@ -76,9 +70,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       };
     } else {
       const events = await getAccessControlEvents(
-        accessControlledDoorUuid,
+        accessControlledDoorUuids,
         startTime ? new Date(startTime).getTime() : undefined,
         endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
@@ -116,6 +111,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         deviceUuid,
         startTime ? new Date(startTime).getTime() : undefined,
         endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );

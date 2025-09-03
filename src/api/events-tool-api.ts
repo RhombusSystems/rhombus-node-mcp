@@ -46,38 +46,51 @@ export async function getFaceEvents(
 }
 
 export async function getAccessControlEvents(
-  doorUuid: string,
+  doorUuids: string[],
   startTime: number | undefined,
   endTime: number | undefined,
+  timeZone: string,
   requestModifiers?: any,
   sessionId?: string
 ) {
-  const body = {
+  const bodies = doorUuids.map(doorUuid => ({
     accessControlledDoorUuid: doorUuid,
     ...(startTime ? { createdAfterMs: startTime } : {}),
     ...(endTime ? { createdBeforeMs: endTime } : {}),
     typeFilter: ["CredentialReceivedEvent"],
-  };
-
-  const response = await postApi<any>({
-    route: "/component/findComponentEventsByAccessControlledDoor",
-    body,
-    modifiers: requestModifiers,
-    sessionId,
-  }).then(response => ({
-    componentEvents: (response.componentEvents || []).map((event: any) => ({
-      authenticationResult: event.authenticationResult,
-      authorizationResult: event.authorizationResult,
-      doorUuid: event.componentCompositeUuid,
-      locationUuid: event.locationUuid,
-      credentials: event.credentials,
-      originator: event.originator,
-      credentialUuid: event.credentialUuid,
-      credSource: event.credSource,
-      datetime: new Date(event.timestampMs).toISOString(),
-    })),
   }));
-  return response;
+
+  const responses = await Promise.all(
+    bodies.map(body =>
+      postApi<schema["Component_FindComponentEventsByAccessControlledDoorWSResponse"]>({
+        route: "/component/findComponentEventsByAccessControlledDoor",
+        body,
+        modifiers: requestModifiers,
+        sessionId,
+      }).then(response => {
+        return (response.componentEvents || [])
+          .map((credEvent: schema["CredentialReceivedEventType"]) => {
+            return {
+              authenticationResult: credEvent?.authenticationResult,
+              authorizationResult: credEvent?.authorizationResult,
+              doorUuid: credEvent?.componentCompositeUuid,
+              locationUuid: credEvent?.locationUuid,
+              user: (credEvent?.originator as any)?.username,
+              credSource: credEvent?.credSource,
+              datetime: credEvent?.timestampMs
+                ? formatTimestamp(credEvent.timestampMs, timeZone)
+                : undefined,
+            };
+          })
+          .filter(Boolean);
+      })
+    )
+  );
+
+  // Flatten all componentEvents into a single array
+  const accessControlEvents = responses.flatMap(events => events);
+  console.error(`componentEvents: ${JSON.stringify(accessControlEvents)}`);
+  return accessControlEvents;
 }
 
 export async function getHumanMotionEvents(
@@ -118,6 +131,7 @@ export async function getEventsForEnvironmentalGateway(
   deviceUuid: string,
   startTime: number | undefined,
   endTime: number | undefined,
+  timeZone: string,
   requestModifiers?: any,
   sessionId?: string
 ) {
@@ -142,7 +156,9 @@ export async function getEventsForEnvironmentalGateway(
     }).then(response => {
       return {
         events: (response.events || []).map(event => ({
-          timestampString: event.timestampMs ? formatTimestamp(event.timestampMs) : undefined,
+          timestampString: event.timestampMs
+            ? formatTimestamp(event.timestampMs, timeZone)
+            : undefined,
           temp: event.co2Sense?.tempC,
           probeTemp: event.tempProbe?.tempC,
           humidity: event.co2Sense?.relHumid,

@@ -117,7 +117,9 @@ export async function postApi<T>({
       // throw new Error(`HTTP error! status: ${response.status}`);
     }
     const ret = await response.json();
-    logger.debug(`✅ RESPONSE - ${response.ok} - ${JSON.stringify(ret)}`);
+    const jsonStr = JSON.stringify(ret);
+    const truncatedJson = jsonStr.length > 150 ? jsonStr.substring(0, 150) + "..." : jsonStr;
+    logger.debug(`✅ RESPONSE - ${response.ok} - ${truncatedJson}`);
     return ret as T & { error?: boolean; status?: string };
   } catch (error) {
     logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {}, null, 4)}`);

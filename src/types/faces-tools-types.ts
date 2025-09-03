@@ -76,32 +76,45 @@ export const GetFaceEventsArgs = z.object({
         .object({
           rangeEnd: z
             .string()
-            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+            .datetime({
+              message: "Invalid datetime string. Expected ISO 8601 format.",
+              offset: true,
+            })
             .nullable()
             .describe(
-              "The end of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days."
-              + ISOTimestampFormatDescription
+              "The end of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days." +
+                ISOTimestampFormatDescription
             ),
           rangeStart: z
             .string()
-            .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+            .datetime({
+              message: "Invalid datetime string. Expected ISO 8601 format.",
+              offset: true,
+            })
             .nullable()
             .describe(
-              "The start of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days."
-              + ISOTimestampFormatDescription
+              "The start of the time range (inclusive) for filtering face events. If not specified, the filter defaults to the last 7 days." +
+                ISOTimestampFormatDescription
             ),
         })
         .nullable()
         .describe("Time range filter for face events"),
     })
     .nullable()
-    .describe("Search criteria for filtering face events. Only applies to tool calls with requestType 'get-face-events'."),
+    .describe(
+      "Search criteria for filtering face events. Only applies to tool calls with requestType 'get-face-events'."
+    ),
 });
 export type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
 
 export const TOOL_ARGS = {
   requestType: z.nativeEnum(RequestType),
   faceEventFilter: GetFaceEventsArgs,
+  timeZone: z
+    .string()
+    .describe(
+      "The timezone for formatting timestamps which should come from the location of the camera for the face event. This is necessary for the tool to produce accurate formatted timestamps."
+    ),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);

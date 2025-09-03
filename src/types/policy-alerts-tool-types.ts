@@ -5,19 +5,19 @@ import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/times
 export const TOOL_ARGS = {
   afterTimestampISO: z
     .string()
-    .datetime( {message: "Invalid ISO 8601 date format.", offset: true} )
+    .datetime({ message: "Invalid ISO 8601 date format.", offset: true })
     .nullable()
     .describe(
-      "The start of the time range for which to retrieve alerts. Only alerts that occurred AFTER this timestamp will be returned."
-      + ISOTimestampFormatDescription
+      "The start of the time range for which to retrieve alerts. Only alerts that occurred AFTER this timestamp will be returned." +
+        ISOTimestampFormatDescription
     ),
   beforeTimestampISO: z
     .string()
-    .datetime( {message: "Invalid ISO 8601 date format.", offset: true} )
+    .datetime({ message: "Invalid ISO 8601 date format.", offset: true })
     .nullable()
     .describe(
-      "The end of the time range for which to retrieve alerts. Only alerts that occurred BEFORE this timestamp will be returned."
-      + ISOTimestampFormatDescription
+      "The end of the time range for which to retrieve alerts. Only alerts that occurred BEFORE this timestamp will be returned." +
+        ISOTimestampFormatDescription
     ),
   deviceFilter: z
     .array(z.string())
@@ -37,13 +37,18 @@ export const TOOL_ARGS = {
     .describe(
       "The maximum number of policy alerts to return. The system may default to a reasonable number (e.g., 20) if not specified, but there is a hard cap (e.g., 100) on the maximum results the API will return."
     ),
+  timeZone: z
+    .string()
+    .describe(
+      "The timezone from the location of the camera of the policy alert, for formatting timestamps. This is necessary for the tool to produce accurate formatted timestamps."
+    ),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
-export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
-  const { afterTimestampISO, beforeTimestampISO, ...rest } = args;
+export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform(args => {
+  const { afterTimestampISO, beforeTimestampISO, timeZone, ...rest } = args;
   const afterTimestampMs = createEpochSchema().parse(afterTimestampISO);
   const beforeTimestampMs = createEpochSchema().parse(beforeTimestampISO);
 
@@ -51,6 +56,7 @@ export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
     ...rest,
     afterTimestampMs,
     beforeTimestampMs,
+    timeZone,
   };
 });
 export type ApiPayload = z.infer<typeof ApiPayloadSchema>;

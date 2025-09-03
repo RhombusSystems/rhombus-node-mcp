@@ -1,19 +1,7 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
-// Define the originator structure to match the API response
-const EventOriginatorSchema = z.object({
-  type: z.string().optional(),
-  // Add other fields as needed based on the BaseEventOriginator structure
-}).passthrough(); // Allow additional properties
-
-// Define the credential structure to match the API response
-const CredentialSchema = z.object({
-  credSource: z.string().optional(),
-  credentialId: z.string().optional(),
-  firstInEligible: z.boolean().optional(),
-  originator: EventOriginatorSchema.optional(),
-}).passthrough(); // Allow additional properties
+// Removed unused schema definitions since the output structure was simplified
 
 export const TOOL_ARGS = {
   eventType: z.enum(["access-control", "environmental-gateway"]),
@@ -31,17 +19,22 @@ export const TOOL_ARGS = {
       "A timestamp representing when to end the search for access control events." +
         ISOTimestampFormatDescription
     ),
-  accessControlledDoorUuid: z
-    .string()
+  accessControlledDoorUuids: z
+    .array(z.string())
     .nullable()
     .describe(
-      "The UUID of the access controlled door. Required when eventType is 'access-control'."
+      "The UUIDs (array) of the access controlled doors. Required when eventType is 'access-control'."
     ),
   deviceUuid: z
     .string()
     .nullable()
     .describe(
       "The UUID of the environmental gateway device. Required when eventType is 'environmental-gateway'  Can be obtained from the get-entity-tool for ENVIRONMENTAL_GATEWAY."
+    ),
+  timeZone: z
+    .string()
+    .describe(
+      "The timezone of the requested locations or devices. This is necessary for the tool to produce accurate formatted timestamps."
     ),
 };
 
@@ -62,26 +55,17 @@ export const OUTPUT_SCHEMA = z.object({
   eventType: z.enum(["access-control", "environmental-gateway"]).optional(),
   accessControlEvents: z.optional(
     z
-      .object({
-        componentEvents: z
-          .array(
-            z.object({
-              authenticationResult: z.string().optional(),
-              authorizationResult: z.string().optional(),
-              doorUuid: z.string().optional(),
-              locationUuid: z.string().optional(),
-              credentials: z
-                .array(CredentialSchema.nullable().optional())
-                .nullable()
-                .optional(),
-              originator: EventOriginatorSchema.optional(),
-              credentialUuid: z.string().optional(),
-              credSource: z.string().optional(),
-              datetime: z.string().datetime({ offset: true }).optional(),
-            })
-          )
-          .optional(),
-      })
+      .array(
+        z.object({
+          authenticationResult: z.string().optional(),
+          authorizationResult: z.string().optional(),
+          doorUuid: z.string().optional(),
+          locationUuid: z.string().optional(),
+          user: z.string().optional(),
+          credSource: z.string().optional(),
+          datetime: z.string().optional(),
+        })
+      )
       .nullable()
       .describe("Access control events data including badge ins, credentials, arrivals, etc.")
   ),

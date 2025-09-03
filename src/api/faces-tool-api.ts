@@ -24,6 +24,7 @@ type OptionalNullable<T> = T extends object
 
 export async function getFaceEvents(
   args: GetFaceEventsArgs,
+  timeZone: string,
   requestModifiers?: any,
   sessionId?: string
 ) {
@@ -106,7 +107,7 @@ export async function getFaceEvents(
       const filteredEvents = response.faceEvents.map((event: any) => ({
         deviceUuid: event.deviceUuid,
         eventTimestampMs: event.eventTimestamp,
-        eventTimestamp: formatTimestamp(event.eventTimestamp),
+        eventTimestamp: formatTimestamp(event.eventTimestamp, timeZone),
         faceName: event.faceName,
         locationUuid: event.locationUuid,
         personUuid: event.personUuid,

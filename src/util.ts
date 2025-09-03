@@ -173,11 +173,12 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
  * Format: "February 24, 2025 at 3:23 PM"
  *
  * @param timestampMs - Timestamp in milliseconds
+ * @param timeZone - Optional IANA timezone string (defaults to "America/Los_Angeles")
  * @returns Formatted date string
  */
-export function formatTimestamp(timestampMs: number): string {
+export function formatTimestamp(timestampMs: number, timeZone?: string): string {
   return DateTime.fromMillis(timestampMs)
-    .setZone("America/Los_Angeles")
+    .setZone(timeZone || "America/Los_Angeles")
     .toFormat("MMMM d, yyyy 'at' h:mm a", {
       locale: "en-US",
     });

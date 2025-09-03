@@ -37,6 +37,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   if (args.requestType === RequestType.GET_FACE_EVENTS) {
     const response = await getFaceEvents(
       args.faceEventFilter as GetFaceEventsArgs,
+      args.timeZone,
       extra._meta?.requestModifiers as RequestModifiers,
       extra.sessionId
     );

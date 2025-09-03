@@ -51,10 +51,24 @@ export async function getAccessControlledDoors(requestModifiers?: any, sessionId
     body: {},
     modifiers: requestModifiers,
     sessionId,
+  }).then(response => {
+    return (response.accessControlledDoors || []).map((door: any) => {
+      return {
+        geofenceEnabled: door.geofenceEnabled,
+        locationUuid: door.locationUuid,
+        policyUuid: door.policyUuid,
+        name: door.name,
+        uuid: door.uuid,
+      };
+    });
   });
 }
 
-export async function getAudioGateways(requestModifiers?: any, sessionId?: string) {
+export async function getAudioGateways(
+  timeZone: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
   return await postApi<any>({
     route: "/audiogateway/getMinimalAudioGatewayStateList",
     body: {},
@@ -67,7 +81,7 @@ export async function getAudioGateways(requestModifiers?: any, sessionId?: strin
         .map((gateway: any) => ({
           ...gateway,
           createdAtString: gateway.createdAtMillis
-            ? formatTimestamp(gateway.createdAtMillis)
+            ? formatTimestamp(gateway.createdAtMillis, timeZone)
             : undefined,
         })),
     };
@@ -89,7 +103,11 @@ export async function getDoorSensors(requestModifiers?: any, sessionId?: string)
   });
 }
 
-export async function getEnvironmentalSensors(requestModifiers?: any, sessionId?: string) {
+export async function getEnvironmentalSensors(
+  timeZone: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
   return await postApi<any>({
     route: "/climate/getMinimalClimateStateList",
     body: {},
@@ -102,7 +120,7 @@ export async function getEnvironmentalSensors(requestModifiers?: any, sessionId?
         .map((sensor: any) => ({
           ...sensor,
           createdAtString: sensor.createdAtMillis
-            ? formatTimestamp(sensor.createdAtMillis)
+            ? formatTimestamp(sensor.createdAtMillis, timeZone)
             : undefined,
         })),
     };
@@ -124,7 +142,7 @@ export async function getMotionSensors(requestModifiers?: any, sessionId?: strin
   });
 }
 
-export async function getButtons(requestModifiers?: any, sessionId?: string) {
+export async function getButtons(timeZone: string, requestModifiers?: any, sessionId?: string) {
   return await postApi<any>({
     route: "/button/getMinimalButtonStateList",
     body: {},
@@ -137,7 +155,7 @@ export async function getButtons(requestModifiers?: any, sessionId?: string) {
         .map((button: any) => ({
           ...button,
           createdAtString: button.createdAtMillis
-            ? formatTimestamp(button.createdAtMillis)
+            ? formatTimestamp(button.createdAtMillis, timeZone)
             : undefined,
         })),
     };
@@ -159,7 +177,11 @@ export async function getKeypads(requestModifiers?: any, sessionId?: string) {
   });
 }
 
-export async function getEnvironmentalGateways(requestModifiers?: any, sessionId?: string) {
+export async function getEnvironmentalGateways(
+  timeZone: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
   return await postApi<any>({
     route: "/climate/getMinimalEnvironmentalGatewayStates",
     body: {},
@@ -172,9 +194,11 @@ export async function getEnvironmentalGateways(requestModifiers?: any, sessionId
         .map((gateway: any) => ({
           ...gateway,
           createdAtString: gateway.createdAtMillis
-            ? formatTimestamp(gateway.createdAtMillis)
+            ? formatTimestamp(gateway.createdAtMillis, timeZone)
             : undefined,
-          timestampString: gateway.timestampMs ? formatTimestamp(gateway.timestampMs) : undefined,
+          timestampString: gateway.timestampMs
+            ? formatTimestamp(gateway.timestampMs, timeZone)
+            : undefined,
         })),
     };
   });
