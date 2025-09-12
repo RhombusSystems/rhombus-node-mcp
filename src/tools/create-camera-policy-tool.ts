@@ -48,8 +48,11 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
       if (cameraList.length > 0) {
         const cameraPayload = {
-          cameraUuids: cameraList,
-          details: { policyUuid },
+          cameraBulkDetails: cameraList.map(cameraUuid => ({
+            uuid: cameraUuid,
+            policyUuid: policyUuid,
+            policyUuidUpdated: true,
+          })),
         };
 
         await postApi({
