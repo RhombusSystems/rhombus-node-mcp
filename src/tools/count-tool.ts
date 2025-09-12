@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 export function createTool(server: McpServer) {
@@ -25,9 +25,11 @@ export function createTool(server: McpServer) {
         return {
           content: [{ type: "text", text: `Count: ${data.length}` }],
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : `Unknown error: ${e}`;
+
         return {
-          content: [{ type: "text", text: `Invalid JSON.` }],
+          content: [{ type: "text", text: `Invalid JSON. Error message: ${errorMessage}` }],
         };
       }
     }

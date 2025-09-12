@@ -1,14 +1,14 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestModifiers } from "../util.js";
-import {
-  GetRegisteredFacesArgs,
-  GetFaceEventsArgs,
-  TOOL_ARGS,
-  ToolArgs,
-  RequestType,
-  OUTPUT_SCHEMA,
-} from "../types/faces-tools-types.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getFaceEvents, getRegisteredFaces } from "../api/faces-tool-api.js";
+import {
+  type GetFaceEventsArgs,
+  type GetRegisteredFacesArgs,
+  OUTPUT_SCHEMA,
+  RequestType,
+  TOOL_ARGS,
+  type ToolArgs,
+} from "../types/faces-tools-types.js";
+import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "faces-tool";
 
@@ -30,7 +30,9 @@ If the requestType is "get-registered-faces":
 - This is useful to call before calling "get-face-events" to get a list of all people that have been seen by the camera system, and then you can use personUuids or the name *in the system* to filter face events.
 `;
 
-const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
+const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
+  const { requestModifiers, sessionId } = extractFromToolExtra(extra);
+
   let ret: OUTPUT_SCHEMA = {
     requestType: args.requestType,
   };
@@ -38,8 +40,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     const response = await getFaceEvents(
       args.faceEventFilter as GetFaceEventsArgs,
       args.timeZone,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
+      requestModifiers,
+      sessionId
     );
     ret = {
       requestType: RequestType.GET_FACE_EVENTS,
@@ -48,17 +50,17 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   } else if (args.requestType === RequestType.GET_REGISTERED_FACES) {
     const response = await getRegisteredFaces(
       args as GetRegisteredFacesArgs,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
+      requestModifiers,
+      sessionId
     );
     if (response.people) {
       ret = {
         requestType: RequestType.GET_REGISTERED_FACES,
         getSavedFacesResponse: response.people.map(p => ({
-          createdOn: p.createdOn ? parseInt(p.createdOn) : undefined,
+          createdOn: p.createdOn ? parseInt(p.createdOn, 10) : undefined,
           name: p.name ?? undefined,
           orgUuid: p.orgUuid ?? undefined,
-          updatedOn: p.updatedOn ? parseInt(p.updatedOn) : undefined,
+          updatedOn: p.updatedOn ? parseInt(p.updatedOn, 10) : undefined,
           uuid: p.uuid ?? undefined,
         })),
       };

@@ -39,7 +39,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { name, description, orgUuid, policyUuid, scheduleConfigs, cameraUuids, policyName } = args;
 
   // Step 3: Camera assignment (if cameraUuids provided)
-  if (cameraUuids && cameraUuids.trim()) {
+  if (cameraUuids?.trim()) {
     try {
       const cameraList = cameraUuids
         .split(",")
@@ -87,7 +87,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   }
 
   // Step 2: Schedule configuration (if scheduleConfigs provided and non-empty)
-  if (scheduleConfigs && scheduleConfigs.trim() && scheduleConfigs.trim() !== "[]") {
+  if (scheduleConfigs?.trim() && scheduleConfigs.trim() !== "[]") {
     try {
       const configs = JSON.parse(scheduleConfigs) as Array<{
         scheduleUuid: string;
@@ -156,13 +156,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   }
 
   // Step 1: Policy creation (if name provided)
-  if (name && name.trim()) {
+  if (name?.trim()) {
     try {
       const payload = ApiPayloadSchema.parse({
         policy: {
           name,
-          description: description && description.trim() ? description : undefined,
-          orgUuid: orgUuid && orgUuid.trim() ? orgUuid : undefined,
+          description: description?.trim() ? description : undefined,
+          orgUuid: orgUuid?.trim() ? orgUuid : undefined,
           scheduledTriggers: [],
         },
       });

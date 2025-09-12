@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
-import { createUuidSchema, UUID } from "../types.js";
+import { createUuidSchema } from "../types.js";
 
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",

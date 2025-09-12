@@ -22,6 +22,21 @@ export const RequestModifiers = z
   .optional();
 export type RequestModifiers = z.infer<typeof RequestModifiers>;
 
+export type ToolExtra = {
+  _meta?: {
+    requestModifiers?: RequestModifiers;
+  };
+  sessionId?: string;
+};
+
+export function extractFromToolExtra(_extra: unknown) {
+  const extra = _extra as ToolExtra;
+  return {
+    requestModifiers: extra._meta?.requestModifiers,
+    sessionId: extra.sessionId,
+  };
+}
+
 /**
  * Get all file paths in a directory in a directory
  *
@@ -63,6 +78,24 @@ export function createToolTextContent(content: string): CallToolResult {
         text: content,
       },
     ],
+  };
+}
+
+/**
+ * Returns strucutred content expected by `server.tool`
+ * The generic type T allows for type safety. Set T to the output schema of the tool, and your content will be type checked
+ */
+export function createToolStructuredContent<
+  T extends { [key: string]: unknown } = { [key: string]: unknown },
+>(content: T): CallToolResult {
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(content),
+      },
+    ],
+    structuredContent: content,
   };
 }
 

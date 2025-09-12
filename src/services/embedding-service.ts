@@ -1,7 +1,7 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 // Constants following coding style guidelines
-const EMBEDDING_MODEL = 'text-embedding-3-small';
+const EMBEDDING_MODEL = "text-embedding-3-small";
 const EMBEDDING_BATCH_SIZE = 100;
 const MAX_TOKENS_PER_REQUEST = 8000;
 const DELAY_BETWEEN_BATCHES_MS = 1000;
@@ -118,7 +118,7 @@ export class EmbeddingService {
 
   private async processBatch(batch: EmbeddingRequest[]): Promise<EmbeddingBatchResult> {
     const texts = batch.map(req => req.text);
-    
+
     let attempt = 0;
     while (attempt < MAX_RETRY_ATTEMPTS) {
       try {
@@ -129,7 +129,7 @@ export class EmbeddingService {
 
         const results: EmbeddingResult[] = batch.map((request, index) => {
           const embeddingData = response.data[index];
-          const tokenCount = response.usage?.total_tokens 
+          const tokenCount = response.usage?.total_tokens
             ? Math.round(response.usage.total_tokens / batch.length)
             : 0;
 
@@ -151,9 +151,11 @@ export class EmbeddingService {
       } catch (error) {
         attempt++;
         console.error(`Attempt ${attempt} failed for batch:`, error);
-        
+
         if (attempt >= MAX_RETRY_ATTEMPTS) {
-          throw new Error(`Failed to process batch after ${MAX_RETRY_ATTEMPTS} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          throw new Error(
+            `Failed to process batch after ${MAX_RETRY_ATTEMPTS} attempts: ${error instanceof Error ? error.message : "Unknown error"}`
+          );
         }
 
         // Exponential backoff delay
@@ -163,15 +165,15 @@ export class EmbeddingService {
       }
     }
 
-    throw new Error('Unexpected end of retry attempts');
+    throw new Error("Unexpected end of retry attempts");
   }
 
   private createBatches(requests: EmbeddingRequest[]): EmbeddingRequest[][] {
     const batches: EmbeddingRequest[][] = [];
-    
+
     for (let i = 0; i < requests.length; i += this.batchSize) {
       const batch = requests.slice(i, i + this.batchSize);
-      
+
       // Check if batch exceeds token limit (rough estimate)
       const estimatedTokens = batch.reduce((sum, req) => sum + req.text.length / 4, 0);
       if (estimatedTokens > MAX_TOKENS_PER_REQUEST) {
@@ -185,7 +187,7 @@ export class EmbeddingService {
         batches.push(batch);
       }
     }
-    
+
     return batches;
   }
 

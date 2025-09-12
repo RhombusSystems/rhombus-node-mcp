@@ -26,5 +26,4 @@ log4js.configure({
 });
 
 export const getLogger = log4js.getLogger;
-
 export const logger = log4js.getLogger("mcp");
