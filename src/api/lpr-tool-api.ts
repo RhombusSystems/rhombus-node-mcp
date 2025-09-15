@@ -35,10 +35,11 @@ export async function getVehicleEvents(
       event =>
         ({
           uuid: event.uuid ?? "",
-          deviceUuid: event.deviceUuid ?? "",
+          deviceUuid: event.deviceUuid ?? undefined,
           eventTimestamp: formatTimestamp(event.eventTimestamp ?? Date.now(), timeZone),
-          imageS3Key: event.imageS3Key ?? "",
-          locationUuid: event.locationUuid ?? "",
+          imageS3Key: event.imageS3Key ?? undefined,
+          thumbnailS3Key: event.thumbnailS3Key ?? undefined,
+          locationUuid: event.locationUuid ?? undefined,
           vehicleLicensePlate: event.vehicleLicensePlate ?? "No License Plate",
         }) satisfies VehicleEvent
     ) ?? []
@@ -58,13 +59,16 @@ export async function getSavedVehicles(
   });
 
   return (
-    res.vehicles?.map(vehicle => ({
-      createdTimestamp: formatTimestamp(vehicle.createdAtMillis ?? Date.now(), timeZone),
-      name: vehicle.name ?? "No Name",
-      description: vehicle.description ?? "No Description",
-      licensePlate: vehicle.licensePlate ?? "No License Plate",
-      orgUuid: vehicle.orgUuid ?? "",
-    } satisfies SavedVehicle)) ?? []
+    res.vehicles?.map(
+      vehicle =>
+        ({
+          createdTimestamp: formatTimestamp(vehicle.createdAtMillis ?? Date.now(), timeZone),
+          name: vehicle.name ?? "No Name",
+          description: vehicle.description ?? "No Description",
+          licensePlate: vehicle.licensePlate ?? "No License Plate",
+          orgUuid: vehicle.orgUuid ?? "",
+        }) satisfies SavedVehicle
+    ) ?? []
   );
 }
 

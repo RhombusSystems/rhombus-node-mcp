@@ -84,6 +84,10 @@ const VehicleEvent = z.object({
     .string()
     .optional()
     .describe("The S3 key of the image of the license plate event. Do not modify this."),
+  thumbnailS3Key: z
+    .string()
+    .optional()
+    .describe("The S3 key of the thumbnail of the license plate event. Do not modify this."),
   locationUuid: z
     .string()
     .optional()
