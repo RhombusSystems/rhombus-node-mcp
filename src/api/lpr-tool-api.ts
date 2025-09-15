@@ -40,7 +40,7 @@ export async function getVehicleEvents(
           imageS3Key: event.imageS3Key ?? "",
           locationUuid: event.locationUuid ?? "",
           vehicleLicensePlate: event.vehicleLicensePlate ?? "No License Plate",
-        }) as VehicleEvent
+        }) satisfies VehicleEvent
     ) ?? []
   );
 }
@@ -64,7 +64,7 @@ export async function getSavedVehicles(
       description: vehicle.description ?? "No Description",
       licensePlate: vehicle.licensePlate ?? "No License Plate",
       orgUuid: vehicle.orgUuid ?? "",
-    })) ?? []
+    } satisfies SavedVehicle)) ?? []
   );
 }
 
