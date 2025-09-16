@@ -212,7 +212,7 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
 export function formatTimestamp(timestampMs: number, timeZone?: string): string {
   return DateTime.fromMillis(timestampMs)
     .setZone(timeZone || "America/Los_Angeles")
-    .toFormat("MMMM d, yyyy 'at' h:mm a", {
+    .toFormat("MMMM d, yyyy 'at' h:mm:ss a", {
       locale: "en-US",
     });
 }

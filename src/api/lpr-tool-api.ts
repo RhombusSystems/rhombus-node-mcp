@@ -30,6 +30,10 @@ export async function getVehicleEvents(
     sessionId,
   });
 
+  if (res.error) {
+    throw new Error(JSON.stringify(res));
+  }
+
   return (
     res.events?.map(
       event =>
@@ -58,6 +62,10 @@ export async function getSavedVehicles(
     sessionId,
   });
 
+  if (res.error) {
+    throw new Error(JSON.stringify(res));
+  }
+
   return (
     res.vehicles?.map(
       vehicle =>
@@ -82,6 +90,10 @@ export async function getVehicleLabels(
     modifiers: requestModifiers,
     sessionId,
   });
+
+  if (res.error) {
+    throw new Error(JSON.stringify(res));
+  }
 
   const processedVehicleLabels: VehicleLabels = {};
 

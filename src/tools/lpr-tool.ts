@@ -35,41 +35,52 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
 
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);
 
-  switch (responseType) {
-    case LprToolRequestType.GET_VEHICLE_EVENTS: {
-      const { vehicleEventsArgs } = args;
+  try {
+    switch (responseType) {
+      case LprToolRequestType.GET_VEHICLE_EVENTS: {
+        const { vehicleEventsArgs } = args;
 
-      if (!vehicleEventsArgs) {
-        return createToolTextContent(
-          JSON.stringify({
-            error: "vehicleEventsArgs is required. Please try again.",
-          })
+        if (!vehicleEventsArgs) {
+          return createToolTextContent(
+            JSON.stringify({
+              error: "vehicleEventsArgs is required. Please try again.",
+            })
+          );
+        }
+
+        const vehicleEvents = await getVehicleEvents(
+          vehicleEventsArgs,
+          args.timeZone,
+          requestModifiers,
+          sessionId
         );
+
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          vehicleEvents,
+        });
       }
-
-      const vehicleEvents = await getVehicleEvents(
-        vehicleEventsArgs,
-        args.timeZone,
-        requestModifiers,
-        sessionId
-      );
-
+      case LprToolRequestType.GET_SAVED_VEHICLES: {
+        const savedVehicles = await getSavedVehicles(args.timeZone, requestModifiers, sessionId);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          savedVehicles,
+        });
+      }
+      case LprToolRequestType.GET_VEHICLE_LABELS: {
+        const vehicleLabels = await getVehicleLabels(requestModifiers, sessionId);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          vehicleLabels,
+        });
+      }
+    }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
       return createToolStructuredContent<OUTPUT_SCHEMA>({
-        vehicleEvents,
+        error: error.message,
       });
     }
-    case LprToolRequestType.GET_SAVED_VEHICLES: {
-      const savedVehicles = await getSavedVehicles(args.timeZone, requestModifiers, sessionId);
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        savedVehicles,
-      });
-    }
-    case LprToolRequestType.GET_VEHICLE_LABELS: {
-      const vehicleLabels = await getVehicleLabels(requestModifiers, sessionId);
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        vehicleLabels,
-      });
-    }
+    return createToolStructuredContent<OUTPUT_SCHEMA>({
+      error: "Unknown error",
+    });
   }
 
   return createToolStructuredContent({
