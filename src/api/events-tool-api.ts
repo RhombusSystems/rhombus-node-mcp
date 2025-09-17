@@ -194,3 +194,94 @@ export async function getEventsForEnvironmentalGateway(
     lastEvaluatedKey: undefined, // Don't return lastEvaluatedKey since we've fetched all pages
   };
 }
+
+export async function getClimateEventsForSensor(
+  sensorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  limit: number | null | undefined,
+  timeZone: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  let allClimateEvents: any[] = [];
+  let hasMore = true;
+  let remainingLimit = limit || 1000; // Default to 1000 if no limit specified
+
+  while (hasMore && allClimateEvents.length < remainingLimit) {
+    const currentBatchSize = Math.min(100, remainingLimit - allClimateEvents.length); // Max 100 per request
+
+    const body: schema["Climate_GetClimateEventsForSensorWSRequest"] = {
+      sensorUuid,
+      ...(startTime ? { createdAfterMs: startTime } : {}),
+      ...(endTime ? { createdBeforeMs: endTime } : {}),
+      limit: currentBatchSize,
+    };
+
+    const response = await postApi<schema["Climate_GetClimateEventsForSensorWSResponse"]>({
+      route: "/climate/getClimateEventsForSensor",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (response && response.climateEvents) {
+      // Map the climate events to include formatted timestamp and relevant fields
+      const mappedEvents = response.climateEvents.map(event => ({
+        timestampString: event.timestampMs
+          ? formatTimestamp(event.timestampMs, timeZone)
+          : undefined,
+        timestampMs: event.timestampMs,
+        temp: event.temp,
+        probeTempC: event.probeTempC,
+        humidity: event.humidity,
+        pm25: event.pm25,
+        co2: event.co2,
+        tvoc: event.tvoc,
+        iaq: event.iaq,
+        ethanol: event.ethanol,
+        heatIndexDegF: event.heatIndexDegF,
+        heatIndexRangeWarning: event.heatIndexRangeWarning,
+        vapeSmokeDetected: event.vapeSmokeDetected,
+        vapeSmokePercent: event.vapeSmokePercent,
+        thcDetected: event.thcDetected,
+        thcPercent: event.thcPercent,
+        tampered: event.tampered,
+        batteryPercentage: event.batteryPercentage,
+        locationUuid: event.locationUuid,
+        orgUuid: event.orgUuid,
+      }));
+
+      allClimateEvents.push(...mappedEvents);
+
+      // Check if we got a full batch and haven't reached the limit
+      if (
+        response.climateEvents.length === currentBatchSize &&
+        allClimateEvents.length < remainingLimit
+      ) {
+        // Prepare for the next batch by updating the endTime to the oldest event's timestamp
+        if (mappedEvents.length > 0) {
+          const oldestEventTimestamp = mappedEvents[mappedEvents.length - 1].timestampMs;
+          if (oldestEventTimestamp) {
+            endTime = oldestEventTimestamp - 1; // Subtract 1ms to avoid duplicates
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  // Trim to the requested limit if we got more than needed
+  if (limit && allClimateEvents.length > limit) {
+    allClimateEvents = allClimateEvents.slice(0, limit);
+  }
+
+  return allClimateEvents;
+}

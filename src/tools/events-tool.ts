@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   getAccessControlEvents,
   getEventsForEnvironmentalGateway,
+  getClimateEventsForSensor,
 } from "../api/events-tool-api.js";
 import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/events-tools-types.js";
 import type { RequestModifiers } from "../util.js";
@@ -10,9 +11,9 @@ const TOOL_NAME = "events-tool";
 
 // "faces" | "people" | "human" | "access-control"
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 2 modes of operation, determined by the "eventType" parameter: access-control and environmental-gateway
+This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 3 modes of operation, determined by the "eventType" parameter: access-control, environmental-gateway, and climate-sensor
 
-This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc. or environmental gateway events.
+This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc., environmental gateway events, or climate sensor events.
 
 This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
 
@@ -48,10 +49,44 @@ This tool takes 3 arguments:
 The tool returns a JSON object with the following structure:
   * **events (array of objects):** An array where each object represents a single environmental event containing sensor readings and derived values.
   * **lastEvaluatedKey (string | null):** A key for pagination if more results are available.
+
+When eventType is "climate-sensor":
+
+This tool retrieves climate sensor events for a specific climate sensor within a time range. The data returned will have a timestamp that is in
+the timezone of the **sensor**, not necessarily UTC time.
+
+This tool takes 4 arguments:
+  * **sensorUuid (string):** The unique identifier for the climate sensor.
+  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
+  * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
+  * **limit (number, optional):** Maximum number of climate events to return. Default is 1000.
+
+The tool returns a JSON object with the following structure:
+  * **climateSensorEvents (array of objects):** An array where each object represents a single climate event containing sensor readings such as:
+      * **timestampString:** Human-readable formatted timestamp
+      * **temp:** Temperature reading in Celsius
+      * **humidity:** Relative humidity percentage
+      * **co2:** CO2 concentration in PPM
+      * **pm25:** PM2.5 particulate matter reading
+      * **tvoc:** Total Volatile Organic Compounds
+      * **iaq:** Indoor Air Quality index
+      * **vapeSmokeDetected:** Whether vape or smoke was detected
+      * **thcDetected:** Whether THC was detected
+      * **batteryPercentage:** Battery level percentage
+      * And other sensor readings
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { eventType, accessControlledDoorUuids, deviceUuid, startTime, endTime, timeZone } = args;
+  const {
+    eventType,
+    accessControlledDoorUuids,
+    deviceUuid,
+    sensorUuid,
+    startTime,
+    endTime,
+    limit,
+    timeZone,
+  } = args;
 
   if (eventType === "access-control") {
     if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
@@ -118,6 +153,45 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       const result = {
         eventType: "environmental-gateway",
         environmentalGatewayEvents: events,
+      };
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result),
+          },
+        ],
+        structuredContent: result,
+      };
+    }
+  } else if (eventType === "climate-sensor") {
+    if (!sensorUuid) {
+      const result = {
+        needUserInput: true,
+        commandForUser: "Which climate sensor are you asking about?",
+      };
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result),
+          },
+        ],
+        structuredContent: result,
+      };
+    } else {
+      const events = await getClimateEventsForSensor(
+        sensorUuid,
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        limit ?? null,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      const result = {
+        eventType: "climate-sensor",
+        climateSensorEvents: events,
       };
       return {
         content: [
