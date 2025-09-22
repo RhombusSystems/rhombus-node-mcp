@@ -129,7 +129,15 @@ Now, you'll need to adjust your `claude_desktop_config.json` to point to your ne
 }
 ```
 
-### Hitting a Snag? We've Got You! 🛟
+## Creating a new tool
+
+We've written a script that you can run to get kickstarted on developing a new tool in addition to our existing tool set. You can simply call:
+
+```sh
+npm run create:tool
+```
+
+## Hitting a Snag? We've Got You! 🛟
 
 Check out Claude's fantastic [troubleshooting guide](https://modelcontextprotocol.io/docs/tools/debugging) for quick fixes! Still stuck? Our team of experts is ready to help!
 

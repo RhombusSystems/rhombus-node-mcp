@@ -35,7 +35,8 @@
     "embedding-progress": "npx tsx scripts/generate-embeddings.ts --progress",
     "estimate-cost": "npx tsx scripts/generate-embeddings.ts --estimate-only",
     "build-faiss-index": "npx tsx scripts/build-faiss-index.ts",
-    "extract-route-outputs": "npx tsx assets/extract-route-outputs.ts"
+    "extract-route-outputs": "npx tsx assets/extract-route-outputs.ts",
+    "create:tool": "tsx scripts/create-new-tool.ts"
   },
   "files": [
     "dist"
