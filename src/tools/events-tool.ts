@@ -3,6 +3,7 @@ import {
   getAccessControlEvents,
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
+  getComponentEventsByLocation,
 } from "../api/events-tool-api.js";
 import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/events-tools-types.js";
 import type { RequestModifiers } from "../util.js";
@@ -11,9 +12,11 @@ const TOOL_NAME = "events-tool";
 
 // "faces" | "people" | "human" | "access-control"
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 3 modes of operation, determined by the "eventType" parameter: access-control, environmental-gateway, and climate-sensor
+This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 4 modes of operation, determined by the "eventType" parameter: access-control, environmental-gateway, climate-sensor, and component-events
 
-This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc., environmental gateway events, or climate sensor events.
+This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc., environmental gateway events, climate sensor events, or any other component events.
+
+For maximum flexibility, use eventType "component-events" which allows querying any combination of event types (doorbell pushes, badge scans, door state changes, button presses, etc.) for a location.
 
 This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
 
@@ -74,6 +77,34 @@ The tool returns a JSON object with the following structure:
       * **thcDetected:** Whether THC was detected
       * **batteryPercentage:** Battery level percentage
       * And other sensor readings
+
+When eventType is "component-events":
+
+This tool retrieves ALL types of component events for a specific location within a time range. This is the most flexible option and allows filtering by specific event types. The data returned will have a timestamp that is in the timezone of the **location**, not necessarily UTC time.
+
+This tool takes 4 arguments:
+  * **locationUuid (string):** The unique identifier for the location.
+  * **componentEventTypes (array of strings, optional):** Array of event types to filter by. If empty or not provided, returns all event types.
+  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
+  * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
+
+Valid event types include:
+  * **DoorbellEvent:** Doorbell button press events
+  * **CredentialReceivedEvent:** Badge/credential scans (NFC, BLE_WAVE, REMOTE unlocks)
+  * **DoorStateChangeEvent:** Door state changes (locked/unlocked)
+  * **ButtonEvent:** Generic button press events
+  * **PanicButtonEvent:** Panic/emergency button activations
+  * **DoorReaderStateChangeEvent:** Changes in door reader state
+  * **DoorRelayStateChangeEvent:** Changes in door relay state
+  * **AccessControlUnitTamperEvent:** Tamper detection events
+  * **AccessControlUnitBatteryStateChangeEvent:** Battery state changes
+  * **WaveToUnlockIntentExpiredEvent:** Wave-to-unlock timeout events
+  * **DoorAuthFirstInStateEvent:** First-in authentication state events
+  * **DoorScheduleFirstInStateEvent:** First-in schedule state events
+  * And more...
+
+The tool returns a JSON object with the following structure:
+  * **componentEvents (array of objects | null):** An array where each object represents a component event, sorted by timestamp (newest first). Each event contains base fields plus event-specific fields based on the event type.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -82,6 +113,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     accessControlledDoorUuids,
     deviceUuid,
     sensorUuid,
+    locationUuid,
+    componentEventTypes,
     startTime,
     endTime,
     limit,
@@ -192,6 +225,45 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       const result = {
         eventType: "climate-sensor",
         climateSensorEvents: events,
+      };
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result),
+          },
+        ],
+        structuredContent: result,
+      };
+    }
+  } else if (eventType === "component-events") {
+    if (!locationUuid) {
+      const result = {
+        needUserInput: true,
+        commandForUser: "Which location are you asking about?",
+      };
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result),
+          },
+        ],
+        structuredContent: result,
+      };
+    } else {
+      const events = await getComponentEventsByLocation(
+        locationUuid,
+        componentEventTypes || [],
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      const result = {
+        eventType: "component-events",
+        componentEvents: events,
       };
       return {
         content: [
