@@ -61,13 +61,34 @@ export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform(args => {
 });
 export type ApiPayload = z.infer<typeof ApiPayloadSchema>;
 
-const ExtendedPolicyAlertType = schemas.BasePolicyAlertType.extend({
+// Extend both possible alert types with the createdOnString field
+// Use passthrough to allow any additional fields that might be in the response
+const ExtendedPolicyAlertV2Type = schemas.PolicyAlertV2Type.extend({
   createdOnString: z
     .string()
     .optional()
     .describe("Human-readable formatted timestamp (e.g., 'January 24, 2025 at 5:32 PM')"),
-});
+}).passthrough();
 
-export const OUTPUT_SCHEMA = schemas.Event_GetPolicyAlertsWSResponse.extend({
-  policyAlerts: z.array(ExtendedPolicyAlertType).nullable(),
-});
+const ExtendedAccessControlledDoorPolicyAlertType =
+  schemas.AccessControlledDoorPolicyAlertType.extend({
+    createdOnString: z
+      .string()
+      .optional()
+      .describe("Human-readable formatted timestamp (e.g., 'January 24, 2025 at 5:32 PM')"),
+  }).passthrough();
+
+// Create a union type that accepts either type of policy alert
+const ExtendedPolicyAlertType = z.union([
+  ExtendedPolicyAlertV2Type,
+  ExtendedAccessControlledDoorPolicyAlertType,
+]);
+
+// Create a new schema that matches what we actually return
+export const OUTPUT_SCHEMA = z
+  .object({
+    error: z.boolean().optional(),
+    errorMsg: z.string().optional(),
+    policyAlerts: z.array(ExtendedPolicyAlertType).optional().default([]),
+  })
+  .passthrough();
