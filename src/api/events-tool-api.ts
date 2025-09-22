@@ -1,12 +1,52 @@
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
-import { formatTimestamp } from "../util.js";
+import { formatTimestamp, type RequestModifiers } from "../util.js";
 import schema from "../types/schema.js";
+
+// Type definitions
+type HumanEvent = {
+  timestamp: number;
+  id: number;
+};
+
+type MappedEnvironmentalEvent = {
+  timestampString?: string;
+  temp?: number | null;
+  probeTemp?: number | null;
+  humidity?: number | null;
+  pm25?: number | null;
+  co2?: number | null;
+  vapeDetected?: boolean | null;
+};
+
+type MappedClimateEvent = {
+  timestampString?: string;
+  timestampMs?: number | null;
+  temp?: number | null;
+  probeTempC?: number | null;
+  humidity?: number | null;
+  pm25?: number | null;
+  co2?: number | null;
+  tvoc?: number | null;
+  iaq?: number | null;
+  ethanol?: number | null;
+  heatIndexDegF?: number | null;
+  heatIndexRangeWarning?: string | null;
+  vapeSmokeDetected?: boolean | null;
+  vapeSmokePercent?: number | null;
+  thcDetected?: boolean | null;
+  thcPercent?: number | null;
+  tampered?: boolean | null;
+  batteryPercentage?: number | null;
+  locationUuid?: string | null;
+  orgUuid?: string | null;
+};
 
 export async function getFaceEvents(
   _locationUuid: string | null | undefined,
-  requestModifiers?: any,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const nowMs = Date.now();
@@ -29,16 +69,20 @@ export async function getFaceEvents(
       },
     },
   };
-  const response = await postApi<any>({
-    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
-    body,
-    modifiers: requestModifiers,
-    sessionId,
-  }).then(response => {
+  const response = await postApi<schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]>(
+    {
+      route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    }
+  ).then(response => {
     return {
-      faceEvents: (response.faceEvents || []).map((event: any) => ({
+      faceEvents: (response.faceEvents || []).map(event => ({
         ...event,
-        eventTimestamp: new Date(event.eventTimestamp).toString(),
+        eventTimestamp: event.eventTimestamp
+          ? formatTimestamp(event.eventTimestamp, timeZone)
+          : undefined,
       })),
     };
   });
@@ -50,7 +94,7 @@ export async function getAccessControlEvents(
   startTime: number | undefined,
   endTime: number | undefined,
   timeZone: string,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const bodies = doorUuids.map(doorUuid => ({
@@ -75,7 +119,7 @@ export async function getAccessControlEvents(
               authorizationResult: credEvent?.authorizationResult,
               doorUuid: credEvent?.componentCompositeUuid,
               locationUuid: credEvent?.locationUuid,
-              user: (credEvent?.originator as any)?.username,
+              user: (credEvent?.originator as { username?: string } | undefined)?.username,
               credSource: credEvent?.credSource,
               datetime: credEvent?.timestampMs
                 ? formatTimestamp(credEvent.timestampMs, timeZone)
@@ -97,7 +141,7 @@ export async function getHumanMotionEvents(
   cameraUuid: string,
   duration: number,
   startTime: number,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = {
@@ -105,7 +149,7 @@ export async function getHumanMotionEvents(
     duration,
     startTime,
   };
-  const response = await postApi<any>({
+  const response = await postApi<schema["Camera_GetFootageSeekpointsV2WSResponse"]>({
     route: "/camera/getFootageSeekpointsV2",
     body,
     modifiers: requestModifiers,
@@ -113,8 +157,13 @@ export async function getHumanMotionEvents(
   }).then(response => {
     const seekPoints = response.footageSeekPoints || [];
 
-    const uniqueHumanEvents = seekPoints.reduceRight((acc: any[], point: any) => {
-      if (point.a === "MOTION_HUMAN" && !acc.some((existing: any) => existing.id === point.id)) {
+    const uniqueHumanEvents = seekPoints.reduceRight((acc: HumanEvent[], point) => {
+      if (
+        point.a === "MOTION_HUMAN" &&
+        typeof point.ts === "number" &&
+        typeof point.id === "number" &&
+        !acc.some(existing => existing.id === point.id)
+      ) {
         acc.unshift({ timestamp: point.ts, id: point.id });
       }
       return acc;
@@ -132,10 +181,10 @@ export async function getEventsForEnvironmentalGateway(
   startTime: number | undefined,
   endTime: number | undefined,
   timeZone: string,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  let allEvents: any[] = [];
+  let allEvents: MappedEnvironmentalEvent[] = [];
   let hasMore = true;
   let lastEvaluatedKey: string | undefined = undefined;
 
@@ -201,10 +250,10 @@ export async function getClimateEventsForSensor(
   endTime: number | undefined,
   limit: number | null | undefined,
   timeZone: string,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  let allClimateEvents: any[] = [];
+  let allClimateEvents: MappedClimateEvent[] = [];
   let hasMore = true;
   let remainingLimit = limit || 1000; // Default to 1000 if no limit specified
 
@@ -284,4 +333,86 @@ export async function getClimateEventsForSensor(
   }
 
   return allClimateEvents;
+}
+
+export async function getComponentEventsByLocation(
+  locationUuid: string,
+  eventTypes: string[], // Still accept string[] for flexibility
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const MAX_LIMIT = 1000; // API limit for component events
+  const body: schema["Component_FindComponentEventsByLocationWSRequest"] = {
+    locationUuid,
+    typeFilter: eventTypes.length > 0 ? (eventTypes as any) : undefined, // API accepts string array
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+    limit: MAX_LIMIT,
+  };
+
+  const response = await postApi<schema["Component_FindComponentEventsByLocationWSResponse"]>({
+    route: "/component/findComponentEventsByLocation",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const events = (response.componentEvents || []).map(event => {
+    // Map different event types to a common structure
+    const baseEvent = {
+      eventType: event.type,
+      componentUuid: event.componentUuid,
+      locationUuid: event.locationUuid,
+      orgUuid: event.orgUuid,
+      correlationId: event.correlationId,
+      ownerDeviceUuid: event.ownerDeviceUuid,
+      datetime: event.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+      timestampMs: event.timestampMs,
+      uuid: event.uuid,
+    };
+
+    // Add event-specific fields based on type
+    if (event.type === "CredentialReceivedEvent") {
+      const credEvent = event as any;
+      return {
+        ...baseEvent,
+        authenticationResult: credEvent?.authenticationResult,
+        authorizationResult: credEvent?.authorizationResult,
+        user: credEvent?.originator?.username,
+        credSource: credEvent?.credSource,
+        doorUuid: credEvent?.componentCompositeUuid,
+      };
+    } else if (event.type === "DoorbellEvent") {
+      return {
+        ...baseEvent,
+        doorbellCameraUuid: event.componentUuid,
+      };
+    } else if (event.type === "DoorStateChangeEvent") {
+      const doorEvent = event as any;
+      return {
+        ...baseEvent,
+        previousState: doorEvent?.previousState,
+        newState: doorEvent?.newState,
+        reason: doorEvent?.reason,
+      };
+    } else if (event.type === "ButtonEvent" || event.type === "PanicButtonEvent") {
+      const buttonEvent = event as any;
+      return {
+        ...baseEvent,
+        buttonState: buttonEvent?.buttonState,
+      };
+    }
+
+    // For other event types, return the base event
+    return baseEvent;
+  });
+
+  // Sort events by timestamp (newest first)
+  events.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+
+  console.error(`componentEvents: ${JSON.stringify(events)}`);
+  return events;
 }

@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
+import { ComponentEventEnumType } from "./schema-components.js";
 
 // Removed unused schema definitions since the output structure was simplified
 
 export const TOOL_ARGS = {
-  eventType: z.enum(["access-control", "environmental-gateway", "climate-sensor"]),
+  eventType: z.enum([
+    "access-control",
+    "environmental-gateway",
+    "climate-sensor",
+    "component-events",
+  ]),
   startTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
@@ -44,6 +50,24 @@ export const TOOL_ARGS = {
     .nullable()
     .describe(
       "Maximum number of climate events to return. Only applicable when eventType is 'climate-sensor'. Default is 1000. Pass null for other event types."
+    ),
+  locationUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the location. Required when eventType is 'component-events'."),
+  componentEventTypes: z
+    .array(z.nativeEnum(ComponentEventEnumType))
+    .nullable()
+    .describe(
+      "Array of component event types to filter by. Only applicable when eventType is 'component-events'. " +
+        "If empty or null, returns all event types. Valid values: " +
+        "DoorbellEvent, DoorReaderStateChangeEvent, DoorRelayStateChangeEvent, DoorPositionIndicatorStateChangeEvent, " +
+        "RequestToExitStateChangeEvent, CredentialReceivedEvent, ButtonEvent, GenericInputStateChangeEvent, " +
+        "GenericRelayStateChangeEvent, AccessControlUnitTamperEvent, AccessControlUnitLocationLockdownStateEvent, " +
+        "DoorLocationLockdownStateEvent, PanicButtonEvent, AccessControlUnitBatteryStateChangeEvent, " +
+        "WaveToUnlockIntentExpiredEvent, DoorStateChangeEvent, DoorAuthFirstInStateEvent, DoorScheduleFirstInStateEvent, " +
+        "AccessControlUnitDoorFirstInStateEvent, AperioDoorExtensionStateEvent, AperioGatewayStateEvent, " +
+        "AperioGatewayConnectionStateChangeEvent, AperioDtcEvent, AperioTamperStateEvent."
     ),
   timeZone: z
     .string()
@@ -89,7 +113,9 @@ const ClimateSensorEvent = z.object({
 });
 
 export const OUTPUT_SCHEMA = z.object({
-  eventType: z.enum(["access-control", "environmental-gateway", "climate-sensor"]).optional(),
+  eventType: z
+    .enum(["access-control", "environmental-gateway", "climate-sensor", "component-events"])
+    .optional(),
   accessControlEvents: z.optional(
     z
       .array(
@@ -122,6 +148,35 @@ export const OUTPUT_SCHEMA = z.object({
       .describe(
         "Climate sensor events data including temperature, humidity, air quality, and other readings"
       )
+  ),
+  componentEvents: z.optional(
+    z
+      .array(
+        z.object({
+          eventType: z.string().optional(),
+          componentUuid: z.string().optional(),
+          locationUuid: z.string().optional(),
+          orgUuid: z.string().optional(),
+          correlationId: z.string().optional(),
+          ownerDeviceUuid: z.string().optional(),
+          datetime: z.string().optional(),
+          timestampMs: z.number().optional(),
+          uuid: z.string().optional(),
+          // Event-specific fields
+          authenticationResult: z.string().optional(),
+          authorizationResult: z.string().optional(),
+          user: z.string().optional(),
+          credSource: z.string().optional(),
+          doorUuid: z.string().optional(),
+          doorbellCameraUuid: z.string().optional(),
+          previousState: z.string().optional(),
+          newState: z.string().optional(),
+          reason: z.string().optional(),
+          buttonState: z.string().optional(),
+        })
+      )
+      .nullable()
+      .describe("Component events data for all types of access control events at a location")
   ),
   needUserInput: z.boolean().optional(),
   commandForUser: z.string().optional(),

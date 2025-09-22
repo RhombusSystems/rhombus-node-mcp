@@ -1,7 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
 import { getPolicyAlerts } from "../api/policy-alerts-tool-api.js";
-import { ApiPayloadSchema, OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/policy-alerts-tool-types.js";
+import {
+  ApiPayloadSchema,
+  OUTPUT_SCHEMA,
+  TOOL_ARGS,
+  type ToolArgs,
+} from "../types/policy-alerts-tool-types.js";
 
 const TOOL_NAME = "policy-alerts-tool";
 const TOOL_DESCRIPTION = `
@@ -22,7 +27,6 @@ You can also specify the maximum number of results to return.
 The output is provided in JSON format.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-
   const payload = ApiPayloadSchema.parse(args);
 
   const ret = await getPolicyAlerts(
