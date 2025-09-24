@@ -192,22 +192,20 @@ export type ExternalUpdateableFacetedUserConfig = z.infer<
 
 export const BASE_TOOL_ARGS = {
   cameraUuid: z.string().nullable().describe("the camera uuid requested"),
-  timestampISO: z.string().datetime({ message: "Invalid ISO 8601 date format.", offset: true })
+  timestampISO: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 date format.", offset: true })
     .nullable()
-    .describe(`
+    .describe(
+      `
       the timestamp for the image. This will default to 5 minutes before the current time. You can also call time-tool to parse the user's time description.
       ` + ISOTimestampFormatDescription
     ),
-  requestType: z.enum(["image", "get-settings", "update-settings"]),
-  configUpdate: ExternalUpdateableFacetedUserConfigSchema.nullable().describe(
-    'the config update that would be applied to the camera if the requestType is "update-settings"'
-  ),
+  requestType: z.enum(["image", "get-settings"]),
 };
 
 const BASE_TOOL_ARGS_SCHEMA = z.object(BASE_TOOL_ARGS);
 export type BaseToolArgs = z.infer<typeof BASE_TOOL_ARGS_SCHEMA>;
 
-// Type for tool args including confirmation parameters
-export type ToolArgs = BaseToolArgs & {
-  confirmationId?: string | null;
-};
+// Type for tool args
+export type ToolArgs = BaseToolArgs;
