@@ -11,6 +11,7 @@ export const MyType = z.object({
   // TODO: change this description
   uuid: createUuidSchema().describe("The UUID of the my type."),
 });
+export type MyType = z.infer<typeof MyType>;
 
 export const TOOL_ARGS = {
   requestType: z.nativeEnum(MyToolRequestType).describe("The type of request to make."),

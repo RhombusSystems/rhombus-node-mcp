@@ -4,17 +4,21 @@ import {
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
   getComponentEventsByLocation,
+  getHumanMotionEvents,
 } from "../api/events-tool-api.js";
-import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/events-tools-types.js";
-import type { RequestModifiers } from "../util.js";
+import { EventsToolRequestType, OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/events-tools-types.js";
+import { createToolStructuredContent, type RequestModifiers } from "../util.js";
+import { getLogger } from "../logger.js";
+
+const logger = getLogger("events-tool");
 
 const TOOL_NAME = "events-tool";
 
 // "faces" | "people" | "human" | "access-control"
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 4 modes of operation, determined by the "eventType" parameter: access-control, environmental-gateway, climate-sensor, and component-events
+This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 5 modes of operation, determined by the "eventType" parameter: access-control, environmental-gateway, climate-sensor, component-events, and camera
 
-This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc., environmental gateway events, climate sensor events, or any other component events.
+This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc., environmental gateway events, climate sensor events, camera motion events, or any other component events.
 
 For maximum flexibility, use eventType "component-events" which allows querying any combination of event types (doorbell pushes, badge scans, door state changes, button presses, etc.) for a location.
 
@@ -26,18 +30,7 @@ This tool can return a lot of data. Please make sure the time range provided is 
   * **startTime (string):** The timestamp (in ISO 8601 format) representing the start or earliest time of access control events.
   * **endTime (string):** The timestamp (in ISO 8601 format) representing the end or latest time of access control events.
 
-  The tool returns a JSON object with the following structure and important fields:
-  * **accessControlEvents (array of objects | null):** An array where each object represents a single access control event. Each event object contains the following important fields:
-      * **authenticationResult (string):** The result of the authentication process.
-      * **authorizationResult (string):** The result of the authorization process.
-      * **doorUuid (string):** The unique identifier for the access controlled door.
-      * **locationUuid (string):** The unique identifier for the location where the event occurred.
-      * **user (string):** The username of the person who triggered the event.
-      * **credSource (string):** The source of the credential. Is what generated the event.
-        - "BLE_WAVE" is a user badging in by physically waving their hand over the reader. This is presented as "Credential Received" in the web console.
-        - "NFC" is a user badging in by tapping their badge or their phone on the reader. This is presented as "Credential Received" in the web console.
-        - "REMOTE" is unlocking the door remotely through the Rhombus app. This is presented as "Mobile Remote Unlock" in the web console.
-      * **datetime:** Datetime string of when the event occured.
+  The tool returns a JSON object with access control events data.
 
 When eventType is "environmental-gateway":
 
@@ -49,9 +42,7 @@ This tool takes 3 arguments:
   * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
   * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
 
-The tool returns a JSON object with the following structure:
-  * **events (array of objects):** An array where each object represents a single environmental event containing sensor readings and derived values.
-  * **lastEvaluatedKey (string | null):** A key for pagination if more results are available.
+The tool returns a JSON object with environmental gateway events data.
 
 When eventType is "climate-sensor":
 
@@ -64,19 +55,7 @@ This tool takes 4 arguments:
   * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
   * **limit (number, optional):** Maximum number of climate events to return. Default is 1000.
 
-The tool returns a JSON object with the following structure:
-  * **climateSensorEvents (array of objects):** An array where each object represents a single climate event containing sensor readings such as:
-      * **timestampString:** Human-readable formatted timestamp
-      * **temp:** Temperature reading in Celsius
-      * **humidity:** Relative humidity percentage
-      * **co2:** CO2 concentration in PPM
-      * **pm25:** PM2.5 particulate matter reading
-      * **tvoc:** Total Volatile Organic Compounds
-      * **iaq:** Indoor Air Quality index
-      * **vapeSmokeDetected:** Whether vape or smoke was detected
-      * **thcDetected:** Whether THC was detected
-      * **batteryPercentage:** Battery level percentage
-      * And other sensor readings
+The tool returns a JSON object with climate sensor events data.
 
 When eventType is "component-events":
 
@@ -103,8 +82,16 @@ Valid event types include:
   * **DoorScheduleFirstInStateEvent:** First-in schedule state events
   * And more...
 
-The tool returns a JSON object with the following structure:
-  * **componentEvents (array of objects | null):** An array where each object represents a component event, sorted by timestamp (newest first). Each event contains base fields plus event-specific fields based on the event type.
+When eventType is "camera":
+
+This tool retrieves human motion events detected by a specific camera within a time range. The data returned will have timestamps in milliseconds.
+
+This tool takes 3 arguments:
+  * **cameraUuid (string):** The unique identifier for the camera.
+  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
+  * **duration (number):** Duration in seconds to search for human motion events. Default is 3600 (1 hour).
+
+The tool returns a JSON object with camera events data.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -119,161 +106,135 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     endTime,
     limit,
     timeZone,
+    cameraUuid,
+    duration,
   } = args;
 
-  if (eventType === "access-control") {
-    if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
-      const result = {
-        needUserInput: true,
-        commandForUser: "Which door are you asking about?",
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
-    } else {
-      const events = await getAccessControlEvents(
-        accessControlledDoorUuids,
-        startTime ? new Date(startTime).getTime() : undefined,
-        endTime ? new Date(endTime).getTime() : undefined,
-        timeZone,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-      const result = {
-        eventType: "access-control",
-        accessControlEvents: events,
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
+  logger.debug(`eventType: ${eventType}`);
+
+  switch (eventType) {
+    case "access-control": {
+      if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
+        const result = {
+          needUserInput: true,
+          commandForUser: "Which door are you asking about?",
+        };
+        return createToolStructuredContent(result);
+      } else {
+        const events = await getAccessControlEvents(
+          accessControlledDoorUuids,
+          startTime ? new Date(startTime).getTime() : undefined,
+          endTime ? new Date(endTime).getTime() : undefined,
+          timeZone,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        const result = {
+          eventType: "access-control",
+          accessControlEvents: events,
+        };
+
+        return createToolStructuredContent(result);
+      }
     }
-  } else if (eventType === "environmental-gateway") {
-    if (!deviceUuid) {
-      const result = {
-        needUserInput: true,
-        commandForUser: "Which environmental gateway device are you asking about?",
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
-    } else {
-      const events = await getEventsForEnvironmentalGateway(
-        deviceUuid,
-        startTime ? new Date(startTime).getTime() : undefined,
-        endTime ? new Date(endTime).getTime() : undefined,
-        timeZone,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-      const result = {
-        eventType: "environmental-gateway",
-        environmentalGatewayEvents: events,
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
+    case "environmental-gateway": {
+      if (!deviceUuid) {
+        const result = {
+          needUserInput: true,
+          commandForUser: "Which environmental gateway device are you asking about?",
+        };
+
+        return createToolStructuredContent(result);
+      } else {
+        const events = await getEventsForEnvironmentalGateway(
+          deviceUuid,
+          startTime ? new Date(startTime).getTime() : undefined,
+          endTime ? new Date(endTime).getTime() : undefined,
+          timeZone,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        const result = {
+          eventType: "environmental-gateway",
+          environmentalGatewayEvents: events,
+        };
+
+        return createToolStructuredContent(result);
+      }
     }
-  } else if (eventType === "climate-sensor") {
-    if (!sensorUuid) {
-      const result = {
-        needUserInput: true,
-        commandForUser: "Which climate sensor are you asking about?",
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
-    } else {
-      const events = await getClimateEventsForSensor(
-        sensorUuid,
-        startTime ? new Date(startTime).getTime() : undefined,
-        endTime ? new Date(endTime).getTime() : undefined,
-        limit ?? null,
-        timeZone,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-      const result = {
-        eventType: "climate-sensor",
-        climateSensorEvents: events,
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
+    case "climate-sensor": {
+      if (!sensorUuid) {
+        const result = {
+          needUserInput: true,
+          commandForUser: "Which climate sensor are you asking about?",
+        };
+
+        return createToolStructuredContent(result);
+      } else {
+        const events = await getClimateEventsForSensor(
+          sensorUuid,
+          startTime ? new Date(startTime).getTime() : undefined,
+          endTime ? new Date(endTime).getTime() : undefined,
+          limit ?? null,
+          timeZone,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        const result = {
+          eventType: "climate-sensor",
+          climateSensorEvents: events,
+        };
+
+        return createToolStructuredContent(result);
+      }
     }
-  } else if (eventType === "component-events") {
-    if (!locationUuid) {
-      const result = {
-        needUserInput: true,
-        commandForUser: "Which location are you asking about?",
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
-    } else {
-      const events = await getComponentEventsByLocation(
-        locationUuid,
-        componentEventTypes || [],
-        startTime ? new Date(startTime).getTime() : undefined,
-        endTime ? new Date(endTime).getTime() : undefined,
-        timeZone,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-      const result = {
-        eventType: "component-events",
-        componentEvents: events,
-      };
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result),
-          },
-        ],
-        structuredContent: result,
-      };
+    case "component-events": {
+      if (!locationUuid) {
+        const result = {
+          needUserInput: true,
+          commandForUser: "Which location are you asking about?",
+        };
+
+        return createToolStructuredContent(result);
+      } else {
+        const events = await getComponentEventsByLocation(
+          locationUuid,
+          componentEventTypes || [],
+          startTime ? new Date(startTime).getTime() : undefined,
+          endTime ? new Date(endTime).getTime() : undefined,
+          timeZone,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        const result = {
+          eventType: "component-events",
+          componentEvents: events,
+        };
+        return createToolStructuredContent(result);
+      }
+    }
+    case EventsToolRequestType.CAMERA: {
+      if (!cameraUuid) {
+        const result = {
+          needUserInput: true,
+          commandForUser: "Which camera are you asking about?",
+        };
+
+        return createToolStructuredContent(result);
+      } else {
+        const events = await getHumanMotionEvents(
+          cameraUuid,
+          duration ?? 3600, // Default to 1 hour if not provided
+          startTime ? new Date(startTime).getTime() : Date.now() - 3600000, // Default to 1 hour ago if not provided
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          eventType: "camera",
+          cameraEvents: events.uniqueHumanEvents,
+        });
+      }
     }
   }
 

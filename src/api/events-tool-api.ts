@@ -1,14 +1,15 @@
+import z from "zod";
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
-import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
+import type schema from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
-import schema from "../types/schema.js";
 
 // Type definitions
-type HumanEvent = {
-  timestamp: number;
-  id: number;
-};
+export const HumanEvent = z.object({
+  timestamp: z.number(),
+  id: z.number(),
+});
+export type HumanEvent = z.infer<typeof HumanEvent>;
 
 type MappedEnvironmentalEvent = {
   timestampString?: string;
@@ -147,7 +148,7 @@ export async function getHumanMotionEvents(
   const body = {
     cameraUuid,
     duration,
-    startTime,
+    startTime: Math.round(startTime / 1000),
   };
   const response = await postApi<schema["Camera_GetFootageSeekpointsV2WSResponse"]>({
     route: "/camera/getFootageSeekpointsV2",
@@ -157,20 +158,26 @@ export async function getHumanMotionEvents(
   }).then(response => {
     const seekPoints = response.footageSeekPoints || [];
 
-    const uniqueHumanEvents = seekPoints.reduceRight((acc: HumanEvent[], point) => {
-      if (
-        point.a === "MOTION_HUMAN" &&
-        typeof point.ts === "number" &&
-        typeof point.id === "number" &&
-        !acc.some(existing => existing.id === point.id)
-      ) {
-        acc.unshift({ timestamp: point.ts, id: point.id });
-      }
-      return acc;
-    }, []);
+    const uniqueHumanEvents = seekPoints
+      .reduceRight((acc: HumanEvent[], point) => {
+        if (
+          point.a === "MOTION_HUMAN" &&
+          typeof point.ts === "number" &&
+          typeof point.id === "number" &&
+          !acc.some(existing => existing.id === point.id)
+        ) {
+          acc.unshift({ timestamp: point.ts, id: point.id });
+        }
+        return acc;
+      }, [])
+      .map(event => ({
+        timestamp: event.timestamp,
+        id: event.id,
+      }));
 
     return { cameraUuid, uniqueHumanEvents };
   });
+
   return response;
 }
 

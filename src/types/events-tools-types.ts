@@ -1,16 +1,27 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 import { ComponentEventEnumType } from "./schema-components.js";
+import { HumanEvent } from "../api/events-tool-api.js";
 
-// Removed unused schema definitions since the output structure was simplified
+export enum EventsToolRequestType {
+  ACCESS_CONTROL = "access-control",
+  ENVIRONMENTAL_GATEWAY = "environmental-gateway",
+  CLIMATE_SENSOR = "climate-sensor",
+  COMPONENT_EVENTS = "component-events",
+  CAMERA = "camera",
+}
 
 export const TOOL_ARGS = {
-  eventType: z.enum([
-    "access-control",
-    "environmental-gateway",
-    "climate-sensor",
-    "component-events",
-  ]),
+  eventType: z
+    .nativeEnum(EventsToolRequestType)
+    .describe(
+      "The type of events to retrieve. " +
+        "access-control: Access control events like unlocks, badge ins, credentials, arrivals. " +
+        "environmental-gateway: Environmental gateway events with sensor readings and derived values. " +
+        "climate-sensor: Climate sensor events with temperature, humidity, air quality readings. " +
+        "component-events: All types of component events for a location (most flexible option). " +
+        "camera: Human motion events detected by cameras."
+    ),
   startTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
@@ -74,6 +85,20 @@ export const TOOL_ARGS = {
     .describe(
       "The timezone of the requested locations or devices. This is necessary for the tool to produce accurate formatted timestamps."
     ),
+  cameraUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "The unique identifier for the camera. Required when eventType is 'camera'. Can be obtained from the get-entity-tool for CAMERA."
+    ),
+  duration: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .describe(
+      "Duration in seconds to search for human motion events. Required when eventType is 'camera'. Default is 3600 (1 hour)."
+    ),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
@@ -114,19 +139,48 @@ const ClimateSensorEvent = z.object({
 
 export const OUTPUT_SCHEMA = z.object({
   eventType: z
-    .enum(["access-control", "environmental-gateway", "climate-sensor", "component-events"])
+    .enum([
+      "access-control",
+      "environmental-gateway",
+      "climate-sensor",
+      "component-events",
+      "camera",
+    ])
     .optional(),
   accessControlEvents: z.optional(
     z
       .array(
         z.object({
-          authenticationResult: z.string().optional(),
-          authorizationResult: z.string().optional(),
-          doorUuid: z.string().optional(),
-          locationUuid: z.string().optional(),
-          user: z.string().optional(),
-          credSource: z.string().optional(),
-          datetime: z.string().optional(),
+          authenticationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authentication process"),
+          authorizationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authorization process"),
+          doorUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the access controlled door"),
+          locationUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the location where the event occurred"),
+          user: z
+            .string()
+            .optional()
+            .describe("The username of the person who triggered the event"),
+          credSource: z
+            .string()
+            .optional()
+            .describe(
+              "The source of the credential. Is what generated the event. " +
+                "BLE_WAVE is a user badging in by physically waving their hand over the reader. " +
+                "NFC is a user badging in by tapping their badge or their phone on the reader. " +
+                "REMOTE is unlocking the door remotely through the Rhombus app."
+            ),
+          datetime: z.string().optional().describe("Datetime string of when the event occurred"),
         })
       )
       .nullable()
@@ -135,8 +189,16 @@ export const OUTPUT_SCHEMA = z.object({
   environmentalGatewayEvents: z.optional(
     z
       .object({
-        events: z.array(StrippedEnvironmentalEvent).optional(),
-        lastEvaluatedKey: z.string().optional(),
+        events: z
+          .array(StrippedEnvironmentalEvent)
+          .optional()
+          .describe(
+            "An array where each object represents a single environmental event containing sensor readings and derived values"
+          ),
+        lastEvaluatedKey: z
+          .string()
+          .optional()
+          .describe("A key for pagination if more results are available"),
       })
       .nullable()
       .describe("Environmental gateway events data including sensor readings and derived values")
@@ -153,31 +215,88 @@ export const OUTPUT_SCHEMA = z.object({
     z
       .array(
         z.object({
-          eventType: z.string().optional(),
-          componentUuid: z.string().optional(),
-          locationUuid: z.string().optional(),
-          orgUuid: z.string().optional(),
-          correlationId: z.string().optional(),
-          ownerDeviceUuid: z.string().optional(),
-          datetime: z.string().optional(),
-          timestampMs: z.number().optional(),
-          uuid: z.string().optional(),
+          eventType: z
+            .string()
+            .optional()
+            .describe(
+              "The type of component event (e.g., DoorbellEvent, CredentialReceivedEvent, etc.)"
+            ),
+          componentUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the component that generated the event"),
+          locationUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the location where the event occurred"),
+          orgUuid: z.string().optional().describe("The unique identifier for the organization"),
+          correlationId: z
+            .string()
+            .optional()
+            .describe("A correlation ID for tracking related events"),
+          ownerDeviceUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the device that owns this component"),
+          datetime: z
+            .string()
+            .optional()
+            .describe("Human-readable datetime string of when the event occurred"),
+          timestampMs: z
+            .number()
+            .optional()
+            .describe("Timestamp in milliseconds when the event occurred"),
+          uuid: z.string().optional().describe("The unique identifier for this specific event"),
           // Event-specific fields
-          authenticationResult: z.string().optional(),
-          authorizationResult: z.string().optional(),
-          user: z.string().optional(),
-          credSource: z.string().optional(),
-          doorUuid: z.string().optional(),
-          doorbellCameraUuid: z.string().optional(),
-          previousState: z.string().optional(),
-          newState: z.string().optional(),
-          reason: z.string().optional(),
-          buttonState: z.string().optional(),
+          authenticationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authentication process (for credential events)"),
+          authorizationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authorization process (for credential events)"),
+          user: z
+            .string()
+            .optional()
+            .describe("The username of the person who triggered the event (for credential events)"),
+          credSource: z
+            .string()
+            .optional()
+            .describe("The source of the credential (for credential events)"),
+          doorUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the door (for door-related events)"),
+          doorbellCameraUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the doorbell camera (for doorbell events)"),
+          previousState: z
+            .string()
+            .optional()
+            .describe("The previous state before the change (for state change events)"),
+          newState: z
+            .string()
+            .optional()
+            .describe("The new state after the change (for state change events)"),
+          reason: z.string().optional().describe("The reason for the state change or event"),
+          buttonState: z
+            .string()
+            .optional()
+            .describe("The state of the button (for button events)"),
         })
       )
       .nullable()
-      .describe("Component events data for all types of access control events at a location")
+      .describe(
+        "Component events data for all types of access control events at a location, sorted by timestamp (newest first)"
+      )
   ),
+  cameraEvents: z
+    .array(HumanEvent)
+    .optional()
+    .describe(`Camera events data, as requested with requestType ${EventsToolRequestType.CAMERA}`),
   needUserInput: z.boolean().optional(),
   commandForUser: z.string().optional(),
 });
+export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;
