@@ -129,3 +129,40 @@ export async function getSummaryCountReport(
     timeSeriesDataPoints: newTimeSeriesDataPoints,
   };
 }
+
+export async function getOccupancyEnabledCameras(
+  requestModifiers?: any,
+  sessionId?: string
+): Promise<OutputSchema["occupancyEnabledCamerasReport"]> {
+  logger.info("📷 Getting occupancy enabled cameras");
+
+  const body = {};
+
+  const response = await postApi<schema["Camera_GetFacetedCameraDetailsWSResponse"]>({
+    route: "/camera/getOccupancyEnabledCameras",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  // Transform the response to handle null values
+  const cameras = response.cameras
+    ? response.cameras.map(camera => ({
+        uuid: camera.uuid ?? undefined,
+        deviceUuid: camera.deviceUuid ?? undefined,
+        name: camera.name ?? undefined,
+        serialNumber: camera.serialNumber ?? undefined,
+        locationUuid: camera.locationUuid ?? undefined,
+        facetNameMap: camera.facetNameMap ?? undefined,
+        deleted: camera.deleted ?? undefined,
+        pending: camera.pending ?? undefined,
+        mummified: camera.mummified ?? undefined,
+      }))
+    : undefined;
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    cameras,
+  };
+}

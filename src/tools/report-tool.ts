@@ -6,7 +6,11 @@ import {
   OUTPUT_SCHEMA,
   RequestType,
 } from "../types/report-tool-types.js";
-import { getOccupancyCountReport, getSummaryCountReport } from "../api/report-tool-api.js";
+import {
+  getOccupancyCountReport,
+  getSummaryCountReport,
+  getOccupancyEnabledCameras,
+} from "../api/report-tool-api.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
 import { DateTime } from "luxon";
 
@@ -18,6 +22,10 @@ It provides aggregated counts over specified time intervals and scopes.
 This tool should be used when users need high level summary reports, analytics, or aggregated counts of system events and activities.
 If types contains PEOPLE please understand that this is not a unique person count, it is a count of people detection events. 
 It's useful for getting a high level count of people, but not for getting a unique person count.
+
+This tool can also retrieve a list of cameras that have occupancy reporting enabled, which is useful as a first step
+before running GET_SUMMARY_COUNT_REPORT since the uuid pulled from summaryCountRequest should always be present on
+the list returned from getOccupancyEnabledCameras.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -79,6 +87,25 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       ],
       structuredContent: {
         occupancyCountReport: report,
+      },
+    };
+  }
+
+  if (requestType === RequestType.GET_OCCUPANCY_ENABLED_CAMERAS) {
+    const report = await getOccupancyEnabledCameras(
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(report),
+        },
+      ],
+      structuredContent: {
+        occupancyEnabledCamerasReport: report,
       },
     };
   }

@@ -5,12 +5,14 @@ import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 export enum RequestType {
   GET_SUMMARY_COUNT_REPORT = "get-summary-count-report",
   GET_OCCUPANCY_COUNT_REPORT = "get-occupancy-count-report",
+  GET_OCCUPANCY_ENABLED_CAMERAS = "get-occupancy-enabled-cameras",
 }
 
 export const TOOL_ARGS = z.object({
   requestType: z.enum([
     RequestType.GET_SUMMARY_COUNT_REPORT,
     RequestType.GET_OCCUPANCY_COUNT_REPORT,
+    RequestType.GET_OCCUPANCY_ENABLED_CAMERAS,
   ]),
   occupancyCountRequest: z.object({
     deviceUuid: z.string().describe("The uuid of the device to get occupancy count for"),
@@ -78,6 +80,9 @@ export const TOOL_ARGS = z.object({
       .describe(`The timezone of the requested locations or devices. This is necessary for the tool to produce
       accurate UTC dates for the returned data.`),
   }),
+  occupancyEnabledCamerasRequest: z
+    .object({})
+    .describe("Request to get list of occupancy enabled cameras"),
 });
 
 const TOOL_ARGS_SCHEMA = TOOL_ARGS;
@@ -127,5 +132,29 @@ export const OUTPUT_SCHEMA = z.object({
       })
     )
     .nullable(),
+  occupancyEnabledCamerasReport: z
+    .optional(
+      z.object({
+        error: z.optional(z.boolean()),
+        errorMsg: z.optional(z.string()),
+        cameras: z.optional(
+          z.array(
+            z.object({
+              uuid: z.optional(z.string()),
+              deviceUuid: z.optional(z.string()),
+              name: z.optional(z.string()),
+              serialNumber: z.optional(z.string()),
+              locationUuid: z.optional(z.string()),
+              facetNameMap: z.optional(z.record(z.string().nullable())),
+              deleted: z.optional(z.boolean()),
+              pending: z.optional(z.boolean()),
+              mummified: z.optional(z.boolean()),
+            })
+          )
+        ),
+      })
+    )
+    .nullable()
+    .describe("List of cameras that have occupancy reporting enabled"),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;
