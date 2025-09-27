@@ -13,7 +13,7 @@ import {
   getLineCrossingEnabledCameras,
   getThresholdCrossingCountReport,
   findPromptConfigurations,
-  getCustomLLMNumericCounts,
+  getCustomLLMReport,
 } from "../api/report-tool-api.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
 import { DateTime } from "luxon";
@@ -46,9 +46,13 @@ Additionally, this tool supports line crossing analytics:
 The tool also supports custom user-defined event reporting:
 - FIND_PROMPT_CONFIGURATIONS: Retrieves all custom event prompt configurations. This should be called first to discover
   what custom events are available for reporting (e.g., "black dog sightings", "delivery truck arrivals", etc.).
-  Each configuration includes the prompt text and UUID needed for generating reports.
-- GET_CUSTOM_LLM_NUMERIC_COUNTS: Generates time series reports for a specific custom event using the prompt UUID.
-  Returns aggregated counts over specified time intervals (minutely, quarter-hourly, hourly, daily, weekly, monthly).
+  Each configuration includes the prompt text, UUID, and promptType (COUNT, PERCENT, or BOOLEAN) needed for generating reports.
+- GET_CUSTOM_LLM_REPORT: Generates time series reports for a specific custom event using the prompt UUID.
+  The promptType field from the configuration determines which API endpoint is used:
+  • COUNT: Returns numeric counts (e.g., "3 black dogs detected")
+  • PERCENT: Returns percentage values (e.g., "75% occupancy")
+  • BOOLEAN: Returns true/false values (e.g., "parking lot full: true")
+  Returns aggregated data over specified time intervals (minutely, quarter-hourly, hourly, daily, weekly, monthly).
   Use this after finding the appropriate prompt configuration to get historical data for custom events.
 `;
 
@@ -209,19 +213,31 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     };
   }
 
-  if (requestType === RequestType.GET_CUSTOM_LLM_NUMERIC_COUNTS) {
-    const { customLLMNumericCountsRequest } = args;
-    if (!customLLMNumericCountsRequest) {
-      throw new Error("customLLMNumericCountsRequest is required");
+  if (requestType === RequestType.GET_CUSTOM_LLM_REPORT) {
+    const { customLLMReportRequest } = args;
+    if (!customLLMReportRequest) {
+      throw new Error("customLLMReportRequest is required");
     }
-    const { promptUuid, rangeStart, rangeEnd, interval } = customLLMNumericCountsRequest;
-    const report = await getCustomLLMNumericCounts(
+    const { promptUuid, promptType, rangeStart, rangeEnd, interval } = customLLMReportRequest;
+    const report = await getCustomLLMReport(
       promptUuid,
+      promptType,
       new Date(rangeStart).getTime(),
       new Date(rangeEnd).getTime(),
       interval,
       extra._meta?.requestModifiers as RequestModifiers,
       extra.sessionId
+    );
+
+    // Log the report data to help debug
+    console.log(
+      "📊 Custom LLM Report Tool Response:",
+      JSON.stringify({
+        promptType,
+        hasError: report?.error,
+        dataPointsCount: report?.timeSeriesDataPoints?.length,
+        firstDataPoint: report?.timeSeriesDataPoints?.[0],
+      })
     );
 
     return {
@@ -232,7 +248,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         },
       ],
       structuredContent: {
-        customLLMNumericCountsReport: report,
+        customLLMReport: report,
       },
     };
   }

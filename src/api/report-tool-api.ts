@@ -394,18 +394,20 @@ export async function findPromptConfigurations(
   };
 }
 
-export async function getCustomLLMNumericCounts(
+export async function getCustomLLMReport(
   promptUuid: string,
+  promptType: "COUNT" | "PERCENT" | "BOOLEAN",
   startTimeMs: number,
   endTimeMs: number,
   interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY",
   requestModifiers?: any,
   sessionId?: string
-): Promise<OutputSchema["customLLMNumericCountsReport"]> {
+): Promise<OutputSchema["customLLMReport"]> {
   logger.info(
-    "📊 Getting custom LLM numeric counts",
+    "📊 Getting custom LLM report",
     JSON.stringify({
       promptUuid,
+      promptType,
       startTimeMs,
       endTimeMs,
       interval,
@@ -419,35 +421,136 @@ export async function getCustomLLMNumericCounts(
     interval,
   };
 
-  const response = await postApi<schema["Report_GetCustomLLMWSResponse"]>({
-    route: "/report/getCustomLLMNumericCounts",
+  // Determine the correct endpoint based on promptType
+  let route: string;
+  switch (promptType) {
+    case "COUNT":
+      route = "/report/getCustomLLMNumericCounts";
+      break;
+    case "PERCENT":
+      route = "/report/getCustomLLMReport";
+      break;
+    case "BOOLEAN":
+      route = "/report/getCustomLLMBinaryCounts";
+      break;
+    default:
+      throw new Error(`Unknown prompt type: ${promptType}`);
+  }
+
+  const response = await postApi<any>({
+    route,
     body,
     modifiers: requestModifiers,
     sessionId,
   });
 
-  // Transform the response to handle null values
-  const timeSeriesDataPoints = response.timeSeriesDataPoints
-    ? response.timeSeriesDataPoints.map(dataPoint => ({
-        dateLocal: dataPoint.dateLocal ?? undefined,
-        dateUtc: dataPoint.dateUtc ?? undefined,
-        eventCountMap: dataPoint.eventCountMap
-          ? Object.entries(dataPoint.eventCountMap).reduce(
-              (acc, [key, value]) => {
-                if (value !== null) {
-                  acc[key] = value;
-                }
-                return acc;
-              },
-              {} as Record<string, number>
-            )
-          : undefined,
-      }))
-    : undefined;
+  logger.info(
+    "📊 Custom LLM API response:",
+    JSON.stringify({
+      promptType,
+      hasReports: !!response.reports,
+      hasTimeSeriesDataPoints: !!response.timeSeriesDataPoints,
+      error: response.error,
+    })
+  );
 
-  return {
+  // Different prompt types return different response structures
+  let timeSeriesDataPoints;
+
+  if ((promptType === "BOOLEAN" || promptType === "PERCENT") && response.reports) {
+    // BOOLEAN and PERCENT types return a reports object with device UUIDs as keys
+    const reportEntries = Object.entries(response.reports);
+    logger.info(
+      `📊 ${promptType} response structure:`,
+      JSON.stringify({ reportEntries: reportEntries.length })
+    );
+
+    // Aggregate data from all devices
+    const aggregatedData: Record<string, any> = {};
+
+    reportEntries.forEach(([deviceId, reportData]) => {
+      if (Array.isArray(reportData)) {
+        reportData.forEach((item: any) => {
+          const dateKey = item.localDate || new Date().toISOString();
+          if (!aggregatedData[dateKey]) {
+            aggregatedData[dateKey] = {
+              dateLocal: item.localDate,
+              eventCount: 0,
+              true: 0,
+              false: 0,
+              // For PERCENT type, store percentage values
+              percentages: {},
+            };
+          }
+
+          if (promptType === "BOOLEAN") {
+            aggregatedData[dateKey].eventCount += item.eventCount || 0;
+            aggregatedData[dateKey].true += item.true || 0;
+            aggregatedData[dateKey].false += item.false || 0;
+          } else if (promptType === "PERCENT") {
+            // For PERCENT type, aggregate percentage data
+            aggregatedData[dateKey].eventCount += item.eventCount || 0;
+            // Store any percentage-related fields from the response
+            Object.entries(item).forEach(([key, value]) => {
+              if (key !== "localDate" && key !== "eventCount") {
+                // Store any numeric values as percentages (could be number or string percentage)
+                aggregatedData[dateKey].percentages[key] = value;
+              }
+            });
+          }
+        });
+      }
+    });
+
+    // Convert aggregated data to timeSeriesDataPoints format
+    timeSeriesDataPoints = Object.entries(aggregatedData).map(([date, data]) => ({
+      dateLocal: data.dateLocal ?? undefined,
+      dateUtc: data.dateLocal ?? undefined, // Convert to UTC if needed
+      eventCountMap:
+        promptType === "BOOLEAN"
+          ? {
+              total: data.eventCount,
+              true: data.true,
+              false: data.false,
+            }
+          : {
+              total: data.eventCount,
+              ...data.percentages,
+            },
+    }));
+  } else if (response.timeSeriesDataPoints) {
+    // COUNT type uses the standard timeSeriesDataPoints format
+    timeSeriesDataPoints = response.timeSeriesDataPoints.map((dataPoint: any) => ({
+      dateLocal: dataPoint.dateLocal ?? undefined,
+      dateUtc: dataPoint.dateUtc ?? undefined,
+      eventCountMap: dataPoint.eventCountMap
+        ? Object.entries(dataPoint.eventCountMap).reduce(
+            (acc, [key, value]) => {
+              if (value !== null && value !== undefined) {
+                acc[key] = value as number | boolean | string;
+              }
+              return acc;
+            },
+            {} as Record<string, number | boolean | string>
+          )
+        : undefined,
+    }));
+  }
+
+  const result = {
     error: response.error ?? undefined,
     errorMsg: response.errorMsg ?? undefined,
     timeSeriesDataPoints,
   };
+
+  logger.info(
+    "📊 Custom LLM report result:",
+    JSON.stringify({
+      hasError: !!result.error,
+      dataPointsCount: timeSeriesDataPoints?.length ?? 0,
+      firstDataPoint: timeSeriesDataPoints?.[0],
+    })
+  );
+
+  return result;
 }

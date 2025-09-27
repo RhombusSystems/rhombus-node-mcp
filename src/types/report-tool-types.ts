@@ -9,7 +9,7 @@ export enum RequestType {
   GET_LINE_CROSSING_ENABLED_CAMERAS = "get-line-crossing-enabled-cameras",
   GET_THRESHOLD_CROSSING_COUNT_REPORT = "get-threshold-crossing-count-report",
   FIND_PROMPT_CONFIGURATIONS = "find-prompt-configurations",
-  GET_CUSTOM_LLM_NUMERIC_COUNTS = "get-custom-llm-numeric-counts",
+  GET_CUSTOM_LLM_REPORT = "get-custom-llm-report",
 }
 
 export const TOOL_ARGS = z.object({
@@ -20,7 +20,7 @@ export const TOOL_ARGS = z.object({
     RequestType.GET_LINE_CROSSING_ENABLED_CAMERAS,
     RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT,
     RequestType.FIND_PROMPT_CONFIGURATIONS,
-    RequestType.GET_CUSTOM_LLM_NUMERIC_COUNTS,
+    RequestType.GET_CUSTOM_LLM_REPORT,
   ]),
   occupancyCountRequest: z.object({
     deviceUuid: z.string().describe("The uuid of the device to get occupancy count for"),
@@ -123,8 +123,11 @@ export const TOOL_ARGS = z.object({
   findPromptConfigurationsRequest: z
     .object({})
     .describe("Request to find all custom event prompt configurations"),
-  customLLMNumericCountsRequest: z.object({
+  customLLMReportRequest: z.object({
     promptUuid: z.string().describe("The uuid of the prompt configuration to get counts for"),
+    promptType: z
+      .enum(["COUNT", "PERCENT", "BOOLEAN"])
+      .describe("The type of prompt configuration - determines which API endpoint to use"),
     rangeStart: z
       .string()
       .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
@@ -312,7 +315,7 @@ export const OUTPUT_SCHEMA = z.object({
     )
     .nullable()
     .describe("List of custom event prompt configurations"),
-  customLLMNumericCountsReport: z
+  customLLMReport: z
     .optional(
       z.object({
         error: z.optional(z.boolean()),
@@ -322,13 +325,15 @@ export const OUTPUT_SCHEMA = z.object({
             z.object({
               dateLocal: z.optional(z.string()),
               dateUtc: z.optional(z.string()),
-              eventCountMap: z.optional(z.record(z.number())),
+              eventCountMap: z.optional(z.record(z.union([z.number(), z.boolean(), z.string()]))),
             })
           )
         ),
       })
     )
     .nullable()
-    .describe("Custom LLM numeric counts report showing event counts over time"),
+    .describe(
+      "Custom LLM report showing event data over time - supports COUNT, PERCENT, and BOOLEAN prompt types"
+    ),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;
