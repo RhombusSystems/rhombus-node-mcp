@@ -6,6 +6,8 @@ export enum RequestType {
   GET_SUMMARY_COUNT_REPORT = "get-summary-count-report",
   GET_OCCUPANCY_COUNT_REPORT = "get-occupancy-count-report",
   GET_OCCUPANCY_ENABLED_CAMERAS = "get-occupancy-enabled-cameras",
+  GET_LINE_CROSSING_ENABLED_CAMERAS = "get-line-crossing-enabled-cameras",
+  GET_THRESHOLD_CROSSING_COUNT_REPORT = "get-threshold-crossing-count-report",
 }
 
 export const TOOL_ARGS = z.object({
@@ -13,6 +15,8 @@ export const TOOL_ARGS = z.object({
     RequestType.GET_SUMMARY_COUNT_REPORT,
     RequestType.GET_OCCUPANCY_COUNT_REPORT,
     RequestType.GET_OCCUPANCY_ENABLED_CAMERAS,
+    RequestType.GET_LINE_CROSSING_ENABLED_CAMERAS,
+    RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT,
   ]),
   occupancyCountRequest: z.object({
     deviceUuid: z.string().describe("The uuid of the device to get occupancy count for"),
@@ -83,6 +87,35 @@ export const TOOL_ARGS = z.object({
   occupancyEnabledCamerasRequest: z
     .object({})
     .describe("Request to get list of occupancy enabled cameras"),
+  lineCrossingEnabledCamerasRequest: z.object({
+    locationUuid: z
+      .string()
+      .describe("The uuid of the location to get line crossing enabled cameras for"),
+  }),
+  thresholdCrossingCountRequest: z.object({
+    deviceUuid: z.string().describe("The uuid of the device to get threshold crossing count for"),
+    rangeStart: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The start of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
+    rangeEnd: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The end of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
+    bucketSize: z
+      .enum(["QUARTER_HOUR", "HOUR", "DAY", "WEEK"])
+      .describe("The time bucket size for aggregating crossing counts"),
+    crossingObject: z
+      .enum(["HUMAN", "VEHICLE", "UNKNOWN"])
+      .describe("The type of object crossing to report on"),
+    dedupe: z.boolean().describe("Whether to deduplicate crossing events"),
+  }),
 });
 
 const TOOL_ARGS_SCHEMA = TOOL_ARGS;
@@ -156,5 +189,33 @@ export const OUTPUT_SCHEMA = z.object({
     )
     .nullable()
     .describe("List of cameras that have occupancy reporting enabled"),
+  lineCrossingEnabledCamerasReport: z
+    .optional(
+      z.object({
+        error: z.optional(z.boolean()),
+        errorMsg: z.optional(z.string()),
+        camerasToConfigs: z.optional(z.record(z.unknown())),
+      })
+    )
+    .nullable()
+    .describe("Cameras at a location that have line crossing enabled with their configurations"),
+  thresholdCrossingCountReport: z
+    .optional(
+      z.object({
+        error: z.optional(z.boolean()),
+        errorMsg: z.optional(z.string()),
+        crossingCounts: z.optional(
+          z.array(
+            z.object({
+              timestampMs: z.optional(z.number()),
+              ingressCount: z.optional(z.number()),
+              egressCount: z.optional(z.number()),
+            })
+          )
+        ),
+      })
+    )
+    .nullable()
+    .describe("Threshold crossing count report showing ingress and egress counts over time"),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

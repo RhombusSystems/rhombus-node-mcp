@@ -10,6 +10,8 @@ import {
   getOccupancyCountReport,
   getSummaryCountReport,
   getOccupancyEnabledCameras,
+  getLineCrossingEnabledCameras,
+  getThresholdCrossingCountReport,
 } from "../api/report-tool-api.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
 import { DateTime } from "luxon";
@@ -26,6 +28,13 @@ It's useful for getting a high level count of people, but not for getting a uniq
 This tool can also retrieve a list of cameras that have occupancy reporting enabled, which is useful as a first step
 before running GET_SUMMARY_COUNT_REPORT since the uuid pulled from summaryCountRequest should always be present on
 the list returned from getOccupancyEnabledCameras.
+
+Additionally, this tool supports line crossing analytics:
+- GET_LINE_CROSSING_ENABLED_CAMERAS: Retrieves cameras at a location that have line crossing enabled, along with their configurations.
+  This should be called first to identify which cameras can be used for threshold crossing reports.
+- GET_THRESHOLD_CROSSING_COUNT_REPORT: Generates reports showing ingress and egress counts for line crossings over time.
+  Useful for analyzing entry/exit patterns, calculating averages per hour, identifying peak hours, and understanding traffic flow.
+  Supports human and vehicle crossing detection with configurable time buckets (quarter hour, hour, day, week).
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -106,6 +115,62 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       ],
       structuredContent: {
         occupancyEnabledCamerasReport: report,
+      },
+    };
+  }
+
+  if (requestType === RequestType.GET_LINE_CROSSING_ENABLED_CAMERAS) {
+    const { lineCrossingEnabledCamerasRequest } = args;
+    if (!lineCrossingEnabledCamerasRequest) {
+      throw new Error("lineCrossingEnabledCamerasRequest is required");
+    }
+    const { locationUuid } = lineCrossingEnabledCamerasRequest;
+    const report = await getLineCrossingEnabledCameras(
+      locationUuid,
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(report),
+        },
+      ],
+      structuredContent: {
+        lineCrossingEnabledCamerasReport: report,
+      },
+    };
+  }
+
+  if (requestType === RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT) {
+    const { thresholdCrossingCountRequest } = args;
+    if (!thresholdCrossingCountRequest) {
+      throw new Error("thresholdCrossingCountRequest is required");
+    }
+    const { deviceUuid, rangeStart, rangeEnd, bucketSize, crossingObject, dedupe } =
+      thresholdCrossingCountRequest;
+    const report = await getThresholdCrossingCountReport(
+      deviceUuid,
+      new Date(rangeStart).getTime(),
+      new Date(rangeEnd).getTime(),
+      bucketSize,
+      crossingObject,
+      dedupe,
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(report),
+        },
+      ],
+      structuredContent: {
+        thresholdCrossingCountReport: report,
       },
     };
   }

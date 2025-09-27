@@ -166,3 +166,84 @@ export async function getOccupancyEnabledCameras(
     cameras,
   };
 }
+
+export async function getLineCrossingEnabledCameras(
+  locationUuid: string,
+  requestModifiers?: any,
+  sessionId?: string
+): Promise<OutputSchema["lineCrossingEnabledCamerasReport"]> {
+  logger.info("🚶 Getting line crossing enabled cameras for location", locationUuid);
+
+  const body = {
+    locationUuid,
+  };
+
+  const response = await postApi<
+    schema["Camera_GetLineCrossingEnabledCamerasForLocationWSResponse"]
+  >({
+    route: "/camera/getLineCrossingEnabledCamerasForLocation",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    camerasToConfigs: response.camerasToConfigs ?? undefined,
+  };
+}
+
+export async function getThresholdCrossingCountReport(
+  deviceUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  bucketSize: "QUARTER_HOUR" | "HOUR" | "DAY" | "WEEK",
+  crossingObject: "HUMAN" | "VEHICLE" | "UNKNOWN",
+  dedupe: boolean,
+  requestModifiers?: any,
+  sessionId?: string
+): Promise<OutputSchema["thresholdCrossingCountReport"]> {
+  logger.info(
+    "🚪 Getting threshold crossing count report",
+    JSON.stringify({
+      deviceUuid,
+      startTimeMs,
+      endTimeMs,
+      bucketSize,
+      crossingObject,
+      dedupe,
+    })
+  );
+
+  const body = {
+    deviceUuid,
+    startTimeMs,
+    endTimeMs,
+    bucketSize,
+    crossingObject,
+    dedupe,
+  };
+
+  const response = await postApi<schema["Report_GetThresholdCrossingCountReportWSResponse"]>({
+    route: "/report/getThresholdCrossingCountReport",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  // Transform the response to handle null values
+  const crossingCounts = response.crossingCounts
+    ? response.crossingCounts.map(count => ({
+        timestampMs: count.timestampMs ?? undefined,
+        ingressCount: count.ingressCount ?? undefined,
+        egressCount: count.egressCount ?? undefined,
+      }))
+    : undefined;
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    crossingCounts,
+  };
+}
