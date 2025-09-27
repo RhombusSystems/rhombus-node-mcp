@@ -213,9 +213,50 @@ export const OUTPUT_SCHEMA = z.object({
             })
           )
         ),
+        metrics: z
+          .optional(
+            z.object({
+              averageEntriesPerHour: z
+                .number()
+                .describe("Average number of entries (ingress) per hour"),
+              averageExitsPerHour: z.number().describe("Average number of exits (egress) per hour"),
+              mostEntriesInHour: z
+                .object({
+                  count: z.number().describe("Maximum number of entries in a single hour"),
+                  timestamp: z.string().describe("ISO timestamp of the hour with most entries"),
+                  hourLabel: z
+                    .string()
+                    .describe("Human-readable hour label (e.g., '2:00 PM - 3:00 PM')"),
+                })
+                .describe("Hour with the most entries"),
+              mostExitsInHour: z
+                .object({
+                  count: z.number().describe("Maximum number of exits in a single hour"),
+                  timestamp: z.string().describe("ISO timestamp of the hour with most exits"),
+                  hourLabel: z
+                    .string()
+                    .describe("Human-readable hour label (e.g., '2:00 PM - 3:00 PM')"),
+                })
+                .describe("Hour with the most exits"),
+              busiestHour: z
+                .object({
+                  totalCount: z.number().describe("Total entries + exits in the busiest hour"),
+                  timestamp: z.string().describe("ISO timestamp of the busiest hour"),
+                  hourLabel: z
+                    .string()
+                    .describe("Human-readable hour label (e.g., '2:00 PM - 3:00 PM')"),
+                  entries: z.number().describe("Number of entries in the busiest hour"),
+                  exits: z.number().describe("Number of exits in the busiest hour"),
+                })
+                .describe("Hour with the most total activity (entries + exits)"),
+            })
+          )
+          .describe("Calculated metrics from the crossing count data"),
       })
     )
     .nullable()
-    .describe("Threshold crossing count report showing ingress and egress counts over time"),
+    .describe(
+      "Threshold crossing count report showing ingress and egress counts over time with calculated metrics"
+    ),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

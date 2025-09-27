@@ -33,7 +33,12 @@ Additionally, this tool supports line crossing analytics:
 - GET_LINE_CROSSING_ENABLED_CAMERAS: Retrieves cameras at a location that have line crossing enabled, along with their configurations.
   This should be called first to identify which cameras can be used for threshold crossing reports.
 - GET_THRESHOLD_CROSSING_COUNT_REPORT: Generates reports showing ingress and egress counts for line crossings over time.
-  Useful for analyzing entry/exit patterns, calculating averages per hour, identifying peak hours, and understanding traffic flow.
+  Automatically calculates key metrics including:
+  • Average entries per hour
+  • Average exits per hour
+  • Hour with most entries (with timestamp and count)
+  • Hour with most exits (with timestamp and count)
+  • Busiest hour overall (total activity with breakdown)
   Supports human and vehicle crossing detection with configurable time buckets (quarter hour, hour, day, week).
 `;
 

@@ -241,9 +241,115 @@ export async function getThresholdCrossingCountReport(
       }))
     : undefined;
 
+  // Calculate metrics if we have crossing counts and the bucket size is appropriate
+  let metrics: NonNullable<OutputSchema["thresholdCrossingCountReport"]>["metrics"] = undefined;
+
+  if (crossingCounts && crossingCounts.length > 0) {
+    // Calculate total entries and exits
+    let totalEntries = 0;
+    let totalExits = 0;
+    let maxEntries = 0;
+    let maxExits = 0;
+    let maxTotal = 0;
+    let maxEntriesTimestamp: number | undefined;
+    let maxExitsTimestamp: number | undefined;
+    let maxTotalTimestamp: number | undefined;
+    let maxTotalEntries = 0;
+    let maxTotalExits = 0;
+
+    crossingCounts.forEach(count => {
+      const entries = count.ingressCount || 0;
+      const exits = count.egressCount || 0;
+      const total = entries + exits;
+
+      totalEntries += entries;
+      totalExits += exits;
+
+      // Track max entries
+      if (entries > maxEntries) {
+        maxEntries = entries;
+        maxEntriesTimestamp = count.timestampMs;
+      }
+
+      // Track max exits
+      if (exits > maxExits) {
+        maxExits = exits;
+        maxExitsTimestamp = count.timestampMs;
+      }
+
+      // Track busiest hour (max total)
+      if (total > maxTotal) {
+        maxTotal = total;
+        maxTotalTimestamp = count.timestampMs;
+        maxTotalEntries = entries;
+        maxTotalExits = exits;
+      }
+    });
+
+    // Calculate hours based on bucket size
+    let hoursInPeriod = 1;
+    const periodMs = endTimeMs - startTimeMs;
+
+    if (bucketSize === "HOUR") {
+      hoursInPeriod = periodMs / (1000 * 60 * 60);
+    } else if (bucketSize === "QUARTER_HOUR") {
+      // For quarter hour buckets, we need to aggregate to hourly
+      hoursInPeriod = periodMs / (1000 * 60 * 60);
+      // Note: For more accurate hourly calculations with quarter-hour buckets,
+      // we'd need to group by hour, but for now we'll use the total period
+    } else if (bucketSize === "DAY") {
+      hoursInPeriod = periodMs / (1000 * 60 * 60);
+    } else if (bucketSize === "WEEK") {
+      hoursInPeriod = periodMs / (1000 * 60 * 60);
+    }
+
+    // Helper function to format hour labels
+    const formatHourLabel = (timestampMs: number | undefined): string => {
+      if (!timestampMs) return "Unknown";
+
+      const date = DateTime.fromMillis(timestampMs);
+      if (bucketSize === "HOUR") {
+        const endHour = date.plus({ hours: 1 });
+        return `${date.toFormat("h:mm a")} - ${endHour.toFormat("h:mm a")} (${date.toFormat("MMM d, yyyy")})`;
+      } else if (bucketSize === "QUARTER_HOUR") {
+        const endTime = date.plus({ minutes: 15 });
+        return `${date.toFormat("h:mm a")} - ${endTime.toFormat("h:mm a")} (${date.toFormat("MMM d, yyyy")})`;
+      } else if (bucketSize === "DAY") {
+        return date.toFormat("MMM d, yyyy");
+      } else if (bucketSize === "WEEK") {
+        const endWeek = date.plus({ weeks: 1 }).minus({ days: 1 });
+        return `Week of ${date.toFormat("MMM d")} - ${endWeek.toFormat("MMM d, yyyy")}`;
+      }
+      return date.toISO() || "Unknown";
+    };
+
+    metrics = {
+      averageEntriesPerHour: totalEntries / hoursInPeriod,
+      averageExitsPerHour: totalExits / hoursInPeriod,
+      mostEntriesInHour: {
+        count: maxEntries,
+        timestamp: maxEntriesTimestamp ? DateTime.fromMillis(maxEntriesTimestamp).toISO()! : "",
+        hourLabel: formatHourLabel(maxEntriesTimestamp),
+      },
+      mostExitsInHour: {
+        count: maxExits,
+        timestamp: maxExitsTimestamp ? DateTime.fromMillis(maxExitsTimestamp).toISO()! : "",
+        hourLabel: formatHourLabel(maxExitsTimestamp),
+      },
+      busiestHour: {
+        totalCount: maxTotal,
+        timestamp: maxTotalTimestamp ? DateTime.fromMillis(maxTotalTimestamp).toISO()! : "",
+        hourLabel: formatHourLabel(maxTotalTimestamp),
+        entries: maxTotalEntries,
+        exits: maxTotalExits,
+      },
+    };
+  }
+
   return {
     error: response.error ?? undefined,
     errorMsg: response.errorMsg ?? undefined,
     crossingCounts,
+    metrics,
   };
 }
