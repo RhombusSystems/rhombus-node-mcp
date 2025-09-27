@@ -12,6 +12,8 @@ import {
   getOccupancyEnabledCameras,
   getLineCrossingEnabledCameras,
   getThresholdCrossingCountReport,
+  findPromptConfigurations,
+  getCustomLLMNumericCounts,
 } from "../api/report-tool-api.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
 import { DateTime } from "luxon";
@@ -40,6 +42,14 @@ Additionally, this tool supports line crossing analytics:
   • Hour with most exits (with timestamp and count)
   • Busiest hour overall (total activity with breakdown)
   Supports human and vehicle crossing detection with configurable time buckets (quarter hour, hour, day, week).
+
+The tool also supports custom user-defined event reporting:
+- FIND_PROMPT_CONFIGURATIONS: Retrieves all custom event prompt configurations. This should be called first to discover
+  what custom events are available for reporting (e.g., "black dog sightings", "delivery truck arrivals", etc.).
+  Each configuration includes the prompt text and UUID needed for generating reports.
+- GET_CUSTOM_LLM_NUMERIC_COUNTS: Generates time series reports for a specific custom event using the prompt UUID.
+  Returns aggregated counts over specified time intervals (minutely, quarter-hourly, hourly, daily, weekly, monthly).
+  Use this after finding the appropriate prompt configuration to get historical data for custom events.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -176,6 +186,53 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       ],
       structuredContent: {
         thresholdCrossingCountReport: report,
+      },
+    };
+  }
+
+  if (requestType === RequestType.FIND_PROMPT_CONFIGURATIONS) {
+    const report = await findPromptConfigurations(
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(report),
+        },
+      ],
+      structuredContent: {
+        promptConfigurationsReport: report,
+      },
+    };
+  }
+
+  if (requestType === RequestType.GET_CUSTOM_LLM_NUMERIC_COUNTS) {
+    const { customLLMNumericCountsRequest } = args;
+    if (!customLLMNumericCountsRequest) {
+      throw new Error("customLLMNumericCountsRequest is required");
+    }
+    const { promptUuid, rangeStart, rangeEnd, interval } = customLLMNumericCountsRequest;
+    const report = await getCustomLLMNumericCounts(
+      promptUuid,
+      new Date(rangeStart).getTime(),
+      new Date(rangeEnd).getTime(),
+      interval,
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(report),
+        },
+      ],
+      structuredContent: {
+        customLLMNumericCountsReport: report,
       },
     };
   }

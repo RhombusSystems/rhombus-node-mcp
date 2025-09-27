@@ -353,3 +353,101 @@ export async function getThresholdCrossingCountReport(
     metrics,
   };
 }
+
+export async function findPromptConfigurations(
+  requestModifiers?: any,
+  sessionId?: string
+): Promise<OutputSchema["promptConfigurationsReport"]> {
+  logger.info("🔍 Finding custom event prompt configurations");
+
+  const body = {};
+
+  const response = await postApi<schema["Scenequery_FindAllPromptConfigurationsWSResponse"]>({
+    route: "/scenequery/findPromptConfigurations",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  // Transform the response to handle null values
+  const promptConfigurations = response.promptConfigurations
+    ? response.promptConfigurations.map(config => ({
+        active: config.active ?? undefined,
+        cameraConfigurations: config.cameraConfigurations ?? undefined,
+        checkEquations: config.checkEquations ?? undefined,
+        description: config.description ?? undefined,
+        minuteTriggerRate: config.minuteTriggerRate ?? undefined,
+        name: config.name ?? undefined,
+        orgUuid: config.orgUuid ?? undefined,
+        prompt: config.prompt ?? undefined,
+        promptType: config.promptType ?? undefined,
+        scheduleUuid: config.scheduleUuid ?? undefined,
+        shortName: config.shortName ?? undefined,
+        uuid: config.uuid ?? undefined,
+      }))
+    : undefined;
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    promptConfigurations,
+  };
+}
+
+export async function getCustomLLMNumericCounts(
+  promptUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY",
+  requestModifiers?: any,
+  sessionId?: string
+): Promise<OutputSchema["customLLMNumericCountsReport"]> {
+  logger.info(
+    "📊 Getting custom LLM numeric counts",
+    JSON.stringify({
+      promptUuid,
+      startTimeMs,
+      endTimeMs,
+      interval,
+    })
+  );
+
+  const body = {
+    promptUuid,
+    startTimeMs,
+    endTimeMs,
+    interval,
+  };
+
+  const response = await postApi<schema["Report_GetCustomLLMWSResponse"]>({
+    route: "/report/getCustomLLMNumericCounts",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  // Transform the response to handle null values
+  const timeSeriesDataPoints = response.timeSeriesDataPoints
+    ? response.timeSeriesDataPoints.map(dataPoint => ({
+        dateLocal: dataPoint.dateLocal ?? undefined,
+        dateUtc: dataPoint.dateUtc ?? undefined,
+        eventCountMap: dataPoint.eventCountMap
+          ? Object.entries(dataPoint.eventCountMap).reduce(
+              (acc, [key, value]) => {
+                if (value !== null) {
+                  acc[key] = value;
+                }
+                return acc;
+              },
+              {} as Record<string, number>
+            )
+          : undefined,
+      }))
+    : undefined;
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    timeSeriesDataPoints,
+  };
+}

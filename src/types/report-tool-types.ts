@@ -8,6 +8,8 @@ export enum RequestType {
   GET_OCCUPANCY_ENABLED_CAMERAS = "get-occupancy-enabled-cameras",
   GET_LINE_CROSSING_ENABLED_CAMERAS = "get-line-crossing-enabled-cameras",
   GET_THRESHOLD_CROSSING_COUNT_REPORT = "get-threshold-crossing-count-report",
+  FIND_PROMPT_CONFIGURATIONS = "find-prompt-configurations",
+  GET_CUSTOM_LLM_NUMERIC_COUNTS = "get-custom-llm-numeric-counts",
 }
 
 export const TOOL_ARGS = z.object({
@@ -17,6 +19,8 @@ export const TOOL_ARGS = z.object({
     RequestType.GET_OCCUPANCY_ENABLED_CAMERAS,
     RequestType.GET_LINE_CROSSING_ENABLED_CAMERAS,
     RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT,
+    RequestType.FIND_PROMPT_CONFIGURATIONS,
+    RequestType.GET_CUSTOM_LLM_NUMERIC_COUNTS,
   ]),
   occupancyCountRequest: z.object({
     deviceUuid: z.string().describe("The uuid of the device to get occupancy count for"),
@@ -115,6 +119,29 @@ export const TOOL_ARGS = z.object({
       .enum(["HUMAN", "VEHICLE", "UNKNOWN"])
       .describe("The type of object crossing to report on"),
     dedupe: z.boolean().describe("Whether to deduplicate crossing events"),
+  }),
+  findPromptConfigurationsRequest: z
+    .object({})
+    .describe("Request to find all custom event prompt configurations"),
+  customLLMNumericCountsRequest: z.object({
+    promptUuid: z.string().describe("The uuid of the prompt configuration to get counts for"),
+    rangeStart: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The start of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
+    rangeEnd: z
+      .string()
+      .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+      .describe(
+        "The end of the time range (inclusive) for the report period." +
+          ISOTimestampFormatDescription
+      ),
+    interval: z
+      .enum(["MINUTELY", "QUARTERHOURLY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY"])
+      .describe("The time interval for the report aggregation"),
   }),
 });
 
@@ -258,5 +285,50 @@ export const OUTPUT_SCHEMA = z.object({
     .describe(
       "Threshold crossing count report showing ingress and egress counts over time with calculated metrics"
     ),
+  promptConfigurationsReport: z
+    .optional(
+      z.object({
+        error: z.optional(z.boolean()),
+        errorMsg: z.optional(z.string()),
+        promptConfigurations: z.optional(
+          z.array(
+            z.object({
+              active: z.optional(z.boolean()),
+              cameraConfigurations: z.optional(z.array(z.unknown())),
+              checkEquations: z.optional(z.unknown()),
+              description: z.optional(z.string()),
+              minuteTriggerRate: z.optional(z.number()),
+              name: z.optional(z.string()),
+              orgUuid: z.optional(z.string()),
+              prompt: z.optional(z.string()),
+              promptType: z.optional(z.enum(["COUNT", "PERCENT", "BOOLEAN"])),
+              scheduleUuid: z.optional(z.string()),
+              shortName: z.optional(z.string()),
+              uuid: z.optional(z.string()),
+            })
+          )
+        ),
+      })
+    )
+    .nullable()
+    .describe("List of custom event prompt configurations"),
+  customLLMNumericCountsReport: z
+    .optional(
+      z.object({
+        error: z.optional(z.boolean()),
+        errorMsg: z.optional(z.string()),
+        timeSeriesDataPoints: z.optional(
+          z.array(
+            z.object({
+              dateLocal: z.optional(z.string()),
+              dateUtc: z.optional(z.string()),
+              eventCountMap: z.optional(z.record(z.number())),
+            })
+          )
+        ),
+      })
+    )
+    .nullable()
+    .describe("Custom LLM numeric counts report showing event counts over time"),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;
