@@ -339,6 +339,7 @@ const AccessControlledDoorPolicyAlertType = z.object({
   notificationSent: z.boolean().optional(),
   orgUuid: z.string().optional(),
   policyAlertTriggers: z.array(ActivityEnum).optional(),
+  policyUuid: z.string().optional(),
   saved: z.boolean().optional(),
   shared: z.boolean().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
@@ -573,6 +574,26 @@ const Accesscontrol_UserAccessRevocation = z.object({
   accessControlledDoorUuids: z.array(z.string()).optional(),
   scheduleUuid: z.string().optional(),
 });
+const RealtimeRelativeSecondsScheduleType = z.object({
+  mutable: z.boolean().optional(),
+  name: z.string().optional(),
+  oneTimeUse: z.boolean().optional(),
+  orgUuid: z.string().optional(),
+  strategy: z.string().optional(),
+  uuid: z.string().optional(),
+});
+const LocalDateTimeIntervalType = z.object({
+  localEndDateTime: z.string(),
+  localStartDateTime: z.string(),
+});
+const RelativeDateTimeIntervalsScheduleType = z.object({
+  mutable: z.boolean().optional(),
+  name: z.string().optional(),
+  oneTimeUse: z.boolean().optional(),
+  orgUuid: z.string().optional(),
+  strategy: z.string().optional(),
+  uuid: z.string().optional(),
+});
 const BaseSavedScheduleType_Minimal = z.object({
   mutable: z.boolean().optional(),
   name: z.string().optional(),
@@ -729,24 +750,22 @@ const QualifiedAddressType = z.object({
   postalCode: z.string().optional(),
   regionCode: z.string().optional(),
 });
-const LocationType: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
-  z.object({
-    address1: z.string().optional(),
-    address2: z.string().optional(),
-    countryCode: z.string().optional(),
-    floorPlans: z.array(FloorPlanType).optional(),
-    labels: z.array(z.string()).optional(),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    name: z.string().optional(),
-    policyUuid: z.string().optional(),
-    postalCode: z.string().optional(),
-    qualifiedAddress: QualifiedAddressType.optional(),
-    subLocations: z.array(LocationType).optional(),
-    tz: z.string().optional(),
-    uuid: z.string().optional(),
-  })
-);
+const LocationType: z.ZodType<any> = z.object({
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  countryCode: z.string().optional(),
+  floorPlans: z.array(FloorPlanType).optional(),
+  labels: z.array(z.string()).optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  name: z.string().optional(),
+  policyUuid: z.string().optional(),
+  postalCode: z.string().optional(),
+  qualifiedAddress: QualifiedAddressType.optional(),
+  subLocations: z.array(z.lazy(() => LocationType)).optional(),
+  tz: z.string().optional(),
+  uuid: z.string().optional(),
+});
 const LockdownActivationPlanType = z.object({
   groupUuids: z.array(z.string()).optional(),
   rhombusKeyNotificationMessage: z.string().optional(),
@@ -1057,7 +1076,7 @@ const Accesscontrol_credentials_BulkProvisionPinCredentialsWSRequest = z.object(
   notifyUsers: z.boolean().optional(),
   pinLength: z.number().int().min(4).max(16).optional(),
   startDateEpochSecInclusive: z.number().int().min(0).optional(),
-  userUuids: z.array(z.string()),
+  userUuids: z.array(z.string()).optional(),
 });
 const Accesscontrol_credentials_BulkProvisionPinCredentialsWSResponse = z.object({
   credentials: z.array(AccessControlCredentialType).optional(),
@@ -1380,8 +1399,8 @@ const Accesscontrol_credentials_UnsuspendAccessControlCredentialWSResponse = z.o
   credential: AccessControlCredentialType.optional(),
 });
 const Accesscontrol_credentials_UpdateAccessControlCredentialNoteWSRequest = z.object({
-  credentialUuid: z.string(),
-  note: z.string(),
+  credentialUuid: z.string().optional(),
+  note: z.string().optional(),
 });
 const Accesscontrol_credentials_UpdateAccessControlCredentialNoteWSResponse = z.object({
   credential: AccessControlCredentialType.optional(),
@@ -1697,6 +1716,17 @@ const CancelLoopingAudioPlaybackActionType = z.object({
   _audioDevices: z.array(z.string()).optional(),
   audioDevices: z.array(z.string()).optional(),
 });
+const ConnectAudioDeviceToPhoneNumberActionType = z.object({
+  audioDeviceUuid: z.string().optional(),
+  doorUuid: z.string().optional(),
+  phoneNumber: z.string().optional(),
+});
+const CustomLLMActionType = z.object({
+  deviceFacetUuids: z.array(z.string()).optional(),
+  orgUuid: z.string().optional(),
+  promptUuid: z.string().optional(),
+  timestampMs: z.number().int().optional(),
+});
 const IntegrationEnum = z.string();
 const IntegrationCommandActionType = z.object({
   commandPayload: z.string().optional(),
@@ -1733,6 +1763,8 @@ const RuleActionType = z.object({
   alertAction: z.boolean().optional(),
   audioPlaybackActions: z.array(AudioPlaybackActionType).optional(),
   cancelLoopingAudioPlaybackAction: CancelLoopingAudioPlaybackActionType.optional(),
+  connectAudioDeviceToPhoneNumberAction: ConnectAudioDeviceToPhoneNumberActionType.optional(),
+  customLLMActions: z.array(CustomLLMActionType).optional(),
   integrationCommandActions: z.array(IntegrationCommandActionType).optional(),
   integrationNotificationActions: z.array(IntegrationNotificationActionType).optional(),
   liveNotificationAction: z.boolean().optional(),
@@ -1812,7 +1844,7 @@ const Accesscontrol_lockdownplan_FindLocationLockdownEventsWSRequest = z.object(
   createdAfterMs: z.number().int().optional(),
   createdBeforeMs: z.number().int().optional(),
   limit: z.number().int().optional(),
-  locationUuid: z.string().optional(),
+  locationUuid: z.string(),
 });
 const LockdownEventOriginatorEnumType = z.string();
 const BaseLocationLockdownEventOriginator = z.object({
@@ -1882,6 +1914,7 @@ const Accesscontrol_lockdownplan_UpdateLocationLockdownPlanWSResponse = z.object
 });
 const Accesscontrol_qr_GenerateQRAccessCodeWSRequest = z.object({
   accessControlledDoorUuid: z.string().optional(),
+  auditPrincipal: z.string().optional(),
   validDurationSec: z.number().int().optional(),
 });
 const Accesscontrol_qr_GenerateQRAccessCodeWSResponse = z.object({
@@ -1891,12 +1924,14 @@ const Accesscontrol_qr_GenerateQRAccessCodeWSResponse = z.object({
 const Accesscontrol_qr_GetQRAccessCodesWSRequest = z.record(z.unknown());
 const Accesscontrol_qr_QRAccessCodeType = z.object({
   accesTokenUuid: z.string().optional(),
+  auditPrincipal: z.string().optional(),
   doorUuid: z.string().optional(),
   expirationTimeSec: z.number().int().optional(),
 });
 const Accesscontrol_qr_GetQRAccessCodesWSResponse = z.object({
   qrAccessCodes: z.array(Accesscontrol_qr_QRAccessCodeType).optional(),
 });
+const Action = z.string();
 const ActivateLocationLockdownActionRecordType = z.object({
   locationUuid: z.string().optional(),
   lockdownPlanUuid: z.string().optional(),
@@ -2069,6 +2104,7 @@ const AlertMonitoringThreatCaseType = z.object({
   policyAlertUuid: z.string().optional(),
   policyAlertUuids: z.array(z.string()).optional(),
   promptTheme: NoonlightPromptTheme.optional(),
+  promptTitle: z.string().optional(),
   sharedClipGroupUuid: z.string().optional(),
   sirenSettings: AMSirenSettingsType.optional(),
   status: ThreatCaseStatus.optional(),
@@ -2089,6 +2125,19 @@ const Alertmonitoring_AcceptAlertMonitoringTermsOfServiceForLocationRequest = z.
 });
 const Alertmonitoring_AcceptAlertMonitoringTermsOfServiceRequest = z.record(z.unknown());
 const Alertmonitoring_AcceptAlertMonitoringTermsOfServiceResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
+const NoonlightPromptSelection = z.object({
+  mutable: z.boolean().optional(),
+  orgUuid: z.string().optional(),
+  reasons: z.array(z.string()).optional(),
+  title: z.string().optional(),
+});
+const Alertmonitoring_AddPromptThreatQualificationsWSRequest = z.object({
+  threatQualification: NoonlightPromptSelection.optional(),
+});
+const Alertmonitoring_AddPromptThreatQualificationsWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
@@ -2143,6 +2192,7 @@ const NoonlightScheduleType = z.object({
   escalationDelayMinutes: z.number().int().optional(),
   monitoredDevices: z.array(z.string()).optional(),
   promptTheme: NoonlightPromptTheme.optional(),
+  promptTitle: z.string().optional(),
   scheduleUuid: z.string().optional(),
   sirenSettings: z.record(z.unknown()).optional(),
   triggerSet: z.array(ActivityEnum).optional(),
@@ -2213,6 +2263,13 @@ const Alertmonitoring_DeletePinForNoonlightWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
+const Alertmonitoring_DeletePromptThreatQualificationByTitleWSRequest = z.object({
+  title: z.string().optional(),
+});
+const Alertmonitoring_DeletePromptThreatQualificationByTitleWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
 const Alertmonitoring_DisableLocationRequest = z.object({
   locationUuid: z.string().optional(),
   pin: z.string().optional(),
@@ -2279,6 +2336,7 @@ const Alertmonitoring_ThreatCaseReportItem = z.object({
   policyAlertUuid: z.string().optional(),
   policyAlertUuids: z.array(z.string()).optional(),
   promptTheme: NoonlightPromptTheme.optional(),
+  promptTitle: z.string().optional(),
   reason: z.string().optional(),
   result: z.string().optional(),
   sharedClipGroupUuid: z.string().optional(),
@@ -2297,6 +2355,7 @@ const Alertmonitoring_GenerateReportDataForLocationWSResponse = z.object({
   errorMsg: z.string().optional(),
   modifiedBy: z.array(Alertmonitoring_AmModifiedBy).optional(),
   threatCaseReportItems: z.array(Alertmonitoring_ThreatCaseReportItem).optional(),
+  threatCases: z.array(z.string()).optional(),
   verificationsByDevice: z.array(Alertmonitoring_AMDeviceHistogramItem).optional(),
 });
 const Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest = z.object({
@@ -2304,6 +2363,36 @@ const Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest = z.object({
 });
 const Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSResponse = z.object({
   count: z.number().int().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
+const Alertmonitoring_GetMonitoredDoorSensorsForLocationWSRequest = z.object({
+  locationUuid: z.string(),
+});
+const HardwareVariationEnum = z.string();
+const Door_MinimalDoorStateType = z.object({
+  associatedCameras: z.array(z.string()).optional(),
+  batteryPercent: z.number().int().optional(),
+  closestBaseStation: z.string().optional(),
+  createdAtMillis: z.number().int().optional(),
+  firmwareVersion: z.string().optional(),
+  floorNumber: z.number().int().optional(),
+  health: z.string().optional(),
+  healthDetails: z.string().optional(),
+  hwVariation: HardwareVariationEnum.optional(),
+  lastSeenSec: z.number().int().optional(),
+  latitude: z.number().optional(),
+  locationUuid: z.string().optional(),
+  longitude: z.number().optional(),
+  name: z.string().optional(),
+  policyUuid: z.string().optional(),
+  sensorUuid: z.string().optional(),
+  serialNumber: z.string().optional(),
+  signalStrength: z.number().int().optional(),
+  status: z.string().optional(),
+});
+const Alertmonitoring_GetMonitoredDoorSensorsForLocationWSResponse = z.object({
+  doorStates: z.array(Door_MinimalDoorStateType).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
@@ -2362,6 +2451,12 @@ const Alertmonitoring_GetNoonlightSettingsWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
+const Alertmonitoring_GetPromptThreatQualificationsWSRequest = z.record(z.unknown());
+const Alertmonitoring_GetPromptThreatQualificationsWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  threatQualifications: z.array(NoonlightPromptSelection).optional(),
+});
 const Alertmonitoring_LocationStatusWSRequest = z.object({
   locationUuid: z.string().optional(),
 });
@@ -2370,7 +2465,9 @@ const Alertmonitoring_LocationStatusWSResponse = z.object({
   errorMsg: z.string().optional(),
   status: MonitoringEnableStatus.optional(),
 });
-const Alertmonitoring_OrgStatusWSRequest = z.record(z.unknown());
+const Alertmonitoring_OrgStatusWSRequest = z.object({
+  includeDeleted: z.boolean().optional(),
+});
 const Alertmonitoring_OrgStatusWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
@@ -2502,8 +2599,18 @@ const AmtSettings = z.object({
   webhookId: z.number().int().optional(),
   webhookSignatureSecret: z.string().optional(),
 });
+const AperioActivatorStateEvent = z.object({
+  componentUuid: z.string().optional(),
+  correlationId: z.string().optional(),
+  createdAtMs: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  orgUuid: z.string().optional(),
+  ownerDeviceUuid: z.string().optional(),
+  timestampMs: z.number().int().optional(),
+  type: ComponentEventEnumType.optional(),
+  uuid: z.string().optional(),
+});
 const ComponentBaseEnumType = z.string();
-const HardwareVariationEnum = z.string();
 const ComponentEnumType = z.string();
 const AperioDoorExtension = z.object({
   baseType: ComponentBaseEnumType.optional(),
@@ -2534,6 +2641,28 @@ const AperioDoorExtensionShadow = z.object({
   updatedAtMillis: z.number().int().optional(),
 });
 const AperioDoorExtensionStateEvent = z.object({
+  componentUuid: z.string().optional(),
+  correlationId: z.string().optional(),
+  createdAtMs: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  orgUuid: z.string().optional(),
+  ownerDeviceUuid: z.string().optional(),
+  timestampMs: z.number().int().optional(),
+  type: ComponentEventEnumType.optional(),
+  uuid: z.string().optional(),
+});
+const AperioDoorHandleStateEvent = z.object({
+  componentUuid: z.string().optional(),
+  correlationId: z.string().optional(),
+  createdAtMs: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  orgUuid: z.string().optional(),
+  ownerDeviceUuid: z.string().optional(),
+  timestampMs: z.number().int().optional(),
+  type: ComponentEventEnumType.optional(),
+  uuid: z.string().optional(),
+});
+const AperioDoorModeEvent = z.object({
   componentUuid: z.string().optional(),
   correlationId: z.string().optional(),
   createdAtMs: z.number().int().optional(),
@@ -2644,6 +2773,17 @@ const AperioGatewayShadow = z.object({
   updatedAtMillis: z.number().int().optional(),
 });
 const AperioGatewayStateEvent = z.object({
+  componentUuid: z.string().optional(),
+  correlationId: z.string().optional(),
+  createdAtMs: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  orgUuid: z.string().optional(),
+  ownerDeviceUuid: z.string().optional(),
+  timestampMs: z.number().int().optional(),
+  type: ComponentEventEnumType.optional(),
+  uuid: z.string().optional(),
+});
+const AperioKeyCylinderStateEvent = z.object({
   componentUuid: z.string().optional(),
   correlationId: z.string().optional(),
   createdAtMs: z.number().int().optional(),
@@ -2816,6 +2956,7 @@ const IAudioUserConfig = z.object({
   media_ttl_minutes: z.number().int().optional(),
   on_demand_license_invalid: z.boolean().optional(),
   orgUuid: z.string().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   snapshot_upload_target: z.string().optional(),
   splice_clip_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
@@ -2889,6 +3030,7 @@ const DeviceHealthStatusDetailsEnum = z.string();
 const DeviceFacet = z.string();
 const FullDeviceStateType = z.object({
   afSupport: z.boolean().optional(),
+  audioSupported: z.boolean().optional(),
   baseVideoOperationUri: z.string().optional(),
   connectionStatus: DeviceStatusEnum.optional(),
   connectionTimestampMs: z.number().int().optional(),
@@ -2920,6 +3062,7 @@ const FullDeviceStateType = z.object({
   onCloudState: z.record(z.unknown()).optional(),
   policyUuid: z.string().optional(),
   region: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   serialNumber: z.string().optional(),
   ssid: z.string().optional(),
   stateUpdatedTimestampMs: z.number().int().optional(),
@@ -2978,6 +3121,7 @@ const MinimalAudioGatewayStateType = z.object({
   name: z.string().optional(),
   policyUuid: z.string().optional(),
   region: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   sensorUuid: z.string().optional(),
   serialNumber: z.string().optional(),
   ssid: z.string().optional(),
@@ -3117,6 +3261,29 @@ const AuditRuleTriggerType = z.object({
   type: RuleTriggerTypeEnum.optional(),
 });
 const AuthDecisionSourceEnum = z.string();
+const NotificationFollowUp = z.object({
+  type: Action.optional(),
+});
+const FollowUpAction = z.object({
+  type: Action.optional(),
+});
+const FrequencyUnit = z.string();
+const PromptFrequency = z.object({
+  frequency: z.number().int().optional(),
+  unit: FrequencyUnit.optional(),
+});
+const AutomatedPrompt = z.object({
+  apiKey: z.string().optional(),
+  followUpActions: z.array(FollowUpAction).optional(),
+  frequency: PromptFrequency.optional(),
+  invokeAtMs: z.number().int().optional(),
+  orgUuid: z.string().optional(),
+  permissionGroupUuid: z.string().optional(),
+  prompt: z.string().optional(),
+  scheduleUuid: z.string().optional(),
+  tokenUuid: z.string().optional(),
+  uuid: z.string().optional(),
+});
 const AuxiliaryEnumType = z.string();
 const AuxiliaryInputPhysicalPortEnumType = z.string();
 const SupervisionModeEnumType = z.string();
@@ -3213,12 +3380,16 @@ const Deviceconfig_settings_ExternalReadableDeviceSettings = z.object({
   cloud_archive_upload_schedule_inverted: z.boolean().optional(),
   cloud_archive_upload_schedule_uuid: z.string().optional(),
   firmware_dev_settings: z.record(z.unknown()).optional(),
+  led_mode_blink_period_ms: z.number().int().optional(),
+  led_mode_when_active: z.string().optional(),
+  led_mode_when_inactive: z.string().optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
   max_event_duration_ms: z.number().int().optional(),
   media_ttl_minutes: z.number().int().optional(),
   on_demand_license_invalid: z.boolean().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   snapshot_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
   storage_target_free_space_permyriad: z.number().int().optional(),
@@ -3280,6 +3451,7 @@ const ThirdPartyCameraSettings = z.object({
   onvif_ip: z.string().optional(),
   onvif_password: z.string().optional(),
   onvif_profiletoken: z.string().optional(),
+  onvif_ptz_servicepath: z.string().optional(),
   onvif_username: z.string().optional(),
   ptz_engine: z.string().optional(),
   ptz_movement: z.string().optional(),
@@ -3340,6 +3512,7 @@ const MinimalDeviceStateType = z.object({
   name: z.string().optional(),
   policyUuid: z.string().optional(),
   region: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   serialNumber: z.string().optional(),
   ssid: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
@@ -3370,11 +3543,15 @@ const ClimateSettingsSelectiveUpdate = z.object({
 const Deviceconfig_settings_ExternalDeviceSettingsSelectiveUpdate = z.object({
   bandwidth_reports_disabled: z.boolean().optional(),
   firmware_dev_settings: z.record(z.unknown()).optional(),
+  led_mode_blink_period_ms: z.number().int().optional(),
+  led_mode_when_active: z.string().optional(),
+  led_mode_when_inactive: z.string().optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
   media_ttl_minutes: z.number().int().optional(),
   on_demand_license_invalid: z.boolean().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   snapshot_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
   storage_target_free_space_permyriad: z.number().int().optional(),
@@ -3745,14 +3922,20 @@ const PolicyEventFaceType = z.object({
   imageS3Bucket: z.string().optional(),
   imageS3Key: z.string().optional(),
   imageS3Region: z.string().optional(),
+  labels: z.array(z.string()).optional(),
   personUuid: z.string().optional(),
 });
 const PolicyEventVehicleType = z.object({
   imageS3Bucket: z.string().optional(),
   imageS3Key: z.string().optional(),
   imageS3Region: z.string().optional(),
+  labels: z.array(z.string()).optional(),
   licensePlateNumber: z.string().optional(),
   vehicleName: z.string().optional(),
+});
+const CheckCondition = z.object({
+  operator: z.string().optional(),
+  value: z.string().optional(),
 });
 const PolicyAlertV2Type = z.object({
   airQualityIndex: z.number().int().optional(),
@@ -3768,6 +3951,11 @@ const PolicyAlertV2Type = z.object({
   clipLocation: MetaDataLocationType.optional(),
   clipLocationMap: z.record(z.unknown()).optional(),
   clipLocationMapV2: z.record(z.unknown()).optional(),
+  cllmBooleanValue: z.boolean().optional(),
+  cllmCheckCondition: CheckCondition.optional(),
+  cllmIntegerValue: z.number().int().optional(),
+  cllmPromptTypeEnum: z.string().optional(),
+  cllmPromptUuid: z.string().optional(),
   co2: z.number().optional(),
   co2Ppm: z.number().int().optional(),
   co2PpmThreshold: z.number().int().optional(),
@@ -3812,6 +4000,7 @@ const PolicyAlertV2Type = z.object({
   pm4p0: z.number().optional(),
   pm4p0Threshold: z.number().optional(),
   policyAlertTriggers: z.array(ActivityEnum).optional(),
+  policyUuid: z.string().optional(),
   pressure: z.number().optional(),
   pressureThreshold: z.number().optional(),
   probeTempC: z.number().optional(),
@@ -3860,6 +4049,7 @@ const BasePolicyAlertType = z.object({
   notificationSent: z.boolean().optional(),
   orgUuid: z.string().optional(),
   policyAlertTriggers: z.array(ActivityEnum).optional(),
+  policyUuid: z.string().optional(),
   saved: z.boolean().optional(),
   shared: z.boolean().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
@@ -3898,6 +4088,9 @@ const LocationLockdownActivatedRuleTriggerType = z.object({
 const LocationLockdownDeactivatedRuleTriggerType = z.object({
   type: RuleTriggerTypeEnum.optional(),
 });
+const CustomLLMEventRuleTriggerType = z.object({
+  type: RuleTriggerTypeEnum.optional(),
+});
 const ButtonIntegrationRuleTriggerType = z.object({
   type: RuleTriggerTypeEnum.optional(),
 });
@@ -3917,6 +4110,16 @@ const BatchRegistrationTokenUsageResult = z.object({
   hi: z.string().optional(),
   rs: z.string().optional(),
   ts: z.number().int().optional(),
+});
+const BinaryAggregationValue = z.object({
+  eventCount: z.number().int().optional(),
+  false: z.number().int().optional(),
+  localDate: z.string().optional(),
+  maxValueTimestampMs: z.number().int().optional(),
+  minValueTimestampMs: z.number().int().optional(),
+  timestampMs: z.number().int().optional(),
+  true: z.number().int().optional(),
+  utcDate: z.string().optional(),
 });
 const Ble_BleDeviceMap = z.object({
   keyToSecureBeacon: z.record(z.unknown()).optional(),
@@ -4015,46 +4218,42 @@ const MediaType = z.object({
 });
 const MessageBodyWorkers = z.record(z.unknown());
 const Providers = z.record(z.unknown());
-const MultiPart: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
-  z.object({
-    bodyParts: z.array(BodyPart).optional(),
-    contentDisposition: ContentDisposition.optional(),
-    entity: z.record(z.unknown()).optional(),
-    headers: z
-      .object({
-        empty: z.boolean().optional(),
-      })
-      .optional(),
-    mediaType: MediaType.optional(),
-    messageBodyWorkers: MessageBodyWorkers.optional(),
-    parameterizedHeaders: z
-      .object({
-        empty: z.boolean().optional(),
-      })
-      .optional(),
-    providers: Providers.optional(),
-  })
-);
-const BodyPart: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
-  z.object({
-    contentDisposition: ContentDisposition.optional(),
-    entity: z.record(z.unknown()).optional(),
-    headers: z
-      .object({
-        empty: z.boolean().optional(),
-      })
-      .optional(),
-    mediaType: MediaType.optional(),
-    messageBodyWorkers: MessageBodyWorkers.optional(),
-    parameterizedHeaders: z
-      .object({
-        empty: z.boolean().optional(),
-      })
-      .optional(),
-    parent: MultiPart.optional(),
-    providers: Providers.optional(),
-  })
-);
+const MultiPart: z.ZodType<any> = z.object({
+  bodyParts: z.array(z.lazy(() => BodyPart)).optional(),
+  contentDisposition: ContentDisposition.optional(),
+  entity: z.record(z.unknown()).optional(),
+  headers: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
+  mediaType: MediaType.optional(),
+  messageBodyWorkers: MessageBodyWorkers.optional(),
+  parameterizedHeaders: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
+  providers: Providers.optional(),
+});
+const BodyPart: z.ZodType<any> = z.object({
+  contentDisposition: ContentDisposition.optional(),
+  entity: z.record(z.unknown()).optional(),
+  headers: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
+  mediaType: MediaType.optional(),
+  messageBodyWorkers: MessageBodyWorkers.optional(),
+  parameterizedHeaders: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
+  parent: z.lazy(() => MultiPart).optional(),
+  providers: Providers.optional(),
+});
 const BoundingBoxType = z.object({
   bottom: z.number().optional(),
   left: z.number().optional(),
@@ -4270,12 +4469,6 @@ const CameraAiDewarpConfigType = z.object({
   dewarp_tile_width: z.number().int().optional(),
   orientation: z.number().int().optional(),
 });
-const CheckEquations = z.object({
-  description: z.string().optional(),
-  equation: z.string().optional(),
-  name: z.string().optional(),
-  shortName: z.string().optional(),
-});
 const RegionCoordinateType = z.object({
   x: z.number().optional(),
   y: z.number().optional(),
@@ -4283,17 +4476,26 @@ const RegionCoordinateType = z.object({
 const RegionPolygonType = z.object({
   coordinates: z.array(RegionCoordinateType).optional(),
 });
+const ScheduledAction = z.object({
+  action: RuleActionType.optional(),
+  backoffMinutes: z.number().int().optional(),
+  backoffSeconds: z.number().int().optional(),
+  ruleUuid: z.string().optional(),
+  scheduleUuid: z.string().optional(),
+});
 const CameraConfiguration = z.object({
   cameraUuid: z.string().optional(),
-  checkEquationsOverride: CheckEquations.optional(),
+  checkConditionOverride: CheckCondition.optional(),
   promptExtension: z.string().optional(),
   promptOverride: z.string().optional(),
   region: RegionPolygonType.optional(),
+  scheduledActions: z.array(ScheduledAction).optional(),
 });
 const CameraCrossCountingSettingsType = z.object({
   directions: z.array(z.string()).optional(),
   in_roi: z.array(RegionPolygonType).optional(),
   object_type: z.string().optional(),
+  object_type_id: z.number().int().optional(),
   out_roi: z.array(RegionPolygonType).optional(),
 });
 const CameraHumanLoiteringSettingsType = z.object({
@@ -4352,6 +4554,7 @@ const CameraType = z.object({
   customData: z.string().optional(),
   deleted: z.boolean().optional(),
   description: z.string().optional(),
+  deviceFacetRadians: z.record(z.unknown()).optional(),
   directionRadians: z.number().optional(),
   facetNameMap: z.record(z.unknown()).optional(),
   floorNumber: z.number().int().optional(),
@@ -4422,6 +4625,7 @@ const Camera_CameraExternalFacetedType = z.object({
   customData: z.string().optional(),
   deleted: z.boolean().optional(),
   description: z.string().optional(),
+  deviceFacetRadians: z.record(z.unknown()).optional(),
   deviceUuid: z.string().optional(),
   directionRadians: z.number().optional(),
   facetNameMap: z.record(z.unknown()).optional(),
@@ -4447,6 +4651,7 @@ const Camera_CameraExternalType = z.object({
   customData: z.string().optional(),
   deleted: z.boolean().optional(),
   description: z.string().optional(),
+  deviceFacetRadians: z.record(z.unknown()).optional(),
   directionRadians: z.number().optional(),
   facetNameMap: z.record(z.unknown()).optional(),
   floorNumber: z.number().int().optional(),
@@ -4520,16 +4725,16 @@ const Camera_CreateFootageSeekpointsWSResponse = z.object({
 const StreamTypeEnum = z.string();
 const Camera_CreateSharedLiveVideoStreamWSRequest = z.object({
   audioGatewayUuid: z.string().optional(),
-  cameraUuid: z.string(),
+  cameraUuid: z.string().optional(),
   expirationTimeSecs: z.number().int().optional(),
-  includeAudio: z.boolean(),
+  includeAudio: z.boolean().optional(),
   invertSchedule: z.boolean().optional(),
   name: z.string().optional(),
   password: z.string().optional(),
   scheduleUuid: z.string().optional(),
-  ssoProtected: z.boolean(),
-  streamType: StreamTypeEnum,
-  vodEnabled: z.boolean(),
+  ssoProtected: z.boolean().optional(),
+  streamType: StreamTypeEnum.optional(),
+  vodEnabled: z.boolean().optional(),
 });
 const Camera_CreateSharedLiveVideoStreamWSResponse = z.object({
   error: z.boolean().optional(),
@@ -4580,10 +4785,10 @@ const Camera_DeleteCameraWSResponse = z.object({
   responseStatus: z.string().optional(),
 });
 const Camera_DeleteCustomFootageSeekpointsWSRequest = z.object({
-  cameraUuids: z.array(z.string()),
+  cameraUuids: z.array(z.string()).optional(),
   customName: z.string().optional(),
-  endTimestampMs: z.number().int().min(0),
-  startTimestampMs: z.number().int().min(0),
+  endTimestampMs: z.number().int().optional(),
+  startTimestampMs: z.number().int().optional(),
 });
 const Camera_DeleteCustomFootageSeekpointsWSResponse = z.object({
   deleteSeekpointResponseMap: z.record(z.unknown()).optional(),
@@ -4728,16 +4933,16 @@ const Camera_GetCameraAIThresholdsWSRequest = z.object({
   cameraUuid: z.string().optional(),
 });
 const Camera_GetCameraAIThresholdsWSResponse = z.object({
-  consecutiveHumanFilter: z.number().int().min(1).max(5).optional(),
-  consecutiveVehicleFilter: z.number().int().min(1).max(5).optional(),
+  consecutiveHumanFilter: z.number().int().optional(),
+  consecutiveVehicleFilter: z.number().int().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  faceConfidenceThreshold: z.number().min(0).max(1).optional(),
+  faceConfidenceThreshold: z.number().optional(),
   faceMatchConfidenceThreshold: z.number().min(0).max(1).optional(),
-  humanConfidenceThreshold: z.number().min(0).max(1).optional(),
-  lprConfidenceThreshold: z.number().min(0).max(1).optional(),
-  maxEventDurationMs: z.number().int().min(4000).max(30000).optional(),
-  vehicleConfidenceThreshold: z.number().min(0).max(1).optional(),
+  humanConfidenceThreshold: z.number().optional(),
+  lprConfidenceThreshold: z.number().optional(),
+  maxEventDurationMs: z.number().int().optional(),
+  vehicleConfidenceThreshold: z.number().optional(),
 });
 const Camera_GetCameraDetailsWSRequest = z.object({
   cameraUuids: z.array(z.string()).optional(),
@@ -4817,6 +5022,7 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig = z.object({
   behavior_detection: z.boolean().optional(),
   blocked_debounce_time_ms: z.number().int().optional(),
   blocked_threshold: z.number().optional(),
+  char_threshold: z.number().optional(),
   cloud_archive_days: z.number().int().optional(),
   cloud_archive_upload_schedule: z.array(WeeklyMinuteIntervalType).optional(),
   cloud_archive_upload_schedule_inverted: z.boolean().optional(),
@@ -4869,6 +5075,7 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig = z.object({
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
   lpr_ai_threshold: z.number().optional(),
+  max_detections_per_frame: z.number().int().optional(),
   max_event_duration_ms: z.number().int().optional(),
   media_ttl_minutes: z.number().int().optional(),
   metering_config: CameraMeteringConfigType.optional(),
@@ -4904,6 +5111,7 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig = z.object({
   region_of_interest_groups: z.array(RegionOfInterestGroup).optional(),
   resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
   rotation: z.number().int().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   segment_max_bytes: z.number().int().optional(),
   sensor_gain_max: z.number().int().optional(),
   shutter_time_max: z.number().int().optional(),
@@ -4920,6 +5128,7 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig = z.object({
   timelapse: z.boolean().optional(),
   upload_all_detections: z.boolean().optional(),
   use_onboard_ai: z.boolean().optional(),
+  use_onboard_lpr: z.boolean().optional(),
   use_pilot_face_id: z.boolean().optional(),
   vehicle_ai_threshold: z.number().optional(),
   vehicle_counting: z.boolean().optional(),
@@ -4950,9 +5159,9 @@ const Camera_GetCustomFootageSeekpointsV2WSRequest = z.object({
   customDescription: z.string().optional(),
   customDisplayName: z.string().optional(),
   deviceUuids: z.array(z.string()).optional(),
-  duration: z.number().int(),
+  duration: z.number().int().optional(),
   locationUuids: z.array(z.string()).optional(),
-  startTime: z.number().int(),
+  startTime: z.number().int().optional(),
 });
 const SeekpointType = z.string();
 const SeekpointIndexType = z.object({
@@ -5209,16 +5418,23 @@ const Camera_RebootCameraWSResponse = z.object({
   errorMsg: z.string().optional(),
   status: z.string().optional(),
 });
+const Camera_RevertCameraToDefaultsWSRequest = z.object({
+  cameraUuid: z.string().optional(),
+});
+const Camera_RevertCameraToDefaultsWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
 const Camera_UpdateCameraAIThresholdsWSRequest = z.object({
-  cameraUuid: z.string(),
-  consecutiveHumanFilter: z.number().int().min(1).max(5).optional(),
-  consecutiveVehicleFilter: z.number().int().min(1).max(5).optional(),
-  faceConfidenceThreshold: z.number().min(0).max(1).optional(),
-  faceMatchConfidenceThreshold: z.number().min(0).max(1).optional(),
-  humanConfidenceThreshold: z.number().min(0).max(1).optional(),
-  lprConfidenceThreshold: z.number().min(0).max(1).optional(),
-  maxEventDurationMs: z.number().int().min(4000).max(30000).optional(),
-  vehicleConfidenceThreshold: z.number().min(0).max(1).optional(),
+  cameraUuid: z.string().optional(),
+  consecutiveHumanFilter: z.number().int().optional(),
+  consecutiveVehicleFilter: z.number().int().optional(),
+  faceConfidenceThreshold: z.number().optional(),
+  faceMatchConfidenceThreshold: z.number().optional(),
+  humanConfidenceThreshold: z.number().optional(),
+  lprConfidenceThreshold: z.number().optional(),
+  maxEventDurationMs: z.number().int().optional(),
+  vehicleConfidenceThreshold: z.number().optional(),
 });
 const Camera_UpdateCameraAIThresholdsWSResponse = z.object({
   error: z.boolean().optional(),
@@ -5233,7 +5449,7 @@ const Camera_UpdateCameraFirmwareWSResponse = z.object({
   status: z.string().optional(),
 });
 const Camera_UpdateCameraHumanLoiteringConfigWSRequest = z.object({
-  cameraUuid: z.string(),
+  cameraUuid: z.string().optional(),
   rois: z.array(RegionPolygonType).optional(),
 });
 const Camera_UpdateCameraHumanLoiteringWSResponse = z.object({
@@ -5241,11 +5457,11 @@ const Camera_UpdateCameraHumanLoiteringWSResponse = z.object({
   errorMsg: z.string().optional(),
 });
 const Camera_UpdateCameraLineCrossingThresholdsWSRequest_Coordinate = z.object({
-  x: z.number().min(0.1).max(0.9).optional(),
-  y: z.number().min(0.1).max(0.9).optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
 });
 const Camera_UpdateCameraLineCrossingThresholdsWSRequest = z.object({
-  cameraUuid: z.string(),
+  cameraUuid: z.string().optional(),
   directions: z.array(z.string()).optional(),
   inverted: z.boolean().optional(),
   objectType: z.string().optional(),
@@ -5317,6 +5533,7 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig = z.object
   bandwidth_reports_disabled: z.boolean().optional(),
   blocked_debounce_time_ms: z.number().int().optional(),
   blocked_threshold: z.number().optional(),
+  char_threshold: z.number().optional(),
   deviceUuid: z.string().optional(),
   device_mic_enabled: z.boolean().optional(),
   device_near_audio_silenced: z.boolean().optional(),
@@ -5351,6 +5568,7 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig = z.object
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
+  max_detections_per_frame: z.number().int().optional(),
   media_ttl_minutes: z.number().int().optional(),
   metering_config: CameraMeteringConfigType.optional(),
   motor_config: CameraMotorConfigType.optional(),
@@ -5375,6 +5593,7 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig = z.object
   region_of_interest_groups: z.array(RegionOfInterestGroup).optional(),
   resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
   rotation: z.number().int().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   segment_max_bytes: z.number().int().optional(),
   sensor_gain_max: z.number().int().optional(),
   shutter_time_max: z.number().int().optional(),
@@ -5387,6 +5606,7 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig = z.object
   thumbstrip_upload_target: z.string().optional(),
   tile_views: z.array(DewarpedView).optional(),
   upload_all_detections: z.boolean().optional(),
+  use_onboard_lpr: z.boolean().optional(),
   vehicle_detection: z.boolean().optional(),
   video_persist_disabled: z.boolean().optional(),
   vlan_ip_v4_address: z.number().int().optional(),
@@ -5435,6 +5655,20 @@ const CancelledDoorStateOverride = z.object({
   type: ManualDoorStateChangeEnum.optional(),
 });
 const ChangeType = z.string();
+const ChatVisibility = z.string();
+const ChatPrivacy = z.object({
+  permissionGroupUuid: z.string().optional(),
+  permittedPrincipalUuids: z.array(z.string()).optional(),
+  visibility: ChatVisibility.optional(),
+});
+const ResponseType = z.string();
+const ChatQueryFilter = z.object({
+  afterMs: z.number().int().optional(),
+  beforeMs: z.number().int().optional(),
+  orgUuid: z.string().optional(),
+  responseTypes: z.array(ResponseType).optional(),
+  responseTypesStr: z.array(z.string()).optional(),
+});
 const QueryStatus = z.string();
 const QueryTimelineEvent = z.object({
   status: QueryStatus.optional(),
@@ -5453,29 +5687,74 @@ const ChatRecord = z.object({
   llmInfo: z.string().optional(),
   orgUuid: z.string().optional(),
   principalUuid: z.string().optional(),
+  privacy: ChatPrivacy.optional(),
   queriedAtMs: z.number().int().optional(),
   query: z.string().optional(),
   respondedAtMs: z.number().int().optional(),
   response: z.string().optional(),
+  responseType: ResponseType.optional(),
   timeline: z.array(QueryTimelineEvent).optional(),
   toolingTimeline: z.array(QueryTool).optional(),
   uuid: z.string().optional(),
 });
+const Chatbot_BaseAutomatedPromptWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  settings: AutomatedPrompt.optional(),
+});
+const Chatbot_BaseChatWSResponse = z.object({
+  chat: ChatRecord.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
+const Chatbot_CreateAutomatedPromptWSRequest = z.object({
+  settings: AutomatedPrompt,
+});
+const Chatbot_DeleteAutomatedPromptWSRequest = z.object({
+  promptUuid: z.string(),
+});
+const Chatbot_DeleteChatRecordWSRequest = z.object({
+  recordUuid: z.string(),
+});
 const Chatbot_DeleteChatbotConversationWSRequest = z.object({
   contextId: z.string(),
+});
+const Chatbot_GetAutomatedPromptChatHistoryWSRequest = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  maxPageSize: z.number().int().optional(),
+  promptUuid: z.string(),
+});
+const Chatbot_GetAutomatedPromptWSRequest = z.object({
+  promptUuid: z.string(),
+});
+const Chatbot_GetAutomatedPromptsForOrgWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  lastEvaluatedKey: z.string().optional(),
+  settingsList: z.array(AutomatedPrompt).optional(),
 });
 const Chatbot_GetChatHistoryByContextIdWSRequest = z.object({
   contextId: z.string(),
   pageRequest: DynamoPageRequest.optional(),
 });
+const Chatbot_GetChatHistoryWSRequest = z.object({
+  filter: ChatQueryFilter.optional(),
+  pageRequest: DynamoPageRequest.optional(),
+});
 const Chatbot_GetChatHistoryWSResponse = z.object({
   chatHistory: z.array(ChatRecord).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
+});
+const Chatbot_GetChatRecordWSRequest = z.object({
+  recordUuid: z.string(),
 });
 const Chatbot_GetChatbotConversationsWSRequest = z.object({
   pageRequest: DynamoPageRequest.optional(),
 });
 const ContextRecord = z.object({
+  automated: z.boolean().optional(),
   contextId: z.string().optional(),
   expiresAtMs: z.number().int().optional(),
   name: z.string().optional(),
@@ -5485,7 +5764,17 @@ const ContextRecord = z.object({
 });
 const Chatbot_GetChatbotConversationsWSResponse = z.object({
   conversations: z.array(ContextRecord).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
+});
+const Chatbot_GetSharedChatRecordsWSRequest = z.object({
+  filter: ChatQueryFilter.optional(),
+});
+const Chatbot_GetSharedChatRecordsWSResponse = z.object({
+  chatRecords: z.array(ChatRecord).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
 });
 const Chatbot_SubmitChatWSRequest = z.object({
   contextId: z.string(),
@@ -5494,6 +5783,22 @@ const Chatbot_SubmitChatWSRequest = z.object({
 });
 const Chatbot_SubmitChatWSResponse = z.object({
   chatRecordUuid: z.string().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
+const Chatbot_SubmitTestPromptWSRequest = z.object({
+  testPrompt: z.string(),
+});
+const Chatbot_SubmitTestPromptWSResponse = z.object({
+  chatUuid: z.string().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
+const Chatbot_UpdateAutomatedPromptWSRequest = z.object({
+  selectiveUpdate: AutomatedPrompt,
+});
+const Chatbot_UpdateChatRecordWSRequest = z.object({
+  chat: ChatRecord,
 });
 const ContextRecordSelectiveUpdate = z.object({
   realTarget: ContextRecord.optional(),
@@ -5504,6 +5809,17 @@ const Chatbot_UpdateChatbotConversationWSRequest = z.object({
 });
 const Chatbot_UpdateChatbotConversationsWSResponse = z.object({
   conversation: ContextRecord.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
+const Chatbot_VerifyJobScheduledWSRequest = z.object({
+  promptUuid: z.string(),
+});
+const Chatbot_VerifyJobScheduledWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  scheduleExpression: z.string().optional(),
+  scheduleTimezone: z.string().optional(),
 });
 const ClaimKeyEntry = z.object({
   productQuantities: z.record(z.unknown()).optional(),
@@ -5531,6 +5847,7 @@ const ClaimKeySearchFilter = z.object({
   excludedStates: z.array(z.string()).optional(),
   includedStates: z.array(z.string()).optional(),
 });
+const Client = z.string();
 const ClimateActivityEventType = z.object({
   activityEvent: ActivityEnum.optional(),
 });
@@ -5564,7 +5881,6 @@ const ClimateEventType = z.object({
 });
 const ClimateTriggerType = z.object({
   activity: ActivityEnum.optional(),
-  audioThreshold: z.number().int().optional(),
   threshold: z.number().optional(),
 });
 const ClimateScheduledTriggerType = z.object({
@@ -5719,6 +6035,7 @@ const EnvironmentalGatewayShadowType = z.object({
   prevConnected: z.boolean().optional(),
   prevConnectedUpdateTimestampMs: z.number().int().optional(),
   region: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   ssid: z.string().optional(),
   state: z.record(z.unknown()).optional(),
   stateUpdatedTimestampMs: z.number().int().optional(),
@@ -6028,6 +6345,7 @@ const ClipGroupType = z.object({
 const SharedClipWithDetailsType = z.object({
   boundingBoxes: z.array(ClipBoundingBoxType).optional(),
   clipLocation: MetaDataLocationType.optional(),
+  description: z.string().optional(),
   deviceUuidMap: z.record(z.unknown()).optional(),
   durationSec: z.number().int().optional(),
   seekPoints: z.array(ClipSeekPointV2Type).optional(),
@@ -6126,7 +6444,7 @@ const Common_devices_UpdateDeviceDetailsWSResponse = z.object({
 const Common_devices_rawstream_CreateRawHttpStreamWSRequest = z.object({
   deviceUuid: z.string().optional(),
   rawStreamName: z.string().optional(),
-  streamType: StreamTypeEnum,
+  streamType: StreamTypeEnum.optional(),
 });
 const Common_devices_rawstream_CreateRawHttpStreamWSResponse = z.object({
   error: z.boolean().optional(),
@@ -6234,6 +6552,12 @@ const RequestToExitStateChangeEventType = z.object({
   uuid: z.string().optional(),
 });
 const CredentialSourceEnumType = z.string();
+const CredentialEntryBleWave = z.object({
+  credSource: CredentialSourceEnumType.optional(),
+  credentialId: z.string().optional(),
+  firstInEligible: z.boolean().optional(),
+  originator: BaseEventOriginator.optional(),
+});
 const CredentialEntry = z.object({
   credSource: CredentialSourceEnumType.optional(),
   credentialId: z.string().optional(),
@@ -7145,12 +7469,6 @@ const Consignee = z.object({
 const CountingActivityEventType = z.object({
   activityEvent: ActivityEnum.optional(),
 });
-const CredentialEntryBleWave = z.object({
-  credSource: CredentialSourceEnumType.optional(),
-  credentialId: z.string().optional(),
-  firstInEligible: z.boolean().optional(),
-  originator: BaseEventOriginator.optional(),
-});
 const CrossingCountsType = z.object({
   egressCount: z.number().int().optional(),
   ingressCount: z.number().int().optional(),
@@ -7383,6 +7701,7 @@ const NotificationTimeFrameRow = z.object({
   locationOnlyActivities: z.array(ActivityEnum).optional(),
   locationOnlyDiagnostics: z.array(z.string()).optional(),
   locations: z.array(z.string()).optional(),
+  promptUuids: z.array(z.string()).optional(),
 });
 const NotificationTimeFrame = z.object({
   days: z.array(z.string()).optional(),
@@ -7668,6 +7987,7 @@ const Deviceconfig_UpdateFacetedUserConfigWSRequest = z.object({
   configUpdate: Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig.optional(),
 });
 const Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate = z.object({
+  audioSupported: z.boolean().optional(),
   audio_aec_via_software: z.boolean().optional(),
   audio_external_mic_boost: z.number().int().optional(),
   audio_external_mic_volume: z.number().int().optional(),
@@ -7691,12 +8011,10 @@ const Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate = z.object({
   frontendEqualizerPeaking2: FrontendEqualizerSettings.optional(),
   frontendEqualizerPeaking3: FrontendEqualizerSettings.optional(),
   frontendNoiseSuppression: z.boolean().optional(),
-  led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional(),
 });
 const Deviceconfig_settings_ExternalReadableAudioSettings = z.object({
+  audioSupported: z.boolean().optional(),
   audio_aec_via_software: z.boolean().optional(),
   audio_analysis_enabled: z.boolean().optional(),
   audio_external_mic_boost: z.number().int().optional(),
@@ -7721,15 +8039,13 @@ const Deviceconfig_settings_ExternalReadableAudioSettings = z.object({
   frontendEqualizerPeaking2: FrontendEqualizerSettings.optional(),
   frontendEqualizerPeaking3: FrontendEqualizerSettings.optional(),
   frontendNoiseSuppression: z.boolean().optional(),
-  led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
 });
 const Deviceconfig_settings_ExternalReadableVideoSettings = z.object({
   ai_dewarp_config: CameraAiDewarpConfigType.optional(),
   behavior_detection: z.boolean().optional(),
   blocked_debounce_time_ms: z.number().int().optional(),
   blocked_threshold: z.number().optional(),
+  char_threshold: z.number().optional(),
   color_detection: z.boolean().optional(),
   con_human_filter: z.number().int().optional(),
   con_vehicle_filter: z.number().int().optional(),
@@ -7760,6 +8076,7 @@ const Deviceconfig_settings_ExternalReadableVideoSettings = z.object({
   img_sharpness: z.number().int().optional(),
   licenseplate_detection: z.boolean().optional(),
   lpr_ai_threshold: z.number().optional(),
+  max_detections_per_frame: z.number().int().optional(),
   metering_config: CameraMeteringConfigType.optional(),
   motion_grid_disabled: z.boolean().optional(),
   motion_grid_window_sec: z.number().int().optional(),
@@ -7803,6 +8120,7 @@ const Deviceconfig_settings_ExternalReadableVideoSettings = z.object({
   timelapse: z.boolean().optional(),
   upload_all_detections: z.boolean().optional(),
   use_onboard_ai: z.boolean().optional(),
+  use_onboard_lpr: z.boolean().optional(),
   use_pilot_face_id: z.boolean().optional(),
   vehicle_ai_threshold: z.number().optional(),
   vehicle_counting: z.boolean().optional(),
@@ -7817,6 +8135,7 @@ const Deviceconfig_settings_ExternalReadableVideoSettings = z.object({
 const Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate = z.object({
   blocked_debounce_time_ms: z.number().int().optional(),
   blocked_threshold: z.number().optional(),
+  char_threshold: z.number().optional(),
   dewarpMode: z.string().optional(),
   disabled_schedule: z.array(WeeklyMinuteIntervalType).optional(),
   disabled_schedule_inverted: z.boolean().optional(),
@@ -7833,6 +8152,7 @@ const Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate = z.object({
   img_contrast: z.number().int().optional(),
   img_saturation: z.number().int().optional(),
   img_sharpness: z.number().int().optional(),
+  max_detections_per_frame: z.number().int().optional(),
   metering_config: CameraMeteringConfigType.optional(),
   motor_config: CameraMotorConfigType.optional(),
   mounting_direction: z.string().optional(),
@@ -7863,6 +8183,7 @@ const Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate = z.object({
   tile_views: z.array(DewarpedView).optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional(),
   upload_all_detections: z.boolean().optional(),
+  use_onboard_lpr: z.boolean().optional(),
   vehicle_detection: z.boolean().optional(),
   video_persist_disabled: z.boolean().optional(),
   wdr_enabled: z.boolean().optional(),
@@ -7899,6 +8220,9 @@ const Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig = z.obje
   firmware_dev_settings: z.record(z.unknown()).optional(),
   flip_display_orientation: z.boolean().optional(),
   lastModified: z.number().int().optional(),
+  led_mode_blink_period_ms: z.number().int().optional(),
+  led_mode_when_active: z.string().optional(),
+  led_mode_when_inactive: z.string().optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
@@ -7909,6 +8233,7 @@ const Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig = z.obje
   pressure_switch_tamper_normally_open: z.boolean().optional(),
   proximity_sensor_tamper_disabled: z.boolean().optional(),
   proximity_sensor_tamper_distance_threshold: z.number().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   snapshot_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
   storage_target_free_space_permyriad: z.number().int().optional(),
@@ -7923,6 +8248,9 @@ const Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig = z.ob
   firmware_dev_settings: z.record(z.unknown()).optional(),
   flip_display_orientation: z.boolean().optional(),
   lastModified: z.number().int().optional(),
+  led_mode_blink_period_ms: z.number().int().optional(),
+  led_mode_when_active: z.string().optional(),
+  led_mode_when_inactive: z.string().optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
@@ -7932,6 +8260,7 @@ const Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig = z.ob
   pressure_switch_tamper_normally_open: z.boolean().optional(),
   proximity_sensor_tamper_disabled: z.boolean().optional(),
   proximity_sensor_tamper_distance_threshold: z.number().optional(),
+  secondary_static_ip_v4_address: z.number().int().optional(),
   snapshot_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
   storage_target_free_space_permyriad: z.number().int().optional(),
@@ -7974,6 +8303,7 @@ const DiceType = z.object({
 });
 const RtspEndpointSource = z.string();
 const RtspEndpoint = z.object({
+  audioSupported: z.boolean().optional(),
   lastRtspUrlStatus: z.string().optional(),
   onvifProfileToken: z.string().optional(),
   rtspUrl: z.string().optional(),
@@ -8048,27 +8378,6 @@ const Door_GetDoorEventsForSensorWSResponse = z.object({
   errorMsg: z.string().optional(),
 });
 const Door_GetMinimalDoorStatesWSRequest = z.record(z.unknown());
-const Door_MinimalDoorStateType = z.object({
-  associatedCameras: z.array(z.string()).optional(),
-  batteryPercent: z.number().int().optional(),
-  closestBaseStation: z.string().optional(),
-  createdAtMillis: z.number().int().optional(),
-  firmwareVersion: z.string().optional(),
-  floorNumber: z.number().int().optional(),
-  health: z.string().optional(),
-  healthDetails: z.string().optional(),
-  hwVariation: HardwareVariationEnum.optional(),
-  lastSeenSec: z.number().int().optional(),
-  latitude: z.number().optional(),
-  locationUuid: z.string().optional(),
-  longitude: z.number().optional(),
-  name: z.string().optional(),
-  policyUuid: z.string().optional(),
-  sensorUuid: z.string().optional(),
-  serialNumber: z.string().optional(),
-  signalStrength: z.number().int().optional(),
-  status: z.string().optional(),
-});
 const Door_GetMinimalDoorStatesWSResponse = z.object({
   doorStates: z.array(Door_MinimalDoorStateType).optional(),
   error: z.boolean().optional(),
@@ -8160,8 +8469,8 @@ const Doorbellcamera_DoorbellCameraOfflineLanStreamingInfo = z.object({
 const Doorbellcamera_FindComponentEventsForDoorbellCameraWSRequest = z.object({
   createdAfterMs: z.number().int().optional(),
   createdBeforeMs: z.number().int().optional(),
-  doorbellCameraUuid: z.string().optional(),
-  limit: z.number().int().optional(),
+  doorbellCameraUuid: z.string(),
+  limit: z.number().int(),
   typeFilter: z.array(ComponentEventEnumType).optional(),
 });
 const Doorbellcamera_FindComponentEventsForDoorbellCameraWSResponse = z.object({
@@ -8235,6 +8544,7 @@ const MinimalObservableDeviceStateType = z.object({
   name: z.string().optional(),
   policyUuid: z.string().optional(),
   region: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   serialNumber: z.string().optional(),
   ssid: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
@@ -8333,26 +8643,27 @@ const Doorcontroller_DoorControllerDiscoveredAperioGateway = z.object({
   model: z.string().optional(),
   protocolVersion: z.string().optional(),
 });
+const Doorcontroller_DoorControllerDiscoveredReaderTypeEnum = z.string();
 const Doorcontroller_DoorControllerDiscoveredRhombusReaderType = z.object({
   boardNum: z.number().int().optional(),
   lastSeenMs: z.number().int().optional(),
   online: z.boolean().optional(),
   portNum: z.number().int().optional(),
-  type: z.string().optional(),
+  type: Doorcontroller_DoorControllerDiscoveredReaderTypeEnum.optional(),
 });
 const Doorcontroller_DoorControllerDiscoveredThirdPartyReaderType = z.object({
   boardNum: z.number().int().optional(),
   lastSeenMs: z.number().int().optional(),
   online: z.boolean().optional(),
   portNum: z.number().int().optional(),
-  type: z.string().optional(),
+  type: Doorcontroller_DoorControllerDiscoveredReaderTypeEnum.optional(),
 });
 const Doorcontroller_DoorControllerDiscoveredReaderType = z.object({
   boardNum: z.number().int().optional(),
   lastSeenMs: z.number().int().optional(),
   online: z.boolean().optional(),
   portNum: z.number().int().optional(),
-  type: z.string().optional(),
+  type: Doorcontroller_DoorControllerDiscoveredReaderTypeEnum.optional(),
 });
 const Doorcontroller_DoorControllerStateType = z.object({
   configUpdatedAtMs: z.number().int().optional(),
@@ -8427,7 +8738,7 @@ const Doorcontroller_UpdateDoorControllerDetailsWSRequest = z.object({
   locationUuid: z.string().optional(),
   longitude: z.number().optional(),
   name: z.string().optional(),
-  uuid: z.string().optional(),
+  uuid: z.string(),
 });
 const Doorcontroller_UpdateDoorControllerDetailsWSResponse = z.object({
   error: z.boolean().optional(),
@@ -8469,6 +8780,10 @@ const EmergencyResponseContactsIntervalType = z.object({
   minuteOfWeekStop: z.number().int().optional(),
 });
 const Entity = z.string();
+const EntityTag = z.object({
+  value: z.string().optional(),
+  weak: z.boolean().optional(),
+});
 const EnvoyCustomField = z.object({
   field: z.string().optional(),
   value: z.string().optional(),
@@ -8576,7 +8891,6 @@ const Event_RuuidWrapper = z.object({
   eventUuid: z.string().optional(),
 });
 const Event_CreateSharedClipGroupWSRequest = z.object({
-  description: z.string().optional(),
   expirationTimeSecs: z.number().int().optional(),
   plaintextPassword: z.string().optional(),
   title: z.string().optional(),
@@ -8722,8 +9036,9 @@ const Event_GetClipWithProgressWSResponse = z.object({
 const Event_GetClipsWithProgressWSRequest = z.object({
   clipVisibilityFilter: ClipVisibility.optional(),
   deviceUuidFilters: z.array(z.string()).optional(),
+  excludeAlertMonitoringClips: z.boolean().optional(),
   locationUuidFilters: z.array(z.string()).optional(),
-  pageSize: z.number().int().min(1).max(1000).optional(),
+  pageSize: z.number().int().min(1).max(200),
   pageToken: z.string().optional(),
   searchFilter: z.string().optional(),
   sortField: z.string().optional(),
@@ -8737,6 +9052,17 @@ const Event_GetClipsWithProgressWSResponse = z.object({
   errorMsg: z.string().optional(),
   pageToken: z.string().optional(),
   savedClips: z.array(Event_SavedClipWithProgressType).optional(),
+});
+const Event_GetExpiringPolicyAlertsWSRequest = z.object({
+  expiresBeforeMs: z.number().int(),
+  lastEvaluatedKey: z.string().optional(),
+  maxPageSize: z.number().int().optional(),
+});
+const Event_GetExpiringPolicyAlertsWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  lastEvaluatedKey: z.string().optional(),
+  policyAlerts: z.array(BasePolicyAlertType).optional(),
 });
 const Event_GetMotionGridCountsWSResponse = z.object({
   countGrid: z.array(z.array(z.number().int())).optional(),
@@ -8781,6 +9107,7 @@ const PolicyAlertWithDetailsType = z.object({
   notificationSent: z.boolean().optional(),
   orgUuid: z.string().optional(),
   policyAlertTriggers: z.array(ActivityEnum).optional(),
+  policyUuid: z.string().optional(),
   recognizedEventFaces: z.array(PolicyEventFaceType).optional(),
   recognizedEventVehicles: z.array(PolicyEventVehicleType).optional(),
   saved: z.boolean().optional(),
@@ -9393,7 +9720,7 @@ const TimeInterval = z.object({
 });
 const Export_ExportVehicleEventsWSRequest = z.object({
   deviceUuids: z.array(z.string()).optional(),
-  fuzzy: z.boolean(),
+  fuzzy: z.boolean().optional(),
   interval: TimeInterval.optional(),
   labels: z.array(z.string()).optional(),
   plateNumbers: z.array(z.string()).optional(),
@@ -9963,7 +10290,7 @@ const Group_AddUsersToOrgGroupWSResponse = z.object({
 const Group_CreateOrgGroupWSRequest = z.object({
   description: z.string().optional(),
   locationUuid: z.string().optional(),
-  name: z.string().optional(),
+  name: z.string(),
   userUuids: z.array(z.string()).optional(),
 });
 const OrgGroupType = z.object({
@@ -10199,7 +10526,7 @@ const Guestmanagement_ActivateKioskWSResponse = z.object({
 });
 const Guestmanagement_BaseGuestManagementWSRequest = z.record(z.unknown());
 const Guestmanagement_CreateGuestInviteWSRequest = z.object({
-  guestInvite: GuestInvite.optional(),
+  guestInvite: GuestInvite,
 });
 const Guestmanagement_CreateGuestManagementSettingsWSRequest = z.object({
   settings: GuestManagementOrgSettings.optional(),
@@ -10319,20 +10646,20 @@ const Guestmanagement_GuestByEmailWSRequest = z.object({
   email: z.string().optional(),
 });
 const Guestmanagement_GuestCheckinWSRequest = z.object({
-  email: z.string().optional(),
-  locationUuid: z.string().optional(),
+  email: z.string(),
+  locationUuid: z.string(),
 });
 const Guestmanagement_GuestInviteWSRequest = z.object({
-  uuid: z.string().optional(),
+  uuid: z.string(),
 });
 const Guestmanagement_GuestInvitesByEmailWSRequest = z.object({
-  email: z.string().optional(),
+  email: z.string(),
 });
 const Guestmanagement_GuestWSRequest = z.object({
   guest: Guest.optional(),
 });
 const Guestmanagement_UpdateGuestInviteWSRequest = z.object({
-  inviteUpdate: GuestInviteSelectiveUpdateByInvocation.optional(),
+  inviteUpdate: GuestInviteSelectiveUpdateByInvocation,
 });
 const Guestmanagement_UpdateGuestManagementSettingsWSRequest = z.object({
   settingsUpdate: GuestManagementSettingsSelectiveUpdate.optional(),
@@ -11074,6 +11401,7 @@ const IRaptorType = z.object({
   apiToken: z.string().optional(),
   clientId: z.string().optional(),
   clientSecret: z.string().optional(),
+  clientUid: z.string().optional(),
   enabled: z.boolean().optional(),
   integration: IntegrationEnum.optional(),
   integrationAuditMap: z.record(z.unknown()).optional(),
@@ -11205,6 +11533,7 @@ const Integration_aperio_DtcInfoView = z.object({
   testCompleted: z.boolean().optional(),
   time: z.number().int().optional(),
 });
+const Integration_aperio_AperioIntegrationStatus = z.string();
 const Integration_aperio_AperioDoorView = z.object({
   accessControlledDoorUuid: z.string().optional(),
   aperioDoorDeviceId: z.string().optional(),
@@ -11222,7 +11551,7 @@ const Integration_aperio_AperioDoorView = z.object({
   rawTamperState: z.number().int().optional(),
   removed: z.boolean().optional(),
   stateUpdateEventTimestampMs: z.number().int().optional(),
-  status: z.string().optional(),
+  status: Integration_aperio_AperioIntegrationStatus.optional(),
 });
 const Integration_aperio_AperioGatewayView = z.object({
   aperioGatewayId: z.string().optional(),
@@ -11241,7 +11570,7 @@ const Integration_aperio_AperioGatewayView = z.object({
   protocolVersion: z.string().optional(),
   rawTamperState: z.number().int().optional(),
   reportedOemCode: z.string().optional(),
-  status: z.string().optional(),
+  status: Integration_aperio_AperioIntegrationStatus.optional(),
 });
 const Integration_aperio_AperioRhombusDoorControllerView = z.object({
   aperioGateways: z.array(Integration_aperio_AperioGatewayView).optional(),
@@ -12147,7 +12476,7 @@ const Integration_UpdateShellyIntegrationWSRequest = z.object({
 });
 const Integration_UpdateSlackIntegrationV2WSRequest = z.object({
   adminRequest: z.boolean().optional(),
-  requestUrl: z.string().optional(),
+  requestUrl: z.string(),
   revokeUserAccessToken: z.boolean().optional(),
   rhombusOrgUserUuid: z.string().optional(),
   slackSettingsV2: SlackSettingsV2.optional(),
@@ -12185,6 +12514,7 @@ const Integration_aperio_ClearAperioDtcWSRequest = z.object({
   aperioDeviceId: z.string(),
   aperioGatewayId: z.string(),
   controllerUuid: z.string(),
+  registeredComponentUuid: z.string().optional(),
 });
 const Integration_aperio_ClearAperioDtcWSResponse = z.object({
   error: z.boolean().optional(),
@@ -12201,6 +12531,19 @@ const Integration_aperio_RebootAperioGatewayWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
+const Internal_AccessControlDoorOnlyWSRequest = z.object({
+  accountDataMap: z.record(z.unknown()).optional(),
+});
+const Internal_AccessControlDoorOnlyWSRequest_AccountData = z.object({
+  opportunityIds: z.array(z.string()).optional(),
+  orgUuid: z.string().optional(),
+});
+const Internal_AccessControlDoorOnlyWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  failedAccounts: z.record(z.unknown()).optional(),
+  successfulAccounts: z.array(z.string()).optional(),
+});
 const Internal_AddPartnerAsSuperAdminWSRequest = z.object({
   loginAccessAllowed: z.boolean().optional(),
   orgUuid: z.string().optional(),
@@ -12212,6 +12555,32 @@ const Internal_AddPartnerAsSuperAdminWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   superAdminGroupUuid: z.string().optional(),
+});
+const Internal_AlarmMonitoringOnlyWSRequest = z.object({
+  accountDataMap: z.record(z.unknown()).optional(),
+});
+const Internal_AlarmMonitoringOnlyWSRequest_AccountData = z.object({
+  opportunityIds: z.array(z.string()).optional(),
+  orgUuid: z.string().optional(),
+});
+const Internal_AlarmMonitoringOnlyWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  failedAccounts: z.record(z.unknown()).optional(),
+  successfulAccounts: z.array(z.string()).optional(),
+});
+const Internal_CreateCombinedLicensesFromV1WSRequest = z.object({
+  accountDataMap: z.record(z.unknown()).optional(),
+});
+const Internal_CreateCombinedLicensesFromV1WSRequest_AccountData = z.object({
+  opportunityIds: z.array(z.string()).optional(),
+  orgUuid: z.string().optional(),
+});
+const Internal_CreateCombinedLicensesFromV1WSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  failedAccounts: z.record(z.unknown()).optional(),
+  successfulAccounts: z.array(z.string()).optional(),
 });
 const Internal_CreateOrgWSRequest = z.object({
   accountOwnerEmail: z.string().optional(),
@@ -12287,6 +12656,19 @@ const Internal_DeveloperNewsletterEnrollWSRequest = z.object({
 const Internal_DeveloperNewsletterEnrollWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+});
+const Internal_EntDevicesOnlyWSRequest = z.object({
+  accountDataMap: z.record(z.unknown()).optional(),
+});
+const Internal_EntDevicesOnlyWSRequest_AccountData = z.object({
+  opportunityIds: z.array(z.string()).optional(),
+  orgUuid: z.string().optional(),
+});
+const Internal_EntDevicesOnlyWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  failedAccounts: z.record(z.unknown()).optional(),
+  successfulAccounts: z.array(z.string()).optional(),
 });
 const Internal_GetSuperAdminGroupUUIDWSRequest = z.object({
   orgUuid: z.string().optional(),
@@ -12391,6 +12773,7 @@ const OrgV2Type = z.object({
   itemizedInvoice: z.boolean().optional(),
   keypadLogoUrl: z.string().optional(),
   keypadLogoUuid: z.string().optional(),
+  llmUsageEnabled: z.boolean().optional(),
   maxAllowedSegmentMaxBytesMap: z.record(z.unknown()).optional(),
   mfaEnabled: z.boolean().optional(),
   motionGridDisabled: z.boolean().optional(),
@@ -12481,6 +12864,11 @@ const Internal_ShipmentEmailWSResponse = z.object({
   errorMsg: z.string().optional(),
   legacyMsg: z.string().optional(),
   trackingIdentifier: z.string().optional(),
+});
+const Internal_VerifyCanMigrateOrgFromV1WSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  invalidOrgsToErrorMessages: z.record(z.unknown()).optional(),
 });
 const LicenseInvoiceSubItem = z.object({
   count: z.number().int().optional(),
@@ -12580,6 +12968,48 @@ const Invoice_InvoiceDetailsV1WSResponse = z.object({
   errorMsg: z.string().optional(),
   invoice: Invoice_InvoiceV1Type.optional(),
 });
+const Invoice_InvoiceDetailsV2WSRequest = z.object({
+  netsuiteInvoiceUuid: z.string().optional(),
+});
+const LineItems = z.object({
+  description: z.string().optional(),
+  productCode: z.string().optional(),
+  productcode: z.string().optional(),
+  quantity: z.number().optional(),
+  subtotal: z.number().optional(),
+  unitPrice: z.number().optional(),
+  unitprice: z.number().optional(),
+});
+const NetsuiteInvoiceDetails = z.object({
+  billingContactEmail: z.string().optional(),
+  billingContactName: z.string().optional(),
+  billingcontactemail: z.string().optional(),
+  billingcontactname: z.string().optional(),
+  clientOrgName: z.string().optional(),
+  clientorgname: z.string().optional(),
+  dueDate: z.string().optional(),
+  duedate: z.string().optional(),
+  invoiceDate: z.string().optional(),
+  invoiceUuid: z.string().optional(),
+  invoicedate: z.string().optional(),
+  invoiceuuid: z.string().optional(),
+  lineItems: z.array(LineItems).optional(),
+  lineitems: z.array(LineItems).optional(),
+  partnerOrgName: z.string().optional(),
+  partnerorgname: z.string().optional(),
+  status: z.string().optional(),
+  totalBalance: z.number().optional(),
+  totalbalance: z.number().optional(),
+  transactionId: z.string().optional(),
+  transactionid: z.string().optional(),
+  unpaidBalance: z.number().optional(),
+  unpaidbalance: z.number().optional(),
+});
+const Invoice_InvoiceDetailsV2WSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  invoice: NetsuiteInvoiceDetails.optional(),
+});
 const Invoice_InvoiceDetailsWSRequest = z.object({
   invoiceUuid: z.string().optional(),
 });
@@ -12588,10 +13018,10 @@ const Invoice_InvoiceDetailsWSResponse = z.object({
   errorMsg: z.string().optional(),
   invoice: InvoiceType.optional(),
 });
+const KeypadCommand = z.string();
 const KeypadConfigType = z.object({
   armCountdownSecs: z.number().int().optional(),
   buildingAdminPhoneNumber: z.string().optional(),
-  cityName: z.string().optional(),
   connectionState: z.string().optional(),
   floorNumber: z.number().int().optional(),
   lastModified: z.number().int().optional(),
@@ -12601,11 +13031,13 @@ const KeypadConfigType = z.object({
   longitude: z.number().optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
+  qualifiedAddress: QualifiedAddressType.optional(),
   showCallBuildingAdmin: z.boolean().optional(),
   signalStrength: z.number().int().optional(),
-  streetAddress: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
+  tz: z.string().optional(),
   uuid: z.string().optional(),
+  videoWallUuid: z.string().optional(),
 });
 const Keypad_AuthenticatePinRequest = z.object({
   pin: z.string().optional(),
@@ -12646,6 +13078,10 @@ const Keypad_KeypadCheckinWSRequest = z.object({
   signalStrength: z.number().int().optional(),
 });
 const Keypad_KeypadCheckinWSResponse = z.record(z.unknown());
+const Keypad_PublishKeypadCommandWSRequest = z.object({
+  command: KeypadCommand,
+  executeAtMs: z.number().int().optional(),
+});
 const Keypad_UnregisterKeypadRequest = z.object({
   keypadUuid: z.string().optional(),
 });
@@ -12656,7 +13092,6 @@ const Keypad_UnregisterKeypadResponse = z.object({
 const Keypad_UpdateKeypadRequest = z.object({
   armCountdownSecs: z.number().int().optional(),
   buildingAdminPhoneNumber: z.string().optional(),
-  cityName: z.string().optional(),
   floorNumber: z.number().int().optional(),
   keypadUuid: z.string().optional(),
   latitude: z.number().optional(),
@@ -12664,9 +13099,11 @@ const Keypad_UpdateKeypadRequest = z.object({
   locationUuid: z.string().optional(),
   longitude: z.number().optional(),
   name: z.string().optional(),
+  qualifiedAddress: QualifiedAddressType.optional(),
   showCallBuildingAdmin: z.boolean().optional(),
-  streetAddress: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
+  timeZoneId: z.string().optional(),
+  videoWallUuid: z.string().optional(),
 });
 const Keypad_UpdateKeypadResponse = z.object({
   error: z.boolean().optional(),
@@ -12850,7 +13287,9 @@ const OrgLicenseStats = z.object({
 const License_CalculateLicensesStatsForClientOrgWSResponse = z.object({
   orgLicenseStats: OrgLicenseStats.optional(),
 });
-const License_CalculateLicensesStatsForOrgWSRequest = z.record(z.unknown());
+const License_CalculateLicensesStatsForOrgWSRequest = z.object({
+  excludeTrialLicensesFromExpiredCount: z.boolean().optional(),
+});
 const License_CalculateLicensesStatsForOrgWSResponse = z.object({
   orgLicenseStats: OrgLicenseStats.optional(),
 });
@@ -13069,13 +13508,19 @@ const License_claimkey_ReturnClaimKeyProductQuantitiesWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
+const UriBuilder = z.record(z.unknown());
+const Link = z.object({
+  params: z.record(z.unknown()).optional(),
+  rel: z.string().optional(),
+  rels: z.array(z.string()).optional(),
+  title: z.string().optional(),
+  type: z.string().optional(),
+  uri: z.string().optional(),
+  uriBuilder: UriBuilder.optional(),
+});
 const LiveNotificationActionStatusEnum = z.string();
 const LiveNotificationActionRecordType = z.object({
   status: LiveNotificationActionStatusEnum.optional(),
-});
-const LocalDateTimeIntervalType = z.object({
-  localEndDateTime: z.string(),
-  localStartDateTime: z.string(),
 });
 const LocationFunctionality = z.string();
 const LocationSettings = z.object({
@@ -13276,6 +13721,7 @@ const RMAType = z.object({
   inventoryNeeded: z.string().optional(),
   inventoryNeededMap: z.record(z.unknown()).optional(),
   isRefurbished: z.boolean().optional(),
+  knownIssue: z.boolean().optional(),
   lastRecordedFirmwareVersion: z.string().optional(),
   lastUpdatedAtSec: z.number().int().optional(),
   lastUpdatedBy: z.string().optional(),
@@ -13290,7 +13736,6 @@ const RMAType = z.object({
   replacementHardwareUuid: z.string().optional(),
   replacementTrackingNumber: z.string().optional(),
   requesterEmailAddress: z.string().optional(),
-  returnLabelRequested: z.boolean().optional(),
   returnLabelRequestedUpdatedAtSec: z.number().int().optional(),
   returnLabelSent: z.boolean().optional(),
   returnLabelSentUpdatedAtSec: z.number().int().optional(),
@@ -13298,6 +13743,7 @@ const RMAType = z.object({
   rmaRequest: RMARequest.optional(),
   rmaRequestUuid: z.string().optional(),
   sdCardReplaced: z.boolean().optional(),
+  shipmentMethod: z.string().optional(),
   shipmentRequested: z.boolean().optional(),
   shipmentRequestedBy: z.string().optional(),
   shipmentRequestedUpdatedAtSec: z.number().int().optional(),
@@ -13428,6 +13874,7 @@ const MinimalNVRStateType = z.object({
   numThirdPartyCamerasSupported: z.number().int().optional(),
   policyUuid: z.string().optional(),
   region: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   serialNumber: z.string().optional(),
   ssid: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
@@ -13446,18 +13893,18 @@ const MinimalThresholdEventType = z.object({
 const Mobile_LoginToOrg2FARequiredResponse = z.object({
   type: z.string().optional(),
 });
+const Mobile_LoginToOrgSuccessResponse = z.object({
+  type: z.string().optional(),
+});
+const Mobile_LoginToOrgSsoRequiredResponse = z.object({
+  type: z.string().optional(),
+});
 const Mobile_LoginToOrgBaseResponse = z.object({
   type: z.string(),
 });
 const Mobile_LoginToOrgRequest = z.object({
   csr: z.array(z.string()).optional(),
   orgUuid: z.string().optional(),
-});
-const Mobile_LoginToOrgSsoRequiredResponse = z.object({
-  type: z.string().optional(),
-});
-const Mobile_LoginToOrgSuccessResponse = z.object({
-  type: z.string().optional(),
 });
 const Mobile_LoginVerifiedSupportAuthorityMobileRequest = z.object({
   authorityUuid: z.string().optional(),
@@ -13485,18 +13932,26 @@ const Mobile_UpdateRhombusKeyMobileNotificationTokenRequest = z.object({
   token: z.string().optional(),
 });
 const Mobile_UpdateRhombusKeyMobileNotificationTokenResponse = z.record(z.unknown());
+const ModelStatusEnum = z.string();
 const ModularAIModelParams = z.object({
   classOutputMap: z.record(z.unknown()).optional(),
   inputHeight: z.number().int().optional(),
   inputWidth: z.number().int().optional(),
 });
+const PipelineComponentType = z.string();
+const PipelineComponent = z.object({
+  arg_json: z.record(z.unknown()).optional(),
+  name: PipelineComponentType.optional(),
+  uuid: z.string().optional(),
+});
 const ModularAIConfig = z.object({
   description: z.string().optional(),
   modelParams: ModularAIModelParams.optional(),
   modelQuantizedBinaryContentLocator: z.string().optional(),
-  modelStatus: z.string().optional(),
+  modelStatus: ModelStatusEnum.optional(),
   modelUploadZipContentLocator: z.string().optional(),
   name: z.string().optional(),
+  pipeline: z.array(PipelineComponent).optional(),
   restrictedOrgUuid: z.string().optional(),
   uuid: z.string().optional(),
 });
@@ -13504,9 +13959,10 @@ const ModularAIConfigSelectiveUpdate = z.object({
   description: z.string().optional(),
   modelParams: ModularAIModelParams.optional(),
   modelQuantizedBinaryContentLocator: z.string().optional(),
-  modelStatus: z.string().optional(),
+  modelStatus: ModelStatusEnum.optional(),
   modelUploadZipContentLocator: z.string().optional(),
   name: z.string().optional(),
+  pipeline: z.array(PipelineComponent).optional(),
   restrictedOrgUuid: z.string().optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional(),
   uuid: z.string().optional(),
@@ -13553,34 +14009,68 @@ const Modularai_UpdateModelWSRequest = z.object({
   update: ModularAIConfigSelectiveUpdate.optional(),
 });
 const Modularai_UpdateModelWSResponse = z.record(z.unknown());
+const MultivaluedMapStringObject = z.object({
+  empty: z.boolean().optional(),
+});
 const MultivaluedMapStringParameterizedHeader = z.object({
   empty: z.boolean().optional(),
 });
 const MultivaluedMapStringString = z.object({
   empty: z.boolean().optional(),
 });
-const Network_NetworkConfigurationWSRequest = z.object({
+const Network_GetDeviceNetworkConfigurationWSRequest = z.object({
   deviceUuid: z.string().optional(),
-  mode: z.string().optional(),
-  staticIpAddr: z.string().optional(),
-  staticIpGateway: z.string().optional(),
-  staticIpNameserver1: z.string().optional(),
-  staticIpNameserver2: z.string().optional(),
-  staticIpNetmask: z.string().optional(),
 });
-const Network_NetworkConfigurationWSResponse = z.object({
-  mode: z.string().optional(),
-  staticIpAddr: z.string().optional(),
-  staticIpGateway: z.string().optional(),
-  staticIpNameserver1: z.string().optional(),
-  staticIpNameserver2: z.string().optional(),
-  staticIpNetmask: z.string().optional(),
+const Network_NetworkConfigurationModeEnum = z.string();
+const Network_IpConfiguration = z.object({
+  dnsServer1: z.string().optional(),
+  dnsServer2: z.string().optional(),
+  gateway: z.string().optional(),
+  ipAddress: z.string().optional(),
+  isSecondary: z.boolean().optional(),
+  mode: Network_NetworkConfigurationModeEnum.optional(),
+  netmask: z.string().optional(),
+});
+const Network_GetDeviceNetworkConfigurationWSResponse = z.object({
+  ipConfigurations: z.array(Network_IpConfiguration).optional(),
+});
+const Network_UpdateDeviceIpConfigurationWSRequest = z.object({
+  deviceUuid: z.string().optional(),
+  ipConfiguration: Network_IpConfiguration.optional(),
+});
+const Network_UpdateDeviceIpConfigurationWSResponse = z.object({
+  ipConfiguration: Network_IpConfiguration.optional(),
+});
+const NewCookie = z.object({
+  comment: z.string().optional(),
+  domain: z.string().optional(),
+  expiry: z.string().datetime({ offset: true }).optional(),
+  httpOnly: z.boolean().optional(),
+  maxAge: z.number().int().optional(),
+  name: z.string().optional(),
+  path: z.string().optional(),
+  sameSite: z.string().optional(),
+  secure: z.boolean().optional(),
+  value: z.string().optional(),
+  version: z.number().int().optional(),
 });
 const NotificationSettingsType = z.object({
   orgUuid: z.string().optional(),
   slackChannel: z.string().optional(),
   slackEnabled: z.boolean().optional(),
   slackWebhookUrl: z.string().optional(),
+});
+const NumericAggregationValue = z.object({
+  average: z.number().optional(),
+  eventCount: z.number().int().optional(),
+  localDate: z.string().optional(),
+  max: z.number().optional(),
+  maxValueTimestampMs: z.number().int().optional(),
+  min: z.number().optional(),
+  minValueTimestampMs: z.number().int().optional(),
+  sum: z.number().optional(),
+  timestampMs: z.number().int().optional(),
+  utcDate: z.string().optional(),
 });
 const OAuthApplication = z.object({
   clientId: z.string().optional(),
@@ -13647,14 +14137,16 @@ const OccupancyPolicyType = z.object({
   uuid: z.string().optional(),
 });
 const Occupancysensor_GetMinimalOccupancySensorStatesWSRequest = z.record(z.unknown());
+const Occupancysensor_MotionSensorHealthEnum = z.string();
+const Occupancysensor_MotionSensorHealthDetailsEnum = z.string();
 const Occupancysensor_MinimalOccupancySensorStateType = z.object({
   associatedCameras: z.array(z.string()).optional(),
   batteryPercent: z.number().int().optional(),
   closestBaseStation: z.string().optional(),
   firmwareVersion: z.string().optional(),
   floorNumber: z.number().int().optional(),
-  health: z.string().optional(),
-  healthDetails: z.string().optional(),
+  health: Occupancysensor_MotionSensorHealthEnum.optional(),
+  healthDetails: Occupancysensor_MotionSensorHealthDetailsEnum.optional(),
   hwVariation: HardwareVariationEnum.optional(),
   lastSeenSec: z.number().int().optional(),
   latitude: z.number().optional(),
@@ -13901,6 +14393,7 @@ const Org_FindSCIMSettingsForOrgWSResponse = z.object({
   scimSettings: SCIMSettingsType.optional(),
 });
 const Org_GenerateFederatedSessionTokenRequest = z.object({
+  domain: z.string().optional(),
   durationSec: z.number().int().optional(),
 });
 const Org_GenerateFederatedSessionTokenResponse = z.object({
@@ -14125,6 +14618,13 @@ const Org_UpdateOrgIntegrationsWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
 });
+const Org_UpdateOrgLLMUsagePolicyWSRequest = z.object({
+  llmUsageEnabled: z.boolean().optional(),
+});
+const Org_UpdateOrgLLMUsagePolicyWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+});
 const UserNotificationSelectiveUpdateV2 = z.object({
   orgUuid: z.string().optional(),
   smsPhoneNumbers: z.array(z.string()).optional(),
@@ -14234,11 +14734,12 @@ const Partner_CreatePartnerClientWSRequest = z.object({
   clientOrgName: z.string().optional(),
   suppressWelcomeEmail: z.boolean().optional(),
 });
+const Partner_PartnerWebResponseStatusEnum = z.string();
 const Partner_CreatePartnerClientWSResponse = z.object({
   clientOrgUuid: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional(),
+  responseStatus: Partner_PartnerWebResponseStatusEnum.optional(),
 });
 const Partner_CustomizeClientDeviceWSRequest = z.object({
   clientDeviceUuid: z.string().optional(),
@@ -14275,17 +14776,17 @@ const Partner_GetClientDevicesWSRequest = z.object({
 const Partner_GetClientDevicesWSResponse = z.object({
   devices: z.array(Partner_DeviceWithPartnerDetailsType).optional(),
 });
-const Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSBaseResponse = z.object({
-  type: z.string(),
-});
 const Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSFailureResponse = z.object({
   type: z.string().optional(),
 });
-const Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSRequest = z.object({
-  token: z.string().optional(),
-});
 const Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSSuccessResponse = z.object({
   type: z.string().optional(),
+});
+const Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSBaseResponse = z.object({
+  type: z.string(),
+});
+const Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSRequest = z.object({
+  token: z.string().optional(),
 });
 const Partner_GetClientSummaryInfoWSRequest = z.object({
   clientOrgUuid: z.string().optional(),
@@ -14404,19 +14905,19 @@ const Partner_RequestAccessToClientAccountV2Request = z.object({
 const Partner_RequestAccessToClientAccountV2Response = z.object({
   success: z.boolean().optional(),
 });
-const Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSBaseResponse = z.object({
-  type: z.string(),
-});
 const Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSFailureResponse = z.object({
   type: z.string().optional(),
+});
+const Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSSuccessResponse = z.object({
+  type: z.string().optional(),
+});
+const Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSBaseResponse = z.object({
+  type: z.string(),
 });
 const Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSRequest = z.object({
   accessGrantedByClient: z.boolean().optional(),
   orgUuid: z.string().optional(),
   token: z.string().optional(),
-});
-const Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSSuccessResponse = z.object({
-  type: z.string().optional(),
 });
 const Partner_UpdateManuallySendLicenseExpirationEmailWSRequest = z.object({
   manuallySendLicenseExpirationEmail: z.boolean().optional(),
@@ -15105,18 +15606,24 @@ const PosIntegrationInfoType = z.object({
   assignedCameraList: z.array(z.string()).optional(),
   posName: z.string().optional(),
 });
+const Trigger = z.object({
+  activity: z.string().optional(),
+  value: z.string().optional(),
+});
 const PromptConfigurationType = z.object({
   active: z.boolean().optional(),
   cameraConfigurations: z.array(CameraConfiguration).optional(),
-  checkEquations: CheckEquations.optional(),
+  checkCondition: CheckCondition.optional(),
   description: z.string().optional(),
-  minuteTriggerRate: z.number().int().optional(),
+  generateAlertForActionNewlyAddedCameras: z.boolean().optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
   prompt: z.string().optional(),
   promptType: z.string().optional(),
+  reportsEnabled: z.boolean().optional(),
   scheduleUuid: z.string().optional(),
   shortName: z.string().optional(),
+  trigger: Trigger.optional(),
   uuid: z.string().optional(),
 });
 const ProximityArrivedActivityEventType = z.object({
@@ -15167,13 +15674,15 @@ const Proximity_GetLocomotionEventsForTagWSResponse = z.object({
   locomotionEvents: z.array(ProximityTagLocomotionEventType).optional(),
 });
 const Proximity_GetMinimalProximityStatesWSRequest = z.record(z.unknown());
+const Proximity_ProximityHealthEnum = z.string();
+const Proximity_ProximityHealthDetailsEnum = z.string();
 const Proximity_MinimalProximityStateType = z.object({
   batteryPercent: z.number().int().optional(),
   createdAtMillis: z.number().int().optional(),
   firmwareVersion: z.string().optional(),
   gpsLocation: GeodeticCoordinates.optional(),
-  health: z.string().optional(),
-  healthDetails: z.string().optional(),
+  health: Proximity_ProximityHealthEnum.optional(),
+  healthDetails: Proximity_ProximityHealthDetailsEnum.optional(),
   hwVariation: HardwareVariationEnum.optional(),
   imageUrl: z.string().optional(),
   lastSeenSec: z.number().int().optional(),
@@ -15229,21 +15738,8 @@ const Rapidsos_GetNearbyFeedsResponse = z.object({
   errorMsg: z.string().optional(),
   streamUrls: z.array(z.string()).optional(),
 });
-const RealtimeRelativeSecondsScheduleType = z.object({
-  mutable: z.boolean().optional(),
-  name: z.string().optional(),
-  oneTimeUse: z.boolean().optional(),
-  orgUuid: z.string().optional(),
-  strategy: z.string().optional(),
-  uuid: z.string().optional(),
-});
-const RelativeDateTimeIntervalsScheduleType = z.object({
-  mutable: z.boolean().optional(),
-  name: z.string().optional(),
-  oneTimeUse: z.boolean().optional(),
-  orgUuid: z.string().optional(),
-  strategy: z.string().optional(),
-  uuid: z.string().optional(),
+const RegionCrossingActivityEventType = z.object({
+  activityEvent: ActivityEnum.optional(),
 });
 const Relay_AssignThirdPartyCameraToNVRWSRequest = z.object({
   discoveredCameraMacAddress: z.string().optional(),
@@ -15397,15 +15893,14 @@ const Relay_MinimalThirdPartyCameraStateType = z.object({
   model: z.string().optional(),
   mummified: z.boolean().optional(),
   name: z.string().optional(),
-  password: z.string().optional(),
   policyUuid: z.string().optional(),
   region: z.string().optional(),
   rtspUrl: z.string().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
   serialNumber: z.string().optional(),
   ssid: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
   supportedFacets: z.array(DeviceFacet).optional(),
-  username: z.string().optional(),
   uuid: z.string().optional(),
   wifiApMac: z.string().optional(),
   wifiBars: z.number().int().optional(),
@@ -15426,6 +15921,7 @@ const Relay_NVRExternalType = z.object({
   customData: z.string().optional(),
   deleted: z.boolean().optional(),
   description: z.string().optional(),
+  deviceFacetRadians: z.record(z.unknown()).optional(),
   directionRadians: z.number().optional(),
   facetNameMap: z.record(z.unknown()).optional(),
   floorNumber: z.number().int().optional(),
@@ -15518,16 +16014,6 @@ const Relay_RebootNVRVWSResponse = z.object({
   errorMsg: z.string().optional(),
   result: z.string().optional(),
 });
-const Relay_RegisterNVRVWSRequest = z.object({
-  activationToken: z.string().optional(),
-  locationUuid: z.string().optional(),
-  name: z.string().optional(),
-});
-const Relay_RegisterNVRVWSResponse = z.object({
-  error: z.boolean().optional(),
-  errorMsg: z.string().optional(),
-  nvrUuid: z.string().optional(),
-});
 const Relay_UnassignThirdPartyCameraWSRequest = z.object({
   nvruuid: z.string().optional(),
   rtspUrl: z.string().optional(),
@@ -15545,13 +16031,14 @@ const Relay_UnregisterNVRWSResponse = z.object({
   errorMsg: z.string().optional(),
   responseStatus: z.string().optional(),
 });
+const Relay_UpdateFirmwareWSStatus = z.string();
 const Relay_UpdateNVRFirmwareWSRequest = z.object({
   nvruuid: z.string().optional(),
 });
 const Relay_UpdateNVRFirmwareWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  status: z.string().optional(),
+  status: Relay_UpdateFirmwareWSStatus.optional(),
 });
 const Relay_UpdateNVRVWSRequest = z.object({
   customData: z.string().optional(),
@@ -15608,7 +16095,7 @@ const Report_AuditEventWeb = z.object({
   FOOBAR: z.string().optional(),
   action: z.string().optional(),
   asi: z.string().optional(),
-  clientType: z.string().optional(),
+  clientType: Client.optional(),
   displayText: z.string().optional(),
   failure: z.boolean().optional(),
   orgUuid: z.string().optional(),
@@ -15722,16 +16209,44 @@ const Report_GetCountReportsWSResponse = z.object({
   errorMsg: z.string().optional(),
   timeSeriesDataPointsMap: z.record(z.unknown()).optional(),
 });
+const Report_GetCustomLLMNumericWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  reports: z.record(z.unknown()).optional(),
+});
+const Report_GetCustomLLMReportWSRequest = z.object({
+  deviceFacetUuids: z.array(z.string()).optional(),
+  endTimeMs: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  promptUuid: z.string().optional(),
+  startTimeMs: z.number().int().optional(),
+});
+const SceneQueryReportEvent = z.object({
+  checkCondition: z.boolean().optional(),
+  timestampMs: z.number().int().optional(),
+  value: z.string().optional(),
+});
+const SceneQueryReport = z.object({
+  deviceFacetUuid: z.string().optional(),
+  events: z.array(SceneQueryReportEvent).optional(),
+  promptType: z.string().optional(),
+  promptUuid: z.string().optional(),
+});
+const Report_GetCustomLLMReportWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  timeSeriesDataPoints: z.array(SceneQueryReport).optional(),
+});
+const Report_GetCustomLLMWBinaryWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  reports: z.record(z.unknown()).optional(),
+});
 const Report_GetCustomLLMWSRequest = z.object({
   endTimeMs: z.number().int().optional(),
   interval: z.string().optional(),
   promptUuid: z.string().optional(),
   startTimeMs: z.number().int().optional(),
-});
-const Report_GetCustomLLMWSResponse = z.object({
-  error: z.boolean().optional(),
-  errorMsg: z.string().optional(),
-  timeSeriesDataPoints: z.array(TimeSeriesDataPointV2Type).optional(),
 });
 const Report_GetDiagnosticFeedWSRequest = z.object({
   timestampMsAfter: z.number().int().optional(),
@@ -15919,6 +16434,59 @@ const Report_ResetRunningAverageWSRequest = z.object({
 const Report_ResetRunningAverageWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+});
+const StatusType = z.object({
+  family: z.string().optional(),
+  reasonPhrase: z.string().optional(),
+  statusCode: z.number().int().optional(),
+});
+const Response = z.object({
+  allowedMethods: z.array(z.string()).optional(),
+  closed: z.boolean().optional(),
+  cookies: z.record(z.unknown()).optional(),
+  date: z.string().datetime({ offset: true }).optional(),
+  entity: z.record(z.unknown()).optional(),
+  entityTag: EntityTag.optional(),
+  headers: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
+  language: z
+    .object({
+      country: z.string().optional(),
+      displayCountry: z.string().optional(),
+      displayLanguage: z.string().optional(),
+      displayName: z.string().optional(),
+      displayScript: z.string().optional(),
+      displayVariant: z.string().optional(),
+      extensionKeys: z.array(z.string()).optional(),
+      iso3Country: z.string().optional(),
+      iso3Language: z.string().optional(),
+      language: z.string().optional(),
+      script: z.string().optional(),
+      unicodeLocaleAttributes: z.array(z.string()).optional(),
+      unicodeLocaleKeys: z.array(z.string()).optional(),
+      variant: z.string().optional(),
+    })
+    .optional(),
+  lastModified: z.string().datetime({ offset: true }).optional(),
+  length: z.number().int().optional(),
+  links: z.array(Link).optional(),
+  location: z.string().optional(),
+  mediaType: MediaType.optional(),
+  metadata: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
+  status: z.number().int().optional(),
+  statusInfo: StatusType.optional(),
+  stringHeaders: z
+    .object({
+      empty: z.boolean().optional(),
+    })
+    .optional(),
 });
 const ResponseEntity = z.object({
   body: z.record(z.unknown()).optional(),
@@ -16305,10 +16873,6 @@ const SalesforceLicenseStartDateTimeAndEndDateTime = z.object({
   contractEndDateTime: z.string().optional(),
   contractStartDateTime: z.string().optional(),
 });
-const SceneQueryReportEvent = z.object({
-  timestampMs: z.number().int().optional(),
-  value: z.string().optional(),
-});
 const Scenequery_CreatePromptConfigurationWSRequest = z.object({
   promptConfiguration: PromptConfigurationType.optional(),
 });
@@ -16338,30 +16902,10 @@ const Scenequery_GetPromptConfigurationWSResponse = z.object({
   errorMsg: z.string().optional(),
   promptConfiguration: PromptConfigurationType.optional(),
 });
-const Scenequery_ReportWSRequest = z.object({
-  deviceFacetUuids: z.array(z.string()).optional(),
-  endMs: z.number().int().optional(),
-  locationUuid: z.string().optional(),
-  promptUuid: z.string().optional(),
-  startMs: z.number().int().optional(),
-});
-const Scenequery_ReportWSResponse_SceneQueryReportWSEvent = z.object({
-  timestampMs: z.number().int().optional(),
-  value: z.string().optional(),
-});
-const Scenequery_ReportWSResponse_SceneQueryWSReport = z.object({
-  deviceFacetUuid: z.string().optional(),
-  events: z.array(Scenequery_ReportWSResponse_SceneQueryReportWSEvent).optional(),
-  promptType: z.string().optional(),
-  promptUuid: z.string().optional(),
-});
-const Scenequery_ReportWSResponse = z.object({
-  reports: z.array(Scenequery_ReportWSResponse_SceneQueryWSReport).optional(),
-});
 const Scenequery_SelectiveUpdatePromptConfigurationWSRequest = z.object({
   active: z.boolean().optional(),
   cameraConfigurations: z.array(CameraConfiguration).optional(),
-  checkEquations: CheckEquations.optional(),
+  checkCondition: CheckCondition.optional(),
   description: z.string().optional(),
   minuteTriggerRate: z.number().int().optional(),
   name: z.string().optional(),
@@ -16467,6 +17011,7 @@ const Schedule_WeeklyRepeatingScheduleDataType = z.object({
   accessGrantUuids: z.array(z.string()).optional(),
   alarmMonitoringUuids: z.array(z.string()).optional(),
   alertPolicyUuids: z.array(z.string()).optional(),
+  customEventUuids: z.array(z.string()).optional(),
   doorSettingUuids: z.array(z.string()).optional(),
   intervalList: z.array(WeeklyMinuteIntervalType).optional(),
   locationsUsedIn: z.array(z.string()).optional(),
@@ -16694,6 +17239,7 @@ const Share_GetSharedClipDataWSRequest = z.record(z.unknown());
 const Share_SharedClipPublicType = z.object({
   boundingBoxes: z.array(ClipBoundingBoxType).optional(),
   clipLocation: MetaDataLocationType.optional(),
+  description: z.string().optional(),
   deviceBoundingBoxMap: z.record(z.unknown()).optional(),
   deviceMap: z.record(z.unknown()).optional(),
   deviceSeekPointMap: z.record(z.unknown()).optional(),
@@ -16905,6 +17451,7 @@ const StatsCredentialReference = z.object({
   orgUuid: z.string().optional(),
   userUuid: z.string().optional(),
 });
+const StreamingOutput = z.record(z.unknown());
 const SupportAuthorityLockdownEventOriginator = z.object({
   type: LockdownEventOriginatorEnumType.optional(),
 });
@@ -17118,6 +17665,11 @@ const User_AssignEmailToUserWSRequest = z.object({
   userUuid: z.string().optional(),
 });
 const User_AssignEmailToUserWSResponse = z.record(z.unknown());
+const User_BulkProvisionCredentialsWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  messages: z.array(z.string()).optional(),
+});
 const User_ChangeUserEmailWSRequest = z.object({
   newEmail: z.string().optional(),
   userUuid: z.string().optional(),
@@ -17173,6 +17725,13 @@ const User_FindUserWSRequest = z.object({
 });
 const User_FindUserWSResponse = z.object({
   user: WrappedRhombusOrgUserType.optional(),
+});
+const User_GetBulkProvisionCredentialsFormatWSResponse = z.object({
+  accessControlEnabled: z.boolean().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  example: z.string().optional(),
+  explanation: z.string().optional(),
 });
 const User_GetImportUsersFormatWSResponse = z.object({
   accessControlEnabled: z.boolean().optional(),
@@ -17753,7 +18312,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/addUsersToAccessControlGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_AddUsersToOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -17766,7 +18325,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/assignAccessControlCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_AssignAccessControlCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -17779,7 +18338,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/createBadgeTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_CreateBadgeTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -17792,7 +18351,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/deleteBadgeTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_DeleteBadgeTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -17805,7 +18364,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/deleteBadgeTemplateImage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_DeleteBadgeTemplateImageWSResponse,
     parameters: [
       {
         name: "body",
@@ -17818,7 +18377,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/findBadgeTemplateImages",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_FindBadgeTemplateImagesWSResponse,
     parameters: [
       {
         name: "body",
@@ -17831,7 +18390,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/findBadgeTemplates",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_FindBadgeTemplatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -17844,7 +18403,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/getBadgeTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_GetBadgeTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -17857,7 +18416,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/getBadgeTemplateImage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_GetBadgeTemplateImageWSResponse,
     parameters: [
       {
         name: "body",
@@ -17870,7 +18429,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/updateBadgeTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_UpdateBadgeTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -17883,7 +18442,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/badgeTemplate/updateBadgeTemplateImage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_badgetemplate_UpdateBadgeTemplateImageWSResponse,
     parameters: [
       {
         name: "body",
@@ -17896,7 +18455,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createAccessControlCredentialByHexValueAndType",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateAccessControlCredentialByHexValueAndTypeWSResponse,
     parameters: [
       {
         name: "body",
@@ -17909,7 +18468,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createAccessControlGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_CreateOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -17922,7 +18481,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createAccessGrant",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_CreateAccessGrantWSResponse,
     parameters: [
       {
         name: "body",
@@ -17935,7 +18494,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createAccessRevocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_CreateAccessRevocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -17948,7 +18507,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createAppleWalletPass",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateAppleWalletPassWSResponse,
     parameters: [
       {
         name: "body",
@@ -17961,7 +18520,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createRhombusSecureCsnCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateRhombusSecureCsnCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -17974,7 +18533,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createStandardCsnCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateStandardCsnCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -17987,7 +18546,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createWiegand64BitRawCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateWiegand64BitRawCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18000,7 +18559,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createWiegandCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateWiegandCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18013,7 +18572,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createWiegandD10202Credential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateWiegandD10202CredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18026,7 +18585,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createWiegandH10301Credential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateWiegandH10301CredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18039,7 +18598,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/createWiegandH10304Credential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreateWiegandH10304CredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18052,7 +18611,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/deleteAccessControlCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_DeleteAccessControlCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18065,7 +18624,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/deleteAccessControlGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_DeleteOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -18078,7 +18637,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/deleteLocationAccessGrant",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_DeleteLocationAccessGrantWSResponse,
     parameters: [
       {
         name: "body",
@@ -18091,7 +18650,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/deleteLocationAccessRevocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_DeleteLocationAccessRevocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18104,7 +18663,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/deleteUnassignedAccessControlCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_DeleteUnassignedAccessControlCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -18117,7 +18676,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/createExceptionV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_CreateDoorScheduleExceptionWSResponse,
     parameters: [
       {
         name: "body",
@@ -18130,7 +18689,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/deleteExceptionV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_DeleteDoorScheduleExceptionWSResponse,
     parameters: [
       {
         name: "body",
@@ -18143,7 +18702,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/findExceptionsForDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_FindDoorScheduleExceptionsForDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -18156,7 +18715,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/findExceptionsForLocationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_FindDoorScheduleExceptionsForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18169,7 +18728,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/findExceptionsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_FindDoorScheduleExceptionsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18182,7 +18741,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/getExceptionV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_GetDoorScheduleExceptionWSResponse,
     parameters: [
       {
         name: "body",
@@ -18195,7 +18754,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/doorScheduleException/updateExceptionV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_doorexception_UpdateDoorScheduleExceptionWSResponse,
     parameters: [
       {
         name: "body",
@@ -18208,7 +18767,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlCredentialByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindAccessControlCredentialByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -18221,7 +18780,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlCredentialByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindAccessControlCredentialByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18234,7 +18793,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlCredentialByUsers",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindAccessControlCredentialByUsersWSResponse,
     parameters: [
       {
         name: "body",
@@ -18247,7 +18806,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlGroupByExactName",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByExactNameWSResponse,
     parameters: [
       {
         name: "body",
@@ -18260,7 +18819,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlGroupMembershipsByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupMembershipsByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18273,7 +18832,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlGroupMembershipsForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupMembershipsForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18286,7 +18845,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlGroupsByNamePrefix",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByNamePrefixWSResponse,
     parameters: [
       {
         name: "body",
@@ -18299,7 +18858,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlGroupsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -18312,7 +18871,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAccessControlGroupsByUserMembership",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByUserMembershipWSResponse,
     parameters: [
       {
         name: "body",
@@ -18325,7 +18884,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findAllUsersForAccessControlGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindAllUsersForOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -18338,7 +18897,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findCredentialHistory",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindCredentialHistoryWSResponse,
     parameters: [
       {
         name: "body",
@@ -18351,7 +18910,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findCredentialHistoryByCredentialHexValue",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindCredentialHistoryByCredentialHexValueWSResponse,
     parameters: [
       {
         name: "body",
@@ -18364,7 +18923,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findCredentialHistoryByCredentialValue",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindCredentialHistoryByCredentialValueWSResponse,
     parameters: [
       {
         name: "body",
@@ -18377,7 +18936,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findCredentialHistoryByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindCredentialHistoryByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18390,7 +18949,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -18403,7 +18962,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByDoorLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByDoorLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -18416,7 +18975,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -18429,7 +18988,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18442,7 +19001,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByLocationAndUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByLocationAndUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18455,7 +19014,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -18468,7 +19027,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessGrantsByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_FindLocationAccessGrantsByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18481,7 +19040,8 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessRevocationsByAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response:
+      Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -18495,7 +19055,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessRevocationsByDoorLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_FindLocationAccessRevocationsByDoorLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -18508,7 +19068,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessRevocationsByGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_FindLocationAccessRevocationsByGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -18521,7 +19081,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessRevocationsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_FindLocationAccessRevocationsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -18534,7 +19094,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findLocationAccessRevocationsByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_FindLocationAccessRevocationsByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18547,7 +19107,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findRhombusSecureMobileCredentialsForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindRhombusSecureMobileCredentialsForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18560,7 +19120,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/findUnlockableAccessControlledDoorsByDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_FindUnlockableAccessControlledDoorsByDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -18573,7 +19133,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/applyDoorAuthFirstInGroupState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_ApplyDoorAuthFirstInGroupStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -18586,7 +19146,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/applyDoorAuthFirstInState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_ApplyDoorAuthFirstInStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -18599,7 +19159,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/applyDoorScheduleFirstInGroupState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_ApplyDoorScheduleFirstInGroupStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -18612,7 +19172,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/applyDoorScheduleFirstInState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_ApplyDoorScheduleFirstInStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -18625,7 +19185,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/createLocationFirstInSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_CreateLocationFirstInSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18638,7 +19198,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/deleteLocationFirstInSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_DeleteLocationFirstInSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18651,7 +19211,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/findLocationFirstInSettingsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_FindLocationFirstInSettingsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18664,7 +19224,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/findLocationFirstInSettingsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_FindLocationFirstInSettingsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -18677,7 +19237,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/getLocationFirstInSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_GetLocationFirstInSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18690,7 +19250,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/getLocationFirstInSettingsForDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_GetLocationFirstInSettingsForDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -18703,7 +19263,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/removeDoorLocationFirstInSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18716,7 +19276,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/firstIn/updateLocationFirstInSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_firstin_UpdateLocationFirstInSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18729,7 +19289,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/forceRefreshAccessControlUnitConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_ForceRefreshAccessControlUnitConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -18742,7 +19302,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getLocationAccessGrant",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_GetLocationAccessGrantWSResponse,
     parameters: [
       {
         name: "body",
@@ -18755,7 +19315,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getLocationAccessRevocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_GetLocationAccessRevocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18768,7 +19328,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getLocationsByAccessGrantForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_GetLocationsByAccessGrantForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18781,7 +19341,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getMinimalAccessControlledDoorsByLocationForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_GetMinimalAccessControlledDoorsByLocationForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18794,7 +19354,8 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getRhombusKeyLocationLockdownDetailsForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response:
+      Accesscontrol_accessgrant_GetRhombusKeyLocationLockdownDetailsForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -18808,7 +19369,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getRhombusSecureCsnCredentialDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_GetRhombusSecureCsnCredentialDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18821,7 +19382,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getRhombusSecureMobileAppStateStatsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_GetRhombusSecureMobileAppStateStatsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -18834,7 +19395,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/getStandardCsnCredentialDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_GetStandardCsnCredentialDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -18847,7 +19408,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/activateLockdownForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_ActivateLockdownForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18860,7 +19421,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/activateLockdownForLocationViaRhombusKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_ActivateLockdownForLocationViaRhombusKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -18873,7 +19434,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/createLocationLockdownPlan",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_CreateLocationLockdownPlanWSResponse,
     parameters: [
       {
         name: "body",
@@ -18886,7 +19447,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/createLockdownRuleForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_CreateLockdownRuleForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18899,7 +19460,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/deactivateLockdownForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_DeactivateLockdownForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18912,7 +19473,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/deactivateLockdownForLocationViaRhombusKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_DeactivateLockdownForLocationViaRhombusKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -18925,7 +19486,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/deleteLocationLockdownState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_DeleteLocationLockdownStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -18938,7 +19499,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/deleteLockdownPlan",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_DeleteLockdownPlanWSResponse,
     parameters: [
       {
         name: "body",
@@ -18951,7 +19512,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/deleteLockdownRuleForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_DeleteLockdownRuleForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18964,7 +19525,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/disableLockdownTestModeForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_DisableLockdownTestModeForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18977,7 +19538,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/enableLockdownTestModeForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_EnableLockdownTestModeForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -18990,7 +19551,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/findLocationLockdownEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_FindLocationLockdownEventsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19003,7 +19564,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/findLocationLockdownStates",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_FindLocationLockdownStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -19016,7 +19577,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/findLockdownPlans",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_FindLockdownPlansWSResponse,
     parameters: [
       {
         name: "body",
@@ -19029,7 +19590,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/findLockdownPlansByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_FindLockdownPlansByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -19042,7 +19603,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/getLockdownPlan",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_GetLockdownPlanWSResponse,
     parameters: [
       {
         name: "body",
@@ -19055,7 +19616,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/getLockdownRulesForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_GetLockdownRulesForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -19068,7 +19629,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/getOrCreateLocationLockdownState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_GetOrCreateLocationLockdownStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -19081,7 +19642,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/lockdownPlan/updateLocationLockdownPlan",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_lockdownplan_UpdateLocationLockdownPlanWSResponse,
     parameters: [
       {
         name: "body",
@@ -19094,7 +19655,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/bulkProvisionPinCredentials",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_BulkProvisionPinCredentialsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19107,7 +19668,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/bulkRotatePinCredentials",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_BulkRotatePinCredentialsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19120,7 +19681,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/createPinCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_CreatePinCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19133,7 +19694,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/deletePinCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_DeletePinCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19146,7 +19707,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/findPinCredentialsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_FindPinCredentialsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -19159,7 +19720,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/getAvailablePinCode",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_GetAvailablePinCodeWSResponse,
     parameters: [
       {
         name: "body",
@@ -19172,7 +19733,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/getPinCredentialDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_GetPinCredentialDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19185,7 +19746,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/revokePinCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_RevokePinCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19198,7 +19759,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/rotatePinCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_RotatePinCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19211,7 +19772,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/pin/updatePinCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdatePinCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19224,7 +19785,8 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/provisionMobileAccessControlCredentialForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response:
+      Accesscontrol_credentials_BaseProvisionMobileAccessControlCredentialForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -19238,7 +19800,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/qr/generateQRAccessCode",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_qr_GenerateQRAccessCodeWSResponse,
     parameters: [
       {
         name: "body",
@@ -19251,7 +19813,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/qr/getQRAccessCodes",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_qr_GetQRAccessCodesWSResponse,
     parameters: [
       {
         name: "body",
@@ -19264,7 +19826,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/removeUsersFromAccessControlGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_RemoveUsersFromOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -19277,7 +19839,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/revokeAccessControlCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_RevokeAccessControlCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19290,7 +19852,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/revokeRhombusSecureMobileCredentialForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_RevokeRhombusSecureMobileCredentialForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -19304,7 +19866,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/sendUserPresenceForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_BaseSendUserPresenceForCurrentUserWsResponse,
     parameters: [
       {
         name: "body",
@@ -19317,7 +19879,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/suspendAccessControlCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_SuspendAccessControlCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19330,7 +19892,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/unlockAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_BaseUnlockAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -19343,7 +19905,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/unlockAccessControlledDoorForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_BaseUnlockAccessControlledDoorForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -19356,7 +19918,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/unsuspendAccessControlCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UnsuspendAccessControlCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19369,7 +19931,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateAccessControlCredentialNote",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdateAccessControlCredentialNoteWSResponse,
     parameters: [
       {
         name: "body",
@@ -19382,7 +19944,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateAccessControlGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_UpdateOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -19395,7 +19957,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateAccessGrant",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessgrant_UpdateAccessGrantWSResponse,
     parameters: [
       {
         name: "body",
@@ -19408,7 +19970,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateAccessRevocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_accessrevocation_UpdateAccessRevocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -19421,7 +19983,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateRhombusKeyMobileAppStateForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdateRhombusKeyMobileAppStateForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -19434,7 +19996,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateRhombusSecureCsnCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdateRhombusSecureCsnCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19447,7 +20009,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateRhombusSecureMobileCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdateRhombusSecureMobileCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19460,7 +20022,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateStandardCsnCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdateStandardCsnCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19473,7 +20035,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/accesscontrol/updateWiegandCredential",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Accesscontrol_credentials_UpdateWiegandCredentialWSResponse,
     parameters: [
       {
         name: "body",
@@ -19486,7 +20048,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/acceptAlertMonitoringTermsOfService",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_AcceptAlertMonitoringTermsOfServiceResponse,
     parameters: [
       {
         name: "body",
@@ -19499,7 +20061,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/acceptAlertMonitoringTermsOfServiceForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_AcceptAlertMonitoringTermsOfServiceResponse,
     parameters: [
       {
         name: "body",
@@ -19510,9 +20072,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/alertmonitoring/addPromptThreatQualification",
+    requestFormat: "json",
+    response: Alertmonitoring_AddPromptThreatQualificationsWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Alertmonitoring_AddPromptThreatQualificationsWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/alertmonitoring/cancelThreatCase",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_CancelThreatCaseWSResponse,
     parameters: [
       {
         name: "body",
@@ -19525,7 +20100,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/createAlertMonitoringSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_CreateNoonlightSettingsForLocationResponse,
     parameters: [
       {
         name: "body",
@@ -19538,7 +20113,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/createCustomPinForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_CreateCustomPinForNoonlightWSResponse,
     parameters: [
       {
         name: "body",
@@ -19551,7 +20126,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/createPinForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_CreatePinForNoonlightWSResponse,
     parameters: [
       {
         name: "body",
@@ -19564,7 +20139,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/deleteAlertMonitoringSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_DeleteNoonlightSettingsForLocationResponse,
     parameters: [
       {
         name: "body",
@@ -19577,7 +20152,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/deletePinForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_DeletePinForNoonlightWSResponse,
     parameters: [
       {
         name: "body",
@@ -19588,9 +20163,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/alertmonitoring/deletePromptThreatQualificationByTitle",
+    requestFormat: "json",
+    response: Alertmonitoring_DeletePromptThreatQualificationByTitleWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Alertmonitoring_DeletePromptThreatQualificationByTitleWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/alertmonitoring/disableMonitoringForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_DisableLocationResponse,
     parameters: [
       {
         name: "body",
@@ -19603,7 +20191,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/dismissThreatCase",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_DismissThreatCaseWSResponse,
     parameters: [
       {
         name: "body",
@@ -19616,7 +20204,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/enableMonitoringForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_EnableLocationResponse,
     parameters: [
       {
         name: "body",
@@ -19629,7 +20217,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/escalateThreatCaseToAlarm",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_EscalateThreatCaseToAlarmWSResponse,
     parameters: [
       {
         name: "body",
@@ -19642,7 +20230,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/generateMonthlyVerificationsForYearReportForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -19655,7 +20243,20 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/generateReportDataForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_GenerateReportDataForLocationWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Alertmonitoring_GenerateReportDataForLocationWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/alertmonitoring/generateReportDataForLocationV2",
+    requestFormat: "json",
+    response: Alertmonitoring_GenerateReportDataForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -19668,7 +20269,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/getAlertMonitoringSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_GetNoonlightSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19681,7 +20282,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/getAlertMonitoringSettingsForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_GetNoonlightSettingsForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -19692,9 +20293,35 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/alertmonitoring/getMonitoredDoorSensorsForLocation",
+    requestFormat: "json",
+    response: Alertmonitoring_GetMonitoredDoorSensorsForLocationWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Alertmonitoring_GetMonitoredDoorSensorsForLocationWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/alertmonitoring/getPromptThreatQualifications",
+    requestFormat: "json",
+    response: Alertmonitoring_GetPromptThreatQualificationsWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Alertmonitoring_GetPromptThreatQualificationsWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/alertmonitoring/getTripwireGroupCount",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSResponse,
     parameters: [
       {
         name: "body",
@@ -19707,7 +20334,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/locationStatus",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_LocationStatusWSResponse,
     parameters: [
       {
         name: "body",
@@ -19720,7 +20347,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/orgStatus",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_OrgStatusWSResponse,
     parameters: [
       {
         name: "body",
@@ -19733,7 +20360,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/bulkProvisionPins",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BulkPinsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19746,7 +20373,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/bulkRotatePins",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BulkPinsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19759,7 +20386,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/createPin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BasePinWSResponse,
     parameters: [
       {
         name: "body",
@@ -19772,7 +20399,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/deletePin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BasePinWSResponse,
     parameters: [
       {
         name: "body",
@@ -19785,7 +20412,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/findPinsByLocationAndUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_FindPinsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19798,7 +20425,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/findPinsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_FindPinsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19811,7 +20438,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/getAvailablePinCode",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_GetAvailableALMPinCodeWSResponse,
     parameters: [
       {
         name: "body",
@@ -19824,7 +20451,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/getPin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BasePinWSResponse,
     parameters: [
       {
         name: "body",
@@ -19837,7 +20464,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/rotatePin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BasePinWSResponse,
     parameters: [
       {
         name: "body",
@@ -19850,7 +20477,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/pin/updatePin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_pin_BasePinWSResponse,
     parameters: [
       {
         name: "body",
@@ -19863,7 +20490,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/resetTripwireGroupCount",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_ResetAlertMonitoringTripwireGroupCountWSResponse,
     parameters: [
       {
         name: "body",
@@ -19876,7 +20503,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/alertmonitoring/updateAlertMonitoringSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Alertmonitoring_UpdateNoonlightSettingsForLocationResponse,
     parameters: [
       {
         name: "body",
@@ -19889,7 +20516,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/delete",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_DeleteAudioGatewayWSResponse,
     parameters: [
       {
         name: "body",
@@ -19902,7 +20529,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getAudioSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_GetAudioSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19915,7 +20542,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_GetAudioGatewayConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -19928,7 +20555,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getFullAudioGatewayState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_GetFullAudioGatewayStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -19941,7 +20568,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getMediaUris",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_GetMediaUrisWSResponse,
     parameters: [
       {
         name: "body",
@@ -19954,7 +20581,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getMinimalAudioGatewayStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_GetMinimalAudioGatewayStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -19967,7 +20594,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getOfflineLanStreamingInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_GetAudioGatewayOfflineLanStreamingInfoWSResponse,
     parameters: [
       {
         name: "body",
@@ -19980,7 +20607,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getPresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_GetPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -19993,7 +20620,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/getUptimeWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_GetUptimeWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20006,7 +20633,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/reboot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_RebootDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -20019,7 +20646,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/updateConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_UpdateAudioGatewayConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20032,7 +20659,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audiogateway/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audiogateway_UpdateAudioGatewayDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20045,7 +20672,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/cancelLoopingAudioPlayback",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_CancelLoopingAudioPlaybackWSResponse,
     parameters: [
       {
         name: "body",
@@ -20058,7 +20685,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/deleteAudioUploadMetadata",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_DeleteAudioUploadMetadataWSResponse,
     parameters: [
       {
         name: "body",
@@ -20071,7 +20698,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/getAudioUploadMetadataForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_GetAudioUploadMetadataForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -20084,7 +20711,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/playAudioUpload",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_PlayAudioUploadWSResponse,
     parameters: [
       {
         name: "body",
@@ -20097,7 +20724,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/updateAudioUploadMetadata",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_UpdateAudioUploadMetadataWSResponse,
     parameters: [
       {
         name: "body",
@@ -20110,7 +20737,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/uploadAudioPcm/:audioClipName",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_UploadAudioPcmWSResponse,
     parameters: [
       {
         name: "audioClipName",
@@ -20123,7 +20750,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/audioplayback/uploadAudioText",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Audioplayback_UploadAudioTextWSResponse,
     parameters: [
       {
         name: "body",
@@ -20136,7 +20763,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/delete",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Badgereader_DeleteBadgeReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -20149,7 +20776,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/getConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Badgereader_GetBadgeReaderConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20162,7 +20789,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/getFullState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Badgereader_GetBadgeReaderFullStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -20175,7 +20802,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/getMinimalStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Badgereader_GetBadgeReaderMinimalStateListWSResponse,
     parameters: [
       {
         name: "body",
@@ -20188,7 +20815,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/reboot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_RebootDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -20201,7 +20828,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/updateConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20214,7 +20841,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/badgereader/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateDeviceDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20227,7 +20854,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/getBaseStations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_GetBaseStationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20240,7 +20867,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/getSecureSecretForRegistered",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_GetSecureSecretForRegisteredWSResponse,
     parameters: [
       {
         name: "body",
@@ -20253,7 +20880,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/getSecureSecretForUnregistered",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_GetSecureSecretForUnregisteredWSResponse,
     parameters: [
       {
         name: "body",
@@ -20266,7 +20893,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/getSecureSecretOfRegisteredDeviceForRhombusKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_GetSecureSecretForRegisteredWSResponse,
     parameters: [
       {
         name: "body",
@@ -20279,7 +20906,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/getSensorHardwareFirmwareUpdateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_GetSensorHardwareFirmwareUpdateDetailsResponse,
     parameters: [
       {
         name: "body",
@@ -20292,7 +20919,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/registerSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_RegisterSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -20305,7 +20932,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ble/unregisterSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ble_UnregisterSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -20318,7 +20945,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/createRuleForButton",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Button_CreateRuleForButtonWSResponse,
     parameters: [
       {
         name: "body",
@@ -20331,7 +20958,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/deleteRuleForButton",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Button_DeleteRuleForButtonWSResponse,
     parameters: [
       {
         name: "body",
@@ -20344,7 +20971,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/getButtonPressEventsForSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Button_GetButtonPressEventsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -20357,7 +20984,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/getButtonRulesForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Button_GetButtonRulesForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -20370,7 +20997,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/getMinimalButtonStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Button_GetMinimalButtonStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -20383,7 +21010,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/getRulesForButton",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Button_GetRulesForButtonWSResponse,
     parameters: [
       {
         name: "body",
@@ -20396,7 +21023,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/updateConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20409,7 +21036,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/button/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateDeviceDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20422,7 +21049,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/calibrateFloorplanProjection",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_CalibrateFloorplanProjectionWSResponse,
     parameters: [
       {
         name: "body",
@@ -20435,7 +21062,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createCustomFootageSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateFootageSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20448,7 +21075,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createFootageBoundingBoxes",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateFootageBoundingBoxesWSResponse,
     parameters: [
       {
         name: "body",
@@ -20461,7 +21088,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createProtectedSharedLiveVideoStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateSharedLiveVideoStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -20474,7 +21101,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createProtectedSharedVideoWall",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateSharedVideoWallWSResponse,
     parameters: [
       {
         name: "body",
@@ -20487,7 +21114,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createRawHttpStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_CreateRawHttpStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -20500,7 +21127,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createSharedLiveVideoStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateSharedLiveVideoStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -20513,7 +21140,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createSharedVideoWall",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateSharedVideoWallWSResponse,
     parameters: [
       {
         name: "body",
@@ -20526,7 +21153,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/createVideoWall",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_CreateVideoWallWSResponse,
     parameters: [
       {
         name: "body",
@@ -20539,7 +21166,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/delete",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_DeleteCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -20552,7 +21179,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/deleteCustomFootageSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_DeleteCustomFootageSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20565,7 +21192,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/deleteRawHttpStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_DeleteRawHttpStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -20578,7 +21205,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/deleteSharedLiveVideoStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: DeleteSharedLiveVideoStreamForDeviceResponse,
     parameters: [
       {
         name: "body",
@@ -20591,7 +21218,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/deleteSharedVideoWall",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_DeleteSharedVideoWallWSResponse,
     parameters: [
       {
         name: "body",
@@ -20604,7 +21231,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/deleteVideoWall",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_DeleteVideoWallWSResponse,
     parameters: [
       {
         name: "body",
@@ -20617,7 +21244,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/erase",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_EraseCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -20630,7 +21257,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/findAllRawHttpStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_FindAllRawHttpStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20643,7 +21270,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/findAllSharedLiveVideoStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_FindAllSharedLiveVideoStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20656,7 +21283,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/findSharedLiveVideoStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_FindSharedLiveVideoStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20669,7 +21296,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/findSharedVideoWalls",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_FindSharedVideoWallsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20682,7 +21309,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/generateBatchRegistrationInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GenerateBatchRegistrationInfoResponse,
     parameters: [
       {
         name: "body",
@@ -20695,7 +21322,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/generateWifiChangeAuthorizationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GenerateWifiChangeAuthorizationTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -20708,7 +21335,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getBatchRegistrationUsage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetBatchRegistrationTokenUsageResponse,
     parameters: [
       {
         name: "body",
@@ -20721,7 +21348,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getCameraAIThresholds",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetCameraAIThresholdsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20734,7 +21361,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getCloudArchivedMediaInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetCloudArchivedMediaInfoWSResponse,
     parameters: [
       {
         name: "body",
@@ -20747,7 +21374,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getCloudArchivingConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetCloudArchivingConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20760,7 +21387,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20773,7 +21400,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getCurrentState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetCurrentStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -20786,7 +21413,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getCustomFootageSeekpointsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetCustomFootageSeekpointsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -20799,7 +21426,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetCameraDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20812,7 +21439,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFacetedConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Deviceconfig_GetFacetedUserConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -20825,7 +21452,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFootageBoundingBoxes",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFootageBoundingBoxesWSResponse,
     parameters: [
       {
         name: "body",
@@ -20838,7 +21465,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFootageBoundingBoxesForMultiple",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFootageBoundingBoxesForMultipleWSResponse,
     parameters: [
       {
         name: "body",
@@ -20851,7 +21478,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFootageSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFootageSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20864,7 +21491,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFootageSeekpointsForMultiple",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFootageSeekpointsForMultipleWSResponse,
     parameters: [
       {
         name: "body",
@@ -20877,7 +21504,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFootageSeekpointsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFootageSeekpointsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -20890,7 +21517,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getFullCameraState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFullCameraStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -20903,7 +21530,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getLineCrossingEnabledCamerasForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetLineCrossingEnabledCamerasForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -20916,7 +21543,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getMediaUris",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetMediaUrisWSResponse,
     parameters: [
       {
         name: "body",
@@ -20929,7 +21556,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getMinimalCameraLocationMap",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetMinimalCameraLocationMapWSResponse,
     parameters: [
       {
         name: "body",
@@ -20942,7 +21569,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getMinimalCameraStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetMinimalCameraStateListWSResponse,
     parameters: [
       {
         name: "body",
@@ -20955,7 +21582,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getMinimalList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetMinimalListWSResponse,
     parameters: [
       {
         name: "body",
@@ -20968,7 +21595,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getOccupancyEnabledCameras",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetFacetedCameraDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -20981,7 +21608,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getOfflineLanStreamingInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetOfflineLanStreamingInfoWSResponse,
     parameters: [
       {
         name: "body",
@@ -20994,7 +21621,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getPresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21007,7 +21634,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getRawHttpStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_GetRawHttpStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21020,7 +21647,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getStorageRecoveryFile",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetStorageRecoveryFileWSResponse,
     parameters: [
       {
         name: "body",
@@ -21033,7 +21660,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getUptimeWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetUptimeWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21046,7 +21673,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/getVideoWalls",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetVideoWallsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21059,7 +21686,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/reboot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_RebootCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -21070,9 +21697,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/camera/updateCameraAIThresholds",
+    path: "/api/camera/revertToDefaults",
     requestFormat: "json",
     response: z.unknown(),
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Camera_RevertCameraToDefaultsWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/camera/updateCameraAIThresholds",
+    requestFormat: "json",
+    response: Camera_UpdateCameraAIThresholdsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21085,7 +21725,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateCameraHumanLoiteringConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateCameraHumanLoiteringWSResponse,
     parameters: [
       {
         name: "body",
@@ -21098,7 +21738,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateCameraLineCrossingThresholds",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateCameraLineCrossingThresholdsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21111,7 +21751,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -21124,7 +21764,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -21137,7 +21777,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateDetailsBulkV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateCameraV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -21150,7 +21790,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateDetailsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateCameraV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -21163,7 +21803,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateFacetedConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -21176,7 +21816,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateFirmware",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateCameraFirmwareWSResponse,
     parameters: [
       {
         name: "body",
@@ -21189,7 +21829,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateVideoWalls",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateVideoWallWSResponse,
     parameters: [
       {
         name: "body",
@@ -21202,7 +21842,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/camera/updateWifi",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_UpdateWifiWSResponse,
     parameters: [
       {
         name: "body",
@@ -21213,9 +21853,126 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/chatbot/automation/createAutomatedPrompt",
+    requestFormat: "json",
+    response: Chatbot_BaseAutomatedPromptWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_CreateAutomatedPromptWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/deleteAutomatedPrompt",
+    requestFormat: "json",
+    response: BaseApiResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_DeleteAutomatedPromptWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/getAutomatedPrompt",
+    requestFormat: "json",
+    response: Chatbot_BaseAutomatedPromptWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_GetAutomatedPromptWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/getAutomatedPromptChatHistory",
+    requestFormat: "json",
+    response: Chatbot_GetChatHistoryWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_GetAutomatedPromptChatHistoryWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/getAutomatedPromptsForOrg",
+    requestFormat: "json",
+    response: Chatbot_GetAutomatedPromptsForOrgWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PaginateRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/submitTestPrompt",
+    requestFormat: "json",
+    response: Chatbot_SubmitTestPromptWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_SubmitTestPromptWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/updateAutomatedPrompt",
+    requestFormat: "json",
+    response: Chatbot_BaseAutomatedPromptWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_UpdateAutomatedPromptWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/automation/verifyJobScheduled",
+    requestFormat: "json",
+    response: Chatbot_VerifyJobScheduledWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_VerifyJobScheduledWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/chatbot/deleteChatRecord",
+    requestFormat: "json",
+    response: BaseApiResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_DeleteChatRecordWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/chatbot/deleteChatbotConversation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -21226,9 +21983,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/chatbot/getChatHistory",
+    requestFormat: "json",
+    response: Chatbot_GetChatHistoryWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_GetChatHistoryWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/chatbot/getChatHistoryByContextId",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Chatbot_GetChatHistoryWSResponse,
     parameters: [
       {
         name: "body",
@@ -21239,9 +22009,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/chatbot/getChatRecord",
+    requestFormat: "json",
+    response: Chatbot_BaseChatWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_GetChatRecordWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/chatbot/getChatbotConversations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Chatbot_GetChatbotConversationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21252,9 +22035,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/chatbot/getSharedChatRecords",
+    requestFormat: "json",
+    response: Chatbot_GetSharedChatRecordsWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_GetSharedChatRecordsWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/chatbot/submitChat",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Chatbot_SubmitChatWSResponse,
     parameters: [
       {
         name: "body",
@@ -21265,9 +22061,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/chatbot/updateChatRecord",
+    requestFormat: "json",
+    response: Chatbot_BaseChatWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Chatbot_UpdateChatRecordWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/chatbot/updateChatbotConversation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Chatbot_UpdateChatbotConversationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21280,7 +22089,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/deleteEnvironmentalGateway",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_DeleteEnvironmentalGatewayWSResponse,
     parameters: [
       {
         name: "body",
@@ -21293,7 +22102,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getClimateEventsForSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetClimateEventsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21306,7 +22115,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getClimateEventsForTags",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetClimateEventsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21319,7 +22128,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getClimatePresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Sensor_GetSensorPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21332,7 +22141,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetClimateSensorConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -21345,7 +22154,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getEnvironmentalGatewayShadows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetEnvironmentalGatewayShadowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21358,7 +22167,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getEventsForEnvironmentalGateway",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetEventsForEnvironmentalGatewayWSResponse,
     parameters: [
       {
         name: "body",
@@ -21371,7 +22180,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getMinimalClimateStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetMinimalClimateStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -21384,7 +22193,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getMinimalEnvironmentalGatewayStates",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetMinimalEnvironmentalGatewayStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -21397,7 +22206,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/getMinimalStateEventsForEnvironmentalGateway",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_GetMinimalEnvironmentalGatewayStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -21410,7 +22219,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/reboot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_RebootDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -21423,7 +22232,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_UpdateClimateSensorDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21436,7 +22245,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/climate/updateEnvironmentalGatewayDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Climate_UpdateEnvironmentalGatewayDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21449,7 +22258,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/addAccessControlledDoorLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_AddAccessControlledDoorLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -21462,7 +22271,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/applyAccessControlledDoorStateOverride",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_ApplyAccessControlledDoorStateOverrideWSResponse,
     parameters: [
       {
         name: "body",
@@ -21475,7 +22284,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/cancelAccessControlledDoorStateOverride",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CancelAccessControlledDoorStateOverrideWSResponse,
     parameters: [
       {
         name: "body",
@@ -21488,7 +22297,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21501,7 +22310,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createAccessControlledDoorSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateAccessControlledDoorSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21514,7 +22323,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createIntegratedDoorPositionIndicator",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateIntegratedDoorPositionIndicatorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21527,7 +22336,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createIntegratedDoorRelay",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateIntegratedDoorRelayWSResponse,
     parameters: [
       {
         name: "body",
@@ -21540,7 +22349,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createIntegratedGenericButton",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateIntegratedGenericButtonWSResponse,
     parameters: [
       {
         name: "body",
@@ -21553,7 +22362,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createIntegratedGenericInput",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateIntegratedGenericInputWSResponse,
     parameters: [
       {
         name: "body",
@@ -21566,7 +22375,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createIntegratedGenericRelay",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateIntegratedGenericRelayWSResponse,
     parameters: [
       {
         name: "body",
@@ -21579,7 +22388,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createIntegratedRequestToExit",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateIntegratedRequestToExitWSResponse,
     parameters: [
       {
         name: "body",
@@ -21592,7 +22401,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createOsdpDoorReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateOsdpReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -21605,7 +22414,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createRhombusOsdpDoorReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateRhombusOsdpReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -21618,7 +22427,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/createWiegandReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateWiegandReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -21631,7 +22440,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/deleteAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_DeleteAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21644,7 +22453,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/deleteComponent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_DeleteComponentWSResponse,
     parameters: [
       {
         name: "body",
@@ -21657,7 +22466,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/deleteComponentsByOwnerDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_DeleteComponentsByOwnerDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -21670,7 +22479,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findAccessControlledDoorShadows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindAccessControlledDoorShadowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21683,7 +22492,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findAccessControlledDoorShadowsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindAccessControlledDoorShadowsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -21696,7 +22505,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findAccessControlledDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindAccessControlledDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21709,7 +22518,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findAccessControlledDoorsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindAccessControlledDoorsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -21722,7 +22531,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findAccessControlledDoorsByOwnerDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindAccessControlledDoorsByOwnerDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -21735,7 +22544,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findAllComponentShadows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindAllComponentShadowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21748,7 +22557,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21761,7 +22570,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -21774,7 +22583,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByComponent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByComponentWSResponse,
     parameters: [
       {
         name: "body",
@@ -21787,7 +22596,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByCorrelation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByCorrelationWSResponse,
     parameters: [
       {
         name: "body",
@@ -21800,7 +22609,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByCredentialHexValue",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByCredentialHexValueWSResponse,
     parameters: [
       {
         name: "body",
@@ -21813,7 +22622,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByCredentialUuid",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByCredentialUuidWSResponse,
     parameters: [
       {
         name: "body",
@@ -21826,7 +22635,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByCredentialValue",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByCredentialValueWSResponse,
     parameters: [
       {
         name: "body",
@@ -21839,7 +22648,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -21852,7 +22661,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByOwnerDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByOwnerDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -21865,7 +22674,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsBySupportAuthority",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsBySupportAuthorityWSResponse,
     parameters: [
       {
         name: "body",
@@ -21878,7 +22687,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -21891,7 +22700,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -21904,7 +22713,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsForOrgDashboard",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsForOrgDashboardWSResponse,
     parameters: [
       {
         name: "body",
@@ -21917,7 +22726,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentEventsForVideoIntercom",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentEventsForVideoIntercomWSResponse,
     parameters: [
       {
         name: "body",
@@ -21930,7 +22739,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentSeekPointsByAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentSeekPointsByAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -21943,7 +22752,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentSeekPointsByAccessControlledDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentSeekPointsByAccessControlledDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -21956,7 +22765,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentSeekPointsByComponent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentSeekPointsByComponentWSResponse,
     parameters: [
       {
         name: "body",
@@ -21969,7 +22778,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentSeekPointsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentSeekPointsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -21982,7 +22791,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentSeekPointsByOwnerDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentSeekPointsByOwnerDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -21995,7 +22804,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentSeekPointsByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentSeekPointsByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22008,7 +22817,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentShadowsByOwnerDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentShadowsByOwnerDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -22021,7 +22830,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findComponentsByOwnerDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindComponentsByOwnerDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -22034,7 +22843,8 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findDistinctByOriginatorCredentialReceivedEventsByAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response:
+      Component_FindDistinctOriginatorCredentialReceivedEventsByAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -22048,7 +22858,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findDistinctByOriginatorCredentialReceivedEventsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindDistinctOriginatorCredentialReceivedEventsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -22061,7 +22871,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findMinimalStateAccessControlledDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindMinimalStateAccessControlledDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22074,7 +22884,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/findMinimalStateAccessControlledDoorsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_FindMinimalStateAccessControlledDoorsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -22087,7 +22897,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/getAccessControlledDoorLabelsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_GetAccessControlledDoorLabelsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -22100,7 +22910,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/getCurrentExpectedAccessControlledDoorState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_GetCurrentExpectedAccessControlledDoorStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -22113,7 +22923,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/getFullAccessControlledDoorShadow",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_GetFullAccessControlledDoorShadowWSResponse,
     parameters: [
       {
         name: "body",
@@ -22126,7 +22936,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/getOrCreateDevicePhysicalPortConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_GetOrCreateDevicePhysicalPortConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -22139,7 +22949,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/removeAccessControlledDoorLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_RemoveAccessControlledDoorLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -22152,7 +22962,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateAccessControlledDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateAccessControlledDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -22165,7 +22975,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedDoorPositionIndicator",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedDoorPositionIndicatorWSResponse,
     parameters: [
       {
         name: "body",
@@ -22178,7 +22988,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedDoorRelay",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedDoorRelayWSResponse,
     parameters: [
       {
         name: "body",
@@ -22191,7 +23001,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedGenericButton",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedGenericButtonWSResponse,
     parameters: [
       {
         name: "body",
@@ -22204,7 +23014,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedGenericInput",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedGenericInputWSResponse,
     parameters: [
       {
         name: "body",
@@ -22217,7 +23027,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedGenericRelay",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedGenericRelayWSResponse,
     parameters: [
       {
         name: "body",
@@ -22230,7 +23040,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedGenericRelaySteadyState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedGenericRelaySteadyStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -22243,7 +23053,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedGenericRelayTransientState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedGenericRelayTransientStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -22256,7 +23066,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateIntegratedRequestToExit",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateIntegratedRequestToExitWSResponse,
     parameters: [
       {
         name: "body",
@@ -22269,7 +23079,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateOsdpDoorReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateOsdpReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -22282,7 +23092,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateRhombusOsdpDoorReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateRhombusOsdpReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -22295,7 +23105,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/component/updateWiegandDoorReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_UpdateWiegandReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -22308,7 +23118,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/acceptUsagePolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_AcceptUsagePolicyResponse,
     parameters: [
       {
         name: "body",
@@ -22321,7 +23131,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/deleteAllNotificationSnoozeSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_DeleteNotificationSnoozeSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -22334,7 +23144,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/deleteNotificationSnoozeSettingForComponentComposite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_DeleteNotificationSnoozeSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -22347,7 +23157,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/deleteNotificationSnoozeSettingForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_DeleteNotificationSnoozeSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -22360,7 +23170,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/deleteNotificationSnoozeSettingForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_DeleteNotificationSnoozeSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -22373,7 +23183,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getCurrentPartnerUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetCurrentPartnerUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22386,7 +23196,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getCurrentRhombusKeyUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetCurrentRhombusKeyUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22399,7 +23209,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22412,7 +23222,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getCurrentUserConsoleOrgsForContextSwitch",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetCurrentUserConsoleOrgsForContextSwitchWSResponse,
     parameters: [
       {
         name: "body",
@@ -22425,7 +23235,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getCurrentUserRhombusKeyOrgsForContextSwitch",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetCurrentUserRhombusKeyOrgsForContextSwitchWSResponse,
     parameters: [
       {
         name: "body",
@@ -22438,7 +23248,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getCurrentUserSessions",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetCurrentUserSessionsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22451,7 +23261,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getDashboardStatus",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetDashboardStatusWSResponse,
     parameters: [
       {
         name: "body",
@@ -22464,7 +23274,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getRhombusKeyConfigForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetRhombusKeyConfigForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22477,7 +23287,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/getUserSnoozedNotificationSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_GetUserSnoozedNotificationSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22490,7 +23300,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/logoutAllOtherCurrentUserSessions",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_LogoutAllOtherCurrentUserSessionsResponse,
     parameters: [
       {
         name: "body",
@@ -22503,7 +23313,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/setFlag",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_SetFlagWSResponse,
     parameters: [
       {
         name: "body",
@@ -22516,7 +23326,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/snoozeAllNotifications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_SnoozeAllNotificationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22529,7 +23339,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/snoozeComponentCompositeNotifications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_SnoozeNotificationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22542,7 +23352,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/snoozeDeviceNotifications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_SnoozeNotificationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22555,7 +23365,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/snoozeLocationNotifications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_SnoozeNotificationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22568,7 +23378,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/updateCurrentPartnerUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_UpdateCurrentPartnerWSResponse,
     parameters: [
       {
         name: "body",
@@ -22581,7 +23391,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/updateCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_UpdateCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22594,7 +23404,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/updateCurrentUserNotificationSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdateUserNotificationSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22607,7 +23417,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/updateDashboardCustomizations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_UpdateDashboardCustomizationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22620,7 +23430,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/updateFrontendCustomizations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_UpdateFrontendCustomizationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22633,7 +23443,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/customer/updateRhombusKeyPreferencesForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Customer_UpdateRhombusKeyPreferencesForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -22646,7 +23456,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/developer/createEventListener",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Developer_CreateEventListenerWSResponse,
     parameters: [
       {
         name: "body",
@@ -22659,7 +23469,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/developer/deleteEventListener",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Developer_DeleteEventListenerWSResponse,
     parameters: [
       {
         name: "body",
@@ -22672,7 +23482,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/developer/getAllEventListeners",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Developer_GetAllEventListenersWSResponse,
     parameters: [
       {
         name: "body",
@@ -22685,7 +23495,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/developer/getEventListenersForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Developer_GetEventListenersForDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -22698,7 +23508,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/deviceconfig/getFacetedConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Deviceconfig_GetFacetedUserConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -22711,7 +23521,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/deviceconfig/updateFacetedConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -22724,7 +23534,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/door/getDoorEventsForSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Door_GetDoorEventsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -22737,7 +23547,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/door/getDoorEventsForTags",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Door_GetDoorEventsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -22750,7 +23560,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/door/getDoorPresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Sensor_GetSensorPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22763,7 +23573,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/door/getMinimalDoorStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Door_GetMinimalDoorStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -22776,7 +23586,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/door/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Door_UpdateDoorSensorDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22789,7 +23599,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/calibrateFloorplanProjection",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_CalibrateFloorplanProjectionWSResponse,
     parameters: [
       {
         name: "body",
@@ -22802,7 +23612,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/createRawHttpStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_CreateRawHttpStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -22815,7 +23625,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/createRuleForDoorbellCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_CreateRuleForDoorbellCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -22828,7 +23638,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/createSharedLiveVideoStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_CreateSharedLiveVideoStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -22841,7 +23651,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/delete",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_DeleteDoorbellCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -22854,7 +23664,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/deleteRawHttpStream",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_DeleteRawHttpStreamWSResponse,
     parameters: [
       {
         name: "body",
@@ -22867,7 +23677,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/deleteRuleForDoorbellCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_DeleteRuleForDoorbellCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -22880,7 +23690,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/findAllRawHttpStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_FindAllRawHttpStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22893,7 +23703,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/findComponentEventsForDoorbellCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_FindComponentEventsForDoorbellCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -22906,7 +23716,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/findComponentSeekPointsForDoorbellCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_FindComponentSeekPointsForDoorbellCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -22919,7 +23729,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/findSharedLiveVideoStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_FindSharedLiveVideoStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -22932,7 +23742,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getBoundingBoxes",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_GetBoundingBoxesWSResponse,
     parameters: [
       {
         name: "body",
@@ -22945,7 +23755,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetDoorbellCameraConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -22958,7 +23768,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getDoorbellCameraRulesForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetDoorbellCameraRulesForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -22971,7 +23781,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getFullState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetDoorbellCameraFullStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -22984,7 +23794,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getMediaUris",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetDoorbellCameraMediaUrisWSResponse,
     parameters: [
       {
         name: "body",
@@ -22997,7 +23807,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getMinimalStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetDoorbellCameraMinimalStateListWSResponse,
     parameters: [
       {
         name: "body",
@@ -23010,7 +23820,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getOfflineLanStreamingInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetDoorbellCameraOfflineLanStreamingInfoWSResponse,
     parameters: [
       {
         name: "body",
@@ -23023,7 +23833,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getPresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_GetPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23036,7 +23846,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getRawHttpStreams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_rawstream_GetRawHttpStreamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23049,7 +23859,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getRulesForDoorbellCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorbellcamera_GetRulesForDoorbellCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -23062,7 +23872,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_GetSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23075,7 +23885,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/getUptimeWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_GetUptimeWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23088,7 +23898,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/reboot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_RebootDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -23101,7 +23911,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/updateConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -23114,7 +23924,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorbellcamera/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateDeviceDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23127,7 +23937,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/createDoorControllerRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_CreateDoorControllerRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -23140,7 +23950,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/delete",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_DeleteDoorControllerWSResponse,
     parameters: [
       {
         name: "body",
@@ -23153,7 +23963,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/deleteDoorControllerRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_DeleteDoorControllerRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -23166,7 +23976,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/getConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_GetDoorControllerConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -23179,7 +23989,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/getDoorControllerRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_GetDoorControllerRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -23192,7 +24002,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/getDoorControllerRules",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_GetDoorControllerRulesWSResponse,
     parameters: [
       {
         name: "body",
@@ -23205,7 +24015,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/getDoorControllerStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_GetDoorControllerStateListWSResponse,
     parameters: [
       {
         name: "body",
@@ -23218,7 +24028,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/registerDiscoveredRhombusReader",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_RegisterDiscoveredRhombusReaderWSResponse,
     parameters: [
       {
         name: "body",
@@ -23231,7 +24041,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/updateConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Common_devices_UpdateConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -23244,7 +24054,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_UpdateDoorControllerDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23257,7 +24067,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/doorcontroller/updateDoorControllerRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Doorcontroller_UpdateDoorControllerRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -23270,7 +24080,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/ethernettester/getEthernetTesterConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Ethernettester_GetEthernetTesterConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -23283,7 +24093,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/createClipGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_groups_CreateClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23296,7 +24106,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/createSharedClipGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_CreateSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23309,7 +24119,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/createSharedClipGroupV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_CreateSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23322,7 +24132,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/createSharedClipGroupV3",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_CreateSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23335,7 +24145,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/deleteAlertMonitoringThreatCase",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DeleteAlertMonitoringThreatCaseWSResponse,
     parameters: [
       {
         name: "body",
@@ -23348,7 +24158,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/deleteAlertMonitoringThreatCaseByStatus",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DeleteAlertMonitoringThreatCaseByStatusWSResponse,
     parameters: [
       {
         name: "body",
@@ -23361,7 +24171,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/deleteClipGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_groups_DeleteClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23374,7 +24184,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/deleteSavedClip",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DeleteSavedClipWSResponse,
     parameters: [
       {
         name: "body",
@@ -23387,7 +24197,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/deleteSharedClipGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DeleteSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23400,7 +24210,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/deleteSharedClipGroupV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DeleteSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23413,7 +24223,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/dismissAllPolicyAlertsForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DismissAllPolicyAlertsForDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -23426,7 +24236,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/dismissAllPolicyAlertsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DismissAllPolicyAlertsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23439,7 +24249,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/dismissPolicyAlertV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DismissPolicyAlertWSResponse,
     parameters: [
       {
         name: "body",
@@ -23452,7 +24262,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/dismissPolicyAlertsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_DismissPolicyAlertsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23465,7 +24275,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getAlertMonitoringThreatCase",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetAlertMonitoringThreatCaseWSResponse,
     parameters: [
       {
         name: "body",
@@ -23478,7 +24288,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getAlertMonitoringThreatCases",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetAlertMonitoringThreatCasesWSResponse,
     parameters: [
       {
         name: "body",
@@ -23491,7 +24301,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getClipGroupDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_groups_GetClipGroupDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23504,7 +24314,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getClipGroupsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_groups_GetClipGroupsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -23517,7 +24327,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getClipWithProgress",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetClipWithProgressWSResponse,
     parameters: [
       {
         name: "body",
@@ -23530,7 +24340,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getClipsWithProgress",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetClipsWithProgressWSResponse,
     parameters: [
       {
         name: "body",
@@ -23543,7 +24353,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getExpiringClipsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetClipsWithProgressWSResponse,
     parameters: [
       {
         name: "body",
@@ -23554,9 +24364,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/event/getExpiringPolicyAlerts",
+    requestFormat: "json",
+    response: Event_GetExpiringPolicyAlertsWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Event_GetExpiringPolicyAlertsWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/event/getMotionGrid",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetMotionGridWSResponse,
     parameters: [
       {
         name: "body",
@@ -23569,7 +24392,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getMotionHeatMap",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetMotionGridCountsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23582,7 +24405,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlert",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertWSResponse,
     parameters: [
       {
         name: "body",
@@ -23595,7 +24418,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertCount",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertCountWSResponse,
     parameters: [
       {
         name: "body",
@@ -23608,7 +24431,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23621,7 +24444,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertGroupsForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertGroupsForDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -23634,7 +24457,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertGroupsForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertGroupsForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -23647,7 +24470,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertGroupsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertGroupsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -23660,7 +24483,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -23673,7 +24496,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlerts",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23686,7 +24509,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getPolicyAlertsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetPolicyAlertsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -23699,7 +24522,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSavedClipCount",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSavedClipCountWSResponse,
     parameters: [
       {
         name: "body",
@@ -23712,7 +24535,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSavedClipDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSavedClipDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23725,7 +24548,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSavedClips",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSavedClipsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23738,7 +24561,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSavedClipsByExternalTransactionId",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSavedClipsByExternalTransactionIdWSResponse,
     parameters: [
       {
         name: "body",
@@ -23751,7 +24574,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSavedClipsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSavedClipsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -23764,7 +24587,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSharedClipGroupDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSharedClipGroupDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23777,7 +24600,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSharedClipGroups",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSharedClipGroupsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23790,7 +24613,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSharedClipGroupsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSharedClipGroupsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -23803,7 +24626,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getSplicedClipsInProgress",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetSplicedClipsInProgressWSResponse,
     parameters: [
       {
         name: "body",
@@ -23816,7 +24639,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/getUnhealthyDeviceAlerts",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_GetUnhealthyDeviceAlertsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23829,7 +24652,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/muteNotificationsForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_MuteNotificationsForDevicetWSResponse,
     parameters: [
       {
         name: "body",
@@ -23842,7 +24665,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/reportBadPolicyAlert",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_ReportBadPolicyAlertWSResponse,
     parameters: [
       {
         name: "body",
@@ -23855,7 +24678,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/savePolicyAlertV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_SavePolicyAlertWSResponse,
     parameters: [
       {
         name: "body",
@@ -23868,7 +24691,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/searchMotionGrid",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_SearchMotionGridWSResponse,
     parameters: [
       {
         name: "body",
@@ -23881,7 +24704,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/searchMotionGridWithActivities",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_SearchMotionGridWithActivitiesWSResponse,
     parameters: [
       {
         name: "body",
@@ -23894,7 +24717,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/unSavePolicyAlertV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_UnSavePolicyAlertWSResponse,
     parameters: [
       {
         name: "body",
@@ -23907,7 +24730,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/updateClipGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_groups_UpdateClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23920,7 +24743,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/updatePolicyAlertTextDescription",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_UpdatePolicyAlertTextDescriptionWSResponse,
     parameters: [
       {
         name: "body",
@@ -23933,7 +24756,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/updateSavedClip",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_UpdateSavedClipWSResponse,
     parameters: [
       {
         name: "body",
@@ -23946,7 +24769,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/updateSharedClipGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_UpdateSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23959,7 +24782,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/event/updateSharedClipGroupV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Event_UpdateSharedClipGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -23972,7 +24795,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/eventSearch/getCameraOrDoorbellCameraSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Eventsearch_GetCameraOrDoorbellCameraSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23985,7 +24808,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/eventSearch/getEventSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Eventsearch_GetEventSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -23998,7 +24821,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/eventSearch/getEventSeekpointsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Eventsearch_GetEventSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -24011,7 +24834,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/eventSearchV2/getEventSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24037,7 +24860,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/climateEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24076,7 +24899,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/doorEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24089,7 +24912,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/environmentalGatewayEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24115,7 +24938,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/motionEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24141,7 +24964,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/peopleEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24154,7 +24977,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/proximityEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24167,7 +24990,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/export/proximityLocomotionEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24232,7 +25055,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/deleteFaceEvent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_DeleteFaceEventWSResponse,
     parameters: [
       {
         name: "body",
@@ -24258,7 +25081,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findFaceEventsByDeviceForReporting",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindFaceEventsByDeviceForReportingWSResponse,
     parameters: [
       {
         name: "body",
@@ -24271,7 +25094,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findFaceEventsByLocationForReporting",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindFaceEventsByLocationForReportingWSResponse,
     parameters: [
       {
         name: "body",
@@ -24284,7 +25107,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findFaceEventsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindFaceEventsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -24297,7 +25120,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findFaceEventsByOrgForReporting",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindFaceEventsByOrgForReportingWSResponse,
     parameters: [
       {
         name: "body",
@@ -24310,7 +25133,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findSimilarFaceEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindSimilarFaceEventsWSResponse,
     parameters: [
       {
         name: "body",
@@ -24323,7 +25146,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findSimilarFaceEventsByEmbedding",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindSimilarFaceEventsByEmbeddingWSResponse,
     parameters: [
       {
         name: "body",
@@ -24336,7 +25159,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/findSimilarFaceEventsByFaceMatchmaker",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_FindSimilarFaceEventsByFaceMatchmakerWSResponse,
     parameters: [
       {
         name: "body",
@@ -24349,7 +25172,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/getFaceEvent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_GetFaceEventWSResponse,
     parameters: [
       {
         name: "body",
@@ -24362,13 +25185,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/faceEvent/processFaceEventSearchImage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_ProcessFaceEventSearchImageWSResponse,
   },
   {
     method: "post",
     path: "/api/faceRecognition/faceEvent/updateFaceEvent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_faceevent_UpdateFaceEventWSResponse,
     parameters: [
       {
         name: "body",
@@ -24381,7 +25204,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/createFaceMatchmakerFromSighting",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_CreateFaceMatchmakerFromSightingWSResponse,
     parameters: [
       {
         name: "body",
@@ -24394,13 +25217,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/createPersonAndFaceMatchmakers",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_CreatePersonAndFaceMatchmakersWSResponse,
   },
   {
     method: "post",
     path: "/api/faceRecognition/matchmaker/deleteFaceMatchmaker",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_DeleteFaceMatchmakerWSResponse,
     parameters: [
       {
         name: "body",
@@ -24413,7 +25236,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/findFaceMatchmakersByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_FindFaceMatchmakersByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -24426,7 +25249,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/findFaceMatchmakersByPerson",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_FindFaceMatchmakersByPersonWSResponse,
     parameters: [
       {
         name: "body",
@@ -24439,7 +25262,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/findFaceUploadMetadataByTransaction",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_FindFaceUploadMetadataByTransactionWSResponse,
     parameters: [
       {
         name: "body",
@@ -24452,7 +25275,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/getFaceMatchingConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_GetFaceMatchingConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -24465,7 +25288,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/getFaceMatchmaker",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_GetFaceMatchmakerWSResponse,
     parameters: [
       {
         name: "body",
@@ -24478,7 +25301,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/updateFaceMatchingConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_UpdateFaceMatchingConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -24491,7 +25314,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/uploadFaceMatchmakerForPerson/:personUuid",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_UploadFaceMatchmakerForPersonWSResponse,
     parameters: [
       {
         name: "personUuid",
@@ -24509,7 +25332,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/uploadFaceMatchmakers",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_UploadFaceMatchmakersWSResponse,
     parameters: [
       {
         name: "transaction",
@@ -24527,13 +25350,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/matchmaker/validateFaceMatchmakerImage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_matchmaker_ValidateFaceMatchmakerImageWSResponse,
   },
   {
     method: "post",
     path: "/api/faceRecognition/person/addPersonLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_AddPersonLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -24546,7 +25369,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/createPerson",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_CreatePersonWSResponse,
     parameters: [
       {
         name: "body",
@@ -24559,7 +25382,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/deletePerson",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_DeletePersonWSResponse,
     parameters: [
       {
         name: "body",
@@ -24572,7 +25395,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/findPeopleByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_FindPeopleByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -24585,7 +25408,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/findPersonLabelsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_FindPersonLabelsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -24598,7 +25421,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/getPerson",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_GetPersonWSResponse,
     parameters: [
       {
         name: "body",
@@ -24611,7 +25434,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/removePersonLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_RemovePersonLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -24624,7 +25447,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/faceRecognition/person/updatePerson",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Facerecognition_person_UpdatePersonWSResponse,
     parameters: [
       {
         name: "body",
@@ -24637,7 +25460,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/feature/getDeviceEventTypes",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Feature_GetDeviceEventTypesWSResponse,
     parameters: [
       {
         name: "body",
@@ -24650,7 +25473,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/feature/getDeviceFeatures",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Feature_GetDeviceFeaturesWSResponse,
     parameters: [
       {
         name: "body",
@@ -24663,7 +25486,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/feature/getDeviceFeaturesList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Feature_GetDeviceFeaturesListWSResponse,
     parameters: [
       {
         name: "body",
@@ -24676,7 +25499,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/feature/getFeatureCompatabilityMatrix",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Feature_GetFeatureCompatabilityMatrixWSResponse,
     parameters: [
       {
         name: "body",
@@ -24689,7 +25512,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/feature/updateDeviceFeatures",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Feature_UpdateDeviceFeaturesWSResponse,
     parameters: [
       {
         name: "body",
@@ -24702,7 +25525,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestExternal/updateGuestByToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -24715,7 +25538,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/activateKiosk",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_ActivateKioskWSResponse,
     parameters: [
       {
         name: "body",
@@ -24728,7 +25551,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/addUsersToGuestManagementHostGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_AddUsersToOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -24741,7 +25564,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/createGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -24754,7 +25577,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/createGuestInvite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -24767,7 +25590,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/createGuestManagementHostGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_CreateOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -24780,7 +25603,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/createGuestManagementSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_CreateGuestManagementSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -24793,7 +25616,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/deleteGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -24806,7 +25629,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/deleteGuestManagementHostGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_DeleteOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -24819,7 +25642,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/deleteGuestManagementSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -24832,7 +25655,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/exportGuestActivity",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24845,7 +25668,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/exportGuestActivityForGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24858,7 +25681,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/exportGuestList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: StreamingOutput,
     parameters: [
       {
         name: "body",
@@ -24871,7 +25694,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/findAllUsersForGuestManagementHostGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindAllUsersForOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -24884,7 +25707,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/findGuestManagementHostGroupByExactName",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByExactNameWSResponse,
     parameters: [
       {
         name: "body",
@@ -24897,7 +25720,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/findGuestManagementHostGroupMembershipsByUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupMembershipsByUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -24910,7 +25733,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/findGuestManagementHostGroupsByNamePrefix",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByNamePrefixWSResponse,
     parameters: [
       {
         name: "body",
@@ -24923,7 +25746,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/findGuestManagementHostGroupsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -24936,7 +25759,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/findGuestManagementHostGroupsByUserMembership",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_FindOrgGroupsByUserMembershipWSResponse,
     parameters: [
       {
         name: "body",
@@ -24949,7 +25772,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getActivitiesForGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestActivityLogsWSResponse,
     parameters: [
       {
         name: "body",
@@ -24962,7 +25785,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getActivitiesForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestActivityLogsWSResponse,
     parameters: [
       {
         name: "body",
@@ -24975,7 +25798,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getAllGuestInvitesByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetAllGuestInvitesWSResponse,
     parameters: [
       {
         name: "body",
@@ -24988,7 +25811,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getAllGuestsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetAllGuestsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25001,7 +25824,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestWSResponse,
     parameters: [
       {
         name: "body",
@@ -25014,7 +25837,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getGuestActivityLogs",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestActivityLogsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25027,7 +25850,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getGuestInvite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestInviteWSResponse,
     parameters: [
       {
         name: "body",
@@ -25040,7 +25863,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getGuestInviteByEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestInvitesWSResponse,
     parameters: [
       {
         name: "body",
@@ -25053,7 +25876,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getGuestManagementSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetGuestManagementSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25066,13 +25889,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getKioskInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetKioskInfoWSResponse,
   },
   {
     method: "post",
     path: "/api/guestmanagement/getKiosksForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetKiosksForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -25085,7 +25908,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/getNametagTemplateForGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_GetNametagTemplateForGuestWSResponse,
     parameters: [
       {
         name: "body",
@@ -25098,7 +25921,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/inviteGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25111,7 +25934,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/removeUsersFromGuestManagementHostGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_RemoveUsersFromOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -25124,7 +25947,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/sendFormInvite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25137,7 +25960,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/signInGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25150,7 +25973,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/signOutGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25163,7 +25986,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/updateGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25176,7 +25999,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/updateGuestInvite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25189,7 +26012,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/updateGuestManagementHostGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Group_UpdateOrgGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -25202,7 +26025,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/guestmanagement/updateGuestManagementSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Guestmanagement_UpdateGuestManagementSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25215,7 +26038,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/help/feedback",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_SendFeedbackWSResponse,
     parameters: [
       {
         name: "body",
@@ -25228,7 +26051,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/help/openTickets",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_GetOpenTicketsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25241,7 +26064,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/help/openTicketsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_GetOpenTicketsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -25254,7 +26077,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/help/rma",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_ProcessRMAWSResponse,
     parameters: [
       {
         name: "body",
@@ -25267,7 +26090,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/help/ticket",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_CreateTicketWSResponse,
     parameters: [
       {
         name: "body",
@@ -25280,13 +26103,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/help/ticketWithFile",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_CreateTicketWSResponse,
   },
   {
     method: "post",
     path: "/api/help/triageDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Help_TriageDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -25299,7 +26122,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteDeviceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25312,7 +26135,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteFlicIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25325,7 +26148,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteHaloIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25338,7 +26161,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteIntuifaceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25351,7 +26174,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteNineOneOneCellularIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25364,7 +26187,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteOmnialertIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25377,7 +26200,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/deleteShellyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25390,7 +26213,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/generateFlicToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25403,7 +26226,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/generateNineOneOneCellularToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25416,7 +26239,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getDeviceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -25429,7 +26252,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getFlicDevices",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetFlicDevicesWSResponse,
     parameters: [
       {
         name: "body",
@@ -25442,7 +26265,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getFlicIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -25455,7 +26278,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getFlicModule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetFlicDevicesWSResponse,
     parameters: [
       {
         name: "body",
@@ -25468,7 +26291,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getNineOneOneCellularIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -25481,7 +26304,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getNineOneOneCellularSecurityZones",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetNineOneOneCSZonesWSResponse,
     parameters: [
       {
         name: "body",
@@ -25494,7 +26317,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getOmnialertIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -25507,7 +26330,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/getShellyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -25520,7 +26343,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/initiateShellyAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateCallbackAuthResponse,
     parameters: [
       {
         name: "body",
@@ -25533,7 +26356,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/togglePower",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_TogglePowerWSResponse,
     parameters: [
       {
         name: "body",
@@ -25546,7 +26369,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateDeviceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25559,7 +26382,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateFlicIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25572,7 +26395,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateHaloIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25585,7 +26408,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateIntuifaceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25598,7 +26421,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateNineOneOneCellularIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25611,7 +26434,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateOmnialertIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOmnialertIntegrationWSResponse,
     parameters: [
       {
         name: "body",
@@ -25624,7 +26447,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/IoT/updateShellyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25637,7 +26460,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/clearDtc",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_aperio_ClearAperioDtcWSResponse,
     parameters: [
       {
         name: "body",
@@ -25650,7 +26473,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/createAperioDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateAperioDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25663,7 +26486,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/createAperioGateway",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Component_CreateAperioGatewayWSResponse,
     parameters: [
       {
         name: "body",
@@ -25676,7 +26499,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/downloadCertificate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: z.string(),
     parameters: [
       {
         name: "body",
@@ -25689,7 +26512,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/getAperioIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetAperioIntegrationWSResponse,
     parameters: [
       {
         name: "body",
@@ -25702,7 +26525,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/rebootAperioGateway",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_aperio_RebootAperioGatewayWSResponse,
     parameters: [
       {
         name: "body",
@@ -25715,7 +26538,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/updateAperioIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25728,7 +26551,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/aperio/uploadFirmwareFile",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25743,7 +26566,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteAmtIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25756,7 +26579,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteAvigilonAltaIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25769,7 +26592,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteBrivoIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -25782,7 +26605,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteBrivoIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25795,7 +26618,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteBrivoIntegrationV3",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25808,7 +26631,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteButterflymxIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25821,7 +26644,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteButterflymxIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25834,7 +26657,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteGeneaIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25847,7 +26670,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteGeneaIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25860,7 +26683,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteInnerRangeIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25873,7 +26696,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteKisiIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25886,7 +26709,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteKisiIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25899,7 +26722,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteOpenpathIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25912,7 +26735,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteOpentechAllianceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25925,7 +26748,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deleteOpentechAllianceIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25938,7 +26761,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deletePdkIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25951,7 +26774,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deletePdkIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25964,7 +26787,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deletePlaceOsIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25977,7 +26800,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/deletePlaceOsIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -25990,7 +26813,7 @@ const endpoints = makeApi([
     method: "get",
     path: "/api/integrations/accessControl/enablePdkIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "systemId",
@@ -26008,7 +26831,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getAccessControlIntegrationsForAlm",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetAccessControlIntegrationsForAlmWSResponse,
     parameters: [
       {
         name: "body",
@@ -26021,7 +26844,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getAmtReaders",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBadgeIntegrationDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26034,7 +26857,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getAvigilonAltaIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26047,7 +26870,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getBrivoDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBrivoDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26060,7 +26883,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getBrivoDoorsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBrivoDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26073,7 +26896,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getBrivoDoorsV3",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBrivoDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26086,7 +26909,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getBrivoIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26099,7 +26922,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getButterflymxIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26112,7 +26935,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getButterflymxPanels",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetButterflymxPanelsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26125,7 +26948,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getButterflymxPanelsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetButterflymxPanelsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26138,7 +26961,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getGeneaDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetGeneaDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26151,7 +26974,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getGeneaIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26164,7 +26987,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getInnerRangeConsoles",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetInnerRangeConsolesWSResponse,
     parameters: [
       {
         name: "body",
@@ -26177,7 +27000,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getInnerRangeDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetInnerRangeDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26190,7 +27013,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getInnerRangeIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26203,7 +27026,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getKisiDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetKisiDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26216,7 +27039,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getKisiIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetKisiIntegrationWSResponse,
     parameters: [
       {
         name: "body",
@@ -26229,7 +27052,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getKisiIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26242,7 +27065,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getKisiPlaces",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBadgeIntegrationPlacesWSResponse,
     parameters: [
       {
         name: "body",
@@ -26255,7 +27078,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getOpenpathDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBadgeIntegrationDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26268,7 +27091,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getOpenpathLockdownPlans",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOpenpathLockdownsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26281,7 +27104,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getOpentechAllianceFacilities",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOpentechAllianceFacilitiesWSResponse,
     parameters: [
       {
         name: "body",
@@ -26294,7 +27117,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getOpentechAllianceFacilitiesV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOpentechAllianceFacilitiesWSResponse,
     parameters: [
       {
         name: "body",
@@ -26307,7 +27130,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getOpentechAllianceIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26320,7 +27143,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getPdkDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetPdkDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26333,7 +27156,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getPdkIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26346,7 +27169,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getPdkSystemId",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetPdkSystemIdWSResponse,
     parameters: [
       {
         name: "body",
@@ -26359,7 +27182,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getPlaceOsDoors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBadgeIntegrationGenericDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26372,7 +27195,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/getPlaceOsIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26385,7 +27208,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/initiateBrivoOauth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -26398,7 +27221,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/initiateButterflymxOauth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -26411,7 +27234,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/revertOpenpathLockdown",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26424,7 +27247,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/triggerOpenpathLockdown",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26437,7 +27260,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockBrivoDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26450,7 +27273,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockBrivoDoorV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26463,7 +27286,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockBrivoDoorV3",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26476,7 +27299,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockGeneaDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26489,7 +27312,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockInnerRangeDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26502,7 +27325,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockKisiDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26515,7 +27338,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockOpenpathDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26528,7 +27351,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockOpentechAllianceDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26541,7 +27364,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockOpentechAllianceDoorV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26554,7 +27377,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockPdkDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26567,7 +27390,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/unlockPlaceOsDoor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UnlockDoorWSResponse,
     parameters: [
       {
         name: "body",
@@ -26580,7 +27403,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateAmtIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26593,7 +27416,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateAvigilonAltaIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26606,7 +27429,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateBrivoIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26619,7 +27442,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateBrivoIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26632,7 +27455,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateBrivoIntegrationV3",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26645,7 +27468,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateButterflymxIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26658,7 +27481,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateButterflymxIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26671,7 +27494,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateGeneaIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26684,7 +27507,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateGeneaIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26697,7 +27520,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateInnerRangeIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26710,7 +27533,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateKisiIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26723,7 +27546,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateKisiIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26736,7 +27559,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateOpenpathIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26749,7 +27572,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateOpentechAllianceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26762,7 +27585,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updateOpentechAllianceIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26775,7 +27598,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updatePdkIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26788,7 +27611,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updatePdkIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26801,7 +27624,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updatePlaceOsSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26814,7 +27637,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/updatePlaceOsSettingsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26827,7 +27650,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/validateKisiApiKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26840,7 +27663,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/accessControl/validateKisiApiKeyV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26853,7 +27676,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/deleteAmtIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26866,7 +27689,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/deleteDeviceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26879,7 +27702,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/deleteMattermostIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26892,7 +27715,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/deleteOpenAIIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26905,7 +27728,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/deleteWebhookIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26918,7 +27741,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/deleteWebhookIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -26931,7 +27754,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getAmtReaders",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetBadgeIntegrationDoorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26944,7 +27767,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getApiTokenApplications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetApiTokenApplicationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26957,7 +27780,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getApiTokens",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetApiTokensWSResponse,
     parameters: [
       {
         name: "body",
@@ -26970,7 +27793,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getCalendlyEventDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetCalendlyEventDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -26983,7 +27806,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getDeviceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -26996,7 +27819,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getOpenAIIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27009,7 +27832,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getOpenAIModels",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOpenAIModelsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27022,7 +27845,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getOrgIntegrations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27035,7 +27858,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getOrgIntegrationsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetAllOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27048,7 +27871,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/getWebhookIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27061,7 +27884,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteDiceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27074,7 +27897,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteEmailIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27087,7 +27910,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteInformacastIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27100,7 +27923,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteLumeoIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27113,7 +27936,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteMattermostIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27126,7 +27949,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteMicrosoftTeamsIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27139,7 +27962,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteMicrosoftTeamsIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27152,7 +27975,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteMicrosoftTeamsUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27165,7 +27988,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteOpenAIIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27178,7 +28001,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deletePagerDutyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27191,7 +28014,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deletePimlocIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27204,7 +28027,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteRaptorIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27217,7 +28040,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteServiceNowIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27230,7 +28053,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/deleteSlackIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27243,7 +28066,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getDiceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27256,7 +28079,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getInformacastIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27269,7 +28092,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getInformacastScenarios",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetInformacastScenariosWSResponse,
     parameters: [
       {
         name: "body",
@@ -27282,7 +28105,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getLumeoIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27295,7 +28118,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getMicrosoftTeamsIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27308,7 +28131,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getMicrosoftUsersJoinedTeams",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetMicrosoftUsersJoinedTeamsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27321,7 +28144,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getOpenAIIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27334,7 +28157,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getOpenAIModels",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOpenAIModelsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27347,7 +28170,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getPimlocIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27360,7 +28183,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getRaptorBuildings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetRaptorBuildingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27373,7 +28196,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getRaptorIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27386,7 +28209,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/getRaptorTemplates",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetRaptorTemplatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -27399,7 +28222,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/initiateMicrosoftTeamsOAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -27412,7 +28235,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/initiateSlackOAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -27425,7 +28248,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/installMicrosoftTeamsBotForTeam",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27438,7 +28261,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/installMicrosoftTeamsBotForUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27451,7 +28274,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/uninstallMicrosoftTeamsBotForTeam",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27464,7 +28287,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/uninstallMicrosoftTeamsBotForUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27477,7 +28300,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateDiceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27490,7 +28313,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateEmailIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27503,7 +28326,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateInformacastIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27516,7 +28339,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateLumeoIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27529,7 +28352,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateMattermostIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27542,7 +28365,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateMicrosoftTeamsIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27555,7 +28378,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateMicrosoftTeamsIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27568,7 +28391,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateOpenAIIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27581,7 +28404,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updatePagerDutyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27594,7 +28417,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updatePimlocIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27607,7 +28430,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateRaptorIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27620,7 +28443,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateServiceNowIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27633,7 +28456,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateSlackIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27646,7 +28469,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/incidentManagement/updateSlackIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27659,7 +28482,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/getApiTokenApplications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetApiTokenApplicationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27672,7 +28495,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/getApiTokens",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetApiTokensWSResponse,
     parameters: [
       {
         name: "body",
@@ -27685,7 +28508,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/getOrgIntegrations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27698,7 +28521,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/getOrgIntegrationsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetAllOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27711,7 +28534,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/revokeApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_RevokeApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -27724,7 +28547,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/submitApiTokenApplication",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_SubmitApiTokenApplicationWSResponse,
     parameters: [
       {
         name: "body",
@@ -27737,7 +28560,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/org/updateApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -27750,7 +28573,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/revokeApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_RevokeApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -27763,7 +28586,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/createEnvoyInvite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27776,7 +28599,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/deleteEnvoyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27789,7 +28612,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/deleteEnvoyIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27802,7 +28625,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/deleteGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27815,7 +28638,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/deleteGuestManagementIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27828,7 +28651,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/deleteToastIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27841,7 +28664,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/deleteToastIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27854,7 +28677,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getAllGuestsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetAllGuestsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27867,7 +28690,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getCalendlyEventDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetCalendlyEventDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27880,7 +28703,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getEnvoyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27893,7 +28716,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetGuestWSResponse,
     parameters: [
       {
         name: "body",
@@ -27906,7 +28729,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getGuestManagementIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27919,7 +28742,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getToastIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -27932,7 +28755,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/getToastServiceAreas",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetToastServiceAreasWSResponse,
     parameters: [
       {
         name: "body",
@@ -27945,7 +28768,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/initiateEnvoyOAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -27958,7 +28781,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/updateEnvoyIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27971,7 +28794,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/updateEnvoyIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -27984,7 +28807,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/updateGuest",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -27997,7 +28820,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/updateGuestManagementIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28010,7 +28833,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/updateToastIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28023,7 +28846,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/serviceManagement/updateToastIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28036,7 +28859,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/deleteAwsIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28049,7 +28872,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/deleteBoxIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28062,7 +28885,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/deleteDropboxIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28075,7 +28898,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/deleteGoogleIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28088,7 +28911,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/deleteGoogleIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28101,7 +28924,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/deleteOffice365Integration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28114,7 +28937,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/getGoogleIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -28127,7 +28950,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/initiateDropboxOAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -28140,7 +28963,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/initiateGoogleOAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -28153,7 +28976,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/initiateOffice365OAuth",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_InitiateOAuthWSResponse,
     parameters: [
       {
         name: "body",
@@ -28166,7 +28989,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/migrateGoogleIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28179,7 +29002,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/refreshGoogleAccessToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_RefreshGoogleAccessTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -28192,7 +29015,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/revokeGoogleDriveAccess",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28205,7 +29028,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/updateAwsIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28218,7 +29041,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/updateBoxIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28231,7 +29054,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/updateDropboxIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28244,7 +29067,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/updateGoogleIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28257,7 +29080,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/updateGoogleIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28270,7 +29093,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/storage/updateOffice365Integration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28283,7 +29106,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/submitApiTokenApplication",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_SubmitApiTokenApplicationWSResponse,
     parameters: [
       {
         name: "body",
@@ -28296,7 +29119,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/subscribeZapierWebhook",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_SubscribeZapierWebhookWSResponse,
     parameters: [
       {
         name: "body",
@@ -28309,7 +29132,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/unsubscribeZapierWebhook",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28322,7 +29145,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateAmtIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28335,7 +29158,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -28348,7 +29171,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateDeviceIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28361,7 +29184,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateMattermostIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28374,7 +29197,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateNoonlightSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28387,7 +29210,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateOpenAIIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28400,7 +29223,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateWebhookIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28413,7 +29236,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/updateWebhookIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateWebhookIntegrationV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -28424,9 +29247,15 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/integrations/validateToken",
+    requestFormat: "json",
+    response: BaseApiResponse,
+  },
+  {
+    method: "post",
     path: "/api/integrations/webhooks/deleteWebhookIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28439,7 +29268,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/webhooks/deleteWebhookIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28452,7 +29281,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/webhooks/getWebhookIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetOrgIntegrationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -28465,7 +29294,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/webhooks/subscribeZapierWebhook",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_SubscribeZapierWebhookWSResponse,
     parameters: [
       {
         name: "body",
@@ -28478,7 +29307,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/webhooks/unsubscribeZapierWebhook",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -28491,7 +29320,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/webhooks/updateWebhookIntegration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28504,7 +29333,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/integrations/webhooks/updateWebhookIntegrationV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateWebhookIntegrationV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -28515,9 +29344,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/internal/accessControlDoorOnly",
+    requestFormat: "json",
+    response: Internal_AccessControlDoorOnlyWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Internal_AccessControlDoorOnlyWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/internal/addPartnerAsSuperAdmin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_AddPartnerAsSuperAdminWSResponse,
     parameters: [
       {
         name: "body",
@@ -28528,9 +29370,35 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/internal/alarmMonitoringOnly",
+    requestFormat: "json",
+    response: Internal_AlarmMonitoringOnlyWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Internal_AlarmMonitoringOnlyWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/internal/createCombinedLicensesFromV1",
+    requestFormat: "json",
+    response: Internal_CreateCombinedLicensesFromV1WSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Internal_CreateCombinedLicensesFromV1WSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/internal/createOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_CreateOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -28543,7 +29411,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/createPartnerOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_CreatePartnerOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -28556,7 +29424,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/createReturnInventoryAuditReservation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_CreateReturnedInventoryAuditReservationWSResponse,
     parameters: [
       {
         name: "body",
@@ -28569,7 +29437,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/createSupportAuthority",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_CreateSupportAuthorityWSResponse,
     parameters: [
       {
         name: "body",
@@ -28582,7 +29450,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/developerNewsletterEnroll",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_DeveloperNewsletterEnrollWSResponse,
     parameters: [
       {
         name: "body",
@@ -28593,9 +29461,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/internal/entDevicesOnly",
+    requestFormat: "json",
+    response: Internal_EntDevicesOnlyWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Internal_EntDevicesOnlyWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/internal/getSuperAdminGroupUUID",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_GetSuperAdminGroupUUIDWSResponse,
     parameters: [
       {
         name: "body",
@@ -28608,7 +29489,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/initiateShipment",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_ShipmentEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -28621,7 +29502,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/listOrgs",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_ListOrgsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28634,7 +29515,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/parentLifetimeSpend",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_ParentLifetimeSpendWSResponse,
     parameters: [
       {
         name: "body",
@@ -28645,9 +29526,9 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/internal/proCamerasOnly",
+    path: "/api/internal/proDevicesOnly",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_ProDevicesOnlyWSResponse,
     parameters: [
       {
         name: "body",
@@ -28660,7 +29541,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/requestHardwareForDevelopment",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_RequestHardwareForDevelopmentWSResponse,
     parameters: [
       {
         name: "body",
@@ -28673,7 +29554,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/sendShipmentShippedEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_ShipmentEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -28686,7 +29567,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/internal/setOpportunityForPurchaseOrder",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_SetOpportunityForPurchaseOrderWSResponse,
     parameters: [
       {
         name: "body",
@@ -28697,9 +29578,15 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/internal/verifyCanMigrateOrgFromV1",
+    requestFormat: "json",
+    response: Internal_CreateCombinedLicensesFromV1WSResponse,
+  },
+  {
+    method: "post",
     path: "/api/invoice/charge",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Invoice_InvoiceChargeWSResponse,
     parameters: [
       {
         name: "body",
@@ -28712,7 +29599,20 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/invoice/chargeV1",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Invoice_InvoiceChargeWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Invoice_InvoiceChargeWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/invoice/chargeV2",
+    requestFormat: "json",
+    response: Invoice_InvoiceChargeWSResponse,
     parameters: [
       {
         name: "body",
@@ -28725,7 +29625,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/invoice/details",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Invoice_InvoiceDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -28738,7 +29638,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/invoice/detailsV1",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Invoice_InvoiceDetailsV1WSResponse,
     parameters: [
       {
         name: "body",
@@ -28749,9 +29649,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/invoice/detailsV2",
+    requestFormat: "json",
+    response: Invoice_InvoiceDetailsV2WSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Invoice_InvoiceDetailsV2WSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/keypad/authenticatePin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_AuthenticatePinResponse,
     parameters: [
       {
         name: "body",
@@ -28764,7 +29677,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/keypad/checkin",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_KeypadCheckinWSResponse,
     parameters: [
       {
         name: "body",
@@ -28777,7 +29690,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/keypad/claimKeypadActivationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_ClaimKeypadActivationTokenResponse,
     parameters: [
       {
         name: "body",
@@ -28790,7 +29703,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/keypad/getCurrentKeypad",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_GetCurrentKeypadWSResponse,
     parameters: [
       {
         name: "body",
@@ -28803,7 +29716,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/keypad/getKeypadsForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_GetKeypadsForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -28816,7 +29729,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/keypad/getKeypadsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_GetKeypadsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -28827,9 +29740,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/keypad/publishKeypadCommand",
+    requestFormat: "json",
+    response: BaseApiResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Keypad_PublishKeypadCommandWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/keypad/unregisterKeypad",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_UnregisterKeypadResponse,
     parameters: [
       {
         name: "body",
@@ -28842,7 +29768,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/keypad/updateKeypad",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Keypad_UpdateKeypadResponse,
     parameters: [
       {
         name: "body",
@@ -28855,7 +29781,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/claimKioskActivationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_ClaimKioskActivationTokenResponse,
     parameters: [
       {
         name: "body",
@@ -28868,7 +29794,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/deleteKiosk",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_DeleteKioskWSResponse,
     parameters: [
       {
         name: "body",
@@ -28881,7 +29807,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/getCurrentKiosk",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_GetCurrentKioskWSResponse,
     parameters: [
       {
         name: "body",
@@ -28894,7 +29820,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/getKiosksForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_GetKiosksForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -28907,7 +29833,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/getKiosksForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_GetKiosksForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -28920,7 +29846,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/heartbeat",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_KioskCheckinWSResponse,
     parameters: [
       {
         name: "body",
@@ -28933,7 +29859,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/unregisterKiosk",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_UnregisterKioskResponse,
     parameters: [
       {
         name: "body",
@@ -28946,7 +29872,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/kiosk/updateKiosk",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Kiosk_UpdateKioskResponse,
     parameters: [
       {
         name: "body",
@@ -28959,7 +29885,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/assignACUDoorLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_AssignACUDoorLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -28972,7 +29898,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/assignAlertMonitoringLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_AssignAlertMonitoringLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -28985,7 +29911,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/assignDeviceLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_AssignDeviceLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -28998,7 +29924,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/assignLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_AssignLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29011,7 +29937,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/calculateLicenseStatsForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_CalculateLicensesStatsForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29024,7 +29950,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/calculateLicenseStatsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_CalculateLicensesStatsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29037,7 +29963,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/catalog/findCatalogItems",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_catalog_FindCatalogItemsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29050,7 +29976,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/catalog/getCatalogItemByProductCode",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_catalog_GetCatalogItemByProductCodeWSResponse,
     parameters: [
       {
         name: "body",
@@ -29063,7 +29989,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/claimLicenses",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_ClaimLicensesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29076,7 +30002,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/claimLicensesForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_ClaimLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29089,7 +30015,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/createClaimKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_CreateClaimKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -29102,7 +30028,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/createRenewalClaimKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_CreateRenewalClaimKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -29115,7 +30041,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/findClaimKeysByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_FindClaimKeysByOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29128,7 +30054,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/getClaimKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_GetClaimKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -29141,7 +30067,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/getClaimKeyByCode",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_GetClaimKeyByCodeWSResponse,
     parameters: [
       {
         name: "body",
@@ -29154,7 +30080,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/getClaimKeyByCodeForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_GetClaimKeyByCodeForClientWSResponse,
     parameters: [
       {
         name: "body",
@@ -29167,7 +30093,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/claimkey/returnClaimKeyProductQuantities",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_claimkey_ReturnClaimKeyProductQuantitiesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29180,7 +30106,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/createACUDoorLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_CreateACUDoorLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29193,7 +30119,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/createAlertMonitoringLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_CreateAlertMonitoringLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29206,7 +30132,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/createDeviceLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_CreateDeviceLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29219,7 +30145,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/createLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_CreateLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29232,7 +30158,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/deleteAlertMonitoringLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_DeleteAlertMonitoringLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29245,7 +30171,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/deleteDeviceLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_DeleteDeviceLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29258,7 +30184,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/deleteLicense",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_DeleteLicenseWSResponse,
     parameters: [
       {
         name: "body",
@@ -29271,7 +30197,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/findLicensesByClaimKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_FindLicensesByClaimKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -29284,7 +30210,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getACUDoorLicenses",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetACUDoorLicensesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29297,7 +30223,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getACUDoorLicensesForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetACUDoorLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29310,7 +30236,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getAlertMonitoringLicenses",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetAlertMonitoringLicensesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29323,7 +30249,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getAlertMonitoringLicensesForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetAlertMonitoringLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29336,7 +30262,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getDeviceLicenses",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetDeviceLicensesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29349,7 +30275,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getDeviceLicensesForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetDeviceLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29362,7 +30288,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getLicenses",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetLicensesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29375,7 +30301,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/license/getLicensesForClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29388,7 +30314,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/addLocationLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_AddLocationLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -29401,7 +30327,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/createLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_CreateLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29414,7 +30340,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/deleteLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_DeleteLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29427,7 +30353,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/geoCode",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GeoCodeWSResponse,
     parameters: [
       {
         name: "body",
@@ -29440,7 +30366,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29453,7 +30379,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocationLabelsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationLabelsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29466,7 +30392,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29479,7 +30405,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocationsAssociatedToLocationLabelsByOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationLabelsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29492,7 +30418,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocationsByGeo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationsByGeoResponse,
     parameters: [
       {
         name: "body",
@@ -29505,7 +30431,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocationsBySubLocationsHierarchyKey",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationsBySubLocationsHierarchyKeyWSResponse,
     parameters: [
       {
         name: "body",
@@ -29518,7 +30444,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/getLocationsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_GetLocationsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -29531,7 +30457,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/removeLocationLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_RemoveLocationLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -29544,7 +30470,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/selectiveUpdateLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_SelectiveUpdateLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29557,7 +30483,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/updateLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_UpdateLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29570,7 +30496,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/location/validateLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Location_ValidateLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29583,7 +30509,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/logistics/getRMAs",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Logistics_GetRMAsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29596,7 +30522,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/logistics/getShipments",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Logistics_GetShipmentsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29609,7 +30535,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/logistics/getWarrantyApprovedRMAs",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Internal_GetWarrantyApprovedRMAsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29622,7 +30548,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/maps/generateMapUrl",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Maps_GenerateMapUrlWSResponse,
     parameters: [
       {
         name: "body",
@@ -29635,7 +30561,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/mediadevice/getBulkMediaDeviceDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mediadevice_GetBulkMediaDeviceDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29648,7 +30574,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/metric/logEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Metric_LogEventWSResponse,
     parameters: [
       {
         name: "body",
@@ -29661,13 +30587,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/metric/mobile/logEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/metric/reportError",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Metric_ReportErrorWSResponse,
     parameters: [
       {
         name: "body",
@@ -29680,85 +30606,127 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/mobile/loginToOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mobile_LoginToOrgBaseResponse,
   },
   {
     method: "post",
     path: "/api/mobile/loginVerifiedSupportAuthority",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mobile_LoginVerifiedSupportAuthorityMobileResponse,
   },
   {
     method: "post",
     path: "/api/mobile/logout",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mobile_LogoutMobileUserResponse,
   },
   {
     method: "post",
     path: "/api/mobile/refreshMobileSession",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mobile_RefreshMobileSessionResponse,
   },
   {
     method: "post",
     path: "/api/mobile/updateNotificationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mobile_UpdateMobileNotificationTokenResponse,
   },
   {
     method: "post",
     path: "/api/mobile/updateRhombusKeyNotificationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Mobile_UpdateRhombusKeyMobileNotificationTokenResponse,
   },
   {
     method: "post",
     path: "/api/modularai/addModelToDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Modularai_AddModelToDeviceWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_AddModelToDeviceWSRequest,
+      },
+    ],
   },
   {
     method: "post",
     path: "/api/modularai/getDevicesForModel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Modularai_GetDevicesForModelWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_GetDevicesForModelWSRequest,
+      },
+    ],
   },
   {
     method: "post",
     path: "/api/modularai/getModels",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Modularai_GetModelsWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_GetModelsWSRequest,
+      },
+    ],
   },
   {
     method: "post",
     path: "/api/modularai/getModelsAddedToDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Modularai_GetModelsAddedToDeviceWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_GetModelsAddedToDeviceWSRequest,
+      },
+    ],
   },
   {
     method: "post",
     path: "/api/modularai/removeModelFromDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Modularai_RemoveModelFromDeviceWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_RemoveModelFromDeviceWSRequest,
+      },
+    ],
   },
   {
     method: "post",
     path: "/api/modularai/updateModel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Modularai_UpdateModelWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_UpdateModelWSRequest,
+      },
+    ],
   },
   {
     method: "post",
     path: "/api/modularai/uploadCustomModel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/modularai/uploadQuantizedModel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "modelUuid",
@@ -29769,14 +30737,27 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/network/configuration",
+    path: "/api/network/getDeviceNetworkConfiguration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Network_GetDeviceNetworkConfigurationWSResponse,
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: Network_NetworkConfigurationWSRequest,
+        schema: Network_GetDeviceNetworkConfigurationWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/network/updateDeviceIpConfiguration",
+    requestFormat: "json",
+    response: Network_UpdateDeviceIpConfigurationWSRequest,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Network_UpdateDeviceIpConfigurationWSRequest,
       },
     ],
   },
@@ -29784,7 +30765,7 @@ const endpoints = makeApi([
     method: "get",
     path: "/api/oauth/authorize",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "clientId",
@@ -29822,7 +30803,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/oauth/deleteApplication",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -29835,7 +30816,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/oauth/getAllApplicationsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Oauth_GetAllApplicationsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -29848,7 +30829,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/oauth/getApplicationByClientId",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Oauth_GetApplicationByClientIdWSResponse,
     parameters: [
       {
         name: "body",
@@ -29861,7 +30842,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/oauth/submitApplication",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Oauth_OAuthApplicationWSResponse,
     parameters: [
       {
         name: "body",
@@ -29874,7 +30855,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/oauth/updateApplication",
     requestFormat: "json",
-    response: z.unknown(),
+    response: BaseApiResponse,
     parameters: [
       {
         name: "body",
@@ -29887,7 +30868,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/occupancy/getMinimalOccupancySensorStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Occupancysensor_GetMinimalOccupancySensorStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -29900,7 +30881,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/occupancy/getOccupancyEventsForSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Occupancysensor_GetOccupancyEventsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -29913,7 +30894,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/occupancy/getOccupancyPresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Sensor_GetSensorPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29926,7 +30907,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/occupancy/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Occupancysensor_UpdateOccupancySensorDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -29952,7 +30933,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/claimActivationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_ClaimActivationTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -29965,7 +30946,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/claimShipmentRegistrationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_ClaimShipmentRegistrationTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -29978,7 +30959,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/createPendingRegistration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_CreatePendingRegistrationResponse,
     parameters: [
       {
         name: "body",
@@ -29991,7 +30972,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/deleteCloudArchivingConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_DeleteCloudArchivingConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -30004,7 +30985,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/deleteKeypadLogo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_DeleteKeypadLogoWSResponse,
     parameters: [
       {
         name: "body",
@@ -30017,7 +30998,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/deleteRhombusKeyLogo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_DeleteRhombusKeyLogoWSResponse,
     parameters: [
       {
         name: "body",
@@ -30030,7 +31011,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/findAllHardwareWithPendingRegistration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_FindAllHardwareWithPendingRegistrationResponse,
     parameters: [
       {
         name: "body",
@@ -30043,7 +31024,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/findHardwareAvailableForPendingRegistration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_FindHardwareAvailableForPendingRegistrationResponse,
     parameters: [
       {
         name: "body",
@@ -30056,7 +31037,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/findIfTeamNameAvailable",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_FindIfTeamNameAvailableResponse,
     parameters: [
       {
         name: "body",
@@ -30069,7 +31050,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/findSCIMSettingsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_FindSCIMSettingsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30082,7 +31063,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/generateFederatedSessionToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GenerateFederatedSessionTokenResponse,
     parameters: [
       {
         name: "body",
@@ -30095,7 +31076,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getAwsIntCloudformationFile",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetAwsIntCloudformationFileResponse,
     parameters: [
       {
         name: "body",
@@ -30108,7 +31089,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getClientOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30121,7 +31102,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getCloudArchivingConfigs",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetCloudArchivingConfigsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30134,7 +31115,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getDeviceFlags",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetDeviceFlagsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30147,7 +31128,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getFeatures",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetFeaturesWSResponse,
     parameters: [
       {
         name: "body",
@@ -30160,7 +31141,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getLocationFlags",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetLocationFlagsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30173,7 +31154,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30186,7 +31167,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getOrgIntegrations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30199,7 +31180,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getOrgNotificationTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetOrgNotificationTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -30212,7 +31193,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getOrgNotificationTemplateV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetOrgNotificationTemplateV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -30225,7 +31206,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getOrgV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetOrgV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -30238,7 +31219,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getSAMLSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetSAMLSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30251,7 +31232,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getSAMLSettingsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetSAMLSettingsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -30264,13 +31245,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/getScimDisplayInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_GetScimDisplayInfoResponse,
   },
   {
     method: "post",
     path: "/api/org/getTemporaryOrgToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: GetTemporaryOrgTokenResponse,
     parameters: [
       {
         name: "body",
@@ -30283,7 +31264,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/peekShipmentRegistrationToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_PeekShipmentRegistrationTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -30296,7 +31277,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/removePendingRegistration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_RemovePendingRegistrationResponse,
     parameters: [
       {
         name: "body",
@@ -30309,7 +31290,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/revokeSCIMAccessForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_RevokeSCIMAccessForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30322,7 +31303,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/setFlag",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_SetFlagWSResponse,
     parameters: [
       {
         name: "body",
@@ -30335,7 +31316,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/setupSCIMAccessForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_SetupSCIMAccessForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30348,7 +31329,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateAiTrainingSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateAiTrainingSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30361,7 +31342,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateCloudArchivingConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateCloudArchivingConfigWSResponse,
     parameters: [
       {
         name: "body",
@@ -30374,7 +31355,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateFirmwareSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateFirmwareSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30387,7 +31368,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateGeneralSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateGeneralSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30400,7 +31381,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateMFASettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateMFASettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30413,7 +31394,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30426,7 +31407,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateOrgAudioAnalysisPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateOrgAudioAnalysisPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -30439,7 +31420,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateOrgAudioRecordingPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateOrgAudioRecordingPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -30452,7 +31433,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateOrgIntegrations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateOrgIntegrationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30463,9 +31444,22 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/org/updateOrgLLMUsagePolicy",
+    requestFormat: "json",
+    response: Org_UpdateOrgLLMUsagePolicyWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Org_UpdateOrgLLMUsagePolicyWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/org/updateOrgNotificationTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateOrgNotificationTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -30478,7 +31472,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateOrgNotificationTemplateV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateOrgNotificationTemplateV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -30491,7 +31485,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updatePendingRegistration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdatePendingRegistrationResponse,
     parameters: [
       {
         name: "body",
@@ -30504,7 +31498,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateSAMLSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateSAMLSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30517,7 +31511,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateSAMLSettingsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateSAMLSettingsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -30530,7 +31524,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/org/updateSCIMSettingsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_UpdateSCIMSettingsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30543,7 +31537,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/createPartnerClient",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_CreatePartnerClientWSResponse,
     parameters: [
       {
         name: "body",
@@ -30556,7 +31550,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/customizeClient",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_CustomizeClientWSResponse,
     parameters: [
       {
         name: "body",
@@ -30569,7 +31563,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/customizeClientDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_CustomizeClientDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -30582,7 +31576,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/deleteClient",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_DeleteClientWebResponse,
     parameters: [
       {
         name: "body",
@@ -30595,7 +31589,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getApiTokenApplications",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetApiTokenApplicationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30608,7 +31602,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getApiTokens",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetApiTokensWSResponse,
     parameters: [
       {
         name: "body",
@@ -30621,7 +31615,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getClientDevices",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetClientDevicesWSResponse,
     parameters: [
       {
         name: "body",
@@ -30634,7 +31628,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getClientRhombusOrgUsersForPartnerActivationTokenV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSBaseResponse,
     parameters: [
       {
         name: "body",
@@ -30647,7 +31641,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getClientStatusMap",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetPartnerClientsStatusMapWSResponse,
     parameters: [
       {
         name: "body",
@@ -30660,7 +31654,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getClientSummaryInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetClientSummaryInfoWSResponse,
     parameters: [
       {
         name: "body",
@@ -30673,7 +31667,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getClients",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetPartnerClientsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30686,7 +31680,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getClientsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetPartnerClientsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30699,7 +31693,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getDeviceLicensesForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetDeviceLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30712,7 +31706,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getLicensesForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: License_GetLicensesForClientOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30725,7 +31719,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getListOfAllClientDevices",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetListOfAllClientDevicesResponse,
     parameters: [
       {
         name: "body",
@@ -30738,7 +31732,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getListOfAvailableHardware",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetListOfControlledHardwareResponse,
     parameters: [
       {
         name: "body",
@@ -30751,7 +31745,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getPartnerClientMobileAccountAccess",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetPartnerClientMobileAccountAccessResponse,
     parameters: [
       {
         name: "body",
@@ -30764,7 +31758,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/getShipments",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetShipmentsWSResponse,
     parameters: [
       {
         name: "body",
@@ -30777,7 +31771,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/grantSupportAccessToClient",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GrantSupportAccessToClientWSResponse,
     parameters: [
       {
         name: "body",
@@ -30790,7 +31784,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/reassignDeviceOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_ReassignDeviceOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -30803,7 +31797,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/registerCameraToClient",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Org_CreatePendingRegistrationResponse,
     parameters: [
       {
         name: "body",
@@ -30816,7 +31810,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/registerDeal",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_RegisterDealWSResponse,
     parameters: [
       {
         name: "body",
@@ -30829,7 +31823,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/requestAccessToClientAccount",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_RequestAccessToClientAccountResponse,
     parameters: [
       {
         name: "body",
@@ -30842,7 +31836,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/requestAccessToClientAccountV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_RequestAccessToClientAccountV2Response,
     parameters: [
       {
         name: "body",
@@ -30855,7 +31849,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/revokeApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_RevokeApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -30868,7 +31862,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/submitApiTokenApplication",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_SubmitApiTokenApplicationWSResponse,
     parameters: [
       {
         name: "body",
@@ -30881,7 +31875,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/submitSupportAccessDecisionForPartnerActivationTokenV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSBaseResponse,
     parameters: [
       {
         name: "body",
@@ -30894,7 +31888,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/updateApiToken",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_UpdateApiTokenWSResponse,
     parameters: [
       {
         name: "body",
@@ -30907,7 +31901,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/partner/updateSendLicenseExpirationEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_UpdateManuallySendLicenseExpirationEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -30920,7 +31914,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/password/forgot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Password_ForgotPasswordWSResponse,
     parameters: [
       {
         name: "body",
@@ -30933,7 +31927,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/password/reset",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Password_ResetPasswordWSResponse,
     parameters: [
       {
         name: "body",
@@ -30946,7 +31940,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/password/user/signup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Password_UserSignupWSResponse,
     parameters: [
       {
         name: "body",
@@ -30959,7 +31953,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/assignPermission",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_AssignUserPermissionWSResponse,
     parameters: [
       {
         name: "body",
@@ -30972,7 +31966,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/createPartnerPermissionGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_CreatePartnerPermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -30985,7 +31979,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/createPermissionGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_CreatePermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -30998,7 +31992,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/deletePartnerPermissionGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_DeletePartnerPermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -31011,7 +32005,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/deletePermissionGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_DeletePermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -31024,7 +32018,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/getPartnerPermissionGroups",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_GetPartnerPermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -31037,7 +32031,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/getPermissionGroups",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_GetPermissionGroupsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31050,7 +32044,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/getPermissionGroupsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_GetPermissionGroupsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -31063,7 +32057,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/getPermissionsForCurrentPartner",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_GetPermissionsForCurrentPartnerWSResponse,
     parameters: [
       {
         name: "body",
@@ -31076,7 +32070,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/getPermissionsForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_GetPermissionsForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -31089,7 +32083,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/updatePartnerPermissionGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_UpdatePartnerPermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -31102,7 +32096,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/permission/updatePermissionGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Permission_UpdatePermissionGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -31115,7 +32109,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createAccessControlledDoorPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateAccessControlledDoorPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31128,7 +32122,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createAudioPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateAudioPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31141,7 +32135,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createCameraPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateCameraPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31154,7 +32148,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createClimatePolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateClimatePolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31167,7 +32161,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createDoorPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateDoorPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31180,7 +32174,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createOccupancyPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateOccupancyPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31193,7 +32187,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createPolicyAddendumForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreatePolicyAddendumForLocationResponse,
     parameters: [
       {
         name: "body",
@@ -31206,7 +32200,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createPolicyAddendumsForDevices",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreatePolicyAddendumsForDevicesResponse,
     parameters: [
       {
         name: "body",
@@ -31219,7 +32213,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createProximityPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateProximityPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31232,7 +32226,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -31245,7 +32239,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/createVideoIntercomPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_CreateVideoIntercomPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31258,7 +32252,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteAccessControlledDoorPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteAccessControlledDoorPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31271,7 +32265,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteAudioPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteAudioPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31284,7 +32278,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteCameraPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteCameraPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31297,7 +32291,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteClimatePolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteClimatePolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31310,7 +32304,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteDevicePolicyAddendums",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteDevicePolicyAddendumsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31323,7 +32317,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteDoorPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteDoorPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31336,7 +32330,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteLocationPolicyAddendum",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteLocationPolicyAddendumWSResponse,
     parameters: [
       {
         name: "body",
@@ -31349,7 +32343,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteOccupancyPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteOccupancyPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31362,7 +32356,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deletePolicyPauseSettingForComponentComposite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeletePolicyPauseSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -31375,7 +32369,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deletePolicyPauseSettingForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeletePolicyPauseSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -31388,7 +32382,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deletePolicyPauseSettingForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeletePolicyPauseSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -31401,7 +32395,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteProximityPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteProximityPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31414,7 +32408,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -31427,7 +32421,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/deleteVideoIntercomPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteVideoIntercomPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31440,7 +32434,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/findSchedules",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_FindSchedulesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31453,7 +32447,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getAccessControlledDoorPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetAccessControlledDoorPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31466,7 +32460,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getAudioPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetAudioPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31479,7 +32473,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getCameraPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetCameraPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31492,7 +32486,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getClimatePolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetClimatePoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31505,7 +32499,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getDoorPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetDoorPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31518,7 +32512,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getOccupancyPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetOccupancyPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31531,7 +32525,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getPoliciesUsingSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetPoliciesUsingScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -31544,7 +32538,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getPolicyAddendums",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetPolicyAddendumsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31557,7 +32551,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getPolicyPauseSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetPolicyPauseSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31570,7 +32564,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getProximityPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetProximityPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31583,7 +32577,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/getVideoIntercomPolicies",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_GetVideoIntercomPoliciesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31596,7 +32590,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/pauseAlertPolicyForComponentComposite",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_PauseAlertPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31609,7 +32603,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/pauseAlertPolicyForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_PauseAlertPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31622,7 +32616,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/pauseAlertPolicyForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_PauseAlertPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31635,7 +32629,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateAccessControlledDoorPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateAccessControlledDoorPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31648,7 +32642,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateAudioPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateAudioPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31661,7 +32655,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateCameraPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateCameraPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31674,7 +32668,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateClimatePolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateClimatePolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31687,7 +32681,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateDoorPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateDoorPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31700,7 +32694,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateOccupancyPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateOccupancyPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31713,7 +32707,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateProximityPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateProximityPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31726,7 +32720,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -31739,7 +32733,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/policy/updateVideoIntercomPolicy",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_UpdateVideoIntercomPolicyWSResponse,
     parameters: [
       {
         name: "body",
@@ -31752,7 +32746,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/proximity/getLocomotionEventsForTag",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Proximity_GetLocomotionEventsForTagWSResponse,
     parameters: [
       {
         name: "body",
@@ -31765,7 +32759,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/proximity/getMinimalProximityStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Proximity_GetMinimalProximityStatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -31778,7 +32772,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/proximity/getProximityEventsForTag",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Proximity_GetProximityEventsForTagWSResponse,
     parameters: [
       {
         name: "body",
@@ -31791,7 +32785,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/proximity/updateDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Proximity_UpdateProximitySensorDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31804,7 +32798,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rapidsos/getNearbyFeeds",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rapidsos_GetNearbyFeedsResponse,
     parameters: [
       {
         name: "body",
@@ -31817,7 +32811,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/assignThirdPartyCameraToNVR",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_AssignThirdPartyCameraToNVRWSResponse,
     parameters: [
       {
         name: "body",
@@ -31830,7 +32824,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/assignThirdPartyCameraToRelayCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_AssignThirdPartyCameraToRelayCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -31843,7 +32837,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/authenticateThirdPartyCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_AuthenticateThirdPartyCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -31856,7 +32850,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/createThirdPartyCameraPassword",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_CreateThirdPartyCameraPasswordWSResponse,
     parameters: [
       {
         name: "body",
@@ -31869,7 +32863,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/deleteThirdPartyCameraPassword",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_DeleteThirdPartyCameraPasswordWSResponse,
     parameters: [
       {
         name: "body",
@@ -31882,7 +32876,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/executeThirdPartyCameraDiscovery",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_ExecuteThirdPartyCameraDiscoveryWSResponse,
     parameters: [
       {
         name: "body",
@@ -31895,7 +32889,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/findDefaultRtspUrlsByManufacturer",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_FindDefaultRtspUrlsByManufacturerWSResponse,
     parameters: [
       {
         name: "body",
@@ -31908,7 +32902,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/findDiscoveriesWithUnassignedRtspEndpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_FindDiscoveriesWithUnassignedRtspEndpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31921,7 +32915,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getAssignedThirdPartyCameras",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetAssignedThirdPartyCamerasWSResponse,
     parameters: [
       {
         name: "body",
@@ -31934,7 +32928,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getDetails",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetNVRDetailsWSResponse,
     parameters: [
       {
         name: "body",
@@ -31947,7 +32941,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getFullNVRState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetFullNVRStateWSResponse,
     parameters: [
       {
         name: "body",
@@ -31960,13 +32954,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getImportThirdPartyCamerasFormat",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetImportThirdPartyCamerasFormatWSResponse,
   },
   {
     method: "post",
     path: "/api/relay/getMinimalNVRStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetMinimalNVRStateListWSResponse,
     parameters: [
       {
         name: "body",
@@ -31979,7 +32973,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getMinimalThirdPartyCameraStateList",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetMinimalThirdPartyCameraStateListWSResponse,
     parameters: [
       {
         name: "body",
@@ -31992,7 +32986,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getRtspEndpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetRtspEndpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32005,7 +32999,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/getThirdPartyCameraPasswords",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_GetThirdPartyCameraPasswordsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32018,7 +33012,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/importThirdPartyCameras/:locationUuid",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_ImportThirdPartyCamerasWSResponse,
     parameters: [
       {
         name: "locationUuid",
@@ -32031,7 +33025,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/manualDiscoverCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_ManualDiscoverThirdPartyCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -32044,7 +33038,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/ptzMove",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_PTZMoveWSResponse,
     parameters: [
       {
         name: "body",
@@ -32057,7 +33051,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/ptzStatus",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_PTZStatusWSResponse,
     parameters: [
       {
         name: "body",
@@ -32070,7 +33064,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/reboot",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_RebootNVRVWSResponse,
     parameters: [
       {
         name: "body",
@@ -32081,22 +33075,9 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/relay/register",
-    requestFormat: "json",
-    response: z.unknown(),
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Relay_RegisterNVRVWSRequest,
-      },
-    ],
-  },
-  {
-    method: "post",
     path: "/api/relay/unassignThirdPartyCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_UnassignThirdPartyCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -32109,7 +33090,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/unregister",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_UnregisterNVRWSResponse,
     parameters: [
       {
         name: "body",
@@ -32122,7 +33103,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/updateDetailsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_UpdateNVRVWSResponse,
     parameters: [
       {
         name: "body",
@@ -32135,7 +33116,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/relay/updateFirmware",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Relay_UpdateNVRFirmwareWSResponse,
     parameters: [
       {
         name: "body",
@@ -32148,7 +33129,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getAuditFeed",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetAuditFeedWSResponse,
     parameters: [
       {
         name: "body",
@@ -32161,7 +33142,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getAuditFeedForTarget",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetAuditFeedForTargetWSResponse,
     parameters: [
       {
         name: "body",
@@ -32174,7 +33155,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getAverageReport",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetAverageReportWSResponse,
     parameters: [
       {
         name: "body",
@@ -32187,7 +33168,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getAverageReports",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetAverageReportsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32200,7 +33181,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getCountReport",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetCountReportWSResponse,
     parameters: [
       {
         name: "body",
@@ -32213,7 +33194,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getCountReportV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetCountReportWSResponse,
     parameters: [
       {
         name: "body",
@@ -32226,7 +33207,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getCountReports",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetCountReportsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32239,7 +33220,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getCountReportsForDevicesAtLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetCountReportsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32250,9 +33231,9 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/report/getCustomLLMCounts",
+    path: "/api/report/getCustomLLMBinaryCounts",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetCustomLLMWBinaryWSResponse,
     parameters: [
       {
         name: "body",
@@ -32263,9 +33244,35 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/report/getCustomLLMNumericCounts",
+    requestFormat: "json",
+    response: Report_GetCustomLLMNumericWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Report_GetCustomLLMWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/report/getCustomLLMReport",
+    requestFormat: "json",
+    response: Report_GetCustomLLMNumericWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Report_GetCustomLLMReportWSRequest,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/report/getDiagnosticFeed",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetDiagnosticFeedWSResponse,
     parameters: [
       {
         name: "body",
@@ -32278,7 +33285,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getEnvoyDeliveries",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetEnvoyDeliveriesWSResponse,
     parameters: [
       {
         name: "body",
@@ -32291,7 +33298,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getEnvoyEmployees",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetEnvoyEmployeesWSResponse,
     parameters: [
       {
         name: "body",
@@ -32304,7 +33311,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getEnvoyLocations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetEnvoyLocationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32317,7 +33324,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getEnvoyVisitors",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetEnvoyVisitorsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32330,7 +33337,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getIntegrationDiagnosticEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetIntegrationDiagnosticEventsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32343,7 +33350,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getLicensePlatesByDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetLicensePlatesByDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -32356,7 +33363,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getMostRecentPeopleCountEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetMostRecentPeopleCountWSResponse,
     parameters: [
       {
         name: "body",
@@ -32369,7 +33376,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getOccupancyCount",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetOccupancyCountWSResponse,
     parameters: [
       {
         name: "body",
@@ -32382,7 +33389,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getOccupancyCounts",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetOccupancyCountsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32395,7 +33402,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getProximityTagLocationsByDate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetProximityTagLocationsByDateWSResponse,
     parameters: [
       {
         name: "body",
@@ -32408,7 +33415,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getRunningAverage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetRunningAverageWSResponse,
     parameters: [
       {
         name: "body",
@@ -32421,7 +33428,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getSummaryCountReport",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetSummaryCountReportWSResponse,
     parameters: [
       {
         name: "body",
@@ -32434,7 +33441,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getThresholdCrossingCountReport",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetThresholdCrossingCountReportWSResponse,
     parameters: [
       {
         name: "body",
@@ -32447,7 +33454,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getThresholdCrossingCounts",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetThresholdCrossingCountsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32460,7 +33467,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getThresholdCrossingEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetThresholdCrossingEventsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32473,7 +33480,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getThresholdCrossingEventsForDevice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_GetThresholdCrossingEventsForDeviceWSResponse,
     parameters: [
       {
         name: "body",
@@ -32486,7 +33493,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getToastEventsTable",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetToastEventsTableWSResponse,
     parameters: [
       {
         name: "body",
@@ -32499,7 +33506,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/getToastEventsTableAllLocations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Integration_GetToastEventsTableAllLocationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32512,7 +33519,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/report/resetRunningAverage",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Report_ResetRunningAverageWSResponse,
     parameters: [
       {
         name: "body",
@@ -32525,7 +33532,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/createRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_CreateRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32538,7 +33545,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/deleteRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_DeleteRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32551,7 +33558,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/deleteRulePauseSetting",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_DeleteRulePauseSettingWSResponse,
     parameters: [
       {
         name: "body",
@@ -32564,7 +33571,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/getRulePauseSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_GetRulePauseSettingsResponse,
     parameters: [
       {
         name: "body",
@@ -32577,7 +33584,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/getRulesFiltered",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_GetRulesForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -32590,7 +33597,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/getRulesForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_GetRulesForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -32603,7 +33610,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/pauseRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_PauseRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32616,7 +33623,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rules/updateRule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_UpdateRuleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32629,7 +33636,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rulesRecords/deleteRulesEventRecord",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_records_DeleteRulesEventRecordWSResponse,
     parameters: [
       {
         name: "body",
@@ -32642,7 +33649,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rulesRecords/getLatestRulesEventRecords",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_records_GetLatestRulesEventRecordsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32655,7 +33662,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/rulesRecords/getRulesEventRecords",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Rules_records_GetRulesEventRecordsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32668,7 +33675,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/scenequery/createPromptConfiguration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_CreatePromptConfigurationWSResponse,
     parameters: [
       {
         name: "body",
@@ -32681,7 +33688,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/scenequery/deletePromptConfiguration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_DeletePromptConfigurationWSResponse,
     parameters: [
       {
         name: "body",
@@ -32694,7 +33701,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/scenequery/findPromptConfigurations",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_FindAllPromptConfigurationsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32707,7 +33714,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/scenequery/getPromptConfiguration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_GetPromptConfigurationWSResponse,
     parameters: [
       {
         name: "body",
@@ -32718,22 +33725,9 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/scenequery/getReport",
-    requestFormat: "json",
-    response: z.unknown(),
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Scenequery_ReportWSRequest,
-      },
-    ],
-  },
-  {
-    method: "post",
     path: "/api/scenequery/selectiveUpdatePromptConfiguration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_SelectiveUpdatePromptConfigurationWSResponse,
     parameters: [
       {
         name: "body",
@@ -32746,7 +33740,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/scenequery/triggerPrompt",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_TriggerPromptWSResponse,
     parameters: [
       {
         name: "body",
@@ -32759,7 +33753,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/scenequery/updatePromptConfiguration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Scenequery_UpdatePromptConfigurationWSResponse,
     parameters: [
       {
         name: "body",
@@ -32772,7 +33766,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/createAbsoluteSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_CreateAbsoluteScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32785,7 +33779,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/createRelativeDateTimeIntervalsSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_CreateRelativeDateTimeIntervalsScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32798,7 +33792,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/createRelativeSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_CreateRelativeScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32811,7 +33805,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/createWeeklySchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_CreateWeeklyScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32824,7 +33818,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/deleteSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Policy_DeleteScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32837,7 +33831,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/findAbsoluteSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_FindAbsoluteScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32850,7 +33844,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/findRelativeDateTimeIntervalsSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_FindRelativeDateTimeIntervalsScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32863,7 +33857,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/findRelativeSchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_FindRelativeScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32876,7 +33870,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/findWeeklySchedule",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_FindWeeklyScheduleWSResponse,
     parameters: [
       {
         name: "body",
@@ -32889,7 +33883,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/getScheduleData",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_GetScheduleDataWSResponse,
     parameters: [
       {
         name: "body",
@@ -32902,7 +33896,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/getScheduleDataV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_GetScheduleDataV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -32915,7 +33909,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/schedule/getSchedules",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Schedule_GetSchedulesWSResponse,
     parameters: [
       {
         name: "body",
@@ -32928,7 +33922,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/deleteVideoEmbeddings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_DeleteVideoEmbeddingWSResponse,
     parameters: [
       {
         name: "body",
@@ -32941,7 +33935,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/indexVideoEmbeddings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_IndexVideoEmbeddingWSResponse,
     parameters: [
       {
         name: "body",
@@ -32954,7 +33948,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchLicensePlates",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchLicensePlatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -32967,7 +33961,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchObjectsByColor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchObjectsByColorWSResponse,
     parameters: [
       {
         name: "body",
@@ -32980,7 +33974,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchSimilarObjectEmbeddings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchSimilarObjectEmbeddingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -32993,7 +33987,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchSimilarObjectEmbeddingsByText",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchSimilarObjectEmbeddingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33006,7 +34000,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchSimilarObjectEmbeddingsByVector",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchSimilarObjectEmbeddingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33019,7 +34013,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchSimilarVideoEmbeddings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchSimilarVideoEmbeddingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33032,7 +34026,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/search/searchSimilarVideoEmbeddingsByTimeWindow",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Search_SearchSimilarVideoEmbeddingsByTimeWindowWSResponse,
     parameters: [
       {
         name: "body",
@@ -33045,7 +34039,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/sensors/getFootageSensorSeekpointsForCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Sensor_GetFootageSensorSeekpointsForCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -33058,7 +34052,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/sensors/getFootageSensorSeekpointsForLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Sensor_GetFootageSensorSeekpointsForLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -33071,7 +34065,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/sensors/getFootageSensorSeekpointsForSensor",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Sensor_GetFootageSensorSeekpointsForSensorWSResponse,
     parameters: [
       {
         name: "body",
@@ -33084,13 +34078,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/camera/getCurrentState",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Camera_GetSharedCameraCurrentStateWSResponse,
   },
   {
     method: "post",
     path: "/api/share/camera/getFootageBoundingBoxes",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedFootageBoundingBoxesWSResponse,
     parameters: [
       {
         name: "body",
@@ -33103,7 +34097,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/camera/getFootageSeekpoints",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedFootageSeekpointsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33116,7 +34110,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/camera/getFootageSeekpointsV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedFootageSeekpointsV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -33129,7 +34123,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/camera/getMediaUris",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedMediaUrisWSResponse,
     parameters: [
       {
         name: "body",
@@ -33142,7 +34136,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/camera/getPresenceWindows",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedPresenceWindowsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33155,7 +34149,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/camera/getSharedVideoWallMediaUris",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedVideoWallMediaUrisWSResponse,
     parameters: [
       {
         name: "body",
@@ -33168,7 +34162,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/clips/getSharedClipData",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedClipDataWSResponse,
     parameters: [
       {
         name: "body",
@@ -33181,19 +34175,19 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/getSharedLiveStreamInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedLiveStreamInfoWSResponse,
   },
   {
     method: "post",
     path: "/api/share/getSharedVideoWallInfo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedVideoWallInfoWSResponse,
   },
   {
     method: "post",
     path: "/api/share/sensors/getFootageSensorSeekpointsForCamera",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedFootageSensorSeekpointsForCameraWSResponse,
     parameters: [
       {
         name: "body",
@@ -33206,7 +34200,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/shareLink",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_ShareLinkWSResponse,
     parameters: [
       {
         name: "body",
@@ -33219,7 +34213,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/timelapse/getSharedTimelapseClipData",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedTimelapseDataWSResponse,
     parameters: [
       {
         name: "body",
@@ -33232,7 +34226,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/share/timelapse/getSharedTimelapseClipDataV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Share_GetSharedTimelapseDataV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -33245,7 +34239,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/addSupportAuthority",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_AddSupportAuthorityWSResponse,
     parameters: [
       {
         name: "body",
@@ -33258,7 +34252,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/allowSupportAuthorityAccess",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_AlllowSupportAuthorityAccessWSResponse,
     parameters: [
       {
         name: "body",
@@ -33271,7 +34265,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/findSupportAuthoritySessions",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_FindSupportAuthoritySessionsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33284,7 +34278,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/getSupportAuthorities",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_GetSupportAuthoritiesWSResponse,
     parameters: [
       {
         name: "body",
@@ -33297,7 +34291,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/logoutAllSupportAuthoritySessions",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_LogoutAllSupportAuthoritySessionsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33310,7 +34304,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/lookupSupportPartnerAuthorities",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_LookupSupportPartnerAuthoritiesWSResponse,
     parameters: [
       {
         name: "body",
@@ -33323,7 +34317,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/removeSupportAuthority",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_RemoveSupportAuthorityWSResponse,
     parameters: [
       {
         name: "body",
@@ -33336,7 +34330,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/revokeSupportAuthorityAccess",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_RevokeSupportAuthorityAccessWSResponse,
     parameters: [
       {
         name: "body",
@@ -33349,7 +34343,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/supportAuthority/updateSupportAuthority",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Support_UpdateSupportAuthorityWSResponse,
     parameters: [
       {
         name: "body",
@@ -33362,7 +34356,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/tvos/getTvOsConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Tvos_GetTvOsConfigWsResponse,
     parameters: [
       {
         name: "body",
@@ -33375,7 +34369,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/tvos/getTvOsConfigsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Tvos_GetTvOsConfigsForOrgWsResponse,
     parameters: [
       {
         name: "body",
@@ -33388,7 +34382,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/tvos/updateTvOsConfig",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Tvos_UpdateTvOsConfigWsResponse,
     parameters: [
       {
         name: "body",
@@ -33401,7 +34395,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/accessControlledDoor/delete/:accessControlledDoorUuidStr",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "accessControlledDoorUuidStr",
@@ -33414,7 +34408,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/accessControlledDoor/:accessControlledDoorUuidStr",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "accessControlledDoorUuidStr",
@@ -33427,25 +34421,25 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/badgeTemplate/images",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/upload/bulkUploadUserProfilePhotos",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/upload/companyLogo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/upload/errors/:fileName",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "fileName",
@@ -33458,13 +34452,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/floorplan",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/upload/floorplan/:floorPlanUuid",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "floorPlanUuid",
@@ -33477,7 +34471,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/guest/:guestEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "guestEmail",
@@ -33490,19 +34484,19 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/keypadLogo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/upload/rhombusKeyLogo",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
   },
   {
     method: "post",
     path: "/api/upload/sensor/:sensorUuid/thumbnail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "sensorUuid",
@@ -33515,7 +34509,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/user/deleteProfile/:userUuidStr",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "userUuidStr",
@@ -33528,7 +34522,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/upload/user/:userUuidStr",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Response,
     parameters: [
       {
         name: "userUuidStr",
@@ -33541,7 +34535,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/assignEmailToUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_AssignEmailToUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33552,9 +34546,15 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/user/bulkProvisionCredentials",
+    requestFormat: "json",
+    response: User_BulkProvisionCredentialsWSResponse,
+  },
+  {
+    method: "post",
     path: "/api/user/changeEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_ChangeUserEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -33567,7 +34567,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/changePassword",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_ChangeUserPasswordWSResponse,
     parameters: [
       {
         name: "body",
@@ -33580,7 +34580,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/createUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_CreateUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33593,7 +34593,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/deleteUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_DeleteUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33606,7 +34606,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/deleteVirtualMfaDeviceForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_DeleteVirtualMfaDeviceForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33619,7 +34619,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/findUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_FindUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33632,7 +34632,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/findUserByEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_FindUserByEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -33643,15 +34643,21 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/user/getBulkProvisionCredentialsFormat",
+    requestFormat: "json",
+    response: User_GetBulkProvisionCredentialsFormatWSResponse,
+  },
+  {
+    method: "post",
     path: "/api/user/getImportUsersFormat",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_GetImportUsersFormatWSResponse,
   },
   {
     method: "post",
     path: "/api/user/getPartnerUsersInOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Partner_GetPartnerUsersInOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -33664,7 +34670,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/getRhombusKeyConfigForUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_GetRhombusKeyConfigForUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33677,7 +34683,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/getUserCustomizationFlags",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_GetUserCustomizationFlagsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33690,7 +34696,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/getUsersInOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_GetUsersInOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -33703,7 +34709,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/getUsersInOrgForReports",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_GetUsersInOrgForReportsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33716,7 +34722,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/getVirtualMfaDeviceForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_GetVirtualMfaDeviceForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33729,13 +34735,13 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/importUsers",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_ImportUsersWSResponse,
   },
   {
     method: "post",
     path: "/api/user/metadata/createUserMetadataFieldTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_CreateUserMetadataFieldTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -33748,7 +34754,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/metadata/deleteUserMetadataField",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_DeleteUserMetadataFieldWSResponse,
     parameters: [
       {
         name: "body",
@@ -33761,7 +34767,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/metadata/deleteUserMetadataFieldTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_DeleteUserMetadataFieldTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -33774,7 +34780,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/metadata/findUserMetadataFieldTemplates",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_FindUserMetadataFieldTemplatesWSResponse,
     parameters: [
       {
         name: "body",
@@ -33787,7 +34793,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/metadata/findUserMetadataFields",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_FindUserMetadataFieldsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33800,7 +34806,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/metadata/saveUserMetadataFields",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_SaveUserMetadataFieldsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33813,7 +34819,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/metadata/updateUserMetadataFieldTemplate",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_metadata_UpdateUserMetadataFieldTemplateWSResponse,
     parameters: [
       {
         name: "body",
@@ -33826,7 +34832,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/sendMobileDownloadSMS",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_SendMobileDownloadSMSWSResponse,
     parameters: [
       {
         name: "body",
@@ -33839,7 +34845,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/sendPartnerAccessGranted",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_SendPartnerAccessGrantedEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -33852,7 +34858,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/sendRhombusKeyUserWelcomeEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_SendRhombusKeyUserWelcomeEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -33865,7 +34871,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/sendUserWelcomeEmail",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_SendUserWelcomeEmailWSResponse,
     parameters: [
       {
         name: "body",
@@ -33878,7 +34884,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/setupVirtualMfaDeviceForCurrentUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_SetupVirtualMfaDeviceForCurrentUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33891,7 +34897,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updatePartnerUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdatePartnerWSResponse,
     parameters: [
       {
         name: "body",
@@ -33904,7 +34910,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updatePartnerUserNotificationSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdatePartnerUserNotificationSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33917,7 +34923,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updateRhombusKeySettingsForUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdateRhombusKeySettingsForUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33930,7 +34936,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updateUser",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdateUserWSResponse,
     parameters: [
       {
         name: "body",
@@ -33943,7 +34949,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updateUserCustomizationFlags",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdateUserCustomizationFlagsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33956,7 +34962,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updateUserNotificationSettings",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdateUserNotificationSettingsWSResponse,
     parameters: [
       {
         name: "body",
@@ -33969,7 +34975,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/user/updateUserSelective",
     requestFormat: "json",
-    response: z.unknown(),
+    response: User_UpdateUserSelectiveWSResponse,
     parameters: [
       {
         name: "body",
@@ -33982,7 +34988,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/addVehicleLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_AddVehicleLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -33995,7 +35001,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/associateEventsToVehicle",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_AssociateEventsToVehicleWSResponse,
     parameters: [
       {
         name: "body",
@@ -34008,7 +35014,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/deleteVehicle",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_DeleteVehicleWSResponse,
     parameters: [
       {
         name: "body",
@@ -34021,7 +35027,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/getRecentVehicleEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_GetRecentVehicleEventsWSResponse,
     parameters: [
       {
         name: "body",
@@ -34034,7 +35040,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/getRecentVehicleEventsByLocation",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_GetRecentVehicleEventsByLocationWSResponse,
     parameters: [
       {
         name: "body",
@@ -34047,7 +35053,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/getRecentVehicleEventsForVehicle",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_GetRecentVehicleEventsForVehicleWSResponse,
     parameters: [
       {
         name: "body",
@@ -34060,7 +35066,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/getVehicleEvents",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_GetVehicleEventsWSResponse,
     parameters: [
       {
         name: "body",
@@ -34073,7 +35079,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/getVehicleLabelsForOrg",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_GetVehicleLabelsForOrgWSResponse,
     parameters: [
       {
         name: "body",
@@ -34086,7 +35092,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/getVehicles",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_GetVehiclesWSResponse,
     parameters: [
       {
         name: "body",
@@ -34099,7 +35105,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/removeVehicleLabel",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_RemoveVehicleLabelWSResponse,
     parameters: [
       {
         name: "body",
@@ -34112,7 +35118,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/reportVehicleEvent",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_ReportVehicleEventResponse,
     parameters: [
       {
         name: "body",
@@ -34125,7 +35131,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/vehicle/saveVehicle",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Vehicle_SaveVehicleWSResponse,
     parameters: [
       {
         name: "body",
@@ -34138,7 +35144,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/cancelSplice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_CancelSpliceWSResponse,
     parameters: [
       {
         name: "body",
@@ -34151,7 +35157,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/cancelSpliceV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_CancelSpliceV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -34164,7 +35170,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/createSharedTimelapseGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_CreateSharedTimelapseGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -34177,7 +35183,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/deleteSharedTimelapseGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_DeleteSharedTimelapseGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -34190,7 +35196,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/deleteTimelapseClips",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_DeleteTimelapseClipsWSResponse,
     parameters: [
       {
         name: "body",
@@ -34203,7 +35209,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/generateTimelapseClip",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GenerateTimelapseClipWSResponse,
     parameters: [
       {
         name: "body",
@@ -34216,7 +35222,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/getExactFrameUri",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GetExactFrameUriWSResponse,
     parameters: [
       {
         name: "body",
@@ -34229,7 +35235,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/getMaxSpliceDuration",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GetMaxSpliceDurationWSResponse,
     parameters: [
       {
         name: "body",
@@ -34242,7 +35248,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/getSharedTimelapseGroups",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GetSharedTimelapseGroupsWSResponse,
     parameters: [
       {
         name: "body",
@@ -34255,7 +35261,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/getSplicedClipsInProgress",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GetSplicedClipsInProgressWSResponse,
     parameters: [
       {
         name: "body",
@@ -34268,7 +35274,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/getTimelapseClips",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GetTimelapseClipsWSResponse,
     parameters: [
       {
         name: "body",
@@ -34281,7 +35287,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/getTimelapseMetadata",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_GetTimelapseMetadataWSResponse,
     parameters: [
       {
         name: "body",
@@ -34294,7 +35300,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/retrySplice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_RetrySpliceWSResponse,
     parameters: [
       {
         name: "body",
@@ -34307,7 +35313,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/shareTimelapseClips",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_ShareTimelapseClipsWSResponse,
     parameters: [
       {
         name: "body",
@@ -34320,7 +35326,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/splice",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_SpliceWSResponse,
     parameters: [
       {
         name: "body",
@@ -34333,7 +35339,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/spliceFrame",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_SpliceFrameWSResponse,
     parameters: [
       {
         name: "body",
@@ -34346,7 +35352,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/spliceV2",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_SpliceV2WSResponse,
     parameters: [
       {
         name: "body",
@@ -34359,7 +35365,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/spliceV3",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_SpliceV3WSResponse,
     parameters: [
       {
         name: "body",
@@ -34372,7 +35378,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/updateSharedTimelapseGroup",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_UpdateSharedTimelapseGroupWSResponse,
     parameters: [
       {
         name: "body",
@@ -34385,7 +35391,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/video/updateTimelapseClipMetadata",
     requestFormat: "json",
-    response: z.unknown(),
+    response: Video_UpdateTimelapseClipMetadataWSResponse,
     parameters: [
       {
         name: "body",
@@ -34488,6 +35494,9 @@ export const schemas = {
   Accesscontrol_GetMinimalAccessControlledDoorsByLocationForCurrentUserWSRequest,
   Accesscontrol_UserAccessGrant,
   Accesscontrol_UserAccessRevocation,
+  RealtimeRelativeSecondsScheduleType,
+  LocalDateTimeIntervalType,
+  RelativeDateTimeIntervalsScheduleType,
   BaseSavedScheduleType_Minimal,
   Accesscontrol_GetMinimalAccessControlledDoorsByLocationForCurrentUserWSResponse,
   Accesscontrol_SendUserPresenceForCurrentUserWSRequest_Destination,
@@ -34737,6 +35746,8 @@ export const schemas = {
   ActivateLocationLockdownActionType,
   AudioPlaybackActionType,
   CancelLoopingAudioPlaybackActionType,
+  ConnectAudioDeviceToPhoneNumberActionType,
+  CustomLLMActionType,
   IntegrationEnum,
   IntegrationCommandActionType,
   IntegrationNotificationActionType,
@@ -34791,6 +35802,7 @@ export const schemas = {
   Accesscontrol_qr_GetQRAccessCodesWSRequest,
   Accesscontrol_qr_QRAccessCodeType,
   Accesscontrol_qr_GetQRAccessCodesWSResponse,
+  Action,
   ActivateLocationLockdownActionRecordType,
   AddOnLicense,
   PerceptionType,
@@ -34824,6 +35836,9 @@ export const schemas = {
   Alertmonitoring_AcceptAlertMonitoringTermsOfServiceForLocationRequest,
   Alertmonitoring_AcceptAlertMonitoringTermsOfServiceRequest,
   Alertmonitoring_AcceptAlertMonitoringTermsOfServiceResponse,
+  NoonlightPromptSelection,
+  Alertmonitoring_AddPromptThreatQualificationsWSRequest,
+  Alertmonitoring_AddPromptThreatQualificationsWSResponse,
   Alertmonitoring_AmModifiedBy,
   Alertmonitoring_CancelThreatCaseWSRequest,
   Alertmonitoring_CancelThreatCaseWSResponse,
@@ -34844,6 +35859,8 @@ export const schemas = {
   Alertmonitoring_DeleteNoonlightSettingsForLocationResponse,
   Alertmonitoring_DeletePinForNoonlightWSRequest,
   Alertmonitoring_DeletePinForNoonlightWSResponse,
+  Alertmonitoring_DeletePromptThreatQualificationByTitleWSRequest,
+  Alertmonitoring_DeletePromptThreatQualificationByTitleWSResponse,
   Alertmonitoring_DisableLocationRequest,
   Alertmonitoring_DisableLocationResponse,
   Alertmonitoring_DismissThreatCaseWSRequest,
@@ -34860,12 +35877,18 @@ export const schemas = {
   Alertmonitoring_GenerateReportDataForLocationWSResponse,
   Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest,
   Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSResponse,
+  Alertmonitoring_GetMonitoredDoorSensorsForLocationWSRequest,
+  HardwareVariationEnum,
+  Door_MinimalDoorStateType,
+  Alertmonitoring_GetMonitoredDoorSensorsForLocationWSResponse,
   Alertmonitoring_GetNoonlightSettingsForLocationWSRequest,
   MonitoringEnableStatus,
   Alertmonitoring_NoonlightWSSettings,
   Alertmonitoring_GetNoonlightSettingsForLocationWSResponse,
   Alertmonitoring_GetNoonlightSettingsWSRequest,
   Alertmonitoring_GetNoonlightSettingsWSResponse,
+  Alertmonitoring_GetPromptThreatQualificationsWSRequest,
+  Alertmonitoring_GetPromptThreatQualificationsWSResponse,
   Alertmonitoring_LocationStatusWSRequest,
   Alertmonitoring_LocationStatusWSResponse,
   Alertmonitoring_OrgStatusWSRequest,
@@ -34896,14 +35919,16 @@ export const schemas = {
   DewarpedView,
   AlteredView,
   AmtSettings,
+  AperioActivatorStateEvent,
   ComponentBaseEnumType,
-  HardwareVariationEnum,
   ComponentEnumType,
   AperioDoorExtension,
   ComponentShadowEnumType,
   DtcInfo,
   AperioDoorExtensionShadow,
   AperioDoorExtensionStateEvent,
+  AperioDoorHandleStateEvent,
+  AperioDoorModeEvent,
   DoorPositionIndicatorEnumType,
   NormalStateEnumType,
   AperioDoorPositionIndicator,
@@ -34918,6 +35943,7 @@ export const schemas = {
   AperioGatewayConnectionStateChangeEvent,
   AperioGatewayShadow,
   AperioGatewayStateEvent,
+  AperioKeyCylinderStateEvent,
   AperioTamperStateEvent,
   AperioType,
   ApiClientTypeEnum,
@@ -34981,6 +36007,11 @@ export const schemas = {
   SimpleAuditEventType,
   AuditRuleTriggerType,
   AuthDecisionSourceEnum,
+  NotificationFollowUp,
+  FollowUpAction,
+  FrequencyUnit,
+  PromptFrequency,
+  AutomatedPrompt,
   AuxiliaryEnumType,
   AuxiliaryInputPhysicalPortEnumType,
   SupervisionModeEnumType,
@@ -35063,6 +36094,7 @@ export const schemas = {
   BaseLicenseType,
   PolicyEventFaceType,
   PolicyEventVehicleType,
+  CheckCondition,
   PolicyAlertV2Type,
   BasePolicyAlertType,
   SimpleDeviceActivityEventType,
@@ -35075,10 +36107,12 @@ export const schemas = {
   RecurringRuleTriggerType,
   LocationLockdownActivatedRuleTriggerType,
   LocationLockdownDeactivatedRuleTriggerType,
+  CustomLLMEventRuleTriggerType,
   ButtonIntegrationRuleTriggerType,
   BaseRuleTriggerType,
   BaseSavedScheduleType,
   BatchRegistrationTokenUsageResult,
+  BinaryAggregationValue,
   Ble_BleDeviceMap,
   Ble_BleRegisteredDeviceWSType,
   Ble_BleUnregisteredHardwareWSType,
@@ -35133,9 +36167,9 @@ export const schemas = {
   Buyer,
   COSensorType,
   CameraAiDewarpConfigType,
-  CheckEquations,
   RegionCoordinateType,
   RegionPolygonType,
+  ScheduledAction,
   CameraConfiguration,
   CameraCrossCountingSettingsType,
   CameraHumanLoiteringSettingsType,
@@ -35263,6 +36297,8 @@ export const schemas = {
   Camera_GetVideoWallsWSResponse,
   Camera_RebootCameraWSRequest,
   Camera_RebootCameraWSResponse,
+  Camera_RevertCameraToDefaultsWSRequest,
+  Camera_RevertCameraToDefaultsWSResponse,
   Camera_UpdateCameraAIThresholdsWSRequest,
   Camera_UpdateCameraAIThresholdsWSResponse,
   Camera_UpdateCameraFirmwareWSRequest,
@@ -35288,24 +36324,47 @@ export const schemas = {
   DoorStateOverride,
   CancelledDoorStateOverride,
   ChangeType,
+  ChatVisibility,
+  ChatPrivacy,
+  ResponseType,
+  ChatQueryFilter,
   QueryStatus,
   QueryTimelineEvent,
   QueryTool,
   ChatRecord,
+  Chatbot_BaseAutomatedPromptWSResponse,
+  Chatbot_BaseChatWSResponse,
+  Chatbot_CreateAutomatedPromptWSRequest,
+  Chatbot_DeleteAutomatedPromptWSRequest,
+  Chatbot_DeleteChatRecordWSRequest,
   Chatbot_DeleteChatbotConversationWSRequest,
+  Chatbot_GetAutomatedPromptChatHistoryWSRequest,
+  Chatbot_GetAutomatedPromptWSRequest,
+  Chatbot_GetAutomatedPromptsForOrgWSResponse,
   Chatbot_GetChatHistoryByContextIdWSRequest,
+  Chatbot_GetChatHistoryWSRequest,
   Chatbot_GetChatHistoryWSResponse,
+  Chatbot_GetChatRecordWSRequest,
   Chatbot_GetChatbotConversationsWSRequest,
   ContextRecord,
   Chatbot_GetChatbotConversationsWSResponse,
+  Chatbot_GetSharedChatRecordsWSRequest,
+  Chatbot_GetSharedChatRecordsWSResponse,
   Chatbot_SubmitChatWSRequest,
   Chatbot_SubmitChatWSResponse,
+  Chatbot_SubmitTestPromptWSRequest,
+  Chatbot_SubmitTestPromptWSResponse,
+  Chatbot_UpdateAutomatedPromptWSRequest,
+  Chatbot_UpdateChatRecordWSRequest,
   ContextRecordSelectiveUpdate,
   Chatbot_UpdateChatbotConversationWSRequest,
   Chatbot_UpdateChatbotConversationsWSResponse,
+  Chatbot_VerifyJobScheduledWSRequest,
+  Chatbot_VerifyJobScheduledWSResponse,
   ClaimKeyEntry,
   ClaimKey,
   ClaimKeySearchFilter,
+  Client,
   ClimateActivityEventType,
   HeatIndexRangeWarningEnum,
   ClimateEventType,
@@ -35391,6 +36450,7 @@ export const schemas = {
   RequestToExitStateEnumType,
   RequestToExitStateChangeEventType,
   CredentialSourceEnumType,
+  CredentialEntryBleWave,
   CredentialEntry,
   CredentialReceivedEventType,
   GenericInputStateEnumType,
@@ -35559,7 +36619,6 @@ export const schemas = {
   Component_UpdateWiegandReaderWSResponse,
   Consignee,
   CountingActivityEventType,
-  CredentialEntryBleWave,
   CrossingCountsType,
   CustomerShipmentType,
   Customer_AcceptUsagePolicyRequest,
@@ -35675,7 +36734,6 @@ export const schemas = {
   Door_GetDoorEventsForSensorWSRequest,
   Door_GetDoorEventsForSensorWSResponse,
   Door_GetMinimalDoorStatesWSRequest,
-  Door_MinimalDoorStateType,
   Door_GetMinimalDoorStatesWSResponse,
   Door_UpdateDoorSensorDetailsWSRequest,
   Door_UpdateDoorSensorDetailsWSResponse,
@@ -35720,6 +36778,7 @@ export const schemas = {
   Doorcontroller_DeleteDoorControllerWSResponse,
   Doorcontroller_DoorControllerDiscoveredAperioDoor,
   Doorcontroller_DoorControllerDiscoveredAperioGateway,
+  Doorcontroller_DoorControllerDiscoveredReaderTypeEnum,
   Doorcontroller_DoorControllerDiscoveredRhombusReaderType,
   Doorcontroller_DoorControllerDiscoveredThirdPartyReaderType,
   Doorcontroller_DoorControllerDiscoveredReaderType,
@@ -35744,6 +36803,7 @@ export const schemas = {
   Embedding,
   EmergencyResponseContactsIntervalType,
   Entity,
+  EntityTag,
   EnvoyCustomField,
   EnvoyDeliveryInfo,
   EnvoyPersonInfo,
@@ -35789,6 +36849,8 @@ export const schemas = {
   Event_GetClipWithProgressWSResponse,
   Event_GetClipsWithProgressWSRequest,
   Event_GetClipsWithProgressWSResponse,
+  Event_GetExpiringPolicyAlertsWSRequest,
+  Event_GetExpiringPolicyAlertsWSResponse,
   Event_GetMotionGridCountsWSResponse,
   Event_GetMotionGridWSRequest,
   Event_GetMotionGridWSResponse,
@@ -36161,6 +37223,7 @@ export const schemas = {
   Integration_GetAperioIntegrationWSRequest,
   Integration_aperio_AperioDeviceView,
   Integration_aperio_DtcInfoView,
+  Integration_aperio_AperioIntegrationStatus,
   Integration_aperio_AperioDoorView,
   Integration_aperio_AperioGatewayView,
   Integration_aperio_AperioRhombusDoorControllerView,
@@ -36352,8 +37415,17 @@ export const schemas = {
   Integration_aperio_DownloadCertificateWSRequest,
   Integration_aperio_RebootAperioGatewayWSRequest,
   Integration_aperio_RebootAperioGatewayWSResponse,
+  Internal_AccessControlDoorOnlyWSRequest,
+  Internal_AccessControlDoorOnlyWSRequest_AccountData,
+  Internal_AccessControlDoorOnlyWSResponse,
   Internal_AddPartnerAsSuperAdminWSRequest,
   Internal_AddPartnerAsSuperAdminWSResponse,
+  Internal_AlarmMonitoringOnlyWSRequest,
+  Internal_AlarmMonitoringOnlyWSRequest_AccountData,
+  Internal_AlarmMonitoringOnlyWSResponse,
+  Internal_CreateCombinedLicensesFromV1WSRequest,
+  Internal_CreateCombinedLicensesFromV1WSRequest_AccountData,
+  Internal_CreateCombinedLicensesFromV1WSResponse,
   Internal_CreateOrgWSRequest,
   Internal_CreateOrgWSResponse,
   Internal_CreatePartnerOrgWSRequest,
@@ -36365,6 +37437,9 @@ export const schemas = {
   Internal_CreateSupportAuthorityWSResponse,
   Internal_DeveloperNewsletterEnrollWSRequest,
   Internal_DeveloperNewsletterEnrollWSResponse,
+  Internal_EntDevicesOnlyWSRequest,
+  Internal_EntDevicesOnlyWSRequest_AccountData,
+  Internal_EntDevicesOnlyWSResponse,
   Internal_GetSuperAdminGroupUUIDWSRequest,
   Internal_GetSuperAdminGroupUUIDWSResponse,
   Internal_GetWarrantyApprovedRMAsWSRequest,
@@ -36391,6 +37466,7 @@ export const schemas = {
   Internal_SetOpportunityForPurchaseOrderWSRequest,
   Internal_SetOpportunityForPurchaseOrderWSResponse,
   Internal_ShipmentEmailWSResponse,
+  Internal_VerifyCanMigrateOrgFromV1WSResponse,
   LicenseInvoiceSubItem,
   InvoiceType,
   Invoice_InvoiceChargeWSRequest,
@@ -36398,8 +37474,13 @@ export const schemas = {
   Invoice_InvoiceV1LineItemType,
   Invoice_InvoiceV1Type,
   Invoice_InvoiceDetailsV1WSResponse,
+  Invoice_InvoiceDetailsV2WSRequest,
+  LineItems,
+  NetsuiteInvoiceDetails,
+  Invoice_InvoiceDetailsV2WSResponse,
   Invoice_InvoiceDetailsWSRequest,
   Invoice_InvoiceDetailsWSResponse,
+  KeypadCommand,
   KeypadConfigType,
   Keypad_AuthenticatePinRequest,
   Keypad_AuthenticatePinResponse,
@@ -36413,6 +37494,7 @@ export const schemas = {
   Keypad_GetKeypadsForOrgWSResponse,
   Keypad_KeypadCheckinWSRequest,
   Keypad_KeypadCheckinWSResponse,
+  Keypad_PublishKeypadCommandWSRequest,
   Keypad_UnregisterKeypadRequest,
   Keypad_UnregisterKeypadResponse,
   Keypad_UpdateKeypadRequest,
@@ -36507,9 +37589,10 @@ export const schemas = {
   License_claimkey_GetClaimKeyWSResponse,
   License_claimkey_ReturnClaimKeyProductQuantitiesWSRequest,
   License_claimkey_ReturnClaimKeyProductQuantitiesWSResponse,
+  UriBuilder,
+  Link,
   LiveNotificationActionStatusEnum,
   LiveNotificationActionRecordType,
-  LocalDateTimeIntervalType,
   LocationFunctionality,
   LocationSettings,
   Location_AddLocationLabelWSRequest,
@@ -36563,10 +37646,10 @@ export const schemas = {
   MinimalNVRStateType,
   MinimalThresholdEventType,
   Mobile_LoginToOrg2FARequiredResponse,
+  Mobile_LoginToOrgSuccessResponse,
+  Mobile_LoginToOrgSsoRequiredResponse,
   Mobile_LoginToOrgBaseResponse,
   Mobile_LoginToOrgRequest,
-  Mobile_LoginToOrgSsoRequiredResponse,
-  Mobile_LoginToOrgSuccessResponse,
   Mobile_LoginVerifiedSupportAuthorityMobileRequest,
   Mobile_LoginVerifiedSupportAuthorityMobileResponse,
   Mobile_LogoutMobileUserRequest,
@@ -36577,7 +37660,10 @@ export const schemas = {
   Mobile_UpdateMobileNotificationTokenResponse,
   Mobile_UpdateRhombusKeyMobileNotificationTokenRequest,
   Mobile_UpdateRhombusKeyMobileNotificationTokenResponse,
+  ModelStatusEnum,
   ModularAIModelParams,
+  PipelineComponentType,
+  PipelineComponent,
   ModularAIConfig,
   ModularAIConfigSelectiveUpdate,
   Modularai_AddModelToDeviceWSRequest,
@@ -36592,11 +37678,18 @@ export const schemas = {
   Modularai_RemoveModelFromDeviceWSResponse,
   Modularai_UpdateModelWSRequest,
   Modularai_UpdateModelWSResponse,
+  MultivaluedMapStringObject,
   MultivaluedMapStringParameterizedHeader,
   MultivaluedMapStringString,
-  Network_NetworkConfigurationWSRequest,
-  Network_NetworkConfigurationWSResponse,
+  Network_GetDeviceNetworkConfigurationWSRequest,
+  Network_NetworkConfigurationModeEnum,
+  Network_IpConfiguration,
+  Network_GetDeviceNetworkConfigurationWSResponse,
+  Network_UpdateDeviceIpConfigurationWSRequest,
+  Network_UpdateDeviceIpConfigurationWSResponse,
+  NewCookie,
   NotificationSettingsType,
+  NumericAggregationValue,
   OAuthApplication,
   Oauth_GetAllApplicationsForOrgWSRequest,
   Oauth_GetAllApplicationsForOrgWSResponse,
@@ -36608,6 +37701,8 @@ export const schemas = {
   OccupancyScheduledTriggerType,
   OccupancyPolicyType,
   Occupancysensor_GetMinimalOccupancySensorStatesWSRequest,
+  Occupancysensor_MotionSensorHealthEnum,
+  Occupancysensor_MotionSensorHealthDetailsEnum,
   Occupancysensor_MinimalOccupancySensorStateType,
   Occupancysensor_GetMinimalOccupancySensorStatesWSResponse,
   Occupancysensor_GetOccupancyEventsForSensorWSRequest,
@@ -36705,6 +37800,8 @@ export const schemas = {
   Org_UpdateOrgAudioRecordingPolicyWSResponse,
   Org_UpdateOrgIntegrationsWSRequest,
   Org_UpdateOrgIntegrationsWSResponse,
+  Org_UpdateOrgLLMUsagePolicyWSRequest,
+  Org_UpdateOrgLLMUsagePolicyWSResponse,
   UserNotificationSelectiveUpdateV2,
   Org_UpdateOrgNotificationTemplateV2WSRequest,
   Org_UpdateOrgNotificationTemplateV2WSResponse,
@@ -36729,6 +37826,7 @@ export const schemas = {
   Partner_ClientDeviceCustomizationsType,
   Partner_ConnectionCountType,
   Partner_CreatePartnerClientWSRequest,
+  Partner_PartnerWebResponseStatusEnum,
   Partner_CreatePartnerClientWSResponse,
   Partner_CustomizeClientDeviceWSRequest,
   Partner_CustomizeClientDeviceWSResponse,
@@ -36739,10 +37837,10 @@ export const schemas = {
   Partner_DeviceWithPartnerDetailsType,
   Partner_GetClientDevicesWSRequest,
   Partner_GetClientDevicesWSResponse,
-  Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSBaseResponse,
   Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSFailureResponse,
-  Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSRequest,
   Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSSuccessResponse,
+  Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSBaseResponse,
+  Partner_GetClientRhombusOrgUsersForPartnerActivationTokenV2WSRequest,
   Partner_GetClientSummaryInfoWSRequest,
   Partner_GetClientSummaryInfoWSResponse,
   Partner_GetListOfAllClientDevicesRequest,
@@ -36771,10 +37869,10 @@ export const schemas = {
   Partner_RequestAccessToClientAccountResponse,
   Partner_RequestAccessToClientAccountV2Request,
   Partner_RequestAccessToClientAccountV2Response,
-  Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSBaseResponse,
   Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSFailureResponse,
-  Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSRequest,
   Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSSuccessResponse,
+  Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSBaseResponse,
+  Partner_SubmitSupportAccessDecisionForPartnerActivationTokenV2WSRequest,
   Partner_UpdateManuallySendLicenseExpirationEmailWSRequest,
   Partner_UpdateManuallySendLicenseExpirationEmailWSResponse,
   Password_ForgotPasswordWSRequest,
@@ -36931,6 +38029,7 @@ export const schemas = {
   Policy_UpdateVideoIntercomPolicyWSRequest,
   Policy_UpdateVideoIntercomPolicyWSResponse,
   PosIntegrationInfoType,
+  Trigger,
   PromptConfigurationType,
   ProximityArrivedActivityEventType,
   ProximityDepartedActivityEventType,
@@ -36940,6 +38039,8 @@ export const schemas = {
   Proximity_GetLocomotionEventsForTagWSRequest,
   Proximity_GetLocomotionEventsForTagWSResponse,
   Proximity_GetMinimalProximityStatesWSRequest,
+  Proximity_ProximityHealthEnum,
+  Proximity_ProximityHealthDetailsEnum,
   Proximity_MinimalProximityStateType,
   Proximity_GetMinimalProximityStatesWSResponse,
   Proximity_GetProximityEventsForTagWSRequest,
@@ -36948,8 +38049,7 @@ export const schemas = {
   Proximity_UpdateProximitySensorDetailsWSResponse,
   Rapidsos_GetNearbyFeedsRequest,
   Rapidsos_GetNearbyFeedsResponse,
-  RealtimeRelativeSecondsScheduleType,
-  RelativeDateTimeIntervalsScheduleType,
+  RegionCrossingActivityEventType,
   Relay_AssignThirdPartyCameraToNVRWSRequest,
   Relay_AssignThirdPartyCameraToNVRWSResponse,
   Relay_AssignThirdPartyCameraToRelayCameraWSRequest,
@@ -36996,12 +38096,11 @@ export const schemas = {
   Relay_PTZStatusWSResponse,
   Relay_RebootNVRVWSRequest,
   Relay_RebootNVRVWSResponse,
-  Relay_RegisterNVRVWSRequest,
-  Relay_RegisterNVRVWSResponse,
   Relay_UnassignThirdPartyCameraWSRequest,
   Relay_UnassignThirdPartyCameraWSResponse,
   Relay_UnregisterNVRWSRequest,
   Relay_UnregisterNVRWSResponse,
+  Relay_UpdateFirmwareWSStatus,
   Relay_UpdateNVRFirmwareWSRequest,
   Relay_UpdateNVRFirmwareWSResponse,
   Relay_UpdateNVRVWSRequest,
@@ -37023,8 +38122,13 @@ export const schemas = {
   Report_GetCountReportsForDevicesAtLocationWSRequest,
   Report_GetCountReportsWSRequest,
   Report_GetCountReportsWSResponse,
+  Report_GetCustomLLMNumericWSResponse,
+  Report_GetCustomLLMReportWSRequest,
+  SceneQueryReportEvent,
+  SceneQueryReport,
+  Report_GetCustomLLMReportWSResponse,
+  Report_GetCustomLLMWBinaryWSResponse,
   Report_GetCustomLLMWSRequest,
-  Report_GetCustomLLMWSResponse,
   Report_GetDiagnosticFeedWSRequest,
   Report_GetDiagnosticFeedWSResponse,
   Report_GetLicensePlatesByDeviceWSRequest,
@@ -37056,6 +38160,8 @@ export const schemas = {
   Report_GetThresholdCrossingEventsWSResponse,
   Report_ResetRunningAverageWSRequest,
   Report_ResetRunningAverageWSResponse,
+  StatusType,
+  Response,
   ResponseEntity,
   ResponseEntityString,
   RhombusOrgUserType,
@@ -37087,7 +38193,6 @@ export const schemas = {
   Rules_records_GetRulesEventRecordsWSResponse,
   Rules_records_GetRulesFilteredWSRequest,
   SalesforceLicenseStartDateTimeAndEndDateTime,
-  SceneQueryReportEvent,
   Scenequery_CreatePromptConfigurationWSRequest,
   Scenequery_CreatePromptConfigurationWSResponse,
   Scenequery_DeletePromptConfigurationWSRequest,
@@ -37096,10 +38201,6 @@ export const schemas = {
   Scenequery_FindAllPromptConfigurationsWSResponse,
   Scenequery_GetPromptConfigurationWSRequest,
   Scenequery_GetPromptConfigurationWSResponse,
-  Scenequery_ReportWSRequest,
-  Scenequery_ReportWSResponse_SceneQueryReportWSEvent,
-  Scenequery_ReportWSResponse_SceneQueryWSReport,
-  Scenequery_ReportWSResponse,
   Scenequery_SelectiveUpdatePromptConfigurationWSRequest,
   Scenequery_SelectiveUpdatePromptConfigurationWSResponse,
   Scenequery_TriggerPromptWSRequest,
@@ -37186,6 +38287,7 @@ export const schemas = {
   SplicedClipProgress,
   Stats,
   StatsCredentialReference,
+  StreamingOutput,
   SupportAuthorityLockdownEventOriginator,
   Support_AddSupportAuthorityWSRequest,
   Support_AddSupportAuthorityWSResponse,
@@ -37228,6 +38330,7 @@ export const schemas = {
   UserVirtualMfaDeviceType,
   User_AssignEmailToUserWSRequest,
   User_AssignEmailToUserWSResponse,
+  User_BulkProvisionCredentialsWSResponse,
   User_ChangeUserEmailWSRequest,
   User_ChangeUserEmailWSResponse,
   User_ChangeUserPasswordWSRequest,
@@ -37242,6 +38345,7 @@ export const schemas = {
   User_FindUserByEmailWSResponse,
   User_FindUserWSRequest,
   User_FindUserWSResponse,
+  User_GetBulkProvisionCredentialsFormatWSResponse,
   User_GetImportUsersFormatWSResponse,
   User_GetRhombusKeyConfigForUserWSRequest,
   User_GetRhombusKeyConfigForUserWSResponse,
@@ -37363,11 +38467,9 @@ export const schemas = {
   WebhookMapEntry,
   ZapierWebhookSettings,
 };
+// @ts-expect-error -- Ignore "potentially infinite" erorr.  Its not infinite!
+export const api = new Zodios(endpoints);
 
-// Temporarily comment out API creation due to schema complexity
-// export const api = new Zodios(endpoints);
-
-// Temporarily comment out API client creation due to schema complexity
-// export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
-//   return new Zodios(baseUrl, endpoints, options);
-// }
+export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
+  return new Zodios(baseUrl, endpoints, options);
+}
