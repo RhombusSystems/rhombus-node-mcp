@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
-import { createUuidSchema } from "../types.js";
+import { createUuidSchema, UUID } from "../types.js";
 
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
@@ -126,12 +126,16 @@ export const OUTPUT_SCHEMA = z.object({
     .optional(
       z.array(
         z.object({
-          deviceUuid: z.optional(z.string()),
-          eventTimestampMs: z.number(),
-          eventTimestamp: z.optional(z.string()),
-          faceName: z.optional(z.string()),
-          locationUuid: z.optional(z.string()),
-          personUuid: z.optional(z.string()),
+          deviceUuid: z.optional(UUID),
+          eventTimestampMs: z.number().describe("The timestamp of the face event in milliseconds."),
+          eventTimestamp: z
+            .optional(z.string())
+            .describe("The timestamp of the face event in human readable format."),
+          faceName: z.optional(z.string()).describe("The name of the face that was detected."),
+          locationUuid: z
+            .optional(UUID)
+            .describe("The UUID of the location where the face event occurred."),
+          personUuid: z.optional(UUID).describe("The UUID of the person that was detected."),
           selectedPersonMatch: z.optional(
             z.object({
               confidence: z.number(),
@@ -140,7 +144,9 @@ export const OUTPUT_SCHEMA = z.object({
               uuid: z.optional(z.string()),
             })
           ),
-          thumbnailS3Key: z.optional(z.string()),
+          thumbnailS3Key: z
+            .optional(z.string())
+            .describe("The S3 key of the thumbnail of the face event."),
           topPersonMatches: z.optional(
             z.array(
               z.object({
@@ -150,8 +156,8 @@ export const OUTPUT_SCHEMA = z.object({
                 uuid: z.optional(z.string()),
               })
             )
-          ),
-          uuid: z.optional(z.string()),
+          ).describe("The top person matches found for this face event, in order of confidence."),
+          uuid: z.optional(UUID),
         })
       )
     )

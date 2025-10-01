@@ -1,35 +1,32 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { logger } from "../logger.js";
 
 export function createTool(server: McpServer) {
   server.tool(
     "count-tool",
     `
-      This tool will return the amount of data in an array of any type and shape. Please use this for a very accurate count.
-
-      This takes in a JSON string. Ideally, it should be a JSON array of any type and shape.
+      This tool counts the number of items by accepting an array of UUIDs. It can count anything that has UUIDs - users, devices, 
+      records, or any other entities. Simply provide an array of UUID strings and it will return the precise count.
       `,
     {
-      dataString: z.string(),
+      uuids: z
+        .array(z.string().describe("UUID string of an individual item"))
+        .describe(
+          "An array of UUID strings representing the items to count. Each string should be a valid UUID."
+        ),
     },
-    async ({ dataString }) => {
+    async ({ uuids }) => {
       try {
-        const data = JSON.parse(dataString);
-
-        if (!Array.isArray(data)) {
-          return {
-            content: [{ type: "text", text: `Invalid JSON. Not an array.` }],
-          };
-        }
-
+        logger.info("Counting UUIDs", uuids);
         return {
-          content: [{ type: "text", text: `Count: ${data.length}` }],
+          content: [{ type: "text", text: `Count: ${uuids.length}` }],
         };
       } catch (e: unknown) {
         const errorMessage = e instanceof Error ? e.message : `Unknown error: ${e}`;
 
         return {
-          content: [{ type: "text", text: `Invalid JSON. Error message: ${errorMessage}` }],
+          content: [{ type: "text", text: `Error counting UUIDs: ${errorMessage}` }],
         };
       }
     }

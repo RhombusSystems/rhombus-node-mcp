@@ -1,21 +1,20 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import DeviceType from "../types/deviceType.js";
-import { createToolTextContent, RequestModifiers, filterIncludedFields } from "../util.js";
-import { generateEndpointToKeysWorkflowText } from "../utils/reduce-output.js";
-import { TOOL_ARGS, ToolArgs } from "../types/get-entity-tool-types.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getCameraList,
-  getDoorbellCameras,
-  getBadgeReaders,
   getAccessControlledDoors,
   getAudioGateways,
-  getDoorSensors,
-  getEnvironmentalSensors,
-  getMotionSensors,
+  getBadgeReaders,
   getButtons,
-  getKeypads,
+  getCameraList,
+  getDoorbellCameras,
+  getDoorSensors,
   getEnvironmentalGateways,
+  getEnvironmentalSensors,
+  getKeypads,
+  getMotionSensors,
 } from "../api/get-entity-tool-api.js";
+import DeviceType from "../types/deviceType.js";
+import { TOOL_ARGS, type ToolArgs } from "../types/get-entity-tool-types.js";
+import { createToolTextContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "get-entity-tool";
 
@@ -25,10 +24,9 @@ Can request multiple entity types at once.
 The return structure is a JSON string that contains the states of the requested entities.
 This data is exact. Whatever entities exist will be returned here.`;
 
-const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { entityTypes, includeFields, timeZone } = args;
-  const requestModifiers = extra._meta?.requestModifiers as RequestModifiers;
-  const sessionId = extra.sessionId;
+const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
+  const { entityTypes, timeZone, filterBy } = args;
+  const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   const promises = [];
   if (entityTypes.includes(DeviceType.CAMERA)) {
@@ -64,9 +62,32 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   if (entityTypes.includes(DeviceType.ENVIRONMENTAL_GATEWAY)) {
     promises.push(getEnvironmentalGateways(timeZone, requestModifiers, sessionId));
   }
-  const responses = Promise.all<object>(promises);
+  const responses = await Promise.all<Record<string, unknown>>(promises);
+
+  // apply filters
+  for (let i = 0; i < responses.length; i++) {
+    const response = responses[i];
+
+    // look through keys and find any with an array
+    for (const key of Object.keys(response)) {
+      const value = response[key];
+      if (Array.isArray(value)) {
+        // then filter
+        response[key] = value.filter((item: any) => {
+          let pass = true;
+          if (item.locationUuid && filterBy.locationUuids && filterBy.locationUuids.length > 0) {
+            pass = pass && filterBy.locationUuids.includes(item.locationUuid);
+          }
+          return pass;
+        });
+
+        response[`${key}Count`] = (response[key] as unknown[]).length;
+      }
+    }
+  }
+
   const ret = {
-    ...(await responses).reduce(
+    ...responses.reduce(
       (prev, curr) => ({
         ...prev,
         ...curr,

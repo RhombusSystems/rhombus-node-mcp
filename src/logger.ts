@@ -12,14 +12,15 @@ log4js.configure({
       },
     },
     stderr: { type: "stderr" },
+    stdout: { type: "stdout" },
   },
   categories: {
     default: {
-      appenders: ["mcp", "stderr"],
+      appenders: ["mcp", "stdout"],
       level: "trace",
     },
     mcp: {
-      appenders: ["mcp", "stderr"],
+      appenders: ["mcp", "stdout"],
       level: "trace",
     },
   },
