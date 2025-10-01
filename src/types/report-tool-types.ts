@@ -298,9 +298,8 @@ export const OUTPUT_SCHEMA = z.object({
             z.object({
               active: z.optional(z.boolean()),
               cameraConfigurations: z.optional(z.array(z.unknown())),
-              checkEquations: z.optional(z.unknown()),
+              checkCondition: z.optional(z.unknown()),
               description: z.optional(z.string()),
-              minuteTriggerRate: z.optional(z.number()),
               name: z.optional(z.string()),
               orgUuid: z.optional(z.string()),
               prompt: z.optional(z.string()),

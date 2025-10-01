@@ -21,6 +21,10 @@ export async function getPolicyAlerts(
       ...response,
       policyAlerts: (response.policyAlerts || []).map((alert: PolicyAlert) => ({
         ...alert,
+        labels: [
+          ...(alert.alertingEventFaces || []),
+          ...(alert.alertingEventVehicles || []),
+        ].flatMap(alert => alert.labels),
         createdOnString: alert.timestampMs
           ? formatTimestamp(alert.timestampMs, args.timeZone)
           : undefined,

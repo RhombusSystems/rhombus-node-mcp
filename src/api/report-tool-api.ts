@@ -374,9 +374,8 @@ export async function findPromptConfigurations(
     ? response.promptConfigurations.map(config => ({
         active: config.active ?? undefined,
         cameraConfigurations: config.cameraConfigurations ?? undefined,
-        checkEquations: config.checkEquations ?? undefined,
+        checkCondition: config.checkCondition ?? undefined,
         description: config.description ?? undefined,
-        minuteTriggerRate: config.minuteTriggerRate ?? undefined,
         name: config.name ?? undefined,
         orgUuid: config.orgUuid ?? undefined,
         prompt: config.prompt ?? undefined,
