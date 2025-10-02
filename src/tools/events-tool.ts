@@ -165,7 +165,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         const result = {
           eventType: "environmental-gateway",
           environmentalGatewayEvents: events,
-        };
+        } as OUTPUT_SCHEMA;
 
         return createToolStructuredContent<OUTPUT_SCHEMA>(result);
       }
