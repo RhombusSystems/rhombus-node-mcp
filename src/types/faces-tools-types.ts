@@ -22,7 +22,7 @@ export const GetFaceEventsArgs = z.object({
       maxPageSize: z
         .number()
         .nullable()
-        .describe("Maximum number of results to return per page. Default to around 100."),
+        .describe("Maximum number of results to return per page. Default to around 200. Caution against setting this to a lower number, it may make you miss information."),
     })
     .nullable()
     .describe("Pagination parameters for the request"),
@@ -131,32 +131,32 @@ export const OUTPUT_SCHEMA = z.object({
           eventTimestamp: z
             .optional(z.string())
             .describe("The timestamp of the face event in human readable format."),
-          faceName: z.optional(z.string()).describe("The name of the face that was detected."),
+          faceName: z.optional(z.string()).describe("If the face matches somebody that has been registered in our system, this is the name of the person that was detected."),
           locationUuid: z
             .optional(UUID)
             .describe("The UUID of the location where the face event occurred."),
           personUuid: z.optional(UUID).describe("The UUID of the person that was detected."),
-          selectedPersonMatch: z.optional(
-            z.object({
-              confidence: z.number(),
-              faceId: z.optional(z.string()),
-              name: z.optional(z.string()),
-              uuid: z.optional(z.string()),
-            })
-          ),
+          // selectedPersonMatch: z.optional(
+          //   z.object({
+          //     confidence: z.number(),
+          //     faceId: z.optional(z.string()),
+          //     name: z.optional(z.string()),
+          //     uuid: z.optional(z.string()),
+          //   })
+          // ),
           thumbnailS3Key: z
             .optional(z.string())
             .describe("The S3 key of the thumbnail of the face event."),
-          topPersonMatches: z.optional(
-            z.array(
-              z.object({
-                confidence: z.number(),
-                faceId: z.optional(z.string()),
-                name: z.optional(z.string()),
-                uuid: z.optional(z.string()),
-              })
-            )
-          ).describe("The top person matches found for this face event, in order of confidence."),
+          // topPersonMatches: z.optional(
+          //   z.array(
+          //     z.object({
+          //       confidence: z.number(),
+          //       faceId: z.optional(z.string()),
+          //       name: z.optional(z.string()),
+          //       uuid: z.optional(z.string()),
+          //     })
+          //   )
+          // ).describe("The top person matches found for this face event, in order of confidence."),
           uuid: z.optional(UUID),
         })
       )

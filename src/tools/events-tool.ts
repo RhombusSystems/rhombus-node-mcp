@@ -6,9 +6,15 @@ import {
   getComponentEventsByLocation,
   getHumanMotionEvents,
 } from "../api/events-tool-api.js";
-import { EventsToolRequestType, OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/events-tools-types.js";
+import {
+  EventsToolRequestType,
+  OUTPUT_SCHEMA,
+  TOOL_ARGS,
+  type ToolArgs,
+} from "../types/events-tools-types.js";
 import { createToolStructuredContent, type RequestModifiers } from "../util.js";
 import { getLogger } from "../logger.js";
+import { TempUnit } from "../utils/temp.js";
 
 const logger = getLogger("events-tool");
 
@@ -106,6 +112,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     endTime,
     limit,
     timeZone,
+    tempUnit,
     cameraUuid,
     duration,
   } = args;
@@ -151,6 +158,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           startTime ? new Date(startTime).getTime() : undefined,
           endTime ? new Date(endTime).getTime() : undefined,
           timeZone,
+          tempUnit ?? TempUnit.CELSIUS,
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
@@ -159,7 +167,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           environmentalGatewayEvents: events,
         };
 
-        return createToolStructuredContent(result);
+        return createToolStructuredContent<OUTPUT_SCHEMA>(result);
       }
     }
     case "climate-sensor": {
@@ -177,6 +185,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           endTime ? new Date(endTime).getTime() : undefined,
           limit ?? null,
           timeZone,
+          tempUnit ?? TempUnit.CELSIUS,
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );

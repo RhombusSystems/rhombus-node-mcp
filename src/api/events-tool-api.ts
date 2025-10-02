@@ -3,6 +3,7 @@ import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { postApi } from "../network.js";
 import type schema from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
+import { tempFunc, TempUnit } from "../utils/temp.js";
 
 // Type definitions
 export const HumanEvent = z.object({
@@ -188,6 +189,7 @@ export async function getEventsForEnvironmentalGateway(
   startTime: number | undefined,
   endTime: number | undefined,
   timeZone: string,
+  tempUnit: TempUnit | null | undefined,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
@@ -210,13 +212,18 @@ export async function getEventsForEnvironmentalGateway(
       modifiers: requestModifiers,
       sessionId,
     }).then(response => {
+      const tempFunc =
+        tempUnit === TempUnit.FAHRENHEIT
+          ? (temp: number) => (temp * 9) / 5 + 32
+          : (temp: number) => temp;
+
       return {
         events: (response.events || []).map(event => ({
           timestampString: event.timestampMs
             ? formatTimestamp(event.timestampMs, timeZone)
             : undefined,
-          temp: event.co2Sense?.tempC,
-          probeTemp: event.tempProbe?.tempC,
+          temp: tempFunc(event.co2Sense?.tempC ?? 0),
+          probeTemp: tempFunc(event.tempProbe?.tempC ?? 0),
           humidity: event.co2Sense?.relHumid,
           pm25: event.pmSense?.pm2p5,
           co2: event.co2Sense?.co2Ppm,
@@ -257,6 +264,7 @@ export async function getClimateEventsForSensor(
   endTime: number | undefined,
   limit: number | null | undefined,
   timeZone: string,
+  tempUnit: TempUnit | null | undefined,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
@@ -281,7 +289,7 @@ export async function getClimateEventsForSensor(
       sessionId,
     });
 
-    if (response && response.climateEvents) {
+    if (response?.climateEvents) {
       // Map the climate events to include formatted timestamp and relevant fields
       const mappedEvents = response.climateEvents.map(event => ({
         timestampString: event.timestampMs
@@ -289,7 +297,9 @@ export async function getClimateEventsForSensor(
           : undefined,
         timestampMs: event.timestampMs,
         temp: event.temp,
-        probeTempC: event.probeTempC,
+        probeTemp: tempFunc(event.probeTempC ?? 0, tempUnit),
+        // probeTempC: event.probeTempC,
+        // probeTempF: event.probeTempC ? (event.probeTempC * 9) / 5 + 32 : undefined,
         humidity: event.humidity,
         pm25: event.pm25,
         co2: event.co2,

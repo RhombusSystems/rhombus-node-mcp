@@ -25,7 +25,7 @@ The return structure is a JSON string that contains the states of the requested 
 This data is exact. Whatever entities exist will be returned here.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
-  const { entityTypes, timeZone, filterBy } = args;
+  const { entityTypes, timeZone, filterBy, tempUnit } = args;
   const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   const promises = [];
@@ -48,7 +48,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     promises.push(getDoorSensors(requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.ENVIRONMENTAL_SENSOR)) {
-    promises.push(getEnvironmentalSensors(timeZone, requestModifiers, sessionId));
+    promises.push(getEnvironmentalSensors(timeZone, tempUnit, requestModifiers, sessionId));
   }
   if (entityTypes.includes(DeviceType.MOTION_SENSOR)) {
     promises.push(getMotionSensors(requestModifiers, sessionId));

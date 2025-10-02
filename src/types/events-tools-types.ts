@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 import { ComponentEventEnumType } from "./schema-components.js";
 import { HumanEvent } from "../api/events-tool-api.js";
+import { TempUnit } from "../utils/temp.js";
 
 export enum EventsToolRequestType {
   ACCESS_CONTROL = "access-control",
@@ -99,6 +100,10 @@ export const TOOL_ARGS = {
     .describe(
       "Duration in seconds to search for human motion events. Required when eventType is 'camera'. Default is 3600 (1 hour)."
     ),
+  tempUnit: z
+    .nativeEnum(TempUnit)
+    .nullable()
+    .describe("The unit of temperature to return. Default is Celsius."),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
@@ -118,7 +123,10 @@ const ClimateSensorEvent = z.object({
   timestampString: z.string().optional().describe("Human-readable formatted timestamp"),
   timestampMs: z.number().optional().describe("Timestamp in milliseconds"),
   temp: z.number().optional().describe("Temperature reading in Celsius"),
-  probeTempC: z.number().optional().describe("Temperature from probe sensor in Celsius"),
+
+  probeTemp: z.number().optional().describe("Temperature from probe sensor"),
+
+  // probeTempC: z.number().optional().describe("Temperature from probe sensor in Celsius"),
   humidity: z.number().optional().describe("Relative humidity percentage"),
   pm25: z.number().optional().describe("PM2.5 particulate matter reading"),
   co2: z.number().optional().describe("CO2 concentration in PPM"),

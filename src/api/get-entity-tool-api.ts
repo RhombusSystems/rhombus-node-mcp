@@ -1,6 +1,7 @@
+import { logger } from "../logger.js";
 import { postApi } from "../network.js";
 import { formatTimestamp } from "../util.js";
-import schema from "../types/schema.js";
+import { tempFunc, TempUnit } from "../utils/temp.js";
 
 export async function getCameraList(requestModifiers?: any, sessionId?: string) {
   return {
@@ -105,6 +106,7 @@ export async function getDoorSensors(requestModifiers?: any, sessionId?: string)
 
 export async function getEnvironmentalSensors(
   timeZone: string,
+  tempUnit: TempUnit | null,
   requestModifiers?: any,
   sessionId?: string
 ) {
@@ -114,15 +116,21 @@ export async function getEnvironmentalSensors(
     modifiers: requestModifiers,
     sessionId,
   }).then(response => {
+    logger.info("Using tempUnit: ", tempUnit);
     return {
       climateStates: response.climateStates
         .filter((sensor: { locationUuid?: string }) => !!sensor.locationUuid)
-        .map((sensor: any) => ({
-          ...sensor,
-          createdAtString: sensor.createdAtMillis
-            ? formatTimestamp(sensor.createdAtMillis, timeZone)
-            : undefined,
-        })),
+        .map((_sensor: any) => {
+          const { temperatureCelcius, ...sensor } = _sensor;
+
+          return {
+            ...sensor,
+            temperature: tempFunc(temperatureCelcius ?? 0, tempUnit),
+            createdAtString: sensor.createdAtMillis
+              ? formatTimestamp(sensor.createdAtMillis, timeZone)
+              : undefined,
+          };
+        }),
     };
   });
 }

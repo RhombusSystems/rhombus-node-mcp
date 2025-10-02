@@ -111,9 +111,9 @@ export async function getFaceEvents(
         faceName: event.faceName,
         locationUuid: event.locationUuid,
         personUuid: event.personUuid,
-        selectedPersonMatch: event.selectedPersonMatch,
+        // selectedPersonMatch: event.selectedPersonMatch,
         thumbnailS3Key: event.thumbnailS3Key,
-        topPersonMatches: event.topPersonMatches,
+        // topPersonMatches: event.topPersonMatches,
         uuid: event.uuid,
       }));
 
