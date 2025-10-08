@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
-import { createUuidSchema, UUID } from "../types.js";
+import { createUuidSchema } from "../types.js";
 
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
@@ -22,7 +22,9 @@ export const GetFaceEventsArgs = z.object({
       maxPageSize: z
         .number()
         .nullable()
-        .describe("Maximum number of results to return per page. Default to around 200. Caution against setting this to a lower number, it may make you miss information."),
+        .describe(
+          "Maximum number of results to return per page. Default to around 200. Caution against setting this to a lower number, it may make you miss information."
+        ),
     })
     .nullable()
     .describe("Pagination parameters for the request"),
@@ -126,16 +128,20 @@ export const OUTPUT_SCHEMA = z.object({
     .optional(
       z.array(
         z.object({
-          deviceUuid: z.optional(UUID),
+          deviceUuid: z.optional(z.string()),
           eventTimestampMs: z.number().describe("The timestamp of the face event in milliseconds."),
           eventTimestamp: z
             .optional(z.string())
             .describe("The timestamp of the face event in human readable format."),
-          faceName: z.optional(z.string()).describe("If the face matches somebody that has been registered in our system, this is the name of the person that was detected."),
+          faceName: z
+            .optional(z.string())
+            .describe(
+              "If the face matches somebody that has been registered in our system, this is the name of the person that was detected."
+            ),
           locationUuid: z
-            .optional(UUID)
+            .optional(z.string())
             .describe("The UUID of the location where the face event occurred."),
-          personUuid: z.optional(UUID).describe("The UUID of the person that was detected."),
+          personUuid: z.optional(z.string()).describe("The UUID of the person that was detected."),
           // selectedPersonMatch: z.optional(
           //   z.object({
           //     confidence: z.number(),
@@ -157,7 +163,7 @@ export const OUTPUT_SCHEMA = z.object({
           //     })
           //   )
           // ).describe("The top person matches found for this face event, in order of confidence."),
-          uuid: z.optional(UUID),
+          uuid: z.optional(z.string()),
         })
       )
     )

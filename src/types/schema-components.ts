@@ -680,6 +680,10 @@ export interface paths {
     /** Update alert monitoring settings for a location. */
     post: operations["updateAlertMonitoringSettings"];
   };
+  "/alertmonitoring/updatePromptThreatQualification": {
+    /** Update an existing prompt threat qualification for the org. */
+    post: operations["updatePromptThreatQualification"];
+  };
   "/audiogateway/delete": {
     /** Remove an audio gateway from organization */
     post: operations["deleteAudioGateway"];
@@ -1143,6 +1147,25 @@ export interface paths {
      * one is created. Returns information about when the next scheduled event will trigger.
      */
     post: operations["verifyJobScheduled"];
+  };
+  "/chatbot/config/createChatbotConfig": {
+    /**
+     * Creates a configuration to manage Rhombus MIND. This includes the API key that Rhombus MIND will
+     * use when calling the LLM if provided, otherwise a Rhombus-provided API key will be used by default.
+     */
+    post: operations["createChatbotConfig"];
+  };
+  "/chatbot/config/deleteChatbotConfig": {
+    /** Deletes the current org's Rhombus MIND configuration. */
+    post: operations["deleteChatbotConfig"];
+  };
+  "/chatbot/config/getChatbotConfig": {
+    /** Retrieves the current org's Rhombus MIND configuration. */
+    post: operations["getChatbotConfig"];
+  };
+  "/chatbot/config/updateChatbotConfig": {
+    /** Selectively updates the current org's Rhombus MIND configuration. */
+    post: operations["updateChatbotConfig"];
   };
   "/chatbot/deleteChatRecord": {
     /** Deletes a chat record. */
@@ -3868,6 +3891,10 @@ export interface paths {
   "/modularai/addModelToDevice": {
     /** Add model to device */
     post: operations["addModelToDevice"];
+  };
+  "/modularai/createModularAIPipelineConfig": {
+    /** Create modular ai pipeline */
+    post: operations["createModularAIPipelineConfig"];
   };
   "/modularai/getDevicesForModel": {
     /** Get devices running model */
@@ -7999,6 +8026,13 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
+    Alertmonitoring_UpdatePromptThreatQualificationWSRequest: {
+      promptSelection?: components["schemas"]["NoonlightPromptSelection"];
+    };
+    Alertmonitoring_UpdatePromptThreatQualificationWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
     /** Base response containing alert monitoring PIN information. */
     Alertmonitoring_pin_BasePinWSResponse: {
       error?: boolean | null;
@@ -11391,6 +11425,23 @@ export interface components {
       uuid?: string | null;
     };
     ChatVisibility: ChatVisibilityEnum;
+    /** Rhombus MIND configuration to update. */
+    ChatbotConfig: {
+      /** LLM API key used by the chatbot service */
+      apiKey?: string | null;
+      /** Epoch timestamp in milliseconds when this config was created */
+      createdAtMs?: number | null;
+      /** base 64 (url-safe) uuid string */
+      lastUpdatedByPrincipal?: string | null;
+      /** base 64 (url-safe) uuid string */
+      orgUuid?: string | null;
+      /** Indicator if this org is using their own LLM API key */
+      selfManaged?: boolean | null;
+      /** Indicator if the provided LLM API key is valid */
+      tokenValid?: boolean | null;
+      /** Epoch timestamp in milliseconds when this config was last updated */
+      updatedAtMs?: number | null;
+    };
     /** Response object for creating, updating or retrieving chatbot automation settings. */
     Chatbot_BaseAutomatedPromptWSResponse: {
       error?: boolean | null;
@@ -11403,9 +11454,19 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
+    /** Response object for creating, updating or retrieving Rhombus MIND config. */
+    Chatbot_BaseChatbotConfigWSResponse: {
+      config?: components["schemas"]["ChatbotConfig"];
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
     /** Request object for creating chatbot automation settings. */
     Chatbot_CreateAutomatedPromptWSRequest: {
       settings: components["schemas"]["AutomatedPrompt"];
+    };
+    /** Request object for creating Rhombus MIND config. */
+    Chatbot_CreateChatbotConfigWSRequest: {
+      config: components["schemas"]["ChatbotConfig"];
     };
     /** Request object for deleting chatbot automation settings. */
     Chatbot_DeleteAutomatedPromptWSRequest: {
@@ -11417,6 +11478,8 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       recordUuid: string | null;
     };
+    /** Request object for deleting Rhombus MIND config. */
+    Chatbot_DeleteChatbotConfigWSRequest: { [key: string]: unknown };
     /** Request object for deleting a user's conversation with Rhombus MIND. */
     Chatbot_DeleteChatbotConversationWSRequest: {
       /** Context identifier of the conversation to delete. */
@@ -11468,6 +11531,8 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       recordUuid: string | null;
     };
+    /** Request object for retrieving Rhombus MIND config. */
+    Chatbot_GetChatbotConfigWSRequest: { [key: string]: unknown };
     /** Request object for retrieving a user's conversations with Rhombus MIND. */
     Chatbot_GetChatbotConversationsWSRequest: {
       pageRequest?: components["schemas"]["DynamoPageRequest"];
@@ -11527,6 +11592,10 @@ export interface components {
     /** Request object for selectively updating a chat record. */
     Chatbot_UpdateChatRecordWSRequest: {
       chat: components["schemas"]["ChatRecord"];
+    };
+    /** Request object for updating Rhombus MIND config. */
+    Chatbot_UpdateChatbotConfigWSRequest: {
+      config: components["schemas"]["ChatbotConfig"];
     };
     /** Request object for selectively updating a user's conversation with Rhombus MIND. */
     Chatbot_UpdateChatbotConversationWSRequest: {
@@ -14076,7 +14145,6 @@ export interface components {
     };
     /** Update Audio settings */
     Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate: {
-      audioSupported?: boolean | null;
       audio_aec_via_software?: boolean | null;
       audio_external_mic_boost?: number | null;
       audio_external_mic_volume?: number | null;
@@ -14088,6 +14156,7 @@ export interface components {
       audio_min_echo_amplitude?: number | null;
       audio_playback_gain_percent?: number | null;
       audio_record?: boolean | null;
+      audio_supported?: boolean | null;
       audio_use_external_mic?: boolean | null;
       audio_use_external_speaker?: boolean | null;
       audio_use_internal_speaker?: boolean | null;
@@ -14113,13 +14182,11 @@ export interface components {
       live_license_invalid?: boolean | null;
       media_ttl_minutes?: number | null;
       on_demand_license_invalid?: boolean | null;
-      secondary_static_ip_v4_address?: number | null;
       snapshot_upload_target?: ExternalDeviceSettingsSelectiveUpdateSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: ExternalDeviceSettingsSelectiveUpdateThumbstripUploadTargetEnum | null;
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
-      vlan_ip_v4_address?: number | null;
     };
     /** Update Door Controller settings */
     Deviceconfig_settings_ExternalDoorControllerSettingsSelectiveUpdate: {
@@ -14132,7 +14199,6 @@ export interface components {
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
     };
     Deviceconfig_settings_ExternalReadableAudioSettings: {
-      audioSupported?: boolean | null;
       audio_aec_via_software?: boolean | null;
       audio_analysis_enabled?: boolean | null;
       audio_external_mic_boost?: number | null;
@@ -14145,6 +14211,7 @@ export interface components {
       audio_min_echo_amplitude?: number | null;
       audio_playback_gain_percent?: number | null;
       audio_record?: boolean | null;
+      audio_supported?: boolean | null;
       audio_use_external_mic?: boolean | null;
       audio_use_external_speaker?: boolean | null;
       audio_use_internal_speaker?: boolean | null;
@@ -14181,12 +14248,10 @@ export interface components {
       max_event_duration_ms?: number | null;
       media_ttl_minutes?: number | null;
       on_demand_license_invalid?: boolean | null;
-      secondary_static_ip_v4_address?: number | null;
       snapshot_upload_target?: ExternalReadableDeviceSettingsSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: ExternalReadableDeviceSettingsThumbstripUploadTargetEnum | null;
-      vlan_ip_v4_address?: number | null;
     };
     Deviceconfig_settings_ExternalReadableDeviceVideoSettings: {
       alert_rate_limit_human_only?: components["schemas"]["BurstyRateLimit"];
@@ -14464,6 +14529,7 @@ export interface components {
       audio_min_echo_amplitude?: number | null;
       audio_playback_gain_percent?: number | null;
       audio_record?: boolean | null;
+      audio_supported?: boolean | null;
       audio_use_external_mic?: boolean | null;
       audio_use_external_speaker?: boolean | null;
       audio_use_internal_speaker?: boolean | null;
@@ -14572,7 +14638,6 @@ export interface components {
         | null;
       resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
       rotation?: number | null;
-      secondary_static_ip_v4_address?: number | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
       shutter_time_max?: number | null;
@@ -14596,7 +14661,6 @@ export interface components {
       vehicle_detection?: boolean | null;
       video_persist_disabled?: boolean | null;
       visual_tamper_config?: components["schemas"]["CameraVisualTamperConfigType"];
-      vlan_ip_v4_address?: number | null;
       wdr_enabled?: boolean | null;
       wdr_strength?: number | null;
       zero_motion_video_bitrate_percent?: number | null;
@@ -14633,12 +14697,10 @@ export interface components {
       pressure_switch_tamper_normally_open?: boolean | null;
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
-      secondary_static_ip_v4_address?: number | null;
       snapshot_upload_target?: IExternalReadableDoorControllerUserConfigSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: IExternalReadableDoorControllerUserConfigThumbstripUploadTargetEnum | null;
-      vlan_ip_v4_address?: number | null;
     };
     /** Audio/video user configuration update */
     Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: {
@@ -14653,6 +14715,7 @@ export interface components {
       audio_min_echo_amplitude?: number | null;
       audio_playback_gain_percent?: number | null;
       audio_record?: boolean | null;
+      audio_supported?: boolean | null;
       audio_use_external_mic?: boolean | null;
       audio_use_external_speaker?: boolean | null;
       audio_use_internal_speaker?: boolean | null;
@@ -14728,7 +14791,6 @@ export interface components {
         | null;
       resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
       rotation?: number | null;
-      secondary_static_ip_v4_address?: number | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
       shutter_time_max?: number | null;
@@ -14744,7 +14806,6 @@ export interface components {
       use_onboard_lpr?: boolean | null;
       vehicle_detection?: boolean | null;
       video_persist_disabled?: boolean | null;
-      vlan_ip_v4_address?: number | null;
       wdr_enabled?: boolean | null;
       wdr_strength?: number | null;
       zero_motion_video_bitrate_percent?: number | null;
@@ -14782,12 +14843,10 @@ export interface components {
       pressure_switch_tamper_normally_open?: boolean | null;
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
-      secondary_static_ip_v4_address?: number | null;
       snapshot_upload_target?: IExternalUpdateableDoorControllerUserConfigSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: IExternalUpdateableDoorControllerUserConfigThumbstripUploadTargetEnum | null;
-      vlan_ip_v4_address?: number | null;
     };
     DewarpedView: {
       aspectRatio?: components["schemas"]["AspectRatio"];
@@ -16426,11 +16485,12 @@ export interface components {
     };
     /** Request object for retrieving clips with progress information and filtering options. */
     Event_GetClipsWithProgressWSRequest: {
-      clipVisibilityFilter?: components["schemas"]["ClipVisibility"];
       /** Device uuids to filter clips by. */
       deviceUuidFilters?: (string | null)[] | null;
       /** Filter to exclude clips created for alarm monitoring verification. */
       excludeAlertMonitoringClips?: boolean | null;
+      /** Filter to only include private clips in the result. */
+      filterByPrivate?: boolean | null;
       /** Location uuids to filter clips by. */
       locationUuidFilters?: (string | null)[] | null;
       /** Page size */
@@ -16669,10 +16729,12 @@ export interface components {
     };
     /** Response object containing the count of saved clips. */
     Event_GetSavedClipCountWSResponse: {
-      /** Count of saved clips matching the filter criteria */
+      /** Count of org-wide saved clips matching the filter criteria */
       count?: number | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      /** Count of private saved clips matching the filter criteria */
+      privateCount?: number | null;
     };
     /** Request object for retrieving detailed information about a saved clip. */
     Event_GetSavedClipDetailsWSRequest: {
@@ -19317,6 +19379,7 @@ export interface components {
       audio_min_echo_amplitude?: number | null;
       audio_playback_gain_percent?: number | null;
       audio_record?: boolean | null;
+      audio_supported?: boolean | null;
       audio_use_external_mic?: boolean | null;
       audio_use_external_speaker?: boolean | null;
       audio_use_internal_speaker?: boolean | null;
@@ -19354,13 +19417,11 @@ export interface components {
       on_demand_license_invalid?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
-      secondary_static_ip_v4_address?: number | null;
       snapshot_upload_target?: IAudioUserConfigSnapshotUploadTargetEnum | null;
       splice_clip_upload_target?: IAudioUserConfigSpliceClipUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: IAudioUserConfigThumbstripUploadTargetEnum | null;
-      vlan_ip_v4_address?: number | null;
     };
     /** Avigilon Alta V2 integration settings to update */
     IAvigilonAltaType: {
@@ -23493,6 +23554,22 @@ export interface components {
     Modularai_AddModelToDeviceWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+    };
+    /** Request object for creating a modular AI pipeline config. */
+    Modularai_CreateModularAIPipelineConfigWSRequest: {
+      /** Description of the created model. */
+      description?: string | null;
+      /** Name of the created model. */
+      name?: string | null;
+      /** List of pipeline components describing the behavior of the modular ai config. */
+      pipeline?: components["schemas"]["PipelineComponent"][] | null;
+    };
+    /** Response object for creating a modular AI pipeline config. */
+    Modularai_CreateModularAIPipelineConfigWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
     };
     /** Request object for getting devices running a modular AI model. */
     Modularai_GetDevicesForModelWSRequest: {
@@ -36510,6 +36587,28 @@ export interface operations {
       };
     };
   };
+  /** Update an existing prompt threat qualification for the org. */
+  updatePromptThreatQualification: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Alertmonitoring_UpdatePromptThreatQualificationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Alertmonitoring_UpdatePromptThreatQualificationWSRequest"];
+      };
+    };
+  };
   /** Remove an audio gateway from organization */
   deleteAudioGateway: {
     parameters: {
@@ -38973,6 +39072,97 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Chatbot_VerifyJobScheduledWSRequest"];
+      };
+    };
+  };
+  /**
+   * Creates a configuration to manage Rhombus MIND. This includes the API key that Rhombus MIND will
+   * use when calling the LLM if provided, otherwise a Rhombus-provided API key will be used by default.
+   */
+  createChatbotConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_BaseChatbotConfigWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_CreateChatbotConfigWSRequest"];
+      };
+    };
+  };
+  /** Deletes the current org's Rhombus MIND configuration. */
+  deleteChatbotConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BaseApiResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_DeleteChatbotConfigWSRequest"];
+      };
+    };
+  };
+  /** Retrieves the current org's Rhombus MIND configuration. */
+  getChatbotConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_BaseChatbotConfigWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_GetChatbotConfigWSRequest"];
+      };
+    };
+  };
+  /** Selectively updates the current org's Rhombus MIND configuration. */
+  updateChatbotConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_BaseChatbotConfigWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_UpdateChatbotConfigWSRequest"];
       };
     };
   };
@@ -53880,6 +54070,28 @@ export interface operations {
       };
     };
   };
+  /** Create modular ai pipeline */
+  createModularAIPipelineConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Modularai_CreateModularAIPipelineConfigWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Modularai_CreateModularAIPipelineConfigWSRequest"];
+      };
+    };
+  };
   /** Get devices running model */
   getDevicesForModel: {
     parameters: {
@@ -64595,6 +64807,9 @@ export enum ExportAuditEventsWSRequestExcludeActionsEnum {
   THIRD_PARTY_CAMERA_UNASSIGNED = "THIRD_PARTY_CAMERA_UNASSIGNED",
   THIRD_PARTY_CAMERA_PASSWORD_CREATE = "THIRD_PARTY_CAMERA_PASSWORD_CREATE",
   THIRD_PARTY_CAMERA_PASSWORD_DELTE = "THIRD_PARTY_CAMERA_PASSWORD_DELTE",
+  CREATE_CHATBOT_CONFIG = "CREATE_CHATBOT_CONFIG",
+  UPDATE_CHATBOT_CONFIG = "UPDATE_CHATBOT_CONFIG",
+  DELETE_CHATBOT_CONFIG = "DELETE_CHATBOT_CONFIG",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -64985,6 +65200,9 @@ export enum ExportAuditEventsWSRequestIncludeActionsEnum {
   THIRD_PARTY_CAMERA_UNASSIGNED = "THIRD_PARTY_CAMERA_UNASSIGNED",
   THIRD_PARTY_CAMERA_PASSWORD_CREATE = "THIRD_PARTY_CAMERA_PASSWORD_CREATE",
   THIRD_PARTY_CAMERA_PASSWORD_DELTE = "THIRD_PARTY_CAMERA_PASSWORD_DELTE",
+  CREATE_CHATBOT_CONFIG = "CREATE_CHATBOT_CONFIG",
+  UPDATE_CHATBOT_CONFIG = "UPDATE_CHATBOT_CONFIG",
+  DELETE_CHATBOT_CONFIG = "DELETE_CHATBOT_CONFIG",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -65550,9 +65768,19 @@ export enum InvoiceStatusEnum {
 }
 
 export enum KeypadCommandEnum {
+  ALARM_RAISED = "ALARM_RAISED",
   ARM = "ARM",
-  DISARM = "DISARM",
+  ARMED = "ARMED",
+  ARMING_COUNTDOWN = "ARMING_COUNTDOWN",
   CANCEL = "CANCEL",
+  COUNTDOWN = "COUNTDOWN",
+  DISARM = "DISARM",
+  DISARMED = "DISARMED",
+  DISARMING = "DISARMING",
+  DISMISSING = "DISMISSING",
+  PENDING_ARMED = "PENDING_ARMED",
+  THREAT_DETECTED = "THREAT_DETECTED",
+  VERIFYING = "VERIFYING",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -65794,6 +66022,7 @@ export enum NoonlightPromptSelectionReasonsEnum {
   ACTIVE_CRIME = "ACTIVE_CRIME",
   UNKNOWN_PERSON_INSIDE = "UNKNOWN_PERSON_INSIDE",
   UNKNOWN_SUSPECT_OUTSIDE = "UNKNOWN_SUSPECT_OUTSIDE",
+  UNKNOWN_SUSPECT_INSIDE = "UNKNOWN_SUSPECT_INSIDE",
   UNKNOWN_PERSON_OUTSIDE = "UNKNOWN_PERSON_OUTSIDE",
   OTHER_CONCLUSIVE_RESULT = "OTHER_CONCLUSIVE_RESULT",
   TIMEOUT = "TIMEOUT",
@@ -66481,6 +66710,7 @@ export enum QueryStatusEnum {
   INTERRUPTED = "INTERRUPTED",
   NO_RESPONSE = "NO_RESPONSE",
   INVALID_AUTH_DATA = "INVALID_AUTH_DATA",
+  INVALID_API_TOKEN = "INVALID_API_TOKEN",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -67088,6 +67318,9 @@ export enum AuditEventWebActionEnum {
   THIRD_PARTY_CAMERA_UNASSIGNED = "THIRD_PARTY_CAMERA_UNASSIGNED",
   THIRD_PARTY_CAMERA_PASSWORD_CREATE = "THIRD_PARTY_CAMERA_PASSWORD_CREATE",
   THIRD_PARTY_CAMERA_PASSWORD_DELTE = "THIRD_PARTY_CAMERA_PASSWORD_DELTE",
+  CREATE_CHATBOT_CONFIG = "CREATE_CHATBOT_CONFIG",
+  UPDATE_CHATBOT_CONFIG = "UPDATE_CHATBOT_CONFIG",
+  DELETE_CHATBOT_CONFIG = "DELETE_CHATBOT_CONFIG",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -67493,6 +67726,9 @@ export enum GetAuditFeedWSRequestExcludeActionsEnum {
   THIRD_PARTY_CAMERA_UNASSIGNED = "THIRD_PARTY_CAMERA_UNASSIGNED",
   THIRD_PARTY_CAMERA_PASSWORD_CREATE = "THIRD_PARTY_CAMERA_PASSWORD_CREATE",
   THIRD_PARTY_CAMERA_PASSWORD_DELTE = "THIRD_PARTY_CAMERA_PASSWORD_DELTE",
+  CREATE_CHATBOT_CONFIG = "CREATE_CHATBOT_CONFIG",
+  UPDATE_CHATBOT_CONFIG = "UPDATE_CHATBOT_CONFIG",
+  DELETE_CHATBOT_CONFIG = "DELETE_CHATBOT_CONFIG",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -67883,6 +68119,9 @@ export enum GetAuditFeedWSRequestIncludeActionsEnum {
   THIRD_PARTY_CAMERA_UNASSIGNED = "THIRD_PARTY_CAMERA_UNASSIGNED",
   THIRD_PARTY_CAMERA_PASSWORD_CREATE = "THIRD_PARTY_CAMERA_PASSWORD_CREATE",
   THIRD_PARTY_CAMERA_PASSWORD_DELTE = "THIRD_PARTY_CAMERA_PASSWORD_DELTE",
+  CREATE_CHATBOT_CONFIG = "CREATE_CHATBOT_CONFIG",
+  UPDATE_CHATBOT_CONFIG = "UPDATE_CHATBOT_CONFIG",
+  DELETE_CHATBOT_CONFIG = "DELETE_CHATBOT_CONFIG",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -68796,6 +69035,9 @@ export enum SimpleAuditEventAuditEventEnum {
   THIRD_PARTY_CAMERA_UNASSIGNED = "THIRD_PARTY_CAMERA_UNASSIGNED",
   THIRD_PARTY_CAMERA_PASSWORD_CREATE = "THIRD_PARTY_CAMERA_PASSWORD_CREATE",
   THIRD_PARTY_CAMERA_PASSWORD_DELTE = "THIRD_PARTY_CAMERA_PASSWORD_DELTE",
+  CREATE_CHATBOT_CONFIG = "CREATE_CHATBOT_CONFIG",
+  UPDATE_CHATBOT_CONFIG = "UPDATE_CHATBOT_CONFIG",
+  DELETE_CHATBOT_CONFIG = "DELETE_CHATBOT_CONFIG",
   UNKNOWN = "UNKNOWN",
 }
 
