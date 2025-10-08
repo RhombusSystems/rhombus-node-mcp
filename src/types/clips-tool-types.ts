@@ -3,6 +3,11 @@ import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/times
 import { createUuidSchema } from "../types.js";
 
 export const TOOL_ARGS = {
+  queryType: z
+    .enum(["saved", "expiringSoon"])
+    .describe(
+      'The type of clips to retrieve. Use "saved" to get regular saved clips, and "expiringSoon" to get clips that are nearing their expiration date.'
+    ),
   deviceUuidFilters: z
     .array(createUuidSchema())
     .nullable()
@@ -39,7 +44,7 @@ const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
 export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
-  const { timestampISOAfter, timestampISOBefore, ...rest } = args;
+  const { queryType, timestampISOAfter, timestampISOBefore, ...rest } = args;
   const timestampMsAfter = createEpochSchema().parse(timestampISOAfter);
   const timestampMsBefore = createEpochSchema().parse(timestampISOBefore);
 

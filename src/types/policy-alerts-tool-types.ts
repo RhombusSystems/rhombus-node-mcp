@@ -3,6 +3,11 @@ import { schemas } from "./zod-schemas.js";
 import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
 export const TOOL_ARGS = {
+  queryType: z
+    .enum(["existing", "expiringSoon"])
+    .describe(
+      'The type of policy alerts to retrieve. Use "existing" to get current policy alerts, and "expiringSoon" to get policy alerts that are nearing their expiration date.'
+    ),
   afterTimestampISO: z
     .string()
     .datetime({ message: "Invalid ISO 8601 date format.", offset: true })
@@ -48,7 +53,7 @@ const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
 export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform(args => {
-  const { afterTimestampISO, beforeTimestampISO, timeZone, ...rest } = args;
+  const { queryType, afterTimestampISO, beforeTimestampISO, timeZone, ...rest } = args;
   const afterTimestampMs = createEpochSchema().parse(afterTimestampISO);
   const beforeTimestampMs = createEpochSchema().parse(beforeTimestampISO);
 
