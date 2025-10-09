@@ -13882,6 +13882,7 @@ const PipelineComponent = z.object({
 });
 const ModularAIConfig = z.object({
   description: z.string().optional(),
+  distributionUuid: z.string().optional(),
   modelParams: ModularAIModelParams.optional(),
   modelQuantizedBinaryContentLocator: z.string().optional(),
   modelStatus: ModelStatusEnum.optional(),
@@ -13893,6 +13894,7 @@ const ModularAIConfig = z.object({
 });
 const ModularAIConfigSelectiveUpdate = z.object({
   description: z.string().optional(),
+  distributionUuid: z.string().optional(),
   modelParams: ModularAIModelParams.optional(),
   modelQuantizedBinaryContentLocator: z.string().optional(),
   modelStatus: ModelStatusEnum.optional(),
@@ -13903,6 +13905,12 @@ const ModularAIConfigSelectiveUpdate = z.object({
   updatedSetMethodMap: z.record(z.unknown()).optional(),
   uuid: z.string().optional()
 });
+const ModularAIDistribution = z.object({
+  description: z.string().optional(),
+  name: z.string().optional(),
+  restrictedOrgUuid: z.string().optional(),
+  uuid: z.string().optional()
+});
 const Modularai_AddModelToDeviceWSRequest = z.object({
   deviceUuid: z.string().optional(),
   modelUuid: z.string().optional()
@@ -13911,8 +13919,18 @@ const Modularai_AddModelToDeviceWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional()
 });
+const Modularai_CreateModularAIDistributionWSRequest = z.object({
+  description: z.string().optional(),
+  name: z.string().optional()
+});
+const Modularai_CreateModularAIDistributionWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  uuid: z.string().optional()
+});
 const Modularai_CreateModularAIPipelineConfigWSRequest = z.object({
   description: z.string().optional(),
+  distributionUuid: z.string().optional(),
   name: z.string().optional(),
   pipeline: z.array(PipelineComponent).optional()
 });
@@ -13937,11 +13955,25 @@ const Modularai_GetModelsAddedToDeviceWSResponse = z.object({
   errorMsg: z.string().optional(),
   models: z.array(ModularAIConfig).optional()
 });
+const Modularai_GetModelsForDistributionWSRequest = z.object({
+  distributionUuid: z.string().optional()
+});
+const Modularai_GetModelsForDistributionWSResponse = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  models: z.array(ModularAIConfig).optional()
+});
 const Modularai_GetModelsWSRequest = z.record(z.unknown());
 const Modularai_GetModelsWSResponse = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   models: z.array(ModularAIConfig).optional()
+});
+const Modularai_ListModularAIDistributionsWSRequest = z.record(z.unknown());
+const Modularai_ListModularAIDistributionsWSResponse = z.object({
+  distributions: z.array(ModularAIDistribution).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional()
 });
 const Modularai_RemoveModelFromDeviceWSRequest = z.object({
   deviceUuid: z.string().optional(),
@@ -30599,6 +30631,19 @@ const endpoints = makeApi([
     },
     {
       method: "post",
+      path: "/api/modularai/createDistribution",
+      requestFormat: "json",
+      response: Modularai_CreateModularAIDistributionWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_CreateModularAIDistributionWSRequest
+      }
+    ]
+    },
+    {
+      method: "post",
       path: "/api/modularai/createModularAIPipelineConfig",
       requestFormat: "json",
       response: Modularai_CreateModularAIPipelineConfigWSResponse,
@@ -30646,6 +30691,32 @@ const endpoints = makeApi([
         name: "body",
         type: "Body",
         schema: Modularai_GetModelsAddedToDeviceWSRequest
+      }
+    ]
+    },
+    {
+      method: "post",
+      path: "/api/modularai/getModelsForDistribution",
+      requestFormat: "json",
+      response: Modularai_GetModelsForDistributionWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_GetModelsForDistributionWSRequest
+      }
+    ]
+    },
+    {
+      method: "post",
+      path: "/api/modularai/listDistributions",
+      requestFormat: "json",
+      response: Modularai_ListModularAIDistributionsWSResponse,
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Modularai_ListModularAIDistributionsWSRequest
       }
     ]
     },
@@ -37633,16 +37704,23 @@ export const schemas = {
   PipelineComponent,
   ModularAIConfig,
   ModularAIConfigSelectiveUpdate,
+  ModularAIDistribution,
   Modularai_AddModelToDeviceWSRequest,
   Modularai_AddModelToDeviceWSResponse,
+  Modularai_CreateModularAIDistributionWSRequest,
+  Modularai_CreateModularAIDistributionWSResponse,
   Modularai_CreateModularAIPipelineConfigWSRequest,
   Modularai_CreateModularAIPipelineConfigWSResponse,
   Modularai_GetDevicesForModelWSRequest,
   Modularai_GetDevicesForModelWSResponse,
   Modularai_GetModelsAddedToDeviceWSRequest,
   Modularai_GetModelsAddedToDeviceWSResponse,
+  Modularai_GetModelsForDistributionWSRequest,
+  Modularai_GetModelsForDistributionWSResponse,
   Modularai_GetModelsWSRequest,
   Modularai_GetModelsWSResponse,
+  Modularai_ListModularAIDistributionsWSRequest,
+  Modularai_ListModularAIDistributionsWSResponse,
   Modularai_RemoveModelFromDeviceWSRequest,
   Modularai_RemoveModelFromDeviceWSResponse,
   Modularai_UpdateModelWSRequest,

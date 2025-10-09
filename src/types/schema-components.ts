@@ -3892,6 +3892,10 @@ export interface paths {
     /** Add model to device */
     post: operations["addModelToDevice"];
   };
+  "/modularai/createDistribution": {
+    /** Create modular ai distribution */
+    post: operations["createDistribution"];
+  };
   "/modularai/createModularAIPipelineConfig": {
     /** Create modular ai pipeline */
     post: operations["createModularAIPipelineConfig"];
@@ -3907,6 +3911,14 @@ export interface paths {
   "/modularai/getModelsAddedToDevice": {
     /** Get models added to device */
     post: operations["getModelsAddedToDevice"];
+  };
+  "/modularai/getModelsForDistribution": {
+    /** Get models associated to a distribution */
+    post: operations["getModelsForDistribution"];
+  };
+  "/modularai/listDistributions": {
+    /** List modular ai distributions */
+    post: operations["listDistributions"];
   };
   "/modularai/removeModelFromDevice": {
     /** Remove model from device */
@@ -23509,9 +23521,11 @@ export interface components {
       [key: string]: unknown;
     };
     ModelStatusEnum: ModelStatusEnum;
-    /** List of modular AI models added to the device */
+    /** List of available modular AI models */
     ModularAIConfig: {
       description?: string | null;
+      /** base 64 (url-safe) uuid string */
+      distributionUuid?: string | null;
       modelParams?: components["schemas"]["ModularAIModelParams"];
       modelQuantizedBinaryContentLocator?: string | null;
       modelStatus?: components["schemas"]["ModelStatusEnum"];
@@ -23526,6 +23540,8 @@ export interface components {
     /** Selective update configuration for the modular AI model */
     ModularAIConfigSelectiveUpdate: {
       description?: string | null;
+      /** base 64 (url-safe) uuid string */
+      distributionUuid?: string | null;
       modelParams?: components["schemas"]["ModularAIModelParams"];
       modelQuantizedBinaryContentLocator?: string | null;
       modelStatus?: components["schemas"]["ModelStatusEnum"];
@@ -23535,6 +23551,15 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       restrictedOrgUuid?: string | null;
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+    };
+    /** List of available modular AI distributions */
+    ModularAIDistribution: {
+      description?: string | null;
+      name?: string | null;
+      /** base 64 (url-safe) uuid string */
+      restrictedOrgUuid?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
@@ -23555,10 +23580,26 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
+    /** Request object for creating a modular AI distribution. */
+    Modularai_CreateModularAIDistributionWSRequest: {
+      /** Description of the created model. */
+      description?: string | null;
+      /** Name of the created model. */
+      name?: string | null;
+    };
+    /** Response object for creating a modular AI distribution. */
+    Modularai_CreateModularAIDistributionWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+    };
     /** Request object for creating a modular AI pipeline config. */
     Modularai_CreateModularAIPipelineConfigWSRequest: {
       /** Description of the created model. */
       description?: string | null;
+      /** base 64 (url-safe) uuid string */
+      distributionUuid?: string | null;
       /** Name of the created model. */
       name?: string | null;
       /** List of pipeline components describing the behavior of the modular ai config. */
@@ -23595,6 +23636,18 @@ export interface components {
       /** List of modular AI models added to the device */
       models?: components["schemas"]["ModularAIConfig"][] | null;
     };
+    /** Request object for getting modular AI models for a given distribution. */
+    Modularai_GetModelsForDistributionWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      distributionUuid?: string | null;
+    };
+    /** Response object containing available modular AI models for a given distribution. */
+    Modularai_GetModelsForDistributionWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** List of available modular AI models */
+      models?: components["schemas"]["ModularAIConfig"][] | null;
+    };
     /** Request object for getting available modular AI models. */
     Modularai_GetModelsWSRequest: { [key: string]: unknown };
     /** Response object containing available modular AI models. */
@@ -23603,6 +23656,15 @@ export interface components {
       errorMsg?: string | null;
       /** List of available modular AI models */
       models?: components["schemas"]["ModularAIConfig"][] | null;
+    };
+    /** Request object for getting available modular AI distributions. */
+    Modularai_ListModularAIDistributionsWSRequest: { [key: string]: unknown };
+    /** Response object containing available modular AI distributions. */
+    Modularai_ListModularAIDistributionsWSResponse: {
+      /** List of available modular AI distributions */
+      distributions?: components["schemas"]["ModularAIDistribution"][] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
     };
     /** Request object for removing a modular AI model from a device. */
     Modularai_RemoveModelFromDeviceWSRequest: {
@@ -54070,6 +54132,28 @@ export interface operations {
       };
     };
   };
+  /** Create modular ai distribution */
+  createDistribution: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Modularai_CreateModularAIDistributionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Modularai_CreateModularAIDistributionWSRequest"];
+      };
+    };
+  };
   /** Create modular ai pipeline */
   createModularAIPipelineConfig: {
     parameters: {
@@ -54155,6 +54239,50 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Modularai_GetModelsAddedToDeviceWSRequest"];
+      };
+    };
+  };
+  /** Get models associated to a distribution */
+  getModelsForDistribution: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Modularai_GetModelsForDistributionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Modularai_GetModelsForDistributionWSRequest"];
+      };
+    };
+  };
+  /** List modular ai distributions */
+  listDistributions: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Modularai_ListModularAIDistributionsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Modularai_ListModularAIDistributionsWSRequest"];
       };
     };
   };
