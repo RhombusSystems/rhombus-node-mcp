@@ -41,13 +41,24 @@ class ZodSchemaGenerator {
     this.spec = JSON.parse(specContent);
   }
 
-  private convertType(schema: any, name?: string): string {
+  private convertType(schema: any, name?: string, currentPath: string[] = []): string {
     if (!schema) return "z.unknown()";
 
     // Handle $ref
     if (schema.$ref) {
       const refName = schema.$ref.split("/").pop();
-      return refName || "z.unknown()";
+      if (refName) {
+        // Check for circular reference
+        if (currentPath.includes(refName)) {
+          return `z.lazy(() => ${refName})`;
+        }
+        // Check if this is a forward reference (not yet generated)
+        if (!this.generatedSchemas.has(refName) && this.schemaDefinitions.has(refName)) {
+          return `z.lazy(() => ${refName})`;
+        }
+        return refName;
+      }
+      return "z.unknown()";
     }
 
     // Handle basic types
@@ -73,16 +84,17 @@ class ZodSchemaGenerator {
         return "z.boolean()";
 
       case "array":
-        const itemType = this.convertType(schema.items);
+        const itemType = this.convertType(schema.items, undefined, currentPath);
         return `z.array(${itemType})`;
 
       case "object":
         if (schema.properties) {
           const properties: string[] = [];
           const required = schema.required || [];
+          const newPath = name ? [...currentPath, name] : currentPath;
 
           for (const [propName, propSchema] of Object.entries(schema.properties)) {
-            let propType = this.convertType(propSchema as any, propName);
+            let propType = this.convertType(propSchema as any, propName, newPath);
             if (!required.includes(propName)) {
               propType += ".optional()";
             }
@@ -109,13 +121,13 @@ class ZodSchemaGenerator {
           // For simplicity, just merge the first object schema found
           for (const subSchema of schema.allOf) {
             if (subSchema.type === "object" || subSchema.properties) {
-              return this.convertType(subSchema);
+              return this.convertType(subSchema, undefined, currentPath);
             }
           }
         }
 
         if (schema.oneOf || schema.anyOf) {
-          const unionSchemas = (schema.oneOf || schema.anyOf).map((s: any) => this.convertType(s));
+          const unionSchemas = (schema.oneOf || schema.anyOf).map((s: any) => this.convertType(s, undefined, currentPath));
           return `z.union([${unionSchemas.join(", ")}])`;
         }
 
@@ -172,14 +184,61 @@ class ZodSchemaGenerator {
     }
   }
 
+  private hasCircularReference(schema: any, schemaName: string, visited: Set<string> = new Set()): boolean {
+    if (!schema || typeof schema !== "object") return false;
+    
+    if (visited.has(schemaName)) return true;
+    visited.add(schemaName);
+
+    if (schema.$ref) {
+      const refName = schema.$ref.split("/").pop();
+      if (refName && refName === schemaName) return true;
+      if (refName && this.schemaDefinitions.has(refName)) {
+        return this.hasCircularReference(this.schemaDefinitions.get(refName), refName, new Set(visited));
+      }
+    }
+
+    if (schema.properties) {
+      for (const prop of Object.values(schema.properties)) {
+        if (this.hasCircularReference(prop, schemaName, new Set(visited))) return true;
+      }
+    }
+
+    if (schema.items) {
+      if (this.hasCircularReference(schema.items, schemaName, new Set(visited))) return true;
+    }
+
+    if (schema.allOf) {
+      for (const item of schema.allOf) {
+        if (this.hasCircularReference(item, schemaName, new Set(visited))) return true;
+      }
+    }
+
+    if (schema.oneOf) {
+      for (const item of schema.oneOf) {
+        if (this.hasCircularReference(item, schemaName, new Set(visited))) return true;
+      }
+    }
+
+    if (schema.anyOf) {
+      for (const item of schema.anyOf) {
+        if (this.hasCircularReference(item, schemaName, new Set(visited))) return true;
+      }
+    }
+
+    return false;
+  }
+
   private topologicalSort(): string[] {
     const visited = new Set<string>();
     const visiting = new Set<string>();
     const result: string[] = [];
+    const circularRefs = new Set<string>();
 
     const visit = (node: string) => {
       if (visiting.has(node)) {
-        // Circular dependency detected - skip for now
+        // Circular dependency detected - mark as circular
+        circularRefs.add(node);
         return;
       }
       if (visited.has(node)) {
@@ -204,6 +263,13 @@ class ZodSchemaGenerator {
       visit(schemaName);
     }
 
+    // Add circular refs at the end
+    for (const circularRef of circularRefs) {
+      if (!visited.has(circularRef)) {
+        result.push(circularRef);
+      }
+    }
+
     return result;
   }
 
@@ -218,6 +284,30 @@ class ZodSchemaGenerator {
     this.analyzeDependencies();
     const sortedSchemas = this.topologicalSort();
 
+    // Special handling for known problematic schemas
+    const specialOrder = ['BodyPart', 'MultiPart', 'LocationType'];
+    const processedSpecial = new Set<string>();
+    
+    // Process special order schemas first
+    for (const schemaName of specialOrder) {
+      if (this.schemaDefinitions.has(schemaName) && !this.generatedSchemas.has(schemaName)) {
+        const schemaDefn = this.schemaDefinitions.get(schemaName);
+        if (schemaDefn) {
+          try {
+            const zodSchema = this.convertType(schemaDefn, schemaName, [schemaName]);
+            schemas.push(`const ${schemaName}: z.ZodObject<any> = ${zodSchema};`);
+            this.generatedSchemas.add(schemaName);
+            processedSpecial.add(schemaName);
+          } catch (error) {
+            console.warn(`Warning: Could not generate schema for ${schemaName}:`, error);
+            schemas.push(`const ${schemaName} = z.unknown(); // Could not generate from OpenAPI`);
+            this.generatedSchemas.add(schemaName);
+            processedSpecial.add(schemaName);
+          }
+        }
+      }
+    }
+
     // Generate schemas in dependency order
     for (const schemaName of sortedSchemas) {
       if (this.generatedSchemas.has(schemaName)) continue;
@@ -226,8 +316,13 @@ class ZodSchemaGenerator {
       if (!schemaDefn) continue;
 
       try {
-        const zodSchema = this.convertType(schemaDefn, schemaName);
-        schemas.push(`const ${schemaName} = ${zodSchema};`);
+        const zodSchema = this.convertType(schemaDefn, schemaName, [schemaName]);
+        // Add explicit type annotation for schemas that might have circular references
+        if (this.hasCircularReference(schemaDefn, schemaName)) {
+          schemas.push(`const ${schemaName}: z.ZodObject<any> = ${zodSchema};`);
+        } else {
+          schemas.push(`const ${schemaName} = ${zodSchema};`);
+        }
         this.generatedSchemas.add(schemaName);
       } catch (error) {
         console.warn(`Warning: Could not generate schema for ${schemaName}:`, error);
@@ -243,7 +338,7 @@ class ZodSchemaGenerator {
       try {
         // For circular dependencies, use z.lazy() and add explicit type annotation
         schemas.push(
-          `const ${schemaName}: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => ${this.convertType(schemaDefn, schemaName)});`
+          `const ${schemaName}: z.ZodLazy<z.ZodObject<any>> = z.lazy(() => ${this.convertType(schemaDefn, schemaName, [schemaName])});`
         );
         this.generatedSchemas.add(schemaName);
       } catch (error) {
@@ -279,10 +374,10 @@ class ZodSchemaGenerator {
           const responses = operation.responses;
           if (responses["200"]?.content?.["application/json"]?.schema) {
             const responseSchema = responses["200"].content["application/json"].schema;
-            endpoint.response = this.convertType(responseSchema);
+            endpoint.response = this.convertType(responseSchema, undefined, []);
           } else if (responses["201"]?.content?.["application/json"]?.schema) {
             const responseSchema = responses["201"].content["application/json"].schema;
-            endpoint.response = this.convertType(responseSchema);
+            endpoint.response = this.convertType(responseSchema, undefined, []);
           }
 
           // Handle path parameters
@@ -292,13 +387,13 @@ class ZodSchemaGenerator {
                 endpoint.parameters.push({
                   name: param.name,
                   type: "Path",
-                  schema: this.convertType(param.schema),
+                  schema: this.convertType(param.schema, undefined, []),
                 });
               } else if (param.in === "query") {
                 endpoint.parameters.push({
                   name: param.name,
                   type: "Query",
-                  schema: this.convertType(param.schema),
+                  schema: this.convertType(param.schema, undefined, []),
                 });
               }
             }
@@ -310,7 +405,7 @@ class ZodSchemaGenerator {
             endpoint.parameters.push({
               name: "body",
               type: "Body",
-              schema: this.convertType(bodySchema),
+              schema: this.convertType(bodySchema, undefined, []),
             });
           }
 
@@ -381,8 +476,17 @@ class ZodSchemaGenerator {
       "",
       ...componentSchemas,
       "",
-      endpoints,
-      ...exports,
+      "// API client generation disabled due to TypeScript complexity limits",
+      "// const endpoints = makeApi([]);",
+      "// export const api = new Zodios(endpoints);",
+      "",
+      "export const schemas = {",
+      schemaExports,
+      "};",
+      "",
+      "// export function createApiClient(baseUrl: string, options?: ZodiosOptions) {",
+      "//   return new Zodios(baseUrl, endpoints, options);",
+      "// }",
     ].join("\n");
   }
 
