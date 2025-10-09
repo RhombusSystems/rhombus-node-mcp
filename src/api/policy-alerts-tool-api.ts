@@ -32,3 +32,26 @@ export async function getPolicyAlerts(
     };
   });
 }
+
+export async function getExpiringPolicyAlerts(
+  args: ApiPayload,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  return await postApi<schema["Event_GetExpiringPolicyAlertsWSResponse"]>({
+    route: "/event/getExpiringPolicyAlerts",
+    body: args,
+    modifiers: requestModifiers,
+    sessionId,
+  }).then(response => {
+    return {
+      ...response,
+      policyAlerts: (response.policyAlerts || []).map((alert: PolicyAlert) => ({
+        ...alert,
+        createdOnString: alert.timestampMs
+          ? formatTimestamp(alert.timestampMs)
+          : undefined,
+      })),
+    };
+  });
+}

@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
 import { ApiPayloadSchema, TOOL_ARGS, ToolArgs } from "../types/clips-tool-types.js";
-import { getSavedClips } from "../api/clips-tool-api.js";
+import { getSavedClips, getExpiringClips } from "../api/clips-tool-api.js";
 
 const TOOL_NAME = "clips-tool";
 
@@ -9,6 +9,7 @@ const TOOL_DESCRIPTION = `
 Retrieves saved video clips from the Rhombus system. Saved clips can be viewed for up to 2 years and are typically found in the "Clips" tab of the "Saved Video" section of the Rhombus Console.
 
 This tool allows you to filter clips by:
+* Whether or not they are expiring soon.
 * Specific devices using their UUIDs.
 * Specific locations using their UUIDs.
 * A simple string search on clip names.
@@ -34,15 +35,22 @@ The tool returns a JSON object with the following structure and important fields
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  let ret;
-
   const payload = ApiPayloadSchema.parse(args);
-
-  ret = await getSavedClips(
-    payload,
-    extra._meta?.requestModifiers as RequestModifiers,
-    extra.sessionId
-  );
+  let ret;
+  switch (args.queryType) {
+    case "saved":
+      ret = await getSavedClips(
+        payload,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+    case "expiringSoon":
+      ret = await getExpiringClips(
+        payload,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+  }
 
   return {
     content: [{ type: "text" as const, text: JSON.stringify(ret) }],

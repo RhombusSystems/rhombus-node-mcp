@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
-import { getPolicyAlerts } from "../api/policy-alerts-tool-api.js";
+import { getExpiringPolicyAlerts, getPolicyAlerts } from "../api/policy-alerts-tool-api.js";
 import {
   ApiPayloadSchema,
   OUTPUT_SCHEMA,
@@ -23,7 +23,7 @@ Can inquire about labels that have been seen.
 Please note, this is not an exhaustive list, and there may be other types of triggers or events that generate
 policy alerts within the Rhombus system.
 
-This tool allows you to filter existing alerts by a specific time range (before or after a timestamp in ISO 8601 format),
+This tool allows you to filter existing alerts by existing/expiring, a specific time range (before or after a timestamp in ISO 8601 format),
 by a list of device UUIDs, or by a list of location UUIDs.
 You can also specify the maximum number of results to return.
 The output is provided in JSON format.`;
@@ -31,11 +31,25 @@ The output is provided in JSON format.`;
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const payload = ApiPayloadSchema.parse(args);
 
-  const ret = await getPolicyAlerts(
-    payload,
-    extra._meta?.requestModifiers as RequestModifiers,
-    extra.sessionId
-  );
+  let ret;
+  switch (args.queryType) {
+    case "existing":
+      ret = await getPolicyAlerts(
+        payload,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      break;
+    case "expiringSoon":
+      await getExpiringPolicyAlerts(
+        payload,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      break;
+    default:
+      throw new Error(`Unsupported queryType: ${args.queryType}`);
+  }
 
   return {
     content: [{ type: "text" as const, text: JSON.stringify(ret) }],
