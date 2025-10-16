@@ -6,6 +6,12 @@ import crypto from "node:crypto";
 import createServer from "../createServer.js";
 import { logger } from "../logger.js";
 
+enum AuthScheme {
+  API_TOKEN = "api-token",
+  CHATBOT = "chatbot",
+  WEB2 = "web2",
+}
+
 export const authStore = new Map<
   string,
   | {
@@ -15,6 +21,10 @@ export const authStore = new Map<
     }
   | {
       apiKey: string;
+      createdMs: number;
+    }
+  | {
+      cookie: string;
       createdMs: number;
     }
 >();
@@ -62,7 +72,7 @@ export default function streamableHttpTransport() {
             const authScheme = req.headers["x-auth-scheme"] ?? "api-token";
 
             // if api key is provided
-            if (authScheme === "api-token") {
+            if (authScheme === AuthScheme.API_TOKEN) {
               const apiKey =
                 "x-auth-apikey" in req.headers
                   ? (req.headers["x-auth-apikey"] as string)
@@ -81,7 +91,7 @@ export default function streamableHttpTransport() {
                 createdMs: Date.now(),
               });
             } else if (
-              authScheme === "chatbot" &&
+              authScheme === AuthScheme.CHATBOT &&
               "x-auth-session" in req.headers &&
               "x-auth-chat" in req.headers
             ) {
@@ -92,6 +102,11 @@ export default function streamableHttpTransport() {
               authStore.set(sessionId, {
                 sessionId: req.headers["x-auth-session"] as string,
                 latestRecordUuid: req.headers["x-auth-chat"] as string,
+                createdMs: Date.now(),
+              });
+            } else if (authScheme === AuthScheme.WEB2 && "x-auth-cookie" in req.headers) {
+              authStore.set(sessionId, {
+                cookie: req.headers["x-auth-cookie"] as string,
                 createdMs: Date.now(),
               });
             } else {
@@ -143,6 +158,14 @@ export default function streamableHttpTransport() {
     }
 
     // Handle the request
+    // modify request body to include meta
+    // if (req?.body?.params) {
+    //   req.body.params._meta = {
+    //     ...(req.body.params._meta ?? {}),
+    //     foo: "bar",
+    //   };
+    // }
+    // logger.trace("blah blah blah", JSON.stringify(req.body, null, 2));
     await transport.handleRequest(req, res, req.body);
   });
 
