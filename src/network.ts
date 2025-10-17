@@ -75,11 +75,16 @@ export async function postApi<T>({
         "x-auth-scheme": "chatbot",
       };
       url = appendQueryParams(url, { _rs: auth.sessionId });
+    } else if ("cookie" in auth) {
+      authHeaders = {
+        "x-auth-scheme": "web2",
+        cookie: auth.cookie,
+      };
     }
   }
 
   // merge headers
-  let requestHeaders: Record<string, string> = {
+  const requestHeaders: Record<string, string> = {
     ...STATIC_HEADERS,
     ...authHeaders,
     ...(modifiers?.headers ?? {}),
