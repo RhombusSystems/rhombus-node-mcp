@@ -53,15 +53,17 @@ export async function getAccessControlledDoors(requestModifiers?: any, sessionId
     modifiers: requestModifiers,
     sessionId,
   }).then(response => {
-    return (response.accessControlledDoors || []).map((door: any) => {
-      return {
-        geofenceEnabled: door.geofenceEnabled,
-        locationUuid: door.locationUuid,
-        policyUuid: door.policyUuid,
-        name: door.name,
-        uuid: door.uuid,
-      };
-    });
+    return {
+      accessControlledDoors: (response.accessControlledDoors || []).map((door: any) => {
+        return {
+          geofenceEnabled: door.geofenceEnabled,
+          locationUuid: door.locationUuid,
+          policyUuid: door.policyUuid,
+          name: door.name,
+          uuid: door.uuid,
+        };
+      }),
+    };
   });
 }
 
