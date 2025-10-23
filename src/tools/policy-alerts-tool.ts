@@ -18,6 +18,8 @@ policies configured in the Rhombus Console. These policies trigger alerts when s
 * Physical or Visual Tamper: Detection of physical movement of a device or obstruction of a camera's field of view.
 * Access Control Events: Such as unauthorized access attempts in restricted areas.
 
+Alerts are generated on triggers, but are NOT the same as notifications. Only certain alerts generate notifications based on user settings.
+
 Can inquire about labels that have been seen.
 
 Please note, this is not an exhaustive list, and there may be other types of triggers or events that generate
