@@ -21,6 +21,14 @@ The system's cameras may have LPR enabled, and when it is enabled, it will detec
 come into view. However, it is possible that the recognized license is only a partial match, so keep that in mind when using this tool.
 Users will be able to save license plates into the system, and then additionally label them with a name.
 
+Regarding vehicle labels:  Users in the Rhombus LPR system can assign labels to vehicles.  When a vehicle (license plate) is assigned a label, and then later
+is recognized by a rhombus security camera, it will attach the label to the event and will be available on the events returned from (${LprToolRequestType.GET_SAVED_VEHICLES}).
+
+You should use the location-tool if trying to pair vehicle events to a particular location.  Never use location UUIDs in reports, use names.
+
+As such, if the user is asking anything about a label or labels it would be best practice to first call ${LprToolRequestType.GET_VEHICLE_LABELS} and then ${LprToolRequestType.GET_VEHICLE_EVENTS} 
+or ${LprToolRequestType.GET_VEHICLE_EVENTS}.
+
 This tool has 3 modes of operation, determined by the "requestType" parameter:
 - ${LprToolRequestType.GET_VEHICLE_EVENTS}: Retrieves a list of vehicle events that have been detected by the system. Please keep in mind that this has the *potential*
   to return a lot of data. However, 7 days should be a reasonable time range to start from if the user is not specific.

@@ -5,7 +5,7 @@ import { TOOL_ARGS, type ToolArgs } from "../types/location-tool-types.js";
 
 const TOOL_NAME = "location-tool";
 const TOOL_DESCRIPTION = `This tool performs operations on locations.
-- 'get': Retrieves all locations.`;
+- 'get': Retrieves all locations.  When generating reports with location details, use location names not uuids.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { action } = args;
