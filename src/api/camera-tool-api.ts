@@ -1,9 +1,17 @@
 import { getLogger } from "../logger.js";
 import { appendQueryParams, AUTH_HEADERS, postApi, STATIC_HEADERS } from "../network.js";
 import { removeNullFields, RequestModifiers } from "../util.js";
-import { ExternalUpdateableFacetedUserConfig } from "../types/camera-tool-types.js";
+import {
+  ExternalUpdateableFacetedUserConfig,
+  PresenceWindowsResponse,
+  CameraDaysResult,
+  CameraFullStateResponse,
+  TimeWindowSeconds,
+} from "../types/camera-tool-types.js";
 
 const logger = getLogger("camera-tool");
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export async function getImageForCameraAtTime(
   cameraUuid: string,
@@ -73,6 +81,75 @@ export async function getImageForCameraAtTime(
   };
 }
 
+async function getCameraDays(
+  cameraUuid: string,
+  archiveDays: number,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<CameraDaysResult> {
+  const endTimeSec = Math.floor(Date.now() / 1000);
+  const lookbackMs = Date.now() - (archiveDays * 24 * 60 * 60 * 1000);
+  const startTimeSec = Math.floor(lookbackMs / 1000);
+  const durationSec = endTimeSec - startTimeSec;
+
+  const res = await postApi<PresenceWindowsResponse>({
+    route: "/camera/getPresenceWindows",
+    body: {
+      cameraUuid: cameraUuid,
+      startTimeSec: startTimeSec,
+      durationSec: durationSec,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const calculateTotalDays = (timeWindows: TimeWindowSeconds[] | null | undefined): number => {
+    if (!timeWindows || timeWindows.length === 0) {
+      return 0;
+    }
+
+    let totalMilliseconds = 0;
+
+    timeWindows.forEach(window => {
+      if (window.startSeconds && window.durationSeconds) {
+        const durationMs = window.durationSeconds * 1000;
+        totalMilliseconds += durationMs;
+      }
+    });
+
+    return Math.floor(totalMilliseconds / MILLISECONDS_PER_DAY);
+  };
+
+  const presenceWindows = res.presenceWindows;
+
+  const daysOnCamera = calculateTotalDays(presenceWindows?.VideoLocal);
+  const daysInCloud = calculateTotalDays(presenceWindows?.VideoCloud);
+
+  return {
+    daysInCloud,
+    daysOnCamera,
+  };
+}
+
+async function getCloudArchiveDays(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<number | null> {
+  const res = await postApi<CameraFullStateResponse>({
+    route: "/camera/getFullCameraState",
+    body: {
+      cameraUuid: cameraUuid,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const cloudArchiveDays = res.fullCameraState?.onCloudState?.cloud_archive_days as number | null | undefined;
+
+  return cloudArchiveDays ?? null;
+}
+
 export async function getCameraSettings(
   cameraUuid: string,
   requestModifiers?: RequestModifiers,
@@ -94,9 +171,17 @@ export async function getCameraSettings(
     };
   }
 
+  const cloudArchiveDays = await getCloudArchiveDays(cameraUuid, requestModifiers, sessionId);
+  const defaultLookbackDays = 60;
+  const lookbackDays = cloudArchiveDays ?? defaultLookbackDays;
+  const storageDays = await getCameraDays(cameraUuid, lookbackDays, requestModifiers, sessionId);
+
   return {
     success: true,
     config: res.config,
+    daysInCloud: storageDays.daysInCloud,
+    daysOnCamera: storageDays.daysOnCamera,
+    cloudArchiveDays: cloudArchiveDays,
     status: "fetched camera settings",
   };
 }

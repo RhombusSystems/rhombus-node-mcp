@@ -1,6 +1,43 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
+export const TimeWindowSecondsSchema = z.object({
+  startSeconds: z.number(),
+  durationSeconds: z.number(),
+});
+
+export const PresenceWindowsResponseSchema = z.object({
+  presenceWindows: z
+    .object({
+      VideoLocal: z.array(TimeWindowSecondsSchema).nullable().optional(),
+      VideoCloud: z.array(TimeWindowSecondsSchema).nullable().optional(),
+    })
+    .nullable(),
+});
+
+export const CameraDaysResultSchema = z.object({
+  daysInCloud: z.number(),
+  daysOnCamera: z.number(),
+});
+
+export const CameraFullStateResponseSchema = z.object({
+  fullCameraState: z
+    .object({
+      onCloudState: z
+        .object({
+          cloud_archive_days: z.number().optional(),
+        })
+        .nullable()
+        .optional(),
+    })
+    .nullable(),
+});
+
+export type TimeWindowSeconds = z.infer<typeof TimeWindowSecondsSchema>;
+export type PresenceWindowsResponse = z.infer<typeof PresenceWindowsResponseSchema>;
+export type CameraDaysResult = z.infer<typeof CameraDaysResultSchema>;
+export type CameraFullStateResponse = z.infer<typeof CameraFullStateResponseSchema>;
+
 export const VideoFacetSettings = z
   .object({
     // blocked_debounce_time_ms: z.number().int().nullable(),
