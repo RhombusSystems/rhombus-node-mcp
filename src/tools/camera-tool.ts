@@ -99,7 +99,6 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
-      console.log('🐞', response)
       return {
         content: [{ type: "text" as const, text: JSON.stringify(response) }],
       };
