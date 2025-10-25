@@ -4,9 +4,9 @@ import { removeNullFields, RequestModifiers } from "../util.js";
 import {
   ExternalUpdateableFacetedUserConfig,
   PresenceWindowsResponse,
-  CameraDaysResult,
   CameraFullStateResponse,
   TimeWindowSeconds,
+  CameraStorageData,
 } from "../types/camera-tool-types.js";
 
 const logger = getLogger("camera-tool");
@@ -81,18 +81,32 @@ export async function getImageForCameraAtTime(
   };
 }
 
-async function getCameraDays(
+async function getCameraStorageData(
   cameraUuid: string,
-  archiveDays: number,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-): Promise<CameraDaysResult> {
+): Promise<CameraStorageData> {
+  // First, get the camera's full state to determine the time range and cloud archive days
+  const stateResponse = await postApi<CameraFullStateResponse>({
+    route: "/camera/getFullCameraState",
+    body: {
+      cameraUuid: cameraUuid,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const cloudArchiveDays =
+    (stateResponse.fullCameraState?.onCloudState?.cloud_archive_days as number | null | undefined) ?? null;
+
+  // Get the oldest segment time (in seconds) to use as start time
+  const oldestSegmentSecs = stateResponse.fullCameraState?.onCameraState?.oldest_segment_secs ?? 0;
+
   const endTimeSec = Math.floor(Date.now() / 1000);
-  const lookbackMs = Date.now() - (archiveDays * 24 * 60 * 60 * 1000);
-  const startTimeSec = Math.floor(lookbackMs / 1000);
+  const startTimeSec = oldestSegmentSecs || 0;
   const durationSec = endTimeSec - startTimeSec;
 
-  const res = await postApi<PresenceWindowsResponse>({
+  const presenceResponse = await postApi<PresenceWindowsResponse>({
     route: "/camera/getPresenceWindows",
     body: {
       cameraUuid: cameraUuid,
@@ -120,7 +134,7 @@ async function getCameraDays(
     return Math.floor(totalMilliseconds / MILLISECONDS_PER_DAY);
   };
 
-  const presenceWindows = res.presenceWindows;
+  const presenceWindows = presenceResponse.presenceWindows;
 
   const daysOnCamera = calculateTotalDays(presenceWindows?.VideoLocal);
   const daysInCloud = calculateTotalDays(presenceWindows?.VideoCloud);
@@ -128,26 +142,8 @@ async function getCameraDays(
   return {
     daysInCloud,
     daysOnCamera,
+    cloudArchiveDays,
   };
-}
-
-async function getCloudArchiveDays(
-  cameraUuid: string,
-  requestModifiers?: RequestModifiers,
-  sessionId?: string
-): Promise<number | null> {
-  const res = await postApi<CameraFullStateResponse>({
-    route: "/camera/getFullCameraState",
-    body: {
-      cameraUuid: cameraUuid,
-    },
-    modifiers: requestModifiers,
-    sessionId,
-  });
-
-  const cloudArchiveDays = res.fullCameraState?.onCloudState?.cloud_archive_days as number | null | undefined;
-
-  return cloudArchiveDays ?? null;
 }
 
 export async function getCameraSettings(
@@ -171,17 +167,14 @@ export async function getCameraSettings(
     };
   }
 
-  const cloudArchiveDays = await getCloudArchiveDays(cameraUuid, requestModifiers, sessionId);
-  const defaultLookbackDays = 60;
-  const lookbackDays = cloudArchiveDays ?? defaultLookbackDays;
-  const storageDays = await getCameraDays(cameraUuid, lookbackDays, requestModifiers, sessionId);
+  const storageData = await getCameraStorageData(cameraUuid, requestModifiers, sessionId);
 
   return {
     success: true,
     config: res.config,
-    daysInCloud: storageDays.daysInCloud,
-    daysOnCamera: storageDays.daysOnCamera,
-    cloudArchiveDays: cloudArchiveDays,
+    daysInCloud: storageData.daysInCloud,
+    daysOnCamera: storageData.daysOnCamera,
+    cloudArchiveDays: storageData.cloudArchiveDays,
     status: "fetched camera settings",
   };
 }

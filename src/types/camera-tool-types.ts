@@ -29,14 +29,27 @@ export const CameraFullStateResponseSchema = z.object({
         })
         .nullable()
         .optional(),
+      onCameraState: z
+        .object({
+          oldest_segment_secs: z.number().optional(),
+        })
+        .nullable()
+        .optional(),
     })
     .nullable(),
+});
+
+export const CameraStorageDataSchema = z.object({
+  daysInCloud: z.number(),
+  daysOnCamera: z.number(),
+  cloudArchiveDays: z.number().nullable(),
 });
 
 export type TimeWindowSeconds = z.infer<typeof TimeWindowSecondsSchema>;
 export type PresenceWindowsResponse = z.infer<typeof PresenceWindowsResponseSchema>;
 export type CameraDaysResult = z.infer<typeof CameraDaysResultSchema>;
 export type CameraFullStateResponse = z.infer<typeof CameraFullStateResponseSchema>;
+export type CameraStorageData = z.infer<typeof CameraStorageDataSchema>;
 
 export const VideoFacetSettings = z
   .object({
