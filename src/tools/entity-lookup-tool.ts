@@ -7,7 +7,8 @@ const TOOL_NAME = "entity-lookup-tool";
 
 const TOOL_DESCRIPTION = `
 Retrieves specific entities (or devices) by their UUIDs.
-Takes a list of device UUIDs and returns the device information for those specific devices.
+Takes a list of device UUIDs and returns the device information for those specific devices. 
+Use this tool when the user asks for details on devices' states and details about their licenses and features.
 The return structure is a JSON object that contains the states of the requested entities.
 This data is exact. Only devices with matching UUIDs will be returned.
 `;
