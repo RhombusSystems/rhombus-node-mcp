@@ -1,3 +1,4 @@
+import { postApi } from "../network.js";
 import type { RequestModifiers } from "../util.js";
 import type { TempUnit } from "../utils/temp.js";
 import {
@@ -13,6 +14,35 @@ import {
   getKeypads,
   getMotionSensors,
 } from "./get-entity-tool-api.js";
+
+async function getDeviceFeatures(
+  deviceUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const response = await postApi<{
+    error: boolean;
+    features?: {
+      assignedLicense?: string;
+      deviceUuid: string;
+      featureMap?: Record<string, boolean>;
+    };
+  }>({
+    route: "/feature/getDeviceFeatures",
+    body: { deviceUuid },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error || !response.features) {
+    return null;
+  }
+
+  return {
+    assignedLicense: response.features.assignedLicense,
+    featureMap: response.features.featureMap,
+  };
+}
 
 export async function getAllEntities(
   deviceUuids: string[],
@@ -37,7 +67,7 @@ export async function getAllEntities(
 
   const responses = await Promise.all<Record<string, unknown>>(promises);
 
-  // Filter each response to only include devices with matching UUIDs
+  // Filter each response to only include devices with matching UUIDs and fetch device features
   for (let i = 0; i < responses.length; i++) {
     const response = responses[i];
 
@@ -46,11 +76,26 @@ export async function getAllEntities(
       const value = response[key];
       if (Array.isArray(value)) {
         // Filter to only include devices with matching UUIDs
-        response[key] = value.filter((item: { uuid: string }) => {
+        const filteredDevices = value.filter((item: { uuid: string }) => {
           return deviceUuids.includes(item.uuid);
         });
 
-        response[`${key}Count`] = (response[key] as unknown[]).length;
+        // Fetch device features for each filtered device
+        const devicesWithFeatures = await Promise.all(
+          filteredDevices.map(async (device: { uuid: string }) => {
+            const features = await getDeviceFeatures(device.uuid, requestModifiers, sessionId);
+            return {
+              ...device,
+              ...(features && {
+                assignedLicense: features.assignedLicense,
+                featureMap: features.featureMap,
+              }),
+            };
+          })
+        );
+
+        response[key] = devicesWithFeatures;
+        response[`${key}Count`] = devicesWithFeatures.length;
       }
     }
   }

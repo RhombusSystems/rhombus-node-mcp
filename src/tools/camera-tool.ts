@@ -26,7 +26,7 @@ or situational assessment. When invoked, the tool provides the following:
 
 What follows is a description of the behavior of this tool given the requestType "get-settings"
 
-This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations.
+This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations (e.g. storage settings).
 
 NOTE: To update camera settings, use the update-tool instead.
 `;

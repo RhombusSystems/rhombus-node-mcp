@@ -1,9 +1,17 @@
 import { getLogger } from "../logger.js";
 import { appendQueryParams, AUTH_HEADERS, postApi, STATIC_HEADERS } from "../network.js";
 import { removeNullFields, RequestModifiers } from "../util.js";
-import { ExternalUpdateableFacetedUserConfig } from "../types/camera-tool-types.js";
+import {
+  ExternalUpdateableFacetedUserConfig,
+  PresenceWindowsResponse,
+  CameraFullStateResponse,
+  TimeWindowSeconds,
+  CameraStorageData,
+} from "../types/camera-tool-types.js";
 
 const logger = getLogger("camera-tool");
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export async function getImageForCameraAtTime(
   cameraUuid: string,
@@ -73,6 +81,71 @@ export async function getImageForCameraAtTime(
   };
 }
 
+async function getCameraStorageData(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<CameraStorageData> {
+  // First, get the camera's full state to determine the time range and cloud archive days
+  const stateResponse = await postApi<CameraFullStateResponse>({
+    route: "/camera/getFullCameraState",
+    body: {
+      cameraUuid: cameraUuid,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const cloudArchiveDays =
+    (stateResponse.fullCameraState?.onCloudState?.cloud_archive_days as number | null | undefined) ?? null;
+
+  // Get the oldest segment time (in seconds) to use as start time
+  const oldestSegmentSecs = stateResponse.fullCameraState?.onCameraState?.oldest_segment_secs ?? 0;
+
+  const endTimeSec = Math.floor(Date.now() / 1000);
+  const startTimeSec = oldestSegmentSecs || 0;
+  const durationSec = endTimeSec - startTimeSec;
+
+  const presenceResponse = await postApi<PresenceWindowsResponse>({
+    route: "/camera/getPresenceWindows",
+    body: {
+      cameraUuid: cameraUuid,
+      startTimeSec: startTimeSec,
+      durationSec: durationSec,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const calculateTotalDays = (timeWindows: TimeWindowSeconds[] | null | undefined): number => {
+    if (!timeWindows || timeWindows.length === 0) {
+      return 0;
+    }
+
+    let totalMilliseconds = 0;
+
+    timeWindows.forEach(window => {
+      if (window.startSeconds && window.durationSeconds) {
+        const durationMs = window.durationSeconds * 1000;
+        totalMilliseconds += durationMs;
+      }
+    });
+
+    return Math.floor(totalMilliseconds / MILLISECONDS_PER_DAY);
+  };
+
+  const presenceWindows = presenceResponse.presenceWindows;
+
+  const daysOnCamera = calculateTotalDays(presenceWindows?.VideoLocal);
+  const daysInCloud = calculateTotalDays(presenceWindows?.VideoCloud);
+
+  return {
+    daysInCloud,
+    daysOnCamera,
+    cloudArchiveDays,
+  };
+}
+
 export async function getCameraSettings(
   cameraUuid: string,
   requestModifiers?: RequestModifiers,
@@ -94,9 +167,14 @@ export async function getCameraSettings(
     };
   }
 
+  const storageData = await getCameraStorageData(cameraUuid, requestModifiers, sessionId);
+
   return {
     success: true,
     config: res.config,
+    daysInCloud: storageData.daysInCloud,
+    daysOnCamera: storageData.daysOnCamera,
+    cloudArchiveDays: storageData.cloudArchiveDays,
     status: "fetched camera settings",
   };
 }
