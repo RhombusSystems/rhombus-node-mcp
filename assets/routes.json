@@ -736,8 +736,8 @@
         "description": "This path is likely related to Facial Recognition, which is required for counting unique visitors."
       },
       {
-        "path": "/investigations/license-plates/license-plate/?id=[licensePlateId]",
-        "description": null
+        "path": "/investigations/license-plates/license-plate/?id=[vehicleLicensePlate]",
+        "description": "This path is for looking at all sightings of a license plate. Ensure that the [vehicleLicensePlate] is a license plate number and not a uuid."
       },
       {
         "path": "/settings/policies/audio-gateway/:uuid/",
