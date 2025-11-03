@@ -24,9 +24,11 @@
     "mcp-server-rhombus": "dist/index.js"
   },
   "scripts": {
+    "clean": "rm -rf dist",
     "build": "rm -rf dist && tsc && chmod +x dist/*.js",
+    "docker:build": "docker build -t mcp-server-rhombus .",
     "prepare": "npm run build",
-    "watch": "tsc --watch",
+    "watch": "npm run clean && tsc --watch",
     "generate-schemas": "npx tsx scripts/generate-zod-schemas.ts",
     "scrape-sitemaps": "npx tsx scripts/scrape-sitemaps.ts",
     "scrape-content": "npx tsx scripts/scrape-content.ts",

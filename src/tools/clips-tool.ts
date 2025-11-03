@@ -7,6 +7,8 @@ const TOOL_NAME = "clips-tool";
 
 const TOOL_DESCRIPTION = `
 Retrieves saved video clips from the Rhombus system. Saved clips can be viewed for up to 2 years and are typically found in the "Clips" tab of the "Saved Video" section of the Rhombus Console.
+Clips are either manually saved by the user, or automatically by some defined policy. Therefore, this tool
+is not for looking up the events that have occured.
 
 This tool allows you to filter clips by:
 * Whether or not they are expiring soon.

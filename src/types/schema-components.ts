@@ -788,6 +788,54 @@ export interface paths {
     /** Update hardware details of badge reader. */
     post: operations["updateBadgeReaderDetails"];
   };
+  "/billing/subscription/create": {
+    post: operations["create"];
+  };
+  "/billing/subscription/createCheckoutSession": {
+    post: operations["createCheckoutSession"];
+  };
+  "/billing/subscription/deletePaymentMethod": {
+    post: operations["deletePaymentMethod"];
+  };
+  "/billing/subscription/generateEvents": {
+    post: operations["generateEvents"];
+  };
+  "/billing/subscription/get": {
+    post: operations["get"];
+  };
+  "/billing/subscription/getCustomerInformation": {
+    post: operations["getCustomerInformation"];
+  };
+  "/billing/subscription/getInvoices": {
+    post: operations["getInvoices"];
+  };
+  "/billing/subscription/getMeters": {
+    post: operations["getMeters"];
+  };
+  "/billing/subscription/getPaymentMethods": {
+    post: operations["getPaymentMethods"];
+  };
+  "/billing/subscription/getProducts": {
+    post: operations["getProducts"];
+  };
+  "/billing/subscription/setDefaultPaymentMethod": {
+    post: operations["setDefaultPaymentMethod"];
+  };
+  "/billing/subscription/setDefaultPaymentMethodForSubscription": {
+    post: operations["setDefaultPaymentMethodForSubscription"];
+  };
+  "/billing/subscription/setup": {
+    post: operations["getSetupIntent"];
+  };
+  "/billing/subscription/unsubscribe": {
+    post: operations["unsubscribe"];
+  };
+  "/billing/subscription/updateCustomerInformation": {
+    post: operations["updateCustomerInformation"];
+  };
+  "/billing/subscription/updateMaxSpend": {
+    post: operations["updateMaxSpend"];
+  };
   "/ble/getBaseStations": {
     /** Retrieve list of available base stations for BLE sensors */
     post: operations["getBaseStations"];
@@ -1048,6 +1096,15 @@ export interface paths {
     /** Send reboot command to camera */
     post: operations["rebootCamera"];
   };
+  "/camera/revertCameraSettingsToDefaults": {
+    post: operations["revertCameraSettingsToDefaults"];
+  };
+  "/camera/revertDayImageSettingsToDefaults": {
+    post: operations["revertDayImageSettingsToDefaults"];
+  };
+  "/camera/revertNightImageSettingsToDefaults": {
+    post: operations["revertNightImageSettingsToDefaults"];
+  };
   "/camera/revertToDefaults": {
     post: operations["revertToDefaults"];
   };
@@ -1125,6 +1182,13 @@ export interface paths {
     /** Retrieves settings for all automated jobs for the current org. */
     post: operations["getAutomatedPromptsForOrg"];
   };
+  "/chatbot/automation/shareAutomatedPromptResponse": {
+    /**
+     * Updates the visibility settings of an automated prompt response. Only users with write access to
+     * the associated automated job may edit these visibility settings.
+     */
+    post: operations["shareAutomatedPromptResponse"];
+  };
   "/chatbot/automation/submitTestPrompt": {
     /**
      * Sends a prompt to Rhombus MIND. This is only used for testing a prompt. No additional
@@ -1201,6 +1265,10 @@ export interface paths {
      * chat history is used to initialize the LLM before answer the new query.
      */
     post: operations["getChatbotConversations"];
+  };
+  "/chatbot/getPublicChatRecord": {
+    /** Retrieves a chat record that is publicly viewable to everyone including people outside of an org. */
+    post: operations["getPublicChatRecord"];
   };
   "/chatbot/getSharedChatRecords": {
     /**
@@ -1348,6 +1416,50 @@ export interface paths {
   "/component/deleteComponentsByOwnerDevice": {
     /** Delete all components owned by the specified device */
     post: operations["deleteComponentsByOwnerDevice"];
+  };
+  "/component/elevator/createAccessControlledElevator": {
+    /** Create an access controlled elevator */
+    post: operations["createAccessControlledElevator"];
+  };
+  "/component/elevator/createAccessControlledElevatorLanding": {
+    /** Create an access controlled elevator */
+    post: operations["createAccessControlledElevatorLanding"];
+  };
+  "/component/elevator/deleteAccessControlledElevator": {
+    /** Delete the specified access controlled elevator */
+    post: operations["deleteAccessControlledElevator"];
+  };
+  "/component/elevator/deleteAccessControlledElevatorLanding": {
+    /** Delete the specified access controlled elevator landing */
+    post: operations["deleteAccessControlledElevatorLanding"];
+  };
+  "/component/elevator/findAccessControlledElevatorLandings": {
+    /** Find access controlled elevator landings within the org */
+    post: operations["findAccessControlledElevatorLandings"];
+  };
+  "/component/elevator/findAccessControlledElevatorLandingsByLocation": {
+    /** Find access controlled elevators landings within the specified location */
+    post: operations["findAccessControlledElevatorLandingsByLocation"];
+  };
+  "/component/elevator/findAccessControlledElevators": {
+    /** Find access controlled elevators within the org */
+    post: operations["findAccessControlledElevators"];
+  };
+  "/component/elevator/findAccessControlledElevatorsByLocation": {
+    /** Find access controlled elevators within the specified location */
+    post: operations["findAccessControlledElevatorsByLocation"];
+  };
+  "/component/elevator/findAccessControlledElevatorsByOwnerDevice": {
+    /** Find access controlled elevators for the specified owner device */
+    post: operations["findAccessControlledElevatorsByOwnerDevice"];
+  };
+  "/component/elevator/updateAccessControlledElevator": {
+    /** Updates an access controlled elevator */
+    post: operations["updateAccessControlledElevator"];
+  };
+  "/component/elevator/updateAccessControlledElevatorLanding": {
+    /** Updates an access controlled elevator landing */
+    post: operations["updateAccessControlledElevatorLanding"];
   };
   "/component/findAccessControlledDoorShadows": {
     /** Find access controlled door shadows within the org */
@@ -2050,7 +2162,7 @@ export interface paths {
     post: operations["updatePolicyAlertTextDescription"];
   };
   "/event/updateSavedClip": {
-    /** Update saved clip title or summary */
+    /** Selectively updates a saved clip */
     post: operations["updateSavedClip"];
   };
   "/event/updateSharedClipGroup": {
@@ -3512,6 +3624,10 @@ export interface paths {
     /** Migrate ent devices only from sf opp */
     post: operations["entDevicesOnly"];
   };
+  "/internal/getMigrationInfoForOrg": {
+    /** Returns device count and acd count from v1 org, takes in custom CSV from Salesforce */
+    post: operations["getMigrationInfoForOrg"];
+  };
   "/internal/getSuperAdminGroupUUID": {
     /** Get super admin group UUID */
     post: operations["getSuperAdminGroupUUID"];
@@ -4700,6 +4816,61 @@ export interface paths {
     /** Get count reports by device for a specified location */
     post: operations["getCountReportsForDevicesAtLocation"];
   };
+  "/report/getCustomEventsBinaryCounts": {
+    /**
+     * Retrieves aggregated counts of boolean event values (true/false) produced by a selected prompt over a specified time window.
+     *
+     * Scope & filters:
+     * 	•	promptUuid – The prompt to aggregate (required).
+     *
+     * Time window & interval:
+     * 	•	A time range (startTimeMs → endTimeMs, epoch ms) is required and is used exactly as provided.
+     * 	•	If an interval is supplied (e.g., MINUTELY, QUARTERHOURLY, HOURLY), events are bucketed at that granularity.
+     * 	•	Aggregation is always performed in the device’s local timezone. Buckets are computed relative to each device’s timezone, then evaluated within the exact provided window.
+     *
+     * Response:
+     * 	•	Per interval bucket, returns a BinaryAggregationValue with counts for true and false.
+     * 	•	Includes minValueTimestampMs and maxValueTimestampMs (if available) and the bucket timestamp from BaseReportValue.
+     *
+     * Notes:
+     * 	•	Only binary/boolean prompt types are valid for this endpoint.
+     */
+    post: operations["getCustomEventsBinaryCounts"];
+  };
+  "/report/getCustomEventsNumericCounts": {
+    /**
+     * Retrieves aggregated statistics for numeric events event values produced by a selected prompt over a specified time window.
+     * Scope & filters:
+     * 	•	promptUuid – The prompt to aggregate (required).
+     *
+     * Time window & interval:
+     * 	•	A time range (startTimeMs → endTimeMs, epoch ms) is required and is used exactly as provided.
+     * 	•	If an interval is supplied (e.g., MINUTELY, QUARTERHOURLY, HOURLY), events are bucketed at that granularity.
+     * 	•	Aggregation is always performed in the device’s local timezone. Buckets are computed relative to each device’s timezone, then evaluated within the exact provided window.
+     *
+     * Response:
+     * 	•	Per interval bucket, returns numeric aggregates derived from raw values: count, sum, min, max, average.
+     * 	•	Includes minValueTimestampMs and maxValueTimestampMs indicating when min/max occurred within the bucket (if available).
+     * 	•	Bucket timestamps are returned as epoch ms.
+     *
+     * Notes:
+     * 	•	Only numeric prompt types are valid for this endpoint.
+     */
+    post: operations["getCustomEventsNumericCounts"];
+  };
+  "/report/getCustomEventsReport": {
+    /**
+     * Retrieves a custom events report containing raw time-series event values recorded by selected prompts and devices within the specified time window.
+     * The report can be filtered by:
+     * 	•	promptUuid – The specific prompt to query.
+     * 	•	deviceFacetUuids – A set of devices to include.
+     * 	•	locationUuid – The location context for the query.
+     * For example, a request may specify a promptUuid to fetch results from a certain LLM prompt, and additionally restrict results to only devices in a given locationUuid.
+     * The time range (startTimeMs → endTimeMs) is required and determines the interval of events returned.
+     * The response includes, per device and prompt, the raw event values (numeric or boolean as string) along with timestamps, check-condition results (if selected), and prompt type.
+     */
+    post: operations["getCustomEventsReport"];
+  };
   "/report/getCustomLLMBinaryCounts": {
     /**
      * Retrieves aggregated counts of boolean event values (true/false) produced by a selected prompt over a specified time window.
@@ -5828,6 +5999,72 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
       waveToUnlockSettings?: components["schemas"]["WaveToUnlockSettingsType_Minimal"];
+    };
+    AccessControlledElevator: {
+      associatedCameras?: (string | null)[] | null;
+      associatedFaceDetectionCameras?: (string | null)[] | null;
+      createdAtMillis?: number | null;
+      directionRadians?: number | null;
+      elevatorLandingReferences?: {
+        [key: string]: components["schemas"]["ElevatorLandingReference"];
+      } | null;
+      forceAllReadersFirstInAuthRequiredLedFeedbackEnabled?: boolean | null;
+      forceAllReadersFirstInUnlockPendingLedFeedbackEnabled?: boolean | null;
+      forceAllReadersOtherReaderUnlockAudioFeedbackEnabled?: boolean | null;
+      forceAllReadersRemoteUnlockAudioFeedbackEnabled?: boolean | null;
+      geofenceEnabled?: boolean | null;
+      geofenceRadius?: number | null;
+      latitude?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      longitude?: number | null;
+      name?: string | null;
+      nfcSecureDowngradeEnabled?: boolean | null;
+      /** base 64 (url-safe) uuid string */
+      orgUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      ownerDeviceUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      policyUuid?: string | null;
+      proximityUnlockSettings?: components["schemas"]["ProximityUnlockSettingsType"];
+      readerComponents?:
+        | components["schemas"]["ComponentReferenceType"][]
+        | null;
+      remoteUnlockEnabled?: boolean | null;
+      sendExpiredIntentEvents?: boolean | null;
+      type?: components["schemas"]["ComponentCompositeEnumType"];
+      unlockTimeSec?: number | null;
+      updatedAtMillis?: number | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+      waveToUnlockSettings?: components["schemas"]["WaveToUnlockSettingsType"];
+    };
+    AccessControlledElevatorLanding: {
+      accessScheduleFirstInStateOverride?: components["schemas"]["FirstInState"];
+      accessStateOverride?: components["schemas"]["BaseDoorStateOverride"];
+      accessStateToScheduleUuidMap?: { [key: string]: string | null } | null;
+      associatedCameras?: (string | null)[] | null;
+      associatedFaceDetectionCameras?: (string | null)[] | null;
+      authFirstInStateOverride?: components["schemas"]["FirstInState"];
+      createdAtMillis?: number | null;
+      defaultAccessState?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      floorNumber?: number | null;
+      geofenceEnabled?: boolean | null;
+      geofenceRadius?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      name?: string | null;
+      /** base 64 (url-safe) uuid string */
+      orgUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      ownerDeviceUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      policyUuid?: string | null;
+      remoteUnlockEnabled?: boolean | null;
+      type?: components["schemas"]["ComponentCompositeEnumType"];
+      updatedAtMillis?: number | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
     };
     Accesscontrol_BaseSendUserPresenceForCurrentUserWsResponse: (
       | components["schemas"]["Accesscontrol_SendUserPresenceForCurrentUserSuccessWsResponse"]
@@ -9082,6 +9319,7 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       permissionGroupUuid?: string | null;
       prompt?: string | null;
+      responseTemplate?: string | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -9561,6 +9799,244 @@ export interface components {
       hi?: string | null;
       rs?: string | null;
       ts?: number | null;
+    };
+    Billing_CreateCheckoutSessionWSRequest: {
+      invoiceId?: string | null;
+    };
+    Billing_CreateCheckoutSessionWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      sessionId?: string | null;
+      sessionUrl?: string | null;
+    };
+    Billing_CreateSubscriptionWSRequest: {
+      maxSpendPerMonth?: number | null;
+      paymentMethodId?: string | null;
+      termsOfServiceAccepted?: boolean | null;
+    };
+    Billing_CreateSubscriptionWSResponse: {
+      customerId?: string | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      paymentMethodId?: string | null;
+      status?: string | null;
+      subscriptionId?: string | null;
+    };
+    Billing_DeletePaymentMethodWSRequest: {
+      paymentMethodId?: string | null;
+    };
+    Billing_DeletePaymentMethodWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      removed?: boolean | null;
+    };
+    Billing_GetCustomerInformationWSRequest: { [key: string]: unknown };
+    Billing_GetCustomerInformationWSResponse: {
+      addressCity?: string | null;
+      addressCountry?: string | null;
+      addressLine1?: string | null;
+      addressLine2?: string | null;
+      addressPostalCode?: string | null;
+      addressState?: string | null;
+      businessName?: string | null;
+      email?: string | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      individualName?: string | null;
+      phone?: string | null;
+    };
+    Billing_GetInvoicesWSRequest: {
+      limit?: number | null;
+      startingAfter?: string | null;
+      status?: GetInvoicesWSRequestStatusEnum | null;
+      subscriptionId?: string | null;
+    };
+    Billing_GetInvoicesWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      hasMore?: boolean | null;
+      invoices?:
+        | components["schemas"]["Billing_GetInvoicesWSResponse_Invoice"][]
+        | null;
+    };
+    Billing_GetInvoicesWSResponse_Invoice: {
+      amount?: number | null;
+      amountDue?: number | null;
+      amountPaid?: number | null;
+      created?: number | null;
+      currency?: string | null;
+      description?: string | null;
+      dueDate?: number | null;
+      hostedInvoiceUrl?: string | null;
+      id?: string | null;
+      invoicePdf?: string | null;
+      number?: string | null;
+      periodEnd?: number | null;
+      periodStart?: number | null;
+      productName?: string | null;
+      quantity?: number | null;
+      status?: string | null;
+      subtotal?: number | null;
+      tax?: number | null;
+      total?: number | null;
+      usageDescriptions?: string | null;
+    };
+    Billing_GetMetersWSRequest: { [key: string]: unknown };
+    Billing_GetMetersWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      meters?:
+        | components["schemas"]["Billing_GetMetersWSResponse_Meter"][]
+        | null;
+    };
+    Billing_GetMetersWSResponse_Meter: {
+      archived?: boolean | null;
+      created?: number | null;
+      displayName?: string | null;
+      eventName?: string | null;
+      eventTimeWindow?: string | null;
+      id?: string | null;
+    };
+    Billing_GetPaymentMethodsWSRequest: { [key: string]: unknown };
+    Billing_GetPaymentMethodsWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      paymentMethods?:
+        | components["schemas"]["Billing_GetPaymentMethodsWSResponse_PaymentMethod"][]
+        | null;
+    };
+    Billing_GetPaymentMethodsWSResponse_PaymentMethod: {
+      brand?: string | null;
+      default?: boolean | null;
+      displayBrand?: string | null;
+      id?: string | null;
+      last4?: string | null;
+    };
+    Billing_GetProductsWSRequest: { [key: string]: unknown };
+    Billing_GetProductsWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      products?:
+        | components["schemas"]["Billing_GetProductsWSResponse_Product"][]
+        | null;
+    };
+    Billing_GetProductsWSResponse_Price: {
+      active?: boolean | null;
+      billingScheme?: string | null;
+      currency?: string | null;
+      id?: string | null;
+      lookupKey?: string | null;
+      nickname?: string | null;
+      productId?: string | null;
+      productNameId?: string | null;
+      recurringInterval?: string | null;
+      recurringIntervalCount?: number | null;
+      recurringUsageType?: string | null;
+      taxBehavior?: string | null;
+      transformQuantity?: string | null;
+      type?: string | null;
+      unitAmount?: number | null;
+      unitAmountDecimal?: string | null;
+    };
+    Billing_GetProductsWSResponse_Product: {
+      active?: boolean | null;
+      created?: number | null;
+      defaultPriceId?: string | null;
+      description?: string | null;
+      id?: string | null;
+      name?: string | null;
+      nameId?: string | null;
+      prices?:
+        | components["schemas"]["Billing_GetProductsWSResponse_Price"][]
+        | null;
+      statementDescriptor?: string | null;
+    };
+    Billing_GetSubscriptionWSRequest: { [key: string]: unknown };
+    Billing_GetSubscriptionWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      subscriptions?:
+        | components["schemas"]["Billing_GetSubscriptionWSResponse_Subscription"][]
+        | null;
+    };
+    Billing_GetSubscriptionWSResponse_Subscription: {
+      cancelAtPeriodEnd?: boolean | null;
+      canceledAt?: number | null;
+      collectionMethod?: string | null;
+      created?: number | null;
+      currency?: string | null;
+      currentPeriodEnd?: number | null;
+      currentPeriodStart?: number | null;
+      defaultPaymentMethod?: string | null;
+      id?: string | null;
+      isApproachingLimit?: boolean | null;
+      maxSpendPerMonth?: number | null;
+      pricePerUnit?: string | null;
+      product?: string | null;
+      status?: string | null;
+      upcomingInvoiceAmount?: string | null;
+      upcomingInvoiceCurrency?: string | null;
+      usageType?: string | null;
+    };
+    Billing_SetDefaultPaymentMethodForSubscriptionWSRequest: {
+      paymentMethodId?: string | null;
+      subscriptionId?: string | null;
+    };
+    Billing_SetDefaultPaymentMethodForSubscriptionWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Billing_SetDefaultPaymentMethodWSRequest: {
+      overrideAllSubscriptionPaymentMethods?: boolean | null;
+      paymentMethodId?: string | null;
+    };
+    Billing_SetDefaultPaymentMethodWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Billing_SetupSubscriptionWSRequest: { [key: string]: unknown };
+    Billing_SetupSubscriptionWSResponse: {
+      clientSecret?: string | null;
+      customerId?: string | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Billing_UnsubscribeWSRequest: {
+      subscriptionId?: string | null;
+    };
+    Billing_UnsubscribeWSResponse: {
+      cancelAtPeriodEnd?: boolean | null;
+      canceledAt?: number | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      status?: string | null;
+      subscriptionId?: string | null;
+    };
+    Billing_UpdateCustomerInformationWSRequest: {
+      addressCity?: string | null;
+      addressCountry?: string | null;
+      addressLine1?: string | null;
+      addressLine2?: string | null;
+      addressPostalCode?: string | null;
+      addressState?: string | null;
+      businessName?: string | null;
+      email?: string | null;
+      individualName?: string | null;
+      phone?: string | null;
+    };
+    Billing_UpdateCustomerInformationWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Billing_UpdateSubscriptionMaxSpendWSRequest: {
+      maxSpendPerMonth?: number | null;
+      subscriptionId?: string | null;
+    };
+    Billing_UpdateSubscriptionMaxSpendWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      maxSpendPerMonth?: number | null;
+      subscriptionId?: string | null;
     };
     /** Map of binary count reports */
     BinaryAggregationValue: {
@@ -11420,6 +11896,7 @@ export interface components {
     /** Chat record used for a selective update. */
     ChatRecord: {
       contextId?: string | null;
+      extra?: string | null;
       llmInfo?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -11558,6 +12035,13 @@ export interface components {
       /** Pagination key to resume a paginated query. */
       lastEvaluatedKey?: string | null;
     };
+    /** Request object for retrieving a publicly viewable chat record. */
+    Chatbot_GetPublicChatRecordWSRequest: {
+      /** Base64-encoded chat record UUID. */
+      chatId: string | null;
+      /** Base64-encoded org UUID. */
+      orgId: string | null;
+    };
     /** Request object for retrieving chat records shared with the current user. */
     Chatbot_GetSharedChatRecordsWSRequest: {
       filter?: components["schemas"]["ChatQueryFilter"];
@@ -11568,6 +12052,12 @@ export interface components {
       chatRecords?: components["schemas"]["ChatRecord"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+    };
+    /** Request object for updating the visibility of an automated prompt response. */
+    Chatbot_ShareAutomatedPromptResponseWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      chatUuid: string | null;
+      privacy: components["schemas"]["ChatPrivacy"];
     };
     /** Request object for submitting a query to Rhombus MIND. */
     Chatbot_SubmitChatWSRequest: {
@@ -11587,6 +12077,8 @@ export interface components {
     };
     /** Request object for submitting a test prompt with Rhombus MIND. */
     Chatbot_SubmitTestPromptWSRequest: {
+      /** Template for Rhombus MIND to follow when generating a response. */
+      responseTemplate?: string | null;
       /** Prompt to test with Rhombus MIND. */
       testPrompt: string | null;
     };
@@ -12121,7 +12613,9 @@ export interface components {
     Climate_UpdateEnvironmentalGatewayDetailsWSResponse: {
       [key: string]: unknown;
     };
+    /** Visibility setting for the clip */
     ClipAccessSettings: {
+      allowedRoles?: (string | null)[] | null;
       allowedUsers?: (string | null)[] | null;
       visibility?: components["schemas"]["ClipVisibility"];
     };
@@ -12234,7 +12728,7 @@ export interface components {
       unidentifiedFaceId?: string | null;
       vehicleName?: string | null;
     };
-    /** Visibility setting for the clip */
+    /** Use accessSettings instead */
     ClipVisibility: ClipVisibilityEnum;
     CloudArchivingStrategy: CloudArchivingStrategyEnum;
     Co2SensorType: {
@@ -12610,6 +13104,23 @@ export interface components {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
       error?: boolean | null;
       errorMsg?: string | null;
+    } | null;
+    Component_CreateAccessControlledElevatorLandingWSRequest: {
+      accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
+      accessControlledElevatorLandingLabels?: (string | null)[] | null;
+    };
+    Component_CreateAccessControlledElevatorLandingWSResponse: {
+      accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Component_CreateAccessControlledElevatorWSRequest: {
+      accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
+    };
+    Component_CreateAccessControlledElevatorWSResponse: {
+      accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
+      error?: boolean | null;
+      errorMsg?: string | null;
     };
     /** The Aperio-assigned ID of the door(s) and the Aperio-assigned ID of their lock device. */
     Component_CreateAperioDoorInfo: {
@@ -12760,6 +13271,20 @@ export interface components {
     Component_DeleteAccessControlledDoorWSResponse: {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
     };
+    Component_DeleteAccessControlledElevatorLandingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid?: string | null;
+    };
+    Component_DeleteAccessControlledElevatorLandingWSResponse: {
+      accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
+    };
+    Component_DeleteAccessControlledElevatorWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorUuid?: string | null;
+    };
+    Component_DeleteAccessControlledElevatorWSResponse: {
+      accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
+    } | null;
     Component_DeleteComponentWSRequest: {
       /** base 64 (url-safe) uuid string */
       componentUuid?: string | null;
@@ -12820,6 +13345,59 @@ export interface components {
     Component_FindAccessControlledDoorsWSResponse: {
       accessControlledDoors?:
         | components["schemas"]["AccessControlledDoorType"][]
+        | null;
+      lastEvaluatedKey?: string | null;
+    };
+    Component_FindAccessControlledElevatorLandingsByLocationWSRequest: {
+      lastEvaluatedKey?: string | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      maxPageSize?: number | null;
+    };
+    Component_FindAccessControlledElevatorLandingsByLocationWSResponse: {
+      accessControlledElevatorLandings?:
+        | components["schemas"]["AccessControlledElevatorLanding"][]
+        | null;
+      lastEvaluatedKey?: string | null;
+    };
+    Component_FindAccessControlledElevatorLandingsWSRequest: {
+      lastEvaluatedKey?: string | null;
+      maxPageSize?: number | null;
+    };
+    Component_FindAccessControlledElevatorLandingsWSResponse: {
+      accessControlledElevatorLandings?:
+        | components["schemas"]["AccessControlledElevatorLanding"][]
+        | null;
+      lastEvaluatedKey?: string | null;
+    };
+    Component_FindAccessControlledElevatorsByLocationWSRequest: {
+      lastEvaluatedKey?: string | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      maxPageSize?: number | null;
+    };
+    Component_FindAccessControlledElevatorsByLocationWSResponse: {
+      accessControlledElevators?:
+        | components["schemas"]["AccessControlledElevator"][]
+        | null;
+      lastEvaluatedKey?: string | null;
+    };
+    Component_FindAccessControlledElevatorsByOwnerDeviceWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      ownerDeviceUuid?: string | null;
+    };
+    Component_FindAccessControlledElevatorsByOwnerDeviceWSResponse: {
+      accessControlledElevators?:
+        | components["schemas"]["AccessControlledElevator"][]
+        | null;
+    };
+    Component_FindAccessControlledElevatorsWSRequest: {
+      lastEvaluatedKey?: string | null;
+      maxPageSize?: number | null;
+    };
+    Component_FindAccessControlledElevatorsWSResponse: {
+      accessControlledElevators?:
+        | components["schemas"]["AccessControlledElevator"][]
         | null;
       lastEvaluatedKey?: string | null;
     };
@@ -13216,6 +13794,62 @@ export interface components {
     };
     Component_UpdateAccessControlledDoorWSResponse: {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Component_UpdateAccessControlledElevatorLandingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid?: string | null;
+      accessStateToScheduleUuidMap?: { [key: string]: string | null } | null;
+      associatedCameras?: (string | null)[] | null;
+      associatedFaceDetectionCameras?: (string | null)[] | null;
+      defaultAccessState?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      floorNumber?: number | null;
+      geofenceEnabled?: boolean | null;
+      geofenceRadius?: number | null;
+      name?: string | null;
+      /** base 64 (url-safe) uuid string */
+      policyUuid?: string | null;
+      remoteUnlockEnabled?: boolean | null;
+    };
+    Component_UpdateAccessControlledElevatorLandingWSResponse: {
+      accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
+    Component_UpdateAccessControlledElevatorWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorUuid?: string | null;
+      associatedCameras?: (string | null)[] | null;
+      associatedFaceDetectionCameras?: (string | null)[] | null;
+      directionRadians?: number | null;
+      elevatorLandingReferenceUpdates?: {
+        [key: string]: components["schemas"]["ElevatorLandingReference"];
+      } | null;
+      elevatorLandingReferences?: {
+        [key: string]: components["schemas"]["ElevatorLandingReference"];
+      } | null;
+      forceAllReadersFirstInAuthRequiredLedFeedbackEnabled?: boolean | null;
+      forceAllReadersFirstInUnlockPendingLedFeedbackEnabled?: boolean | null;
+      forceAllReadersOtherReaderUnlockAudioFeedbackEnabled?: boolean | null;
+      forceAllReadersRemoteUnlockAudioFeedbackEnabled?: boolean | null;
+      geofenceEnabled?: boolean | null;
+      geofenceRadius?: number | null;
+      latitude?: number | null;
+      longitude?: number | null;
+      name?: string | null;
+      /** base 64 (url-safe) uuid string */
+      policyUuid?: string | null;
+      proximityUnlockSettings?: components["schemas"]["ProximityUnlockSettingsType"];
+      readerComponents?:
+        | components["schemas"]["ComponentReferenceType"][]
+        | null;
+      remoteUnlockEnabled?: boolean | null;
+      unlockTimeSec?: number | null;
+      waveToUnlockSettings?: components["schemas"]["WaveToUnlockSettingsType"];
+    };
+    Component_UpdateAccessControlledElevatorWSResponse: {
+      accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
       error?: boolean | null;
       errorMsg?: string | null;
     };
@@ -14340,6 +14974,7 @@ export interface components {
       night_shutter_time_min?: number | null;
       obj_ai_threshold?: number | null;
       object_search?: boolean | null;
+      occupancy_counting?: boolean | null;
       people_counting?: boolean | null;
       person_ai_threshold?: number | null;
       pose_detection?: boolean | null;
@@ -14422,6 +15057,7 @@ export interface components {
       night_shutter_time_max?: number | null;
       night_shutter_time_min?: number | null;
       object_search?: boolean | null;
+      occupancy_counting?: boolean | null;
       privacy_window_polygons?:
         | components["schemas"]["RegionPolygonType"][]
         | null;
@@ -14631,6 +15267,7 @@ export interface components {
       night_shutter_time_min?: number | null;
       obj_ai_threshold?: number | null;
       object_search?: boolean | null;
+      occupancy_counting?: boolean | null;
       on_demand_license_invalid?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -14788,6 +15425,7 @@ export interface components {
       night_shutter_time_max?: number | null;
       night_shutter_time_min?: number | null;
       object_search?: boolean | null;
+      occupancy_counting?: boolean | null;
       on_demand_license_invalid?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -16064,6 +16702,13 @@ export interface components {
       vapeThcConfidencePercent?: number | null;
     };
     EarlyExpireModeEnum: EarlyExpireModeEnum;
+    ElevatorLandingReference: {
+      /** base 64 (url-safe) uuid string */
+      elevatorLandingUuid?: string | null;
+      relayComponents?:
+        | components["schemas"]["ComponentReferenceType"][]
+        | null;
+    };
     EmailSettings: {
       emailAddresses?: (string | null)[] | null;
       enabled?: boolean | null;
@@ -17038,11 +17683,12 @@ export interface components {
     };
     /** Request object for updating a saved clip. */
     Event_UpdateSavedClipWSRequest: {
-      /** Description for the saved clip */
+      accessSettings?: components["schemas"]["ClipAccessSettings"];
+      /** Updated description for the saved clip */
       description?: string | null;
       /** base 64 (url-safe) uuid string */
-      savedClipUuid?: string | null;
-      /** Title for the saved clip */
+      savedClipUuid: string | null;
+      /** Updated title for the saved clip */
       title?: string | null;
     };
     /** Response object for updating a saved clip. */
@@ -21327,7 +21973,7 @@ export interface components {
       errorMsg?: string | null;
       failedAccounts?: { [key: string]: string | null } | null;
       successfulAccounts?: (string | null)[] | null;
-    } | null;
+    };
     /** Request object for creating a new organization with account owner and company information. */
     Internal_CreateOrgWSRequest: {
       /** Email address of the account owner */
@@ -21663,6 +22309,13 @@ export interface components {
       uuid?: string | null;
     };
     /** Request object for charging an invoice. */
+    Invoice_InvoiceChargeV2WSRequest: {
+      /** UUID of the invoice to charge */
+      invoiceUuid?: string | null;
+      /** Payment source token for charging the invoice */
+      sourceToken?: string | null;
+    };
+    /** Request object for charging an invoice. */
     Invoice_InvoiceChargeWSRequest: {
       /** base 64 (url-safe) uuid string */
       invoiceUuid?: string | null;
@@ -21787,6 +22440,7 @@ export interface components {
       buildingAdminPhoneNumber?: string | null;
       connectionState?: KeypadConfigConnectionStateEnum | null;
       floorNumber?: number | null;
+      ipAddress?: string | null;
       lastModified?: number | null;
       latitude?: number | null;
       locationName?: string | null;
@@ -21796,6 +22450,7 @@ export interface components {
       name?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
+      platform?: KeypadConfigPlatformEnum | null;
       qualifiedAddress?: components["schemas"]["QualifiedAddressType"];
       showCallBuildingAdmin?: boolean | null;
       signalStrength?: number | null;
@@ -21861,6 +22516,10 @@ export interface components {
     };
     /** Request object for keypad online/offline checkin processing. */
     Keypad_KeypadCheckinWSRequest: {
+      /** Local IP address of the keypad for discoverability */
+      ipAddress?: string | null;
+      /** The keypad platform (IOS or ANDROID) */
+      platform?: KeypadCheckinWSRequestPlatformEnum | null;
       /** Signal strength of the keypad connection */
       signalStrength?: number | null;
     };
@@ -23747,11 +24406,13 @@ export interface components {
       invoiceDate?: string | null;
       invoiceUuid?: string | null;
       invoicedate?: string | null;
+      invoiceinternalid?: string | null;
       invoiceuuid?: string | null;
       lineItems?: components["schemas"]["LineItems"][] | null;
       lineitems?: components["schemas"]["LineItems"][] | null;
       partnerOrgName?: string | null;
       partnerorgname?: string | null;
+      paymentid?: string | null;
       status?: string | null;
       totalBalance?: number | null;
       totalbalance?: number | null;
@@ -29194,6 +29855,7 @@ export interface components {
       remoteDoorUnlockActions?:
         | components["schemas"]["RemoteDoorUnlockActionType"][]
         | null;
+      thirdPartyAudioPlaybackAction?: components["schemas"]["ThirdPartyAudioPlaybackActionType"];
       triggerComponentRelayActions?:
         | components["schemas"]["TriggerComponentRelayActionType"][]
         | null;
@@ -31038,6 +31700,16 @@ export interface components {
       tempC?: number | null;
       timestampSec?: number | null;
     };
+    ThirdPartyAudioPlaybackActionType: {
+      audioFileName?: string | null;
+      ipAddress?: string | null;
+      loopDurationSec?: number | null;
+      password?: string | null;
+      playCount?: number | null;
+      /** base 64 (url-safe) uuid string */
+      proxyDeviceUuid?: string | null;
+      username?: string | null;
+    };
     /** List of third-party camera passwords */
     ThirdPartyCameraPasswordType: {
       notes?: string | null;
@@ -32169,6 +32841,7 @@ export interface components {
       clipVerificationId?: string | null;
       failedAsClip?: boolean | null;
       failedAsStream?: boolean | null;
+      initiatedAsClip?: boolean | null;
       sentAsClip?: boolean | null;
       sentAsClipAtMs?: number | null;
       sentAsWindowedStream?: boolean | null;
@@ -32474,6 +33147,7 @@ export interface components {
     };
     /** Request object for splicing video clips V3 with multiple cameras and advanced options. */
     Video_SpliceV3WSRequest: {
+      accessSettings?: components["schemas"]["ClipAccessSettings"];
       /** Map of device facet UUIDs to altered view configurations */
       alteredViewMap?: {
         [key: string]: components["schemas"]["AlteredView"][] | null;
@@ -37246,6 +37920,337 @@ export interface operations {
       };
     };
   };
+  create: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_CreateSubscriptionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_CreateSubscriptionWSRequest"];
+      };
+    };
+  };
+  createCheckoutSession: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_CreateCheckoutSessionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_CreateCheckoutSessionWSRequest"];
+      };
+    };
+  };
+  deletePaymentMethod: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_DeletePaymentMethodWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_DeletePaymentMethodWSRequest"];
+      };
+    };
+  };
+  generateEvents: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BaseApiResponse"];
+        };
+      };
+    };
+  };
+  get: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_GetSubscriptionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_GetSubscriptionWSRequest"];
+      };
+    };
+  };
+  getCustomerInformation: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_GetCustomerInformationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_GetCustomerInformationWSRequest"];
+      };
+    };
+  };
+  getInvoices: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_GetInvoicesWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_GetInvoicesWSRequest"];
+      };
+    };
+  };
+  getMeters: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_GetMetersWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_GetMetersWSRequest"];
+      };
+    };
+  };
+  getPaymentMethods: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_GetPaymentMethodsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_GetPaymentMethodsWSRequest"];
+      };
+    };
+  };
+  getProducts: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_GetProductsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_GetProductsWSRequest"];
+      };
+    };
+  };
+  setDefaultPaymentMethod: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_SetDefaultPaymentMethodWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_SetDefaultPaymentMethodWSRequest"];
+      };
+    };
+  };
+  setDefaultPaymentMethodForSubscription: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_SetDefaultPaymentMethodForSubscriptionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_SetDefaultPaymentMethodForSubscriptionWSRequest"];
+      };
+    };
+  };
+  getSetupIntent: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_SetupSubscriptionWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_SetupSubscriptionWSRequest"];
+      };
+    };
+  };
+  unsubscribe: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_UnsubscribeWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_UnsubscribeWSRequest"];
+      };
+    };
+  };
+  updateCustomerInformation: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_UpdateCustomerInformationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_UpdateCustomerInformationWSRequest"];
+      };
+    };
+  };
+  updateMaxSpend: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_UpdateSubscriptionMaxSpendWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_UpdateSubscriptionMaxSpendWSRequest"];
+      };
+    };
+  };
   /** Retrieve list of available base stations for BLE sensors */
   getBaseStations: {
     parameters: {
@@ -38677,6 +39682,69 @@ export interface operations {
       };
     };
   };
+  revertCameraSettingsToDefaults: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** default response */
+      default: {
+        content: {
+          "application/json": components["schemas"]["Camera_RevertCameraToDefaultsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Camera_RevertCameraToDefaultsWSRequest"];
+      };
+    };
+  };
+  revertDayImageSettingsToDefaults: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** default response */
+      default: {
+        content: {
+          "application/json": components["schemas"]["Camera_RevertCameraToDefaultsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Camera_RevertCameraToDefaultsWSRequest"];
+      };
+    };
+  };
+  revertNightImageSettingsToDefaults: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** default response */
+      default: {
+        content: {
+          "application/json": components["schemas"]["Camera_RevertCameraToDefaultsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Camera_RevertCameraToDefaultsWSRequest"];
+      };
+    };
+  };
   revertToDefaults: {
     parameters: {
       header: {
@@ -39061,6 +40129,31 @@ export interface operations {
     };
   };
   /**
+   * Updates the visibility settings of an automated prompt response. Only users with write access to
+   * the associated automated job may edit these visibility settings.
+   */
+  shareAutomatedPromptResponse: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_BaseChatWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_ShareAutomatedPromptResponseWSRequest"];
+      };
+    };
+  };
+  /**
    * Sends a prompt to Rhombus MIND. This is only used for testing a prompt. No additional
    * context is used when processing this prompt. The response generated by Rhombus MIND expires
    * after an hour.
@@ -39368,6 +40461,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Chatbot_GetChatbotConversationsWSRequest"];
+      };
+    };
+  };
+  /** Retrieves a chat record that is publicly viewable to everyone including people outside of an org. */
+  getPublicChatRecord: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_BaseChatWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_GetPublicChatRecordWSRequest"];
       };
     };
   };
@@ -40127,6 +41242,248 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Component_DeleteComponentsByOwnerDeviceWSRequest"];
+      };
+    };
+  };
+  /** Create an access controlled elevator */
+  createAccessControlledElevator: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_CreateAccessControlledElevatorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_CreateAccessControlledElevatorWSRequest"];
+      };
+    };
+  };
+  /** Create an access controlled elevator */
+  createAccessControlledElevatorLanding: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_CreateAccessControlledDoorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_CreateAccessControlledElevatorLandingWSRequest"];
+      };
+    };
+  };
+  /** Delete the specified access controlled elevator */
+  deleteAccessControlledElevator: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_DeleteAccessControlledElevatorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_DeleteAccessControlledElevatorWSRequest"];
+      };
+    };
+  };
+  /** Delete the specified access controlled elevator landing */
+  deleteAccessControlledElevatorLanding: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_DeleteAccessControlledElevatorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_DeleteAccessControlledElevatorLandingWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevator landings within the org */
+  findAccessControlledElevatorLandings: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingsWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevators landings within the specified location */
+  findAccessControlledElevatorLandingsByLocation: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingsByLocationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingsByLocationWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevators within the org */
+  findAccessControlledElevators: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorsWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevators within the specified location */
+  findAccessControlledElevatorsByLocation: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorsByLocationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorsByLocationWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevators for the specified owner device */
+  findAccessControlledElevatorsByOwnerDevice: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorsByOwnerDeviceWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorsByOwnerDeviceWSRequest"];
+      };
+    };
+  };
+  /** Updates an access controlled elevator */
+  updateAccessControlledElevator: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_UpdateAccessControlledElevatorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_UpdateAccessControlledElevatorWSRequest"];
+      };
+    };
+  };
+  /** Updates an access controlled elevator landing */
+  updateAccessControlledElevatorLanding: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_UpdateAccessControlledElevatorLandingWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_UpdateAccessControlledElevatorLandingWSRequest"];
       };
     };
   };
@@ -43980,7 +45337,7 @@ export interface operations {
       };
     };
   };
-  /** Update saved clip title or summary */
+  /** Selectively updates a saved clip */
   updateSavedClip: {
     parameters: {
       header: {
@@ -52040,6 +53397,30 @@ export interface operations {
       };
     };
   };
+  /** Returns device count and acd count from v1 org, takes in custom CSV from Salesforce */
+  getMigrationInfoForOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Response"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          file?: { [key: string]: unknown } | null;
+        };
+      };
+    };
+  };
   /** Get super admin group UUID */
   getSuperAdminGroupUUID: {
     parameters: {
@@ -52228,7 +53609,7 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Internal_CreateCombinedLicensesFromV1WSResponse"];
+          "application/json": components["schemas"]["Internal_VerifyCanMigrateOrgFromV1WSResponse"];
         };
       };
     };
@@ -52302,7 +53683,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Invoice_InvoiceChargeWSRequest"];
+        "application/json": components["schemas"]["Invoice_InvoiceChargeV2WSRequest"];
       };
     };
   };
@@ -58593,6 +59974,115 @@ export interface operations {
    * Notes:
    * 	•	Only binary/boolean prompt types are valid for this endpoint.
    */
+  getCustomEventsBinaryCounts: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report_GetCustomLLMWBinaryWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetCustomLLMWSRequest"];
+      };
+    };
+  };
+  /**
+   * Retrieves aggregated statistics for numeric events event values produced by a selected prompt over a specified time window.
+   * Scope & filters:
+   * 	•	promptUuid – The prompt to aggregate (required).
+   *
+   * Time window & interval:
+   * 	•	A time range (startTimeMs → endTimeMs, epoch ms) is required and is used exactly as provided.
+   * 	•	If an interval is supplied (e.g., MINUTELY, QUARTERHOURLY, HOURLY), events are bucketed at that granularity.
+   * 	•	Aggregation is always performed in the device’s local timezone. Buckets are computed relative to each device’s timezone, then evaluated within the exact provided window.
+   *
+   * Response:
+   * 	•	Per interval bucket, returns numeric aggregates derived from raw values: count, sum, min, max, average.
+   * 	•	Includes minValueTimestampMs and maxValueTimestampMs indicating when min/max occurred within the bucket (if available).
+   * 	•	Bucket timestamps are returned as epoch ms.
+   *
+   * Notes:
+   * 	•	Only numeric prompt types are valid for this endpoint.
+   */
+  getCustomEventsNumericCounts: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report_GetCustomLLMNumericWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetCustomLLMWSRequest"];
+      };
+    };
+  };
+  /**
+   * Retrieves a custom events report containing raw time-series event values recorded by selected prompts and devices within the specified time window.
+   * The report can be filtered by:
+   * 	•	promptUuid – The specific prompt to query.
+   * 	•	deviceFacetUuids – A set of devices to include.
+   * 	•	locationUuid – The location context for the query.
+   * For example, a request may specify a promptUuid to fetch results from a certain LLM prompt, and additionally restrict results to only devices in a given locationUuid.
+   * The time range (startTimeMs → endTimeMs) is required and determines the interval of events returned.
+   * The response includes, per device and prompt, the raw event values (numeric or boolean as string) along with timestamps, check-condition results (if selected), and prompt type.
+   */
+  getCustomEventsReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report_GetCustomLLMNumericWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetCustomLLMReportWSRequest"];
+      };
+    };
+  };
+  /**
+   * Retrieves aggregated counts of boolean event values (true/false) produced by a selected prompt over a specified time window.
+   *
+   * Scope & filters:
+   * 	•	promptUuid – The prompt to aggregate (required).
+   *
+   * Time window & interval:
+   * 	•	A time range (startTimeMs → endTimeMs, epoch ms) is required and is used exactly as provided.
+   * 	•	If an interval is supplied (e.g., MINUTELY, QUARTERHOURLY, HOURLY), events are bucketed at that granularity.
+   * 	•	Aggregation is always performed in the device’s local timezone. Buckets are computed relative to each device’s timezone, then evaluated within the exact provided window.
+   *
+   * Response:
+   * 	•	Per interval bucket, returns a BinaryAggregationValue with counts for true and false.
+   * 	•	Includes minValueTimestampMs and maxValueTimestampMs (if available) and the bucket timestamp from BaseReportValue.
+   *
+   * Notes:
+   * 	•	Only binary/boolean prompt types are valid for this endpoint.
+   */
   getCustomLLMBinaryCounts: {
     parameters: {
       header: {
@@ -63104,6 +64594,15 @@ export enum MinimalStrategyEnum {
   RELATIVE_DATETIME_INTERVALS = "RELATIVE_DATETIME_INTERVALS",
 }
 
+export enum GetInvoicesWSRequestStatusEnum {
+  DRAFT = "DRAFT",
+  OPEN = "OPEN",
+  PAID = "PAID",
+  UNCOLLECTIBLE = "UNCOLLECTIBLE",
+  VOID = "VOID",
+  ALL = "ALL",
+}
+
 export enum ButtonEnumType {
   integrated_generic_button = "integrated_generic_button",
   integrated_doorbell_button = "integrated_doorbell_button",
@@ -63250,10 +64749,10 @@ export enum ChangeTypeEnum {
 }
 
 export enum ChatVisibilityEnum {
+  PUBLIC = "PUBLIC",
   ORG_WIDE = "ORG_WIDE",
   SELECT_USERS = "SELECT_USERS",
   PRIVATE = "PRIVATE",
-  UNKNOWN = "UNKNOWN",
 }
 
 export enum CheckConditionOperatorEnum {
@@ -63414,6 +64913,7 @@ export enum ClipSeekPointV2CustomActivityColorEnum {
 
 export enum ClipVisibilityEnum {
   PRIVATE = "PRIVATE",
+  ROLE_RESTRICTED = "ROLE_RESTRICTED",
   ORG_WIDE = "ORG_WIDE",
 }
 
@@ -63439,10 +64939,14 @@ export enum ComponentBaseEnumType {
 
 export enum ComponentCompositeEnumType {
   AccessControlledDoor = "AccessControlledDoor",
+  AccessControlledElevator = "AccessControlledElevator",
+  AccessControlledElevatorLanding = "AccessControlledElevatorLanding",
 }
 
 export enum ComponentCompositeEnumType_Minimal {
   AccessControlledDoor = "AccessControlledDoor",
+  AccessControlledElevator = "AccessControlledElevator",
+  AccessControlledElevatorLanding = "AccessControlledElevatorLanding",
 }
 
 export enum ComponentCompositeShadowEnum {
@@ -63722,6 +65226,8 @@ export enum DeviceFeatureEnum {
   CAMERA_ENTERPRISE_CLOUD_ARCHIVING = "CAMERA_ENTERPRISE_CLOUD_ARCHIVING",
   TIMELAPSE = "TIMELAPSE",
   VISUAL_TAMPER = "VISUAL_TAMPER",
+  REGION_CROSSING = "REGION_CROSSING",
+  OCCUPANCY_COUNTING = "OCCUPANCY_COUNTING",
   AUDIO_AI_ANALYTICS = "AUDIO_AI_ANALYTICS",
   AUDIO_ENTERPRISE_CLOUD_ARCHIVING = "AUDIO_ENTERPRISE_CLOUD_ARCHIVING",
   AUDIO_SPEAKER_ENABLED = "AUDIO_SPEAKER_ENABLED",
@@ -64838,6 +66344,13 @@ export enum ExportAuditEventsWSRequestExcludeActionsEnum {
   CUSTOM_EVENT_CREATE = "CUSTOM_EVENT_CREATE",
   CUSTOM_EVENT_DELETE = "CUSTOM_EVENT_DELETE",
   CUSTOM_EVENT_UPDATE = "CUSTOM_EVENT_UPDATE",
+  SUBSCRIPTION_SETUP_INTENT_CREATE = "SUBSCRIPTION_SETUP_INTENT_CREATE",
+  SUBSCRIPTION_CREATE = "SUBSCRIPTION_CREATE",
+  SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_DELETE = "SUBSCRIPTION_PAYMENT_METHOD_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_UPDATE = "SUBSCRIPTION_PAYMENT_METHOD_UPDATE",
+  SUBSCRIPTION_MAX_SPEND_UPDATE = "SUBSCRIPTION_MAX_SPEND_UPDATE",
+  SUBSCRIPTION_CHECKOUT_SESSION_CREATE = "SUBSCRIPTION_CHECKOUT_SESSION_CREATE",
   UPLOAD_FLOORPLAN = "UPLOAD_FLOORPLAN",
   ORG_AUDIO_RECORD_UPDATE = "ORG_AUDIO_RECORD_UPDATE",
   ORG_AUDIO_ANALYSIS_UPDATE = "ORG_AUDIO_ANALYSIS_UPDATE",
@@ -64845,6 +66358,8 @@ export enum ExportAuditEventsWSRequestExcludeActionsEnum {
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
   UPLOAD_USER_PROFILE_PICTURE = "UPLOAD_USER_PROFILE_PICTURE",
   ACCESS_GRANT_CREATE = "ACCESS_GRANT_CREATE",
   ACCESS_GRANT_UPDATE = "ACCESS_GRANT_UPDATE",
@@ -64855,6 +66370,12 @@ export enum ExportAuditEventsWSRequestExcludeActionsEnum {
   ACCESS_CONTROLLED_DOOR_CREATE = "ACCESS_CONTROLLED_DOOR_CREATE",
   ACCESS_CONTROLLED_DOOR_UPDATE = "ACCESS_CONTROLLED_DOOR_UPDATE",
   ACCESS_CONTROLLED_DOOR_DELETE = "ACCESS_CONTROLLED_DOOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_CREATE = "ACCESS_CONTROLLED_ELEVATOR_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_DELETE = "ACCESS_CONTROLLED_ELEVATOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE",
   AC_CRED_RHOMBUS_SECURE_CSN_CREATE = "AC_CRED_RHOMBUS_SECURE_CSN_CREATE",
   AC_CRED_RHOMBUS_SECURE_CSN_UPDATE = "AC_CRED_RHOMBUS_SECURE_CSN_UPDATE",
   AC_CRED_RHOMBUS_SECURE_CSN_DELETE = "AC_CRED_RHOMBUS_SECURE_CSN_DELETE",
@@ -65231,6 +66752,13 @@ export enum ExportAuditEventsWSRequestIncludeActionsEnum {
   CUSTOM_EVENT_CREATE = "CUSTOM_EVENT_CREATE",
   CUSTOM_EVENT_DELETE = "CUSTOM_EVENT_DELETE",
   CUSTOM_EVENT_UPDATE = "CUSTOM_EVENT_UPDATE",
+  SUBSCRIPTION_SETUP_INTENT_CREATE = "SUBSCRIPTION_SETUP_INTENT_CREATE",
+  SUBSCRIPTION_CREATE = "SUBSCRIPTION_CREATE",
+  SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_DELETE = "SUBSCRIPTION_PAYMENT_METHOD_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_UPDATE = "SUBSCRIPTION_PAYMENT_METHOD_UPDATE",
+  SUBSCRIPTION_MAX_SPEND_UPDATE = "SUBSCRIPTION_MAX_SPEND_UPDATE",
+  SUBSCRIPTION_CHECKOUT_SESSION_CREATE = "SUBSCRIPTION_CHECKOUT_SESSION_CREATE",
   UPLOAD_FLOORPLAN = "UPLOAD_FLOORPLAN",
   ORG_AUDIO_RECORD_UPDATE = "ORG_AUDIO_RECORD_UPDATE",
   ORG_AUDIO_ANALYSIS_UPDATE = "ORG_AUDIO_ANALYSIS_UPDATE",
@@ -65238,6 +66766,8 @@ export enum ExportAuditEventsWSRequestIncludeActionsEnum {
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
   UPLOAD_USER_PROFILE_PICTURE = "UPLOAD_USER_PROFILE_PICTURE",
   ACCESS_GRANT_CREATE = "ACCESS_GRANT_CREATE",
   ACCESS_GRANT_UPDATE = "ACCESS_GRANT_UPDATE",
@@ -65248,6 +66778,12 @@ export enum ExportAuditEventsWSRequestIncludeActionsEnum {
   ACCESS_CONTROLLED_DOOR_CREATE = "ACCESS_CONTROLLED_DOOR_CREATE",
   ACCESS_CONTROLLED_DOOR_UPDATE = "ACCESS_CONTROLLED_DOOR_UPDATE",
   ACCESS_CONTROLLED_DOOR_DELETE = "ACCESS_CONTROLLED_DOOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_CREATE = "ACCESS_CONTROLLED_ELEVATOR_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_DELETE = "ACCESS_CONTROLLED_ELEVATOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE",
   AC_CRED_RHOMBUS_SECURE_CSN_CREATE = "AC_CRED_RHOMBUS_SECURE_CSN_CREATE",
   AC_CRED_RHOMBUS_SECURE_CSN_UPDATE = "AC_CRED_RHOMBUS_SECURE_CSN_UPDATE",
   AC_CRED_RHOMBUS_SECURE_CSN_DELETE = "AC_CRED_RHOMBUS_SECURE_CSN_DELETE",
@@ -65850,6 +67386,7 @@ export enum SubscribeZapierWebhookWSRequestDoorStateEnum {
 }
 
 export enum Integration_aperio_AperioIntegrationStatusEnum {
+  UNKNOWN = "UNKNOWN",
   DISCOVERED = "DISCOVERED",
   PAIRING = "PAIRING",
   CONFIGURED = "CONFIGURED",
@@ -65915,6 +67452,16 @@ export enum KeypadCommandEnum {
 export enum KeypadConfigConnectionStateEnum {
   ONLINE = "ONLINE",
   OFFLINE = "OFFLINE",
+}
+
+export enum KeypadConfigPlatformEnum {
+  ANDROID = "ANDROID",
+  IOS = "IOS",
+}
+
+export enum KeypadCheckinWSRequestPlatformEnum {
+  ANDROID = "ANDROID",
+  IOS = "IOS",
 }
 
 export enum KioskConnectionStatusEnum {
@@ -66839,6 +68386,7 @@ export enum QueryStatusEnum {
   NO_RESPONSE = "NO_RESPONSE",
   INVALID_AUTH_DATA = "INVALID_AUTH_DATA",
   INVALID_API_TOKEN = "INVALID_API_TOKEN",
+  MIND_DISABLED = "MIND_DISABLED",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -67349,6 +68897,13 @@ export enum AuditEventWebActionEnum {
   CUSTOM_EVENT_CREATE = "CUSTOM_EVENT_CREATE",
   CUSTOM_EVENT_DELETE = "CUSTOM_EVENT_DELETE",
   CUSTOM_EVENT_UPDATE = "CUSTOM_EVENT_UPDATE",
+  SUBSCRIPTION_SETUP_INTENT_CREATE = "SUBSCRIPTION_SETUP_INTENT_CREATE",
+  SUBSCRIPTION_CREATE = "SUBSCRIPTION_CREATE",
+  SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_DELETE = "SUBSCRIPTION_PAYMENT_METHOD_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_UPDATE = "SUBSCRIPTION_PAYMENT_METHOD_UPDATE",
+  SUBSCRIPTION_MAX_SPEND_UPDATE = "SUBSCRIPTION_MAX_SPEND_UPDATE",
+  SUBSCRIPTION_CHECKOUT_SESSION_CREATE = "SUBSCRIPTION_CHECKOUT_SESSION_CREATE",
   UPLOAD_FLOORPLAN = "UPLOAD_FLOORPLAN",
   ORG_AUDIO_RECORD_UPDATE = "ORG_AUDIO_RECORD_UPDATE",
   ORG_AUDIO_ANALYSIS_UPDATE = "ORG_AUDIO_ANALYSIS_UPDATE",
@@ -67356,6 +68911,8 @@ export enum AuditEventWebActionEnum {
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
   UPLOAD_USER_PROFILE_PICTURE = "UPLOAD_USER_PROFILE_PICTURE",
   ACCESS_GRANT_CREATE = "ACCESS_GRANT_CREATE",
   ACCESS_GRANT_UPDATE = "ACCESS_GRANT_UPDATE",
@@ -67366,6 +68923,12 @@ export enum AuditEventWebActionEnum {
   ACCESS_CONTROLLED_DOOR_CREATE = "ACCESS_CONTROLLED_DOOR_CREATE",
   ACCESS_CONTROLLED_DOOR_UPDATE = "ACCESS_CONTROLLED_DOOR_UPDATE",
   ACCESS_CONTROLLED_DOOR_DELETE = "ACCESS_CONTROLLED_DOOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_CREATE = "ACCESS_CONTROLLED_ELEVATOR_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_DELETE = "ACCESS_CONTROLLED_ELEVATOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE",
   AC_CRED_RHOMBUS_SECURE_CSN_CREATE = "AC_CRED_RHOMBUS_SECURE_CSN_CREATE",
   AC_CRED_RHOMBUS_SECURE_CSN_UPDATE = "AC_CRED_RHOMBUS_SECURE_CSN_UPDATE",
   AC_CRED_RHOMBUS_SECURE_CSN_DELETE = "AC_CRED_RHOMBUS_SECURE_CSN_DELETE",
@@ -67757,6 +69320,13 @@ export enum GetAuditFeedWSRequestExcludeActionsEnum {
   CUSTOM_EVENT_CREATE = "CUSTOM_EVENT_CREATE",
   CUSTOM_EVENT_DELETE = "CUSTOM_EVENT_DELETE",
   CUSTOM_EVENT_UPDATE = "CUSTOM_EVENT_UPDATE",
+  SUBSCRIPTION_SETUP_INTENT_CREATE = "SUBSCRIPTION_SETUP_INTENT_CREATE",
+  SUBSCRIPTION_CREATE = "SUBSCRIPTION_CREATE",
+  SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_DELETE = "SUBSCRIPTION_PAYMENT_METHOD_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_UPDATE = "SUBSCRIPTION_PAYMENT_METHOD_UPDATE",
+  SUBSCRIPTION_MAX_SPEND_UPDATE = "SUBSCRIPTION_MAX_SPEND_UPDATE",
+  SUBSCRIPTION_CHECKOUT_SESSION_CREATE = "SUBSCRIPTION_CHECKOUT_SESSION_CREATE",
   UPLOAD_FLOORPLAN = "UPLOAD_FLOORPLAN",
   ORG_AUDIO_RECORD_UPDATE = "ORG_AUDIO_RECORD_UPDATE",
   ORG_AUDIO_ANALYSIS_UPDATE = "ORG_AUDIO_ANALYSIS_UPDATE",
@@ -67764,6 +69334,8 @@ export enum GetAuditFeedWSRequestExcludeActionsEnum {
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
   UPLOAD_USER_PROFILE_PICTURE = "UPLOAD_USER_PROFILE_PICTURE",
   ACCESS_GRANT_CREATE = "ACCESS_GRANT_CREATE",
   ACCESS_GRANT_UPDATE = "ACCESS_GRANT_UPDATE",
@@ -67774,6 +69346,12 @@ export enum GetAuditFeedWSRequestExcludeActionsEnum {
   ACCESS_CONTROLLED_DOOR_CREATE = "ACCESS_CONTROLLED_DOOR_CREATE",
   ACCESS_CONTROLLED_DOOR_UPDATE = "ACCESS_CONTROLLED_DOOR_UPDATE",
   ACCESS_CONTROLLED_DOOR_DELETE = "ACCESS_CONTROLLED_DOOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_CREATE = "ACCESS_CONTROLLED_ELEVATOR_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_DELETE = "ACCESS_CONTROLLED_ELEVATOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE",
   AC_CRED_RHOMBUS_SECURE_CSN_CREATE = "AC_CRED_RHOMBUS_SECURE_CSN_CREATE",
   AC_CRED_RHOMBUS_SECURE_CSN_UPDATE = "AC_CRED_RHOMBUS_SECURE_CSN_UPDATE",
   AC_CRED_RHOMBUS_SECURE_CSN_DELETE = "AC_CRED_RHOMBUS_SECURE_CSN_DELETE",
@@ -68150,6 +69728,13 @@ export enum GetAuditFeedWSRequestIncludeActionsEnum {
   CUSTOM_EVENT_CREATE = "CUSTOM_EVENT_CREATE",
   CUSTOM_EVENT_DELETE = "CUSTOM_EVENT_DELETE",
   CUSTOM_EVENT_UPDATE = "CUSTOM_EVENT_UPDATE",
+  SUBSCRIPTION_SETUP_INTENT_CREATE = "SUBSCRIPTION_SETUP_INTENT_CREATE",
+  SUBSCRIPTION_CREATE = "SUBSCRIPTION_CREATE",
+  SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_DELETE = "SUBSCRIPTION_PAYMENT_METHOD_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_UPDATE = "SUBSCRIPTION_PAYMENT_METHOD_UPDATE",
+  SUBSCRIPTION_MAX_SPEND_UPDATE = "SUBSCRIPTION_MAX_SPEND_UPDATE",
+  SUBSCRIPTION_CHECKOUT_SESSION_CREATE = "SUBSCRIPTION_CHECKOUT_SESSION_CREATE",
   UPLOAD_FLOORPLAN = "UPLOAD_FLOORPLAN",
   ORG_AUDIO_RECORD_UPDATE = "ORG_AUDIO_RECORD_UPDATE",
   ORG_AUDIO_ANALYSIS_UPDATE = "ORG_AUDIO_ANALYSIS_UPDATE",
@@ -68157,6 +69742,8 @@ export enum GetAuditFeedWSRequestIncludeActionsEnum {
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
   UPLOAD_USER_PROFILE_PICTURE = "UPLOAD_USER_PROFILE_PICTURE",
   ACCESS_GRANT_CREATE = "ACCESS_GRANT_CREATE",
   ACCESS_GRANT_UPDATE = "ACCESS_GRANT_UPDATE",
@@ -68167,6 +69754,12 @@ export enum GetAuditFeedWSRequestIncludeActionsEnum {
   ACCESS_CONTROLLED_DOOR_CREATE = "ACCESS_CONTROLLED_DOOR_CREATE",
   ACCESS_CONTROLLED_DOOR_UPDATE = "ACCESS_CONTROLLED_DOOR_UPDATE",
   ACCESS_CONTROLLED_DOOR_DELETE = "ACCESS_CONTROLLED_DOOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_CREATE = "ACCESS_CONTROLLED_ELEVATOR_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_DELETE = "ACCESS_CONTROLLED_ELEVATOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE",
   AC_CRED_RHOMBUS_SECURE_CSN_CREATE = "AC_CRED_RHOMBUS_SECURE_CSN_CREATE",
   AC_CRED_RHOMBUS_SECURE_CSN_UPDATE = "AC_CRED_RHOMBUS_SECURE_CSN_UPDATE",
   AC_CRED_RHOMBUS_SECURE_CSN_DELETE = "AC_CRED_RHOMBUS_SECURE_CSN_DELETE",
@@ -69066,6 +70659,13 @@ export enum SimpleAuditEventAuditEventEnum {
   CUSTOM_EVENT_CREATE = "CUSTOM_EVENT_CREATE",
   CUSTOM_EVENT_DELETE = "CUSTOM_EVENT_DELETE",
   CUSTOM_EVENT_UPDATE = "CUSTOM_EVENT_UPDATE",
+  SUBSCRIPTION_SETUP_INTENT_CREATE = "SUBSCRIPTION_SETUP_INTENT_CREATE",
+  SUBSCRIPTION_CREATE = "SUBSCRIPTION_CREATE",
+  SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_DELETE = "SUBSCRIPTION_PAYMENT_METHOD_DELETE",
+  SUBSCRIPTION_PAYMENT_METHOD_UPDATE = "SUBSCRIPTION_PAYMENT_METHOD_UPDATE",
+  SUBSCRIPTION_MAX_SPEND_UPDATE = "SUBSCRIPTION_MAX_SPEND_UPDATE",
+  SUBSCRIPTION_CHECKOUT_SESSION_CREATE = "SUBSCRIPTION_CHECKOUT_SESSION_CREATE",
   UPLOAD_FLOORPLAN = "UPLOAD_FLOORPLAN",
   ORG_AUDIO_RECORD_UPDATE = "ORG_AUDIO_RECORD_UPDATE",
   ORG_AUDIO_ANALYSIS_UPDATE = "ORG_AUDIO_ANALYSIS_UPDATE",
@@ -69073,6 +70673,8 @@ export enum SimpleAuditEventAuditEventEnum {
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
+  UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
   UPLOAD_USER_PROFILE_PICTURE = "UPLOAD_USER_PROFILE_PICTURE",
   ACCESS_GRANT_CREATE = "ACCESS_GRANT_CREATE",
   ACCESS_GRANT_UPDATE = "ACCESS_GRANT_UPDATE",
@@ -69083,6 +70685,12 @@ export enum SimpleAuditEventAuditEventEnum {
   ACCESS_CONTROLLED_DOOR_CREATE = "ACCESS_CONTROLLED_DOOR_CREATE",
   ACCESS_CONTROLLED_DOOR_UPDATE = "ACCESS_CONTROLLED_DOOR_UPDATE",
   ACCESS_CONTROLLED_DOOR_DELETE = "ACCESS_CONTROLLED_DOOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_CREATE = "ACCESS_CONTROLLED_ELEVATOR_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_DELETE = "ACCESS_CONTROLLED_ELEVATOR_DELETE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_CREATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_UPDATE",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE = "ACCESS_CONTROLLED_ELEVATOR_LANDING_DELETE",
   AC_CRED_RHOMBUS_SECURE_CSN_CREATE = "AC_CRED_RHOMBUS_SECURE_CSN_CREATE",
   AC_CRED_RHOMBUS_SECURE_CSN_UPDATE = "AC_CRED_RHOMBUS_SECURE_CSN_UPDATE",
   AC_CRED_RHOMBUS_SECURE_CSN_DELETE = "AC_CRED_RHOMBUS_SECURE_CSN_DELETE",
