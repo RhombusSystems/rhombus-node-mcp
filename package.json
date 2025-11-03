@@ -26,7 +26,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "rm -rf dist && tsc && chmod +x dist/*.js",
-    "docker:build": "docker build -t mcp-server-rhombus .",
+    "docker:build": "docker build -t rhombussystems/mcp-server-rhombus .",
     "prepare": "npm run build",
     "watch": "npm run clean && tsc --watch",
     "generate-schemas": "npx tsx scripts/generate-zod-schemas.ts",
