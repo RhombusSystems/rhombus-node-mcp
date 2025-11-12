@@ -1,6 +1,6 @@
 {
   "name": "rhombus-node-mcp",
-  "version": "0.1.18",
+  "version": "0.1.21",
   "description": "MCP server for Rhombus API",
   "keywords": [
     "ai",
@@ -27,6 +27,7 @@
     "clean": "rm -rf dist",
     "build": "rm -rf dist && tsc && chmod +x dist/*.js",
     "docker:build": "docker build -t rhombussystems/mcp-server-rhombus .",
+    "start": "node dist/index.js",
     "prepare": "npm run build",
     "watch": "npm run clean && tsc --watch",
     "generate-schemas": "npx tsx scripts/generate-zod-schemas.ts",
@@ -44,7 +45,7 @@
     "dist"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@modelcontextprotocol/sdk": "^1.21.1",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
     "chrono-node": "^2.8.0",

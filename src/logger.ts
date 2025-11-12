@@ -1,6 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
 import log4js from "log4js";
-import path from "path";
-import fs from "fs";
 
 const baseDir = process.env.LOG_FOLDER ?? process.cwd();
 const logDir = path.resolve(baseDir, "logs");
@@ -16,7 +16,7 @@ try {
 }
 
 // Build appenders configuration dynamically
-const appenders: any = {
+const appenders: log4js.Configuration["appenders"] = {
   // stderr for terminal visibility (always available)
   stderr: { type: "stderr" },
 

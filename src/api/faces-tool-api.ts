@@ -88,7 +88,6 @@ export async function getFaceEvents(
     }
 
     // one last sweep of null values
-    console.log("filteredArgs", filteredArgs);
     filteredArgs = removeNulls(filteredArgs);
 
     const response = await postApi<

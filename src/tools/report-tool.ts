@@ -17,6 +17,7 @@ import {
 } from "../api/report-tool-api.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
 import { DateTime } from "luxon";
+import { logger } from "../logger.js";
 
 const TOOL_NAME = "report-tool";
 
@@ -230,7 +231,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     );
 
     // Log the report data to help debug
-    console.log(
+    logger.log(
       "📊 Custom LLM Report Tool Response:",
       JSON.stringify({
         promptType,
