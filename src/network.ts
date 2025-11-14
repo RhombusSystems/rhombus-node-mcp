@@ -36,19 +36,12 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
 
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
-export async function postApi<T>({
-  route,
-  body,
-  modifiers,
-  sessionId,
-}: {
-  route: string;
-  body: object | string;
-  modifiers?: RequestModifiers;
-  sessionId?: string;
-}) {
-  let url = BASE_URL + route;
 
+export function constructRequestHeaders(
+  url: string,
+  modifiers?: RequestModifiers,
+  sessionId?: string
+) {
   // construct auth headers
   let authHeaders: Record<string, string> = {};
   if (!sessionId) {
@@ -93,6 +86,29 @@ export async function postApi<T>({
   if (modifiers?.query) {
     url = appendQueryParams(url, modifiers.query);
   }
+
+  return { url, requestHeaders };
+}
+
+export async function postApi<T>({
+  route,
+  body,
+  modifiers,
+  sessionId,
+}: {
+  route: string;
+  body: object | string;
+  modifiers?: RequestModifiers;
+  sessionId?: string;
+}) {
+  let url = BASE_URL + route;
+
+  const { url: newUrl, requestHeaders } = constructRequestHeaders(
+    BASE_URL + route,
+    modifiers,
+    sessionId
+  );
+  url = newUrl;
 
   // stringify body if it's not already a string
   if (typeof body === "object") {

@@ -41,14 +41,16 @@ if (fileLoggingEnabled) {
   };
 }
 
+const stderrAppender = process.env.DEBUG === "true" ? "stderr" : "stderrWarnPlus";
+
 // Configure categories based on available appenders
 const categories = {
   default: {
-    appenders: fileLoggingEnabled ? ["mcpFile", "stderrWarnPlus"] : ["stderrWarnPlus"],
-    level: "info",
+    appenders: fileLoggingEnabled ? ["mcpFile", stderrAppender] : [stderrAppender],
+    level: "trace",
   },
   mcp: {
-    appenders: fileLoggingEnabled ? ["mcpFile", "stderrWarnPlus"] : ["stderrWarnPlus"],
+    appenders: fileLoggingEnabled ? ["mcpFile", stderrAppender] : [stderrAppender],
     level: "trace",
   },
 };

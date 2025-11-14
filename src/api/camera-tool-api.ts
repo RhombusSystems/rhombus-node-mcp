@@ -1,13 +1,14 @@
 import { getLogger } from "../logger.js";
-import { appendQueryParams, AUTH_HEADERS, postApi, STATIC_HEADERS } from "../network.js";
-import { removeNullFields, RequestModifiers } from "../util.js";
-import {
+import { constructRequestHeaders, postApi } from "../network.js";
+import type {
+  CameraFullStateResponse,
+  CameraStorageData,
   ExternalUpdateableFacetedUserConfig,
   PresenceWindowsResponse,
-  CameraFullStateResponse,
   TimeWindowSeconds,
-  CameraStorageData,
 } from "../types/camera-tool-types.js";
+import type schema from "../types/schema.js";
+import { removeNullFields, type RequestModifiers } from "../util.js";
 
 const logger = getLogger("camera-tool");
 
@@ -30,7 +31,7 @@ export async function getImageForCameraAtTime(
     timestampMs: timestampMs,
   };
   logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
-  const base64Image = await postApi<any>({
+  const base64Image = await postApi<schema["Video_GetExactFrameUriWSResponse"]>({
     route: "/video/getExactFrameUri",
     body,
     modifiers: requestModifiers,
@@ -38,20 +39,24 @@ export async function getImageForCameraAtTime(
   }).then(async res => {
     logger.debug(`Received frameUri ${res.frameUri}`);
 
-    // construct request headers
-    let requestHeaders = {
-      ...(requestModifiers?.headers ?? AUTH_HEADERS),
-      ...STATIC_HEADERS,
-    };
-
-    // add query params
-    if (requestModifiers?.query) {
-      res.frameUri = appendQueryParams(res.frameUri, requestModifiers.query);
+    if (!res.frameUri) {
+      throw new Error("No frameUri given. Maybe camera does not support it.");
     }
 
-    logger.trace(`Fetching with headers\n${JSON.stringify(requestHeaders)}`);
+    // construct request headers
+    const { url: frameUri, requestHeaders } = constructRequestHeaders(
+      res.frameUri,
+      requestModifiers,
+      sessionId
+    );
 
-    return await fetch(res.frameUri, {
+    // remove content type
+    delete requestHeaders["Content-Type"];
+    delete requestHeaders["accept"];
+
+    logger.debug(`Fetching with headers\n${JSON.stringify(requestHeaders, null, 2)}`);
+
+    return await fetch(frameUri, {
       method: "GET",
       headers: requestHeaders as HeadersInit,
     }).then(async res => {
@@ -97,7 +102,10 @@ async function getCameraStorageData(
   });
 
   const cloudArchiveDays =
-    (stateResponse.fullCameraState?.onCloudState?.cloud_archive_days as number | null | undefined) ?? null;
+    (stateResponse.fullCameraState?.onCloudState?.cloud_archive_days as
+      | number
+      | null
+      | undefined) ?? null;
 
   // Get the oldest segment time (in seconds) to use as start time
   const oldestSegmentSecs = stateResponse.fullCameraState?.onCameraState?.oldest_segment_secs ?? 0;
