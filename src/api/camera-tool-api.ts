@@ -19,18 +19,29 @@ export async function getImageForCameraAtTime(
   timestampMs: number,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-) {
+): Promise<
+  | {
+      success: true;
+      status: string;
+      frameUri: string;
+      imageType: "base64";
+      imageData: string;
+    }
+  | {
+      success: false;
+      status: string;
+    }
+> {
   const body = {
     cameraUuid: cameraUuid,
     downscaleFactor: 10,
     jpgQuality: 70,
-    permyriadCropHeight: 10000,
-    permyriadCropWidth: 5625,
-    permyriadCropX: 2188,
-    permyriadCropY: 0,
     timestampMs: timestampMs,
   };
+
   logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
+
+  let frameUri: string | undefined;
   const base64Image = await postApi<schema["Video_GetExactFrameUriWSResponse"]>({
     route: "/video/getExactFrameUri",
     body,
@@ -44,11 +55,12 @@ export async function getImageForCameraAtTime(
     }
 
     // construct request headers
-    const { url: frameUri, requestHeaders } = constructRequestHeaders(
+    const { url: _frameUri, requestHeaders } = constructRequestHeaders(
       res.frameUri,
       requestModifiers,
       sessionId
     );
+    frameUri = _frameUri;
 
     // remove content type
     delete requestHeaders["Content-Type"];
@@ -81,6 +93,7 @@ export async function getImageForCameraAtTime(
   return {
     success: true,
     status: "successfully fetched image",
+    frameUri: frameUri ?? "",
     imageType: "base64",
     imageData: base64Image,
   };
