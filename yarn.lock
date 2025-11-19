@@ -268,10 +268,10 @@
     "@types/fs-extra" "^9.0.13"
     fs-extra "^10.1.0"
 
-"@modelcontextprotocol/sdk@^1.21.1":
-  version "1.21.1"
-  resolved "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.21.1.tgz"
-  integrity sha512-UyLFcJLDvUuZbGnaQqXFT32CpPpGj7VS19roLut6gkQVhb439xUzYWbsUvdI3ZPL+2hnFosuugtYWE0Mcs1rmQ==
+"@modelcontextprotocol/sdk@^1.21.2":
+  version "1.21.2"
+  resolved "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.21.2.tgz"
+  integrity sha512-HXR5NeVbaL45KuPRqfBQL/hcdc8Y197ALj5G75M5qUMcOk2at0bj2Nns4ZnjU2mTw52360TK63oDqvRjc1iPRQ==
   dependencies:
     ajv "^8.17.1"
     ajv-formats "^3.0.1"
