@@ -24,6 +24,14 @@ Your insights will directly influence our development roadmap and help us create
 
 ## 🔧 Quick Setup
 
+### Installing via Smithery
+
+To install Rhombus MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp):
+
+```bash
+npx -y @smithery/cli install @RhombusSystems/rhombus-node-mcp --client claude
+```
+
 ### Step 1: Give Your Rhombus Console Superpowers
 
 1. Login to your Rhombus Console  - [Login Here](https://console.rhombus.com)! 🔐
