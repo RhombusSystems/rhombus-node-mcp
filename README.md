@@ -1,5 +1,5 @@
 # 🚀 Rhombus MCP Server - Supercharge Your AI Tools!
-[![smithery badge](https://smithery.ai/badge/@RhombusSystems/rhombus-node-mcp)](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp)
+[![smithery badge](https://smithery.ai/badge/@RhombusSystems/rhombus-node-mcp1)](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp1)
 
 Unleash the power of the Rhombus API with this cutting-edge MCP server implementation! Transform your chatbot experience with advanced security and surveillance capabilities at your fingertips.
 
@@ -57,7 +57,7 @@ npx -y @smithery/cli install @RhombusSystems/rhombus-node-mcp --client claude
         "--rm",
         "-e",
         "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
-        "mcp-server-rhombus"
+        "rhombussystems/mcp-server-rhombus"
       ],
       "env": {
         "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
@@ -99,7 +99,53 @@ Time to see the magic happen! Let's verify that Claude for Desktop is detecting 
 
 If they're visible, YOU'VE DONE IT! 🎉 Your integration is live and ready to rock! Claude can now communicate directly with Rhombus systems, giving you the same incredible capabilities as the Rhombus web app, but with the added power of Claude's intelligence!
 
-### Hitting a Snag? We've Got You! 🛟
+## 🚀 Running Locally: Unleash Your Inner Developer!
+
+Want to get hands-on and test out the Rhombus MCP server right on your machine? Follow these steps to build and run a local Docker image, then connect it to your MCP client of choice!
+
+### 1. Build Your Local Docker Image 🛠️
+First, let's get that Docker image built. This will allow you to run the MCP server in a local environment.
+
+```bash
+npm install
+docker build -t mcp-server-rhombus .
+```
+
+### 2. Update Your Claude Config for Local Use ⚡
+Now, you'll need to adjust your `claude_desktop_config.json` to point to your newly built local Docker image.
+
+> ***Note:*** When running locally, the Docker image name changes to `mcp-server-rhombus` from `rhombussystems/mcp-server-rhombus`. Make sure to update this in your configuration!
+
+```json
+{
+  "mcpServers": {
+    "rhombus": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "RHOMBUS_API_KEY=YOUR_API_KEY_HERE",
+        "mcp-server-rhombus"
+      ],
+      "env": {
+        "RHOMBUS_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+## Creating a new tool
+
+We've written a script that you can run to get kickstarted on developing a new tool in addition to our existing tool set. You can simply call:
+
+```sh
+npm run create:tool
+```
+
+## Hitting a Snag? We've Got You! 🛟
 
 Check out Claude's fantastic [troubleshooting guide](https://modelcontextprotocol.io/docs/tools/debugging) for quick fixes! Still stuck? Our team of experts is ready to help!
 

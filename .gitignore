@@ -51,3 +51,8 @@ Desktop.ini
 *.tsv
 *.jsonl
 :
+
+logs/
+
+# scraped content
+/data/scraped
