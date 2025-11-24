@@ -157,15 +157,6 @@ export default function streamableHttpTransport() {
       return;
     }
 
-    // Handle the request
-    // modify request body to include meta
-    // if (req?.body?.params) {
-    //   req.body.params._meta = {
-    //     ...(req.body.params._meta ?? {}),
-    //     foo: "bar",
-    //   };
-    // }
-    // logger.trace("blah blah blah", JSON.stringify(req.body, null, 2));
     await transport.handleRequest(req, res, req.body);
   });
 

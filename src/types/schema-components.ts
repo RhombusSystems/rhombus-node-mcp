@@ -48,6 +48,14 @@ export interface paths {
     /** Update the metadata for a badge template image */
     post: operations["updateBadgeTemplateImage"];
   };
+  "/accesscontrol/create35BitCorp1000StdCredential": {
+    /** Create a HID Corp1000 Standard 35 bit credential */
+    post: operations["create35BitCorp1000StdCredential"];
+  };
+  "/accesscontrol/create48BitCorp1000StdCredential": {
+    /** Create a HID Corporate 1000 Standard 48 bit credential */
+    post: operations["create48BitCorp1000StdCredential"];
+  };
   "/accesscontrol/createAccessControlCredentialByHexValueAndType": {
     /** Create a credential based on a hex value and credential type. Useful if you see an unauthorized badge event, know its type and want to import it */
     post: operations["createAccessControlCredentialByHexValueAndType"];
@@ -204,6 +212,10 @@ export interface paths {
     /** Finds location access grants by the specified access controlled door */
     post: operations["findLocationAccessGrantsByAccessControlledDoor"];
   };
+  "/accesscontrol/findLocationAccessGrantsByAccessControlledElevatorLanding": {
+    /** Finds location access grants by the specified access controlled elevator landing */
+    post: operations["findLocationAccessGrantsByAccessControlledElevatorLanding"];
+  };
   "/accesscontrol/findLocationAccessGrantsByDoorLabel": {
     /** Finds location access grants by the specified door label */
     post: operations["findLocationAccessGrantsByDoorLabel"];
@@ -231,6 +243,10 @@ export interface paths {
   "/accesscontrol/findLocationAccessRevocationsByAccessControlledDoor": {
     /** Finds location access revocations by the specified access controlled door */
     post: operations["findLocationAccessRevocationsByAccessControlledDoor"];
+  };
+  "/accesscontrol/findLocationAccessRevocationsByAccessControlledElevatorLanding": {
+    /** Finds location access revocations by the specified access controlled elevator landing */
+    post: operations["findLocationAccessRevocationsByAccessControlledElevatorLanding"];
   };
   "/accesscontrol/findLocationAccessRevocationsByDoorLabel": {
     /** Finds location access revocation by the specified door label */
@@ -806,6 +822,12 @@ export interface paths {
   "/billing/subscription/getCustomerInformation": {
     post: operations["getCustomerInformation"];
   };
+  "/billing/subscription/getFreeTrialEligibility": {
+    post: operations["getFreeTrialEligibility"];
+  };
+  "/billing/subscription/getHistoricalUsage": {
+    post: operations["getHistoricalUsage"];
+  };
   "/billing/subscription/getInvoices": {
     post: operations["getInvoices"];
   };
@@ -1227,6 +1249,10 @@ export interface paths {
     /** Retrieves the current org's Rhombus MIND configuration. */
     post: operations["getChatbotConfig"];
   };
+  "/chatbot/config/getTokenUsageHistory": {
+    /** Retrieves the current org's LLM token usage history. */
+    post: operations["getTokenUsageHistory"];
+  };
   "/chatbot/config/updateChatbotConfig": {
     /** Selectively updates the current org's Rhombus MIND configuration. */
     post: operations["updateChatbotConfig"];
@@ -1277,6 +1303,10 @@ export interface paths {
      */
     post: operations["getSharedChatRecords"];
   };
+  "/chatbot/interruptChat": {
+    /** Adds QueryStatus.INTERRUPTED */
+    post: operations["interruptChat"];
+  };
   "/chatbot/submitChat": {
     /**
      * Submits a query to Rhombus MIND. When submitting a query the context ID plays an important role in
@@ -1285,6 +1315,13 @@ export interface paths {
      * cause a new conversation to be created.
      */
     post: operations["submitChat"];
+  };
+  "/chatbot/submitCreateReport": {
+    /**
+     * Very similar to /submitChat, but automatically marks the created chat record with a response type
+     * of report.
+     */
+    post: operations["submitCreateReport"];
   };
   "/chatbot/updateChatRecord": {
     /** Selectively updates a chat record. */
@@ -3584,17 +3621,9 @@ export interface paths {
     /** Update preexisting webhooks */
     post: operations["updateWebhookIntegrationV2"];
   };
-  "/internal/accessControlDoorOnly": {
-    /** Migrate access control door only from sf opp */
-    post: operations["accessControlDoorOnly"];
-  };
   "/internal/addPartnerAsSuperAdmin": {
     /** Add partner as super admin */
     post: operations["addPartnerAsSuperAdmin"];
-  };
-  "/internal/alarmMonitoringOnly": {
-    /** Migrate alarm monitoring only from sf opp */
-    post: operations["alarmMonitoringOnly"];
   };
   "/internal/createCombinedLicensesFromV1": {
     /** Migrate pro and ent devices, cloud archiving, alm and acd from sf opp */
@@ -3620,10 +3649,6 @@ export interface paths {
     /** Enroll in developer newsletter */
     post: operations["developerNewsletterEnroll"];
   };
-  "/internal/entDevicesOnly": {
-    /** Migrate ent devices only from sf opp */
-    post: operations["entDevicesOnly"];
-  };
   "/internal/getMigrationInfoForOrg": {
     /** Returns device count and acd count from v1 org, takes in custom CSV from Salesforce */
     post: operations["getMigrationInfoForOrg"];
@@ -3644,9 +3669,9 @@ export interface paths {
     /** Get parent lifetime spend information */
     post: operations["parentLifetimeSpend"];
   };
-  "/internal/proDevicesOnly": {
-    /** Migrate pro devices only from sf opp */
-    post: operations["proDevicesOnly"];
+  "/internal/remediateMissingFirstAssignedDates": {
+    /** populate firstAssignedDate for v1 licenses already assigned that have been migrated */
+    post: operations["remediateMissingFirstAssignedDates"];
   };
   "/internal/requestHardwareForDevelopment": {
     /** Request hardware for development purposes */
@@ -5694,6 +5719,7 @@ export interface components {
       | components["schemas"]["WiegandH10304Credential"]
       | components["schemas"]["WiegandD10202Credential"]
       | components["schemas"]["Wiegand64BitRawCredentialType"]
+      | components["schemas"]["CustomCredential"]
     ) & {
       createdAtMillis?: number | null;
       endDateEpochSecExclusive?: number | null;
@@ -5835,6 +5861,9 @@ export interface components {
           componentUuid?: string | null;
           initiatingUsername?: string | null;
           originatorEntityName?: string | null;
+          /** base 64 (url-safe) uuid string */
+          originatorEntityUuid?: string | null;
+          originatorType?: components["schemas"]["EventOriginatorEnum"];
         } & {
           /** base 64 (url-safe) uuid string */
           alertMonitoringThreatCaseUuid?: string | null;
@@ -6072,6 +6101,38 @@ export interface components {
     ) & {
       type?: BaseSendUserPresenceForCurrentUserWsResponseTypeEnum | null;
     };
+    /** Request to create an HID Corp1000 Standard 35 Bit credential. */
+    Accesscontrol_Create35BitCorp1000StdCredentialWSRequest: {
+      /** Card number */
+      cardNumber?: number | null;
+      /** Company Id */
+      companyId?: number | null;
+      /** End date in epoch seconds (exclusive) */
+      endDateEpochSecExclusive?: number | null;
+      /** Start date in epoch seconds (inclusive) */
+      startDateEpochSecInclusive?: number | null;
+      /** base 64 (url-safe) uuid string */
+      userUuid?: string | null;
+    };
+    Accesscontrol_Create35BitCorp1000StdCredentialWSResponse: {
+      credential?: components["schemas"]["AccessControlCredentialType"];
+    };
+    /** Request to create an HID Corp1000 Standard 48 Bit credential. */
+    Accesscontrol_Create48BitCorp1000StdCredentialWSRequest: {
+      /** Card number */
+      cardNumber?: number | null;
+      /** Company Id */
+      companyId?: number | null;
+      /** End date in epoch seconds (exclusive) */
+      endDateEpochSecExclusive?: number | null;
+      /** Start date in epoch seconds (inclusive) */
+      startDateEpochSecInclusive?: number | null;
+      /** base 64 (url-safe) uuid string */
+      userUuid?: string | null;
+    };
+    Accesscontrol_Create48BitCorp1000StdWSResponse: {
+      credential?: components["schemas"]["AccessControlCredentialType"];
+    };
     /** Represents an access controlled door that can be unlocked by a device. */
     Accesscontrol_DeviceUnlockableAccessControlledDoorType: {
       /** The name of the access controlled door. */
@@ -6238,6 +6299,16 @@ export interface components {
     Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWSResponse: {
       /** List of location access grants */
       accessGrants?: components["schemas"]["LocationAccessGrantType"][] | null;
+    } | null;
+    /** Request to find location access grants by access controlled elevator landing. */
+    Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid?: string | null;
+    };
+    /** Response containing location access grants for an access controlled elevator landing. */
+    Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSResponse: {
+      /** List of location access grants */
+      accessGrants?: components["schemas"]["LocationAccessGrantType"][] | null;
     };
     /** Request to find location access grants by door label. */
     Accesscontrol_accessgrant_FindLocationAccessGrantsByDoorLabelWSRequest: {
@@ -6371,6 +6442,18 @@ export interface components {
     };
     /** Response containing location access revocations for an access controlled door. */
     Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledDoorWSResponse: {
+      /** List of location access revocations */
+      accessRevocations?:
+        | components["schemas"]["LocationAccessRevocationType"][]
+        | null;
+    };
+    /** Request to find location access revocations by access controlled elevator landing. */
+    Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid?: string | null;
+    };
+    /** Response containing location access revocations for an access controlled elevator landing. */
+    Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSResponse: {
       /** List of location access revocations */
       accessRevocations?:
         | components["schemas"]["LocationAccessRevocationType"][]
@@ -9830,6 +9913,11 @@ export interface components {
       errorMsg?: string | null;
       removed?: boolean | null;
     };
+    Billing_FreeTrialEligibilityWSResponse: {
+      customEvents?: boolean | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+    };
     Billing_GetCustomerInformationWSRequest: { [key: string]: unknown };
     Billing_GetCustomerInformationWSResponse: {
       addressCity?: string | null;
@@ -9974,9 +10062,28 @@ export interface components {
       pricePerUnit?: string | null;
       product?: string | null;
       status?: string | null;
+      trialEnd?: number | null;
       upcomingInvoiceAmount?: string | null;
       upcomingInvoiceCurrency?: string | null;
       usageType?: string | null;
+    };
+    Billing_HistoricalUsageWSRequest: {
+      products?: (string | null)[] | null;
+      range?: { [key: string]: string | null } | null;
+    };
+    Billing_HistoricalUsageWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      usage?: {
+        [key: string]:
+          | components["schemas"]["Billing_HistoricalUsageWSResponse_HistoricalUsageElement"][]
+          | null;
+      } | null;
+    };
+    Billing_HistoricalUsageWSResponse_HistoricalUsageElement: {
+      costInCent?: number | null;
+      date?: string | null;
+      eventCount?: number | null;
     };
     Billing_SetDefaultPaymentMethodForSubscriptionWSRequest: {
       paymentMethodId?: string | null;
@@ -11895,6 +12002,8 @@ export interface components {
     };
     /** Chat record used for a selective update. */
     ChatRecord: {
+      /** base 64 (url-safe) uuid string */
+      automatedPromptUuid?: string | null;
       contextId?: string | null;
       extra?: string | null;
       llmInfo?: string | null;
@@ -12053,6 +12162,22 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
+    /** Request object for retrieving the current org's LLM token usage history. */
+    Chatbot_GetTokenUsageHistoryWSRequest: { [key: string]: unknown };
+    /** Response object for retrieving the current org's LLM token usage history. */
+    Chatbot_GetTokenUsageHistoryWSResponse: {
+      /** The current org's LLM token usage history. */
+      usageHistory?: {
+        [key: string]: {
+          [key: string]: components["schemas"]["TokenUsageStats"];
+        } | null;
+      } | null;
+    };
+    /** Request object for interrupting a chat record. */
+    Chatbot_InterruptChatWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      recordUuid: string | null;
+    };
     /** Request object for updating the visibility of an automated prompt response. */
     Chatbot_ShareAutomatedPromptResponseWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -12070,6 +12195,22 @@ export interface components {
     };
     /** Response object for submitting a query to Rhombus MIND. */
     Chatbot_SubmitChatWSResponse: {
+      /** base 64 (url-safe) uuid string */
+      chatRecordUuid?: string | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+    } | null;
+    /** Request object for submitting a report query to Rhombus MIND. */
+    Chatbot_SubmitCreateReportWSRequest: {
+      /** Uuid used to track the current conversation with Rhombus MIND. */
+      contextId: string | null;
+      /** The name of the conversation if this query is the start of a new conversation. If not specified, the conversation will be named after the first query. */
+      conversationName?: string | null;
+      /** The query to submit to Rhombus MIND. */
+      query: string | null;
+    };
+    /** Response object for submitting a report query to Rhombus MIND. */
+    Chatbot_SubmitCreateReportWSResponse: {
       /** base 64 (url-safe) uuid string */
       chatRecordUuid?: string | null;
       error?: boolean | null;
@@ -14142,6 +14283,38 @@ export interface components {
       ingressCount?: number | null;
       timestampMs?: number | null;
     };
+    CustomCredential:
+      | ({
+          bitGroupValues?: { [key: string]: number | null } | null;
+          customFormatName?: string | null;
+          format?: components["schemas"]["WiegandFormatEnumType"];
+          naturalId?: string | null;
+          numBits?: number | null;
+        } & {
+          createdAtMillis?: number | null;
+          endDateEpochSecExclusive?: number | null;
+          /** base 64 (url-safe) uuid string */
+          lastUsedAccessControlledDoorUuid?: string | null;
+          lastUsedAtMillis?: number | null;
+          /** base 64 (url-safe) uuid string */
+          lastUsedLocationUuid?: string | null;
+          lowercaseHexValue?: string | null;
+          /** base 64 (url-safe) uuid string */
+          managedCredUuid?: string | null;
+          note?: string | null;
+          /** base 64 (url-safe) uuid string */
+          orgUuid?: string | null;
+          startDateEpochSecInclusive?: number | null;
+          type?: components["schemas"]["AccessControlCredentialEnumType"];
+          updatedAtMillis?: number | null;
+          /** base 64 (url-safe) uuid string */
+          userUuid?: string | null;
+          /** base 64 (url-safe) uuid string */
+          uuid?: string | null;
+          value?: string | null;
+          workflowStatus?: components["schemas"]["AccessControlCredentialWorkflowStatusEnumType"];
+        })
+      | null;
     /** List of custom footage seek points to create */
     CustomFootageSeekPointType: {
       /** Custom activity seekpoint color */
@@ -14828,6 +15001,7 @@ export interface components {
       live_license_invalid?: boolean | null;
       media_ttl_minutes?: number | null;
       on_demand_license_invalid?: boolean | null;
+      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: ExternalDeviceSettingsSelectiveUpdateSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
@@ -14894,6 +15068,7 @@ export interface components {
       max_event_duration_ms?: number | null;
       media_ttl_minutes?: number | null;
       on_demand_license_invalid?: boolean | null;
+      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: ExternalReadableDeviceSettingsSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
@@ -15287,6 +15462,7 @@ export interface components {
         | null;
       resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
       rotation?: number | null;
+      scanner_agent_disabled?: boolean | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
       shutter_time_max?: number | null;
@@ -15346,6 +15522,7 @@ export interface components {
       pressure_switch_tamper_normally_open?: boolean | null;
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
+      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: IExternalReadableDoorControllerUserConfigSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
@@ -15441,6 +15618,7 @@ export interface components {
         | null;
       resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
       rotation?: number | null;
+      scanner_agent_disabled?: boolean | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
       shutter_time_max?: number | null;
@@ -15493,6 +15671,7 @@ export interface components {
       pressure_switch_tamper_normally_open?: boolean | null;
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
+      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: IExternalUpdateableDoorControllerUserConfigSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
@@ -19723,6 +19902,7 @@ export interface components {
       enforcedMinFirmwareVersion?: string | null;
       firmwareUpdateTimeMs?: number | null;
       firmwareVersion?: string | null;
+      hwSupportDomain?: string | null;
       hwVariation?: components["schemas"]["HardwareVariationEnum"];
       mac?: string | null;
       manufacturedAtMillis?: number | null;
@@ -20075,6 +20255,7 @@ export interface components {
       on_demand_license_invalid?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
+      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: IAudioUserConfigSnapshotUploadTargetEnum | null;
       splice_clip_upload_target?: IAudioUserConfigSpliceClipUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
@@ -21887,31 +22068,6 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
-    /** Request object for acd only migration. */
-    Internal_AccessControlDoorOnlyWSRequest: {
-      /** Map of account data for alarm only */
-      accountDataMap?: {
-        [
-          key: string
-        ]: components["schemas"]["Internal_AccessControlDoorOnlyWSRequest_AccountData"];
-      } | null;
-    };
-    /** Account data for alarm only. */
-    Internal_AccessControlDoorOnlyWSRequest_AccountData: {
-      /** Set of opportunity IDs */
-      opportunityIds?: (string | null)[] | null;
-      /** UUID of the organization */
-      orgUuid?: string | null;
-    };
-    /** Response object for enterprise devices only operations. */
-    Internal_AccessControlDoorOnlyWSResponse: {
-      error?: boolean | null;
-      errorMsg?: string | null;
-      /** Map of failed account identifiers to error messages */
-      failedAccounts?: { [key: string]: string | null } | null;
-      /** Set of successful account identifiers */
-      successfulAccounts?: (string | null)[] | null;
-    };
     /** Request object for adding a partner as a super admin to an organization. */
     Internal_AddPartnerAsSuperAdminWSRequest: {
       /** Whether login access is allowed for the partner */
@@ -21932,31 +22088,6 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       superAdminGroupUuid?: string | null;
     };
-    /** Request object for alarm monitoring only migration. */
-    Internal_AlarmMonitoringOnlyWSRequest: {
-      /** Map of account data for alarm only */
-      accountDataMap?: {
-        [
-          key: string
-        ]: components["schemas"]["Internal_AlarmMonitoringOnlyWSRequest_AccountData"];
-      } | null;
-    };
-    /** Account data for alarm only. */
-    Internal_AlarmMonitoringOnlyWSRequest_AccountData: {
-      /** Set of opportunity IDs */
-      opportunityIds?: (string | null)[] | null;
-      /** UUID of the organization */
-      orgUuid?: string | null;
-    };
-    /** Response object for enterprise devices only operations. */
-    Internal_AlarmMonitoringOnlyWSResponse: {
-      error?: boolean | null;
-      errorMsg?: string | null;
-      /** Map of failed account identifiers to error messages */
-      failedAccounts?: { [key: string]: string | null } | null;
-      /** Set of successful account identifiers */
-      successfulAccounts?: (string | null)[] | null;
-    };
     Internal_CreateCombinedLicensesFromV1WSRequest: {
       accountDataMap?: {
         [
@@ -21973,7 +22104,7 @@ export interface components {
       errorMsg?: string | null;
       failedAccounts?: { [key: string]: string | null } | null;
       successfulAccounts?: (string | null)[] | null;
-    };
+    } | null;
     /** Request object for creating a new organization with account owner and company information. */
     Internal_CreateOrgWSRequest: {
       /** Email address of the account owner */
@@ -22073,31 +22204,6 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
-    /** Request object for enterprise devices only operations. */
-    Internal_EntDevicesOnlyWSRequest: {
-      /** Map of account data for enterprise devices operations */
-      accountDataMap?: {
-        [
-          key: string
-        ]: components["schemas"]["Internal_EntDevicesOnlyWSRequest_AccountData"];
-      } | null;
-    };
-    /** Account data for enterprise devices operations. */
-    Internal_EntDevicesOnlyWSRequest_AccountData: {
-      /** Set of opportunity IDs */
-      opportunityIds?: (string | null)[] | null;
-      /** UUID of the organization */
-      orgUuid?: string | null;
-    };
-    /** Response object for enterprise devices only operations. */
-    Internal_EntDevicesOnlyWSResponse: {
-      error?: boolean | null;
-      errorMsg?: string | null;
-      /** Map of failed account identifiers to error messages */
-      failedAccounts?: { [key: string]: string | null } | null;
-      /** Set of successful account identifiers */
-      successfulAccounts?: (string | null)[] | null;
-    };
     /** Request object for getting the super admin group UUID for an organization. */
     Internal_GetSuperAdminGroupUUIDWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -22144,30 +22250,15 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
     };
-    /** Request object for pro devices only operations. */
-    Internal_ProDevicesOnlyWSRequest: {
-      /** Map of account data for pro devices operations */
-      accountDataMap?: {
-        [
-          key: string
-        ]: components["schemas"]["Internal_ProDevicesOnlyWSRequest_AccountData"];
-      } | null;
+    Internal_RemediateMissingFirstAssignedDatesWSRequest: {
+      orgUuids?: (string | null)[] | null;
     };
-    /** Account data for pro devices operations. */
-    Internal_ProDevicesOnlyWSRequest_AccountData: {
-      /** Set of opportunity IDs */
-      opportunityIds?: (string | null)[] | null;
-      /** UUID of the organization */
-      orgUuid?: string | null;
-    };
-    /** Response object for pro devices only operations. */
-    Internal_ProDevicesOnlyWSResponse: {
+    Internal_RemediateMissingFirstAssignedDatesWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
-      /** Map of failed account identifiers to error messages */
-      failedAccounts?: { [key: string]: string | null } | null;
-      /** Set of successful account identifiers */
-      successfulAccounts?: (string | null)[] | null;
+      updateOrgUuidsToUpdatedLicenseUuids?: {
+        [key: string]: (string | null)[] | null;
+      } | null;
     };
     /** Request object for requesting hardware for development purposes. */
     Internal_RequestHardwareForDevelopmentWSRequest: {
@@ -22446,6 +22537,8 @@ export interface components {
       locationName?: string | null;
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      logoUuid?: string | null;
       longitude?: number | null;
       name?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -22557,6 +22650,8 @@ export interface components {
       locationName?: string | null;
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      logoUuid?: string | null;
       /** Longitude coordinate of the keypad location */
       longitude?: number | null;
       /** Name of the keypad */
@@ -23253,6 +23348,7 @@ export interface components {
     /** The access grant to update */
     LocationAccessGrantType: {
       accessControlledDoorUuids?: (string | null)[] | null;
+      accessControlledElevatorLandingUuids?: (string | null)[] | null;
       createdAtMillis?: number | null;
       doorLabelIds?: (string | null)[] | null;
       groupUuids?: (string | null)[] | null;
@@ -23273,6 +23369,7 @@ export interface components {
     /** The access revocation to update */
     LocationAccessRevocationType: {
       accessControlledDoorUuids?: (string | null)[] | null;
+      accessControlledElevatorLandingUuids?: (string | null)[] | null;
       createdAtMillis?: number | null;
       doorLabelIds?: (string | null)[] | null;
       groupUuids?: (string | null)[] | null;
@@ -24165,6 +24262,9 @@ export interface components {
     };
     /** Request object for updating mobile notification token for Console app. */
     Mobile_UpdateMobileNotificationTokenRequest: {
+      /** New Android App */
+      androidV2?: boolean | null;
+      forceNewEndpoint?: boolean | null;
       /** Mobile notification token */
       token?: string | null;
     };
@@ -31861,6 +31961,13 @@ export interface components {
           userUuid?: string | null;
         })
       | null;
+    /** The current org's LLM token usage history. */
+    TokenUsageStats: {
+      /** Total LLM input tokens used in a month */
+      inputTokenUsage?: number | null;
+      /** Total LLM output tokens used in a month */
+      outputTokenUsage?: number | null;
+    };
     Trigger: {
       activity?: TriggerActivityEnum | null;
       value?: string | null;
@@ -33366,6 +33473,66 @@ export interface components {
       date?: string | null;
       stats?: { [key: string]: components["schemas"]["Stats"] } | null;
     };
+    Wiegand35BitCorp1000Credential:
+      | ({
+          cardNumber?: number | null;
+          companyId?: number | null;
+          format?: components["schemas"]["WiegandFormatEnumType"];
+        } & {
+          createdAtMillis?: number | null;
+          endDateEpochSecExclusive?: number | null;
+          /** base 64 (url-safe) uuid string */
+          lastUsedAccessControlledDoorUuid?: string | null;
+          lastUsedAtMillis?: number | null;
+          /** base 64 (url-safe) uuid string */
+          lastUsedLocationUuid?: string | null;
+          lowercaseHexValue?: string | null;
+          /** base 64 (url-safe) uuid string */
+          managedCredUuid?: string | null;
+          note?: string | null;
+          /** base 64 (url-safe) uuid string */
+          orgUuid?: string | null;
+          startDateEpochSecInclusive?: number | null;
+          type?: components["schemas"]["AccessControlCredentialEnumType"];
+          updatedAtMillis?: number | null;
+          /** base 64 (url-safe) uuid string */
+          userUuid?: string | null;
+          /** base 64 (url-safe) uuid string */
+          uuid?: string | null;
+          value?: string | null;
+          workflowStatus?: components["schemas"]["AccessControlCredentialWorkflowStatusEnumType"];
+        })
+      | null;
+    Wiegand48BitCorp1000Credential:
+      | ({
+          cardNumber?: number | null;
+          companyId?: number | null;
+          format?: components["schemas"]["WiegandFormatEnumType"];
+        } & {
+          createdAtMillis?: number | null;
+          endDateEpochSecExclusive?: number | null;
+          /** base 64 (url-safe) uuid string */
+          lastUsedAccessControlledDoorUuid?: string | null;
+          lastUsedAtMillis?: number | null;
+          /** base 64 (url-safe) uuid string */
+          lastUsedLocationUuid?: string | null;
+          lowercaseHexValue?: string | null;
+          /** base 64 (url-safe) uuid string */
+          managedCredUuid?: string | null;
+          note?: string | null;
+          /** base 64 (url-safe) uuid string */
+          orgUuid?: string | null;
+          startDateEpochSecInclusive?: number | null;
+          type?: components["schemas"]["AccessControlCredentialEnumType"];
+          updatedAtMillis?: number | null;
+          /** base 64 (url-safe) uuid string */
+          userUuid?: string | null;
+          /** base 64 (url-safe) uuid string */
+          uuid?: string | null;
+          value?: string | null;
+          workflowStatus?: components["schemas"]["AccessControlCredentialWorkflowStatusEnumType"];
+        })
+      | null;
     Wiegand64BitRawCredentialType:
       | ({
           cardNumber?: number | null;
@@ -33844,6 +34011,50 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Accesscontrol_badgetemplate_UpdateBadgeTemplateImageWSRequest"];
+      };
+    };
+  };
+  /** Create a HID Corp1000 Standard 35 bit credential */
+  create35BitCorp1000StdCredential: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_Create35BitCorp1000StdCredentialWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_Create35BitCorp1000StdCredentialWSRequest"];
+      };
+    };
+  };
+  /** Create a HID Corporate 1000 Standard 48 bit credential */
+  create48BitCorp1000StdCredential: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_Create48BitCorp1000StdWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_Create48BitCorp1000StdCredentialWSRequest"];
       };
     };
   };
@@ -34705,6 +34916,28 @@ export interface operations {
       };
     };
   };
+  /** Finds location access grants by the specified access controlled elevator landing */
+  findLocationAccessGrantsByAccessControlledElevatorLanding: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSRequest"];
+      };
+    };
+  };
   /** Finds location access grants by the specified door label */
   findLocationAccessGrantsByDoorLabel: {
     parameters: {
@@ -34856,6 +35089,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledDoorWSRequest"];
+      };
+    };
+  };
+  /** Finds location access revocations by the specified access controlled elevator landing */
+  findLocationAccessRevocationsByAccessControlledElevatorLanding: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSRequest"];
       };
     };
   };
@@ -38041,6 +38296,43 @@ export interface operations {
       };
     };
   };
+  getFreeTrialEligibility: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_FreeTrialEligibilityWSResponse"];
+        };
+      };
+    };
+  };
+  getHistoricalUsage: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_HistoricalUsageWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_HistoricalUsageWSRequest"];
+      };
+    };
+  };
   getInvoices: {
     parameters: {
       header: {
@@ -40299,6 +40591,28 @@ export interface operations {
       };
     };
   };
+  /** Retrieves the current org's LLM token usage history. */
+  getTokenUsageHistory: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_GetTokenUsageHistoryWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_GetTokenUsageHistoryWSRequest"];
+      };
+    };
+  };
   /** Selectively updates the current org's Rhombus MIND configuration. */
   updateChatbotConfig: {
     parameters: {
@@ -40511,6 +40825,27 @@ export interface operations {
       };
     };
   };
+  /** Adds QueryStatus.INTERRUPTED */
+  interruptChat: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      default: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_BaseChatWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_InterruptChatWSRequest"];
+      };
+    };
+  };
   /**
    * Submits a query to Rhombus MIND. When submitting a query the context ID plays an important role in
    * helping seed Rhombus MIND with the previous chat history to answer the query in the context of the
@@ -40535,6 +40870,31 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Chatbot_SubmitChatWSRequest"];
+      };
+    };
+  };
+  /**
+   * Very similar to /submitChat, but automatically marks the created chat record with a response type
+   * of report.
+   */
+  submitCreateReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_SubmitChatWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_SubmitCreateReportWSRequest"];
       };
     };
   };
@@ -53177,28 +53537,6 @@ export interface operations {
       };
     };
   };
-  /** Migrate access control door only from sf opp */
-  accessControlDoorOnly: {
-    parameters: {
-      header: {
-        /** Authentication scheme indicator ("api-token"). */
-        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
-      };
-    };
-    responses: {
-      /** OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Internal_AccessControlDoorOnlyWSResponse"];
-        };
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Internal_AccessControlDoorOnlyWSRequest"];
-      };
-    };
-  };
   /** Add partner as super admin */
   addPartnerAsSuperAdmin: {
     parameters: {
@@ -53218,28 +53556,6 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Internal_AddPartnerAsSuperAdminWSRequest"];
-      };
-    };
-  };
-  /** Migrate alarm monitoring only from sf opp */
-  alarmMonitoringOnly: {
-    parameters: {
-      header: {
-        /** Authentication scheme indicator ("api-token"). */
-        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
-      };
-    };
-    responses: {
-      /** OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Internal_AlarmMonitoringOnlyWSResponse"];
-        };
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Internal_AlarmMonitoringOnlyWSRequest"];
       };
     };
   };
@@ -53375,28 +53691,6 @@ export interface operations {
       };
     };
   };
-  /** Migrate ent devices only from sf opp */
-  entDevicesOnly: {
-    parameters: {
-      header: {
-        /** Authentication scheme indicator ("api-token"). */
-        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
-      };
-    };
-    responses: {
-      /** OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Internal_EntDevicesOnlyWSResponse"];
-        };
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Internal_EntDevicesOnlyWSRequest"];
-      };
-    };
-  };
   /** Returns device count and acd count from v1 org, takes in custom CSV from Salesforce */
   getMigrationInfoForOrg: {
     parameters: {
@@ -53509,8 +53803,8 @@ export interface operations {
       };
     };
   };
-  /** Migrate pro devices only from sf opp */
-  proDevicesOnly: {
+  /** populate firstAssignedDate for v1 licenses already assigned that have been migrated */
+  remediateMissingFirstAssignedDates: {
     parameters: {
       header: {
         /** Authentication scheme indicator ("api-token"). */
@@ -53521,13 +53815,13 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Internal_ProDevicesOnlyWSResponse"];
+          "application/json": components["schemas"]["Internal_CreateCombinedLicensesFromV1WSResponse"];
         };
       };
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Internal_ProDevicesOnlyWSRequest"];
+        "application/json": components["schemas"]["Internal_RemediateMissingFirstAssignedDatesWSRequest"];
       };
     };
   };
@@ -64003,6 +64297,9 @@ export enum AccessControlCredentialEnumType {
   WIEGAND_H10304 = "WIEGAND_H10304",
   WIEGAND_D10202 = "WIEGAND_D10202",
   WIEGAND_64BIT_RAW = "WIEGAND_64BIT_RAW",
+  HID_CORP1000_STD_35 = "HID_CORP1000_STD_35",
+  HID_CORP1000_STD_48 = "HID_CORP1000_STD_48",
+  CUSTOM = "CUSTOM",
 }
 
 export enum AccessControlCredentialWorkflowStatusEnumType {
@@ -64292,6 +64589,14 @@ export enum ActivityEnum {
   CUSTOM_LLM_BOOLEAN_FALSE = "CUSTOM_LLM_BOOLEAN_FALSE",
   CUSTOM_LLM_THRESHOLD_EXCEEDED_LOW = "CUSTOM_LLM_THRESHOLD_EXCEEDED_LOW",
   CUSTOM_LLM_THRESHOLD_EXCEEDED_HIGH = "CUSTOM_LLM_THRESHOLD_EXCEEDED_HIGH",
+  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
+  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
+  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
+  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
+  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
+  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
+  ALM_MONITORING_EVENT_DETECTED = "ALM_MONITORING_EVENT_DETECTED",
+  ROBOT_DOG_DETECTED = "ROBOT_DOG_DETECTED",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -65729,12 +66034,6 @@ export enum DiagnosticEventActivityEnum {
   ALM_OVERAGE_REACHED = "ALM_OVERAGE_REACHED",
   ALM_OVERAGE_EXCEEDED = "ALM_OVERAGE_EXCEEDED",
   ALM_EXCESSIVE_VERIFICATIONS = "ALM_EXCESSIVE_VERIFICATIONS",
-  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
-  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
-  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
-  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
-  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
-  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
   KIOSK_OFFLINE = "KIOSK_OFFLINE",
   KIOSK_ONLINE = "KIOSK_ONLINE",
   TUNNELED_DEVICE_CONNECTED = "TUNNELED_DEVICE_CONNECTED",
@@ -65947,6 +66246,10 @@ export enum EntityEnum {
   COMPONENT_GENERIC_BUTTON_SHADOW = "COMPONENT_GENERIC_BUTTON_SHADOW",
   ACCESS_CONTROLLED_DOOR_SHADOW = "ACCESS_CONTROLLED_DOOR_SHADOW",
   ACCESS_CONTROLLED_DOOR = "ACCESS_CONTROLLED_DOOR",
+  ACCESS_CONTROLLED_ELEVATOR_SHADOW = "ACCESS_CONTROLLED_ELEVATOR_SHADOW",
+  ACCESS_CONTROLLED_ELEVATOR = "ACCESS_CONTROLLED_ELEVATOR",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING_SHADOW = "ACCESS_CONTROLLED_ELEVATOR_LANDING_SHADOW",
+  ACCESS_CONTROLLED_ELEVATOR_LANDING = "ACCESS_CONTROLLED_ELEVATOR_LANDING",
   COMPONENT_SEEKPOINT = "COMPONENT_SEEKPOINT",
   VEHICLE_EVENT = "VEHICLE_EVENT",
   DEVICE_INTEGRATION = "DEVICE_INTEGRATION",
@@ -65984,6 +66287,7 @@ export enum SavedClipWithProgressStatusEnum {
   FAILED = "FAILED",
   COMPLETE = "COMPLETE",
   OFFLINE = "OFFLINE",
+  DELETED = "DELETED",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -67327,12 +67631,6 @@ export enum IntegrationDiagnosticEventActivityEnum {
   ALM_OVERAGE_REACHED = "ALM_OVERAGE_REACHED",
   ALM_OVERAGE_EXCEEDED = "ALM_OVERAGE_EXCEEDED",
   ALM_EXCESSIVE_VERIFICATIONS = "ALM_EXCESSIVE_VERIFICATIONS",
-  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
-  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
-  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
-  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
-  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
-  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
   KIOSK_OFFLINE = "KIOSK_OFFLINE",
   KIOSK_ONLINE = "KIOSK_ONLINE",
   TUNNELED_DEVICE_CONNECTED = "TUNNELED_DEVICE_CONNECTED",
@@ -67443,6 +67741,7 @@ export enum KeypadCommandEnum {
   DISARMED = "DISARMED",
   DISARMING = "DISARMING",
   DISMISSING = "DISMISSING",
+  LOGS_REQUESTED = "LOGS_REQUESTED",
   PENDING_ARMED = "PENDING_ARMED",
   THREAT_DETECTED = "THREAT_DETECTED",
   VERIFYING = "VERIFYING",
@@ -67839,12 +68138,6 @@ export enum NotificationTimeFrameRowDiagnosticsEnum {
   ALM_OVERAGE_REACHED = "ALM_OVERAGE_REACHED",
   ALM_OVERAGE_EXCEEDED = "ALM_OVERAGE_EXCEEDED",
   ALM_EXCESSIVE_VERIFICATIONS = "ALM_EXCESSIVE_VERIFICATIONS",
-  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
-  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
-  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
-  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
-  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
-  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
   KIOSK_OFFLINE = "KIOSK_OFFLINE",
   KIOSK_ONLINE = "KIOSK_ONLINE",
   TUNNELED_DEVICE_CONNECTED = "TUNNELED_DEVICE_CONNECTED",
@@ -67958,12 +68251,6 @@ export enum NotificationTimeFrameRowLocationOnlyDiagnosticsEnum {
   ALM_OVERAGE_REACHED = "ALM_OVERAGE_REACHED",
   ALM_OVERAGE_EXCEEDED = "ALM_OVERAGE_EXCEEDED",
   ALM_EXCESSIVE_VERIFICATIONS = "ALM_EXCESSIVE_VERIFICATIONS",
-  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
-  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
-  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
-  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
-  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
-  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
   KIOSK_OFFLINE = "KIOSK_OFFLINE",
   KIOSK_ONLINE = "KIOSK_ONLINE",
   TUNNELED_DEVICE_CONNECTED = "TUNNELED_DEVICE_CONNECTED",
@@ -68202,12 +68489,6 @@ export enum PartnerNotificationClientSectionRowDiagnosticsEnum {
   ALM_OVERAGE_REACHED = "ALM_OVERAGE_REACHED",
   ALM_OVERAGE_EXCEEDED = "ALM_OVERAGE_EXCEEDED",
   ALM_EXCESSIVE_VERIFICATIONS = "ALM_EXCESSIVE_VERIFICATIONS",
-  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
-  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
-  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
-  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
-  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
-  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
   KIOSK_OFFLINE = "KIOSK_OFFLINE",
   KIOSK_ONLINE = "KIOSK_ONLINE",
   TUNNELED_DEVICE_CONNECTED = "TUNNELED_DEVICE_CONNECTED",
@@ -70240,6 +70521,7 @@ export enum SavedClipV2StatusEnum {
   FAILED = "FAILED",
   COMPLETE = "COMPLETE",
   OFFLINE = "OFFLINE",
+  DELETED = "DELETED",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -70250,6 +70532,7 @@ export enum SavedClipWithDetailsStatusEnum {
   FAILED = "FAILED",
   COMPLETE = "COMPLETE",
   OFFLINE = "OFFLINE",
+  DELETED = "DELETED",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -70877,12 +71160,6 @@ export enum SimpleDiagnosticEventDiagnosticEventEnum {
   ALM_OVERAGE_REACHED = "ALM_OVERAGE_REACHED",
   ALM_OVERAGE_EXCEEDED = "ALM_OVERAGE_EXCEEDED",
   ALM_EXCESSIVE_VERIFICATIONS = "ALM_EXCESSIVE_VERIFICATIONS",
-  ALM_AUTHORITIES_CONTACTED = "ALM_AUTHORITIES_CONTACTED",
-  ALM_MONITORING_ENABLED = "ALM_MONITORING_ENABLED",
-  ALM_MONITORING_DISABLED = "ALM_MONITORING_DISABLED",
-  ALM_MONITORING_SETTINGS_CHANGE = "ALM_MONITORING_SETTINGS_CHANGE",
-  ALM_THREAT_CASE_CLOSED = "ALM_THREAT_CASE_CLOSED",
-  ALM_THREAT_DETECTED = "ALM_THREAT_DETECTED",
   KIOSK_OFFLINE = "KIOSK_OFFLINE",
   KIOSK_ONLINE = "KIOSK_ONLINE",
   TUNNELED_DEVICE_CONNECTED = "TUNNELED_DEVICE_CONNECTED",
@@ -70903,6 +71180,7 @@ export enum SplicedClipStatusEnum {
   FAILED = "FAILED",
   COMPLETE = "COMPLETE",
   OFFLINE = "OFFLINE",
+  DELETED = "DELETED",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -71097,9 +71375,10 @@ export enum WiegandFormatEnumType {
   H10301 = "H10301",
   D10202 = "D10202",
   H10304 = "H10304",
-  H10302 = "H10302",
+  HID_CORP1000_STD_35 = "HID_CORP1000_STD_35",
+  HID_CORP1000_STD_48 = "HID_CORP1000_STD_48",
   WIEGAND_64BIT_RAW = "WIEGAND_64BIT_RAW",
-  HID_CORP1000 = "HID_CORP1000",
+  CUSTOM = "CUSTOM",
 }
 
 export enum WiegandInputPhysicalPortEnumType {
