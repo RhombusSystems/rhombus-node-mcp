@@ -23,15 +23,6 @@ async function main() {
 
   await serverInit();
 
-  const server = new McpServer({
-    name: "rhombus",
-    version: "1.0.0",
-    capabilities: {
-      resources: {},
-      tools: {},
-    },
-  });
-
   if (TRANSPORT_TYPE === "stdio") {
     await stdioTransport();
   } else if (TRANSPORT_TYPE === "streamable-http") {

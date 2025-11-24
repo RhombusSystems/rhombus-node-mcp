@@ -28,6 +28,8 @@
     "build": "rm -rf dist && tsc && chmod +x dist/*.js",
     "docker:build": "docker build -t rhombussystems/mcp-server-rhombus .",
     "start": "node dist/index.js",
+    "start:http": "TRANSPORT_TYPE=streamable-http node dist/index.js",
+    "start:stdio": "TRANSPORT_TYPE=stdio node dist/index.js",
     "prepare": "npm run build",
     "watch": "npm run clean && tsc --watch",
     "generate-schemas": "npx tsx scripts/generate-zod-schemas.ts",

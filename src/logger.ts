@@ -21,10 +21,10 @@ const appenders: log4js.Configuration["appenders"] = {
   stderr: { type: "stderr" },
 
   // only send warn+ to stderr (never stdout)
-  stderrWarnPlus: {
+  stderrInfo: {
     type: "logLevelFilter",
     appender: "stderr",
-    level: "warn",
+    level: "info",
   },
 };
 
@@ -41,7 +41,7 @@ if (fileLoggingEnabled) {
   };
 }
 
-const stderrAppender = process.env.DEBUG === "true" ? "stderr" : "stderrWarnPlus";
+const stderrAppender = process.env.DEBUG === "true" ? "stderr" : "stderrInfo";
 
 // Configure categories based on available appenders
 const categories = {
