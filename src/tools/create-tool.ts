@@ -1,38 +1,33 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestModifiers } from "../util.js";
-import { requireConfirmation } from "../utils/confirmation.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { handleCreateVideoWallRequest } from "../api/create-tool-api.js";
 import { TOOL_ARGS, type ToolArgs } from "../types/create-tool-types.js";
+import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "create-tool";
 const TOOL_DESCRIPTION = "Tool for creating many entity types such as video walls.";
 
-const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { entityType, videoWallCreateOptions, confirmationId } = args;
-  const confirmation = requireConfirmation(confirmationId);
+const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
+  const { entityType, videoWallCreateOptions } = args;
+  const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
-  if (confirmation === true) {
-    switch (entityType) {
-      case "video-wall":
-        return await handleCreateVideoWallRequest(
-          videoWallCreateOptions,
-          extra._meta?.requestModifiers as RequestModifiers,
-          extra.sessionId
-        );
-      default:
-    }
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "",
-        },
-      ],
-    };
-  } else {
-    return confirmation;
+  switch (entityType) {
+    case "video-wall":
+      return await handleCreateVideoWallRequest(
+        videoWallCreateOptions,
+        requestModifiers,
+        sessionId
+      );
+    default:
   }
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: "Invalid entity type. Please try again.",
+      },
+    ],
+  };
 };
 
 export function createTool(server: McpServer) {

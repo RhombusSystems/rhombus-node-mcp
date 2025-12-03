@@ -1,8 +1,9 @@
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "../logger.js";
 import { postApi } from "../network.js";
-import { CreateVideoWallOptionsT } from "../types.js";
-import { RequestModifiers } from "../util.js";
+import type { CreateVideoWallOptionsT } from "../types.js";
+import type { RequestModifiers } from "../util.js";
+import schema from "../types/schema.js";
 
 export async function createVideoWall(
   options: CreateVideoWallOptionsT,
@@ -23,7 +24,7 @@ export async function createVideoWall(
       },
     },
   };
-  const response = await postApi<any>({
+  const response = await postApi<schema["Camera_CreateVideoWallWSResponse"]>({
     route: "/camera/createVideoWall",
     body,
     modifiers: requestModifiers,

@@ -7,6 +7,7 @@ import createServer from "../createServer.js";
 import { logger } from "../logger.js";
 
 enum AuthScheme {
+  OAUTH = "oauth",
   API_TOKEN = "api-token",
   CHATBOT = "chatbot",
   WEB2 = "web2",
@@ -25,6 +26,10 @@ export const authStore = new Map<
     }
   | {
       cookie: string;
+      createdMs: number;
+    }
+  | {
+      oauthToken: string;
       createdMs: number;
     }
 >();
@@ -57,7 +62,11 @@ export default function streamableHttpTransport() {
 
     if (sessionId && transports.has(sessionId)) {
       // Reuse existing transport
-      transport = transports.get(sessionId)!;
+      const _transport = transports.get(sessionId);
+      if (!_transport) {
+        throw new Error(`Transport not found for sessionId: ${sessionId}`);
+      }
+      transport = _transport;
     } else if (!sessionId && isInitializeRequest(req.body)) {
       // New initialization request
       transport = new StreamableHTTPServerTransport({
@@ -69,10 +78,17 @@ export default function streamableHttpTransport() {
           logger.info(`🔒 MCP request initialized with sessionId: ${sessionId}`);
 
           try {
-            const authScheme = req.headers["x-auth-scheme"] ?? "api-token";
+            const oauthToken = req.headers["x-auth-access-token"];
+            const authScheme = req.headers["x-auth-scheme"] ?? AuthScheme.API_TOKEN; // otherwise, read 'x-auth-scheme'
 
-            // if api key is provided
-            if (authScheme === AuthScheme.API_TOKEN) {
+            // if oauth token is provided
+            if (oauthToken && typeof oauthToken === "string") {
+              authStore.set(sessionId, {
+                oauthToken: oauthToken as string,
+                createdMs: Date.now(),
+              });
+              logger.info(`🔒 MCP request authenticated with oauth token: ${oauthToken}`);
+            } else if (authScheme === AuthScheme.API_TOKEN) {
               const apiKey =
                 "x-auth-apikey" in req.headers
                   ? (req.headers["x-auth-apikey"] as string)
@@ -119,10 +135,18 @@ export default function streamableHttpTransport() {
             if (authRequired.includes(req.body.method)) {
               if (e instanceof Error) {
                 logger.error(e.message);
+                res
+                  .status(401)
+                  .setHeader(
+                    "WWW-Authenticate",
+                    `Bearer realm="${process.env.REALM}", error="invalid_token", error_description="The access token is missing or invalid"`
+                  )
+                  .send(e.message);
+                return;
               } else {
                 logger.error(e);
+                throw e;
               }
-              throw e;
             }
           }
         },

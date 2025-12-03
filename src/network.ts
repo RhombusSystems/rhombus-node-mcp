@@ -1,6 +1,6 @@
 import { logger } from "./logger.js";
 import { authStore } from "./transports/streamable-http.js";
-import { RequestModifiers } from "./util.js";
+import type { RequestModifiers } from "./util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
@@ -15,7 +15,7 @@ export const STATIC_HEADERS = {
 };
 
 export const AUTH_HEADERS = {
-  "x-auth-apikey": RHOMBUS_API_KEY!,
+  "x-auth-apikey": RHOMBUS_API_KEY ?? "",
   "x-auth-scheme": "api-token",
 };
 
@@ -56,7 +56,12 @@ export function constructRequestHeaders(
       throw new Error(`No auth found for sessionId: ${sessionId}`);
     }
 
-    if ("apiKey" in auth) {
+    if ("oauthToken" in auth) {
+      authHeaders = {
+        Authorization: `Bearer ${auth.oauthToken}`,
+        "x-auth-scheme": "api-oauth-token",
+      };
+    } else if ("apiKey" in auth) {
       authHeaders = {
         "x-auth-apikey": auth.apiKey,
         "x-auth-scheme": "api-token",

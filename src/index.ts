@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import "dotenv/config";
 
 import { serverInit } from "./createServer.js";
@@ -13,7 +12,6 @@ const TRANSPORT_TYPE: "stdio" | "streamable-http" =
   (process.env.TRANSPORT_TYPE as "stdio" | "streamable-http") || "stdio";
 
 async function main() {
-
   const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
   if (RHOMBUS_API_KEY) {

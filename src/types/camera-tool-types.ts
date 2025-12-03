@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
+import { createUuidSchema } from "../types.js";
 
 export const TimeWindowSecondsSchema = z.object({
   startSeconds: z.number(),
@@ -241,7 +242,7 @@ export type ExternalUpdateableFacetedUserConfig = z.infer<
 >;
 
 export const BASE_TOOL_ARGS = {
-  cameraUuid: z.string().nullable().describe("the camera uuid requested"),
+  cameraUuid: createUuidSchema().describe("the camera uuid requested"),
   timestampISO: z
     .string()
     .datetime({ message: "Invalid ISO 8601 date format.", offset: true })
