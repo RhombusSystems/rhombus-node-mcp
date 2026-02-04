@@ -1,5 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import fs from "fs";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { fileURLToPath } from "node:url";
 import path from "path";
 import { getFilePathsInDirectory } from "../util.js";

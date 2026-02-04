@@ -288,6 +288,14 @@ export interface paths {
     /** Attempts to apply the specified first-in state to the specified door */
     post: operations["applyDoorScheduleFirstInState"];
   };
+  "/accesscontrol/firstIn/applyElevatorLandingAccessScheduleFirstInState": {
+    /** Attempts to apply the specified first-in state to the specified elevator landing */
+    post: operations["applyElevatorLandingAccessScheduleFirstInState"];
+  };
+  "/accesscontrol/firstIn/applyElevatorLandingAuthFirstInState": {
+    /** Attempts to apply the specified first-in state to the specified elevator landing */
+    post: operations["applyElevatorLandingAuthFirstInState"];
+  };
   "/accesscontrol/firstIn/createLocationFirstInSettings": {
     /** Create settings for first-in that can be shared across the specified doors within a location */
     post: operations["createLocationFirstInSettings"];
@@ -315,6 +323,10 @@ export interface paths {
   "/accesscontrol/firstIn/removeDoorLocationFirstInSettings": {
     /** Removes the specified door from the first-in settings if currently assigned to one. Also possible via the updateLocationFirstInSettings method but this method will leave other doorsbelonging assigned settings as-is rather than require the entire list. */
     post: operations["removeDoorLocationFirstInSettings"];
+  };
+  "/accesscontrol/firstIn/removeElevatorLandingLocationFirstInSettings": {
+    /** Removes the specified elevator landing from the first-in settings if currently assigned to one. Also possible via the updateLocationFirstInSettings method but this method will leave other elevator landings belonging assigned settings as-is rather than require the entire list. */
+    post: operations["removeElevatorLandingLocationFirstInSettings"];
   };
   "/accesscontrol/firstIn/updateLocationFirstInSettings": {
     /** Update settings for first-in that can be shared across the specified doors within a location */
@@ -364,6 +376,10 @@ export interface paths {
     /** Activate lockdown for the specified location from Rhombus Key */
     post: operations["activateLockdownForLocationViaRhombusKey"];
   };
+  "/accesscontrol/lockdownPlan/activateLockdownForLocationsViaRhombusKey": {
+    /** Activate lockdown for multiple locations from Rhombus Key */
+    post: operations["activateLockdownForLocationsViaRhombusKey"];
+  };
   "/accesscontrol/lockdownPlan/createLocationLockdownPlan": {
     /** Create location lockdown plan */
     post: operations["createLocationLockdownPlan"];
@@ -379,6 +395,10 @@ export interface paths {
   "/accesscontrol/lockdownPlan/deactivateLockdownForLocationViaRhombusKey": {
     /** Deactivate lockdown for the specified location from Rhombus Key */
     post: operations["deactivateLockdownForLocationViaRhombusKey"];
+  };
+  "/accesscontrol/lockdownPlan/deactivateLockdownForLocationsViaRhombusKey": {
+    /** Deactivate lockdown for multiple locations from Rhombus Key */
+    post: operations["deactivateLockdownForLocationsViaRhombusKey"];
   };
   "/accesscontrol/lockdownPlan/deleteLocationLockdownState": {
     /** Disables tracking lockdown state for the specified location */
@@ -512,6 +532,14 @@ export interface paths {
     /** Unlock an access controlled door using authorization of supplied user token */
     post: operations["unlockAccessControlledDoorForCurrentUser"];
   };
+  "/accesscontrol/unlockAccessControlledElevator": {
+    /** Unlock an access controlled elevator */
+    post: operations["unlockAccessControlledElevator"];
+  };
+  "/accesscontrol/unlockAccessControlledElevatorForCurrentUser": {
+    /** Unlock an access controlled elevator using authorization of supplied user token */
+    post: operations["unlockAccessControlledElevatorForCurrentUser"];
+  };
   "/accesscontrol/unsuspendAccessControlCredential": {
     /** Mark an access control credential as no longer suspended */
     post: operations["unsuspendAccessControlCredential"];
@@ -551,6 +579,42 @@ export interface paths {
   "/accesscontrol/updateWiegandCredential": {
     /** Update a wiegand credential (Third Party Badge) */
     post: operations["updateWiegandCredential"];
+  };
+  "/aiReport/addTimelineEvent": {
+    /** Adds a timeline event to an AI report to track its status. */
+    post: operations["addTimelineEvent"];
+  };
+  "/aiReport/createReport": {
+    /** Generates a new AI report. Creates an AI report record and submits it to the chatbot service for processing. */
+    post: operations["createReport"];
+  };
+  "/aiReport/deleteAiReport": {
+    /** Deletes an AI report record. */
+    post: operations["deleteAiReport"];
+  };
+  "/aiReport/deleteAiReportGroup": {
+    /** Deletes an AI report group. This will also delete all associated reports. */
+    post: operations["deleteAIReportGroup"];
+  };
+  "/aiReport/getAiReport": {
+    /** Retrieves a specific AI report by UUID. */
+    post: operations["getAIReport"];
+  };
+  "/aiReport/getAiReportGroupsByOrg": {
+    /** Retrieves a paginated list of AI report groups for an organization. Groups are used to track revisions of the 'same' report. */
+    post: operations["getAIReportGroupsByOrg"];
+  };
+  "/aiReport/getAiReportsByGroup": {
+    /** Retrieves a paginated list of AI reports for a specific group. Generally, these are revisions of 'same' report. */
+    post: operations["getAIReportsByGroup"];
+  };
+  "/aiReport/getAiReportsByOrg": {
+    /** Retrieves a paginated list of AI reports for an organization. */
+    post: operations["getAIReportsByOrg"];
+  };
+  "/aiReport/updateAiReport": {
+    /** Updates an existing AI report record. */
+    post: operations["updateAiReport"];
   };
   "/alertmonitoring/acceptAlertMonitoringTermsOfService": {
     /** Accept the terms of service for alert monitoring. */
@@ -818,6 +882,9 @@ export interface paths {
   };
   "/billing/subscription/get": {
     post: operations["get"];
+  };
+  "/billing/subscription/getCustomEventsMonthlyBreakdown": {
+    post: operations["getCustomEventsMonthlyBreakdown"];
   };
   "/billing/subscription/getCustomerInformation": {
     post: operations["getCustomerInformation"];
@@ -1454,6 +1521,18 @@ export interface paths {
     /** Delete all components owned by the specified device */
     post: operations["deleteComponentsByOwnerDevice"];
   };
+  "/component/elevator/addAccessControlledElevatorLandingLabel": {
+    /** Create a label that can be assigned to an access controlled elevator landing and referenced by an access grant or access revocation */
+    post: operations["addAccessControlledElevatorLandingLabel"];
+  };
+  "/component/elevator/applyAccessControlledElevatorLandingAccessStateOverride": {
+    /** Attempts to apply an access state override to an access controlled elevator landing that ignores the regular access schedule and access schedule exceptions. */
+    post: operations["applyAccessControlledElevatorLandingAccessStateOverride"];
+  };
+  "/component/elevator/cancelAccessControlledElevatorLandingAccessStateOverride": {
+    /** Attempts to cancel the access state override, if one has been applied, to an access controlled elevator landing. */
+    post: operations["cancelAccessControlledElevatorLandingAccessStateOverride"];
+  };
   "/component/elevator/createAccessControlledElevator": {
     /** Create an access controlled elevator */
     post: operations["createAccessControlledElevator"];
@@ -1469,6 +1548,14 @@ export interface paths {
   "/component/elevator/deleteAccessControlledElevatorLanding": {
     /** Delete the specified access controlled elevator landing */
     post: operations["deleteAccessControlledElevatorLanding"];
+  };
+  "/component/elevator/findAccessControlledElevatorLandingShadows": {
+    /** Find access controlled elevator landing shadows within the org */
+    post: operations["findAccessControlledElevatorLandingShadows"];
+  };
+  "/component/elevator/findAccessControlledElevatorLandingShadowsByLocation": {
+    /** Find access controlled elevator landing shadows within the specified location */
+    post: operations["findAccessControlledElevatorLandingShadowsByLocation"];
   };
   "/component/elevator/findAccessControlledElevatorLandings": {
     /** Find access controlled elevator landings within the org */
@@ -1489,6 +1576,18 @@ export interface paths {
   "/component/elevator/findAccessControlledElevatorsByOwnerDevice": {
     /** Find access controlled elevators for the specified owner device */
     post: operations["findAccessControlledElevatorsByOwnerDevice"];
+  };
+  "/component/elevator/getAccessControlledElevatorLandingLabelsForOrg": {
+    /** Get all access controlled elevator landing labels for the organization */
+    post: operations["getAccessControlledElevatorLandingLabelsForOrg"];
+  };
+  "/component/elevator/getCurrentExpectedAccessControlledElevatorLandingState": {
+    /** Attempts to determine what the current access state is expected to be based on the current elevator landing configuration and current time. */
+    post: operations["getCurrentExpectedAccessControlledElevatorLandingState"];
+  };
+  "/component/elevator/removeAccessControlledElevatorLandingLabel": {
+    /** Remove a label to an access controlled elevator landing */
+    post: operations["removeAccessControlledElevatorLandingLabel"];
   };
   "/component/elevator/updateAccessControlledElevator": {
     /** Updates an access controlled elevator */
@@ -1525,6 +1624,10 @@ export interface paths {
   "/component/findComponentEventsByAccessControlledDoor": {
     /** Retrieve all component events relevant to the specified AccessControlledDoor */
     post: operations["findComponentEventsByAccessControlledDoor"];
+  };
+  "/component/findComponentEventsByAccessControlledElevator": {
+    /** Retrieve all component events relevant to the specified AccessControlledElevator */
+    post: operations["findComponentEventsByAccessControlledElevator"];
   };
   "/component/findComponentEventsByApiToken": {
     /** Retrieve all component events relevant to the specified api token */
@@ -1813,6 +1916,34 @@ export interface paths {
   "/developer/getEventListenersForDevice": {
     /** Get a list of event listeners for a device */
     post: operations["getEventListenersForDevice"];
+  };
+  "/device/health/disableDeviceHealthTracking": {
+    /** Disable device health tracking. */
+    post: operations["disableDeviceHealthTracking"];
+  };
+  "/device/health/enableDeviceHealthTracking": {
+    /** Enable device health tracking. */
+    post: operations["enableDeviceHealthTracking"];
+  };
+  "/device/health/findDevicesWithDisabledHealthTrackingByOrg": {
+    /** Find devices for which health tracking is disabled. */
+    post: operations["findDevicesWithDisabledHealthTrackingByOrg"];
+  };
+  "/device/health/getDeviceHealthTracking": {
+    /** Get device health tracking information. */
+    post: operations["getDeviceHealthTracking"];
+  };
+  "/device/label/addDeviceLabel": {
+    /** Add a label to a device */
+    post: operations["addDeviceLabel"];
+  };
+  "/device/label/findDeviceLabelsByOrg": {
+    /** Find all device labels for organization. */
+    post: operations["findDeviceLabelsByOrg"];
+  };
+  "/device/label/removeDeviceLabel": {
+    /** Remove a label from a device. */
+    post: operations["removeDeviceLabel"];
   };
   "/deviceconfig/getFacetedConfig": {
     /** Get a device's config */
@@ -2628,6 +2759,18 @@ export interface paths {
   "/help/triageDevice": {
     /** Triage a device connection/recording issue */
     post: operations["triageDevice"];
+  };
+  "/inference/segments/boxes": {
+    /** Uploads an image with box prompts and labels to produce segmentation masks. */
+    post: operations["segmentWithBoxes"];
+  };
+  "/inference/segments/points": {
+    /** Uploads an image with point prompts and labels to produce segmentation masks. */
+    post: operations["segmentWithPoints"];
+  };
+  "/inference/segments/text": {
+    /** Uploads an image with a text prompt to produce segmentation masks. */
+    post: operations["segmentWithText"];
   };
   "/integrations/IoT/deleteDeviceIntegration": {
     /** Delete Device integration */
@@ -4725,6 +4868,10 @@ export interface paths {
     /** Create a third party camera password */
     post: operations["createThirdPartyCameraPassword"];
   };
+  "/relay/deleteThirdPartyCameraDiscovery": {
+    /** Delete third party camera discovery if it has no assignments. */
+    post: operations["deleteThirdPartyCameraDiscovery"];
+  };
   "/relay/deleteThirdPartyCameraPassword": {
     /** Delete a third party camera password */
     post: operations["deleteThirdPartyCameraPasswords"];
@@ -4813,6 +4960,10 @@ export interface paths {
     /** Get the latest audit logs for organization */
     post: operations["getAuditFeed"];
   };
+  "/report/getAuditFeedForPrincipal": {
+    /** Get audit logs for a specified principal */
+    post: operations["getAuditFeedForPrincipal"];
+  };
   "/report/getAuditFeedForTarget": {
     /** Get audit logs for a specified entity */
     post: operations["getAuditFeedForTarget"];
@@ -4824,6 +4975,10 @@ export interface paths {
   "/report/getAverageReports": {
     /** Get the average reports if they are available for the specified count report */
     post: operations["getAverageReports"];
+  };
+  "/report/getBatchThresholdCrossingCountReport": {
+    /** Get batch threshold crossing count report */
+    post: operations["getBatchThresholdCrossingCountReport"];
   };
   "/report/getCountReport": {
     /** Use /getCountReportV2 instead */
@@ -5009,8 +5164,12 @@ export interface paths {
     post: operations["getSummaryCountReport"];
   };
   "/report/getThresholdCrossingCountReport": {
-    /** Get threshold crossing count report */
+    /** Get threshold crossing count report for device */
     post: operations["getThresholdCrossingCountReport"];
+  };
+  "/report/getThresholdCrossingCountReportForOrg": {
+    /** Get org wide batch threshold crossing count report */
+    post: operations["getThresholdCrossingCountReportForOrg"];
   };
   "/report/getThresholdCrossingCounts": {
     /** Get the occupancy counts from threshold crossing for a group of cameras over a period of time */
@@ -5035,6 +5194,46 @@ export interface paths {
   "/report/resetRunningAverage": {
     /** Reset the running average for the specified count report */
     post: operations["resetRunningAverage"];
+  };
+  "/robot/delete": {
+    /** Remove the robot from the organization */
+    post: operations["deleteRobot"];
+  };
+  "/robot/deploy": {
+    /** Deploy the robot to a mapped point at its location */
+    post: operations["deployRobot"];
+  };
+  "/robot/getConfig": {
+    /** Get a robot's config */
+    post: operations["getRobotConfig"];
+  };
+  "/robot/getFullState": {
+    /** Get detailed information about state of specified robot */
+    post: operations["getRobotFullState"];
+  };
+  "/robot/getMapImage": {
+    /** Robot's map image */
+    post: operations["getRobotMap"];
+  };
+  "/robot/getMapMeta": {
+    /** Get the robot's map meta */
+    post: operations["getRobotMapMeta"];
+  };
+  "/robot/getMediaUris": {
+    /** Get media uris for robot to retrieve footage and audio */
+    post: operations["getRobotMediaUris"];
+  };
+  "/robot/getMinimalStateList": {
+    /** Get basic state information about all robots in organization */
+    post: operations["getRobotMinimalStateList"];
+  };
+  "/robot/updateConfig": {
+    /** Update a robot's config */
+    post: operations["updateRobotConfig"];
+  };
+  "/robot/updateDetails": {
+    /** Update hardware details of robot. */
+    post: operations["updateRobotDetails"];
   };
   "/rules/createRule": {
     /** Create a rule */
@@ -5316,6 +5515,22 @@ export interface paths {
     /** Uploads an image for a specific access controlled door, supporting various image formats with size validation and automatic storage to S3. */
     post: operations["uploadAccessControlledDoorPicture"];
   };
+  "/upload/accessControlledElevator/delete/{accessControlledElevatorUuidStr}": {
+    /** Deletes the image associated with a specific access controlled elevator, removing the file from S3 storage. */
+    post: operations["deleteAccessControlledElevatorPicture"];
+  };
+  "/upload/accessControlledElevator/{accessControlledElevatorUuidStr}": {
+    /** Uploads an image for a specific access controlled elevator, supporting various image formats with size validation and automatic storage to S3. */
+    post: operations["uploadAccessControlledElevatorPicture"];
+  };
+  "/upload/accessControlledElevatorLanding/delete/{accessControlledElevatorLandingUuidStr}": {
+    /** Deletes the image associated with a specific access controlled elevator landing, removing the file from S3 storage. */
+    post: operations["deleteAccessControlledElevatorLandingPicture"];
+  };
+  "/upload/accessControlledElevatorLanding/{accessControlledElevatorLandingUuidStr}": {
+    /** Uploads an image for a specific access controlled elevator landing, supporting various image formats with size validation and automatic storage to S3. */
+    post: operations["uploadAccessControlledElevatorLandingPicture"];
+  };
   "/upload/badgeTemplate/images": {
     /** Uploads images for badge templates with associated metadata, supporting JPEG and PNG formats with size validation and automatic S3 storage. */
     post: operations["uploadBadgeTemplateImages"];
@@ -5399,14 +5614,6 @@ export interface paths {
   "/user/findUserByEmail": {
     /** Retrieve a specific user by email address with complete user details and associated information. */
     post: operations["findUserByEmail"];
-  };
-  "/user/getBulkProvisionCredentialsFormat": {
-    /** Returns format for bulk provisioning credentials, providing CSV template examples and field explanations based on access control configuration. */
-    post: operations["getBulkProvisionCredentialsFormat"];
-  };
-  "/user/getImportUsersFormat": {
-    /** Returns format for importing users, providing CSV template examples and field explanations based on access control configuration. */
-    post: operations["getImportUsersFormat"];
   };
   "/user/getPartnerUsersInOrg": {
     /** Get list of all partners in organization with partner-specific user details and permissions. */
@@ -5671,6 +5878,47 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
+    /** The AI report to update */
+    AIReport: {
+      completedAtMs?: number | null;
+      /** base 64 (url-safe) uuid string */
+      groupUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      orgUuid?: string | null;
+      params?: components["schemas"]["AIReportGenerateParams"];
+      /** base 64 (url-safe) uuid string */
+      principalUuid?: string | null;
+      privacy?: components["schemas"]["ChatPrivacy"];
+      startedAtMs?: number | null;
+      structureJson?: string | null;
+      timeline?: components["schemas"]["QueryTimelineEvent"][] | null;
+      title?: string | null;
+      toolingTimeline?: components["schemas"]["QueryTool"][] | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+    };
+    AIReportGenerateParams: {
+      additionalPrompt?: string | null;
+      dataSources?: components["schemas"]["DataSource"][] | null;
+      deviceUuids?: (string | null)[] | null;
+      rangeEndMs?: number | null;
+      rangeStartMs?: number | null;
+    };
+    /** List of AI reports */
+    AIReportGroup: {
+      createdAtMs?: number | null;
+      lastModifiedMs?: number | null;
+      latestStatus?: components["schemas"]["QueryStatus"];
+      numReports?: number | null;
+      /** base 64 (url-safe) uuid string */
+      orgUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      principalUuid?: string | null;
+      privacy?: components["schemas"]["ChatPrivacy"];
+      title?: string | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+    };
     AITShipmentInfoType: {
       aitTrackingNumber?: string | null;
       carrierTrackingNumber?: string | null;
@@ -5923,7 +6171,7 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       ownerDeviceUuid?: string | null;
       scheduleFirstIn?: components["schemas"]["FirstInShadow"];
-      state?: components["schemas"]["DoorStateShadow"];
+      state?: components["schemas"]["AccessStateShadow"];
       type?: components["schemas"]["ComponentCompositeShadowEnum"];
       updatedAtMillis?: number | null;
     };
@@ -5940,7 +6188,7 @@ export interface components {
       directionRadians?: number | null;
       doorAuthFirstInStateOverride?: components["schemas"]["FirstInState"];
       doorScheduleFirstInStateOverride?: components["schemas"]["FirstInState"];
-      doorStateOverride?: components["schemas"]["BaseDoorStateOverride"];
+      doorStateOverride?: components["schemas"]["BaseAccessStateOverride"];
       doorStateToScheduleUuidMap?: { [key: string]: string | null } | null;
       dpiComponents?: components["schemas"]["ComponentReferenceType"][] | null;
       floorNumber?: number | null;
@@ -5993,7 +6241,7 @@ export interface components {
       directionRadians?: number | null;
       doorAuthFirstInStateOverride?: components["schemas"]["FirstInState_Minimal"];
       doorScheduleFirstInStateOverride?: components["schemas"]["FirstInState_Minimal"];
-      doorStateOverride?: components["schemas"]["BaseDoorStateOverride_Minimal"];
+      doorStateOverride?: components["schemas"]["BaseAccessStateOverride_Minimal"];
       dpiComponents?:
         | components["schemas"]["ComponentReferenceType_Minimal"][]
         | null;
@@ -6068,9 +6316,10 @@ export interface components {
       uuid?: string | null;
       waveToUnlockSettings?: components["schemas"]["WaveToUnlockSettingsType"];
     };
+    /** The updated elevator landing after applying the first-in state. */
     AccessControlledElevatorLanding: {
       accessScheduleFirstInStateOverride?: components["schemas"]["FirstInState"];
-      accessStateOverride?: components["schemas"]["BaseDoorStateOverride"];
+      accessStateOverride?: components["schemas"]["BaseAccessStateOverride"];
       accessStateToScheduleUuidMap?: { [key: string]: string | null } | null;
       associatedCameras?: (string | null)[] | null;
       associatedFaceDetectionCameras?: (string | null)[] | null;
@@ -6095,6 +6344,34 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
+    AccessControlledElevatorLandingShadow: {
+      authFirstIn?: components["schemas"]["FirstInShadow"];
+      /** base 64 (url-safe) uuid string */
+      componentCompositeUuid?: string | null;
+      createdAtMillis?: number | null;
+      /** base 64 (url-safe) uuid string */
+      orgUuid?: string | null;
+      scheduleFirstIn?: components["schemas"]["FirstInShadow"];
+      state?: components["schemas"]["AccessStateShadow"];
+      type?: components["schemas"]["ComponentCompositeShadowEnum"];
+      updatedAtMillis?: number | null;
+    };
+    AccessStateOverride: {
+      expireEarlyMode?: components["schemas"]["EarlyExpireModeEnum"];
+      expiresAtMillis?: number | null;
+      followFirstInRules?: boolean | null;
+      originator?: components["schemas"]["BaseEventOriginator"];
+      requestedAtMillis?: number | null;
+      startDelaySeconds?: number | null;
+      state?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      type?: components["schemas"]["ManualAccessStateChangeEnum"];
+    } | null;
+    AccessStateShadow: {
+      source?: components["schemas"]["AccessStateSourceEnum"];
+      state?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      stateUpdateEventTimestampMs?: number | null;
+    };
+    AccessStateSourceEnum: AccessStateSourceEnum;
     Accesscontrol_BaseSendUserPresenceForCurrentUserWsResponse: (
       | components["schemas"]["Accesscontrol_SendUserPresenceForCurrentUserSuccessWsResponse"]
       | components["schemas"]["Accesscontrol_SendUserPresenceForCurrentUserErrorWsResponse"]
@@ -6259,6 +6536,55 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       accessControlledDoorUuid?: string | null;
     };
+    /** Error response for unlock access controlled elevator operation. */
+    Accesscontrol_UnlockAccessControlledElevatorErrorWSResponse:
+      | ({
+          /** Enumeration of possible errors when unlocking an access controlled elevator. */
+          errorType?: UnlockAccessControlledElevatorErrorWSResponseErrorTypeEnum | null;
+        } & {
+          type?: UnlockAccessControlledElevatorErrorWSResponseTypeEnum | null;
+        })
+      | null;
+    /** Error response for unlock access controlled elevator for current user operation. */
+    Accesscontrol_UnlockAccessControlledElevatorForCurrentUserErrorWSResponse:
+      | ({
+          /** Enumeration of possible errors when unlocking an access controlled elevator for the current user. */
+          errorType?: UnlockAccessControlledElevatorForCurrentUserErrorWSResponseErrorTypeEnum | null;
+        } & {
+          type?: UnlockAccessControlledElevatorForCurrentUserErrorWSResponseTypeEnum | null;
+        })
+      | null;
+    /** Success response for unlock access controlled elevator for current user operation. */
+    Accesscontrol_UnlockAccessControlledElevatorForCurrentUserSuccessWSResponse: {
+      type?: UnlockAccessControlledElevatorForCurrentUserSuccessWSResponseTypeEnum | null;
+    } | null;
+    /** Request to unlock an access controlled elevator for the current user. */
+    Accesscontrol_UnlockAccessControlledElevatorForCurrentUserWSRequest: {
+      /** UUIDs of specific access controlled elevator landings */
+      accessControlledElevatorLandingUuids?: (string | null)[] | null;
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorUuid?: string | null;
+      cmdVersion?: string | null;
+      /** Credential value for authentication */
+      credentialValue?: string | null;
+      /** Latitude of the mobile device for geofencing */
+      latitude?: number | null;
+      /** Longitude of the mobile device for geofencing */
+      longitude?: number | null;
+      /** Request time in milliseconds */
+      requestTimeMillis?: number | null;
+    };
+    /** Success response for unlock access controlled elevator operation. */
+    Accesscontrol_UnlockAccessControlledElevatorSuccessWSResponse: {
+      type?: UnlockAccessControlledElevatorSuccessWSResponseTypeEnum | null;
+    } | null;
+    /** Request to unlock an access controlled elevator, and optionally specific landings on that elevator. */
+    Accesscontrol_UnlockAccessControlledElevatorWSRequest: {
+      /** UUIDs of specific access controlled elevator landings */
+      accessControlledElevatorLandingUuids?: (string | null)[] | null;
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorUuid?: string | null;
+    };
     /** Access grant information for a user containing schedule and door access permissions. */
     Accesscontrol_UserAccessGrant: {
       /** Set of access controlled door UUIDs that this grant provides access to. */
@@ -6417,6 +6743,7 @@ export interface components {
       expiredACDLicensesDoorUuids?: (string | null)[] | null;
       /** Set of unassigned ACD license door UUIDs */
       unassignedACDLicensesDoorUuids?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request to create a location access revocation. */
     Accesscontrol_accessrevocation_CreateAccessRevocationWSRequest: {
@@ -6528,6 +6855,7 @@ export interface components {
       expiredACDLicensesDoorUuids?: (string | null)[] | null;
       /** Set of unassigned ACD licenses door UUIDs */
       unassignedACDLicensesDoorUuids?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request to create a new badge template. */
     Accesscontrol_badgetemplate_CreateBadgeTemplateWSRequest: {
@@ -6634,17 +6962,33 @@ export interface components {
     ) & {
       type?: BaseProvisionMobileAccessControlCredentialForCurrentUserWSResponseTypeEnum | null;
     };
-    Accesscontrol_credentials_BaseUnlockAccessControlledDoorForCurrentUserWSResponse: (
-      | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorForCurrentUserSuccessWSResponse"]
-      | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorForCurrentUserErrorWSResponse"]
+    Accesscontrol_credentials_BaseUnlockAccessControlledDoorForCurrentUserWSResponse:
+      | ((
+          | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorForCurrentUserSuccessWSResponse"]
+          | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorForCurrentUserErrorWSResponse"]
+        ) & {
+          type?: BaseUnlockAccessControlledDoorForCurrentUserWSResponseTypeEnum | null;
+        })
+      | null;
+    Accesscontrol_credentials_BaseUnlockAccessControlledDoorWSResponse:
+      | ((
+          | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorSuccessWSResponse"]
+          | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorErrorWSResponse"]
+        ) & {
+          type?: BaseUnlockAccessControlledDoorWSResponseTypeEnum | null;
+        })
+      | null;
+    Accesscontrol_credentials_BaseUnlockAccessControlledElevatorForCurrentUserWSResponse: (
+      | components["schemas"]["Accesscontrol_UnlockAccessControlledElevatorForCurrentUserSuccessWSResponse"]
+      | components["schemas"]["Accesscontrol_UnlockAccessControlledElevatorForCurrentUserErrorWSResponse"]
     ) & {
-      type?: BaseUnlockAccessControlledDoorForCurrentUserWSResponseTypeEnum | null;
+      type?: BaseUnlockAccessControlledElevatorForCurrentUserWSResponseTypeEnum | null;
     };
-    Accesscontrol_credentials_BaseUnlockAccessControlledDoorWSResponse: (
-      | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorSuccessWSResponse"]
-      | components["schemas"]["Accesscontrol_UnlockAccessControlledDoorErrorWSResponse"]
+    Accesscontrol_credentials_BaseUnlockAccessControlledElevatorWSResponse: (
+      | components["schemas"]["Accesscontrol_UnlockAccessControlledElevatorSuccessWSResponse"]
+      | components["schemas"]["Accesscontrol_UnlockAccessControlledElevatorErrorWSResponse"]
     ) & {
-      type?: BaseUnlockAccessControlledDoorWSResponseTypeEnum | null;
+      type?: BaseUnlockAccessControlledElevatorWSResponseTypeEnum | null;
     };
     /** Request to bulk provision PIN credentials for multiple users. */
     Accesscontrol_credentials_BulkProvisionPinCredentialsWSRequest: {
@@ -6667,6 +7011,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of user UUIDs for which PIN credential creation failed */
       failedUsers?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request to bulk rotate PIN credentials for multiple users. */
     Accesscontrol_credentials_BulkRotatePinCredentialsWSRequest: {
@@ -6689,6 +7034,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create an access control credential by hex value and type. */
     Accesscontrol_credentials_CreateAccessControlCredentialByHexValueAndTypeWSRequest: {
@@ -6739,6 +7085,7 @@ export interface components {
       credential?: components["schemas"]["AccessControlCredentialType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create a Rhombus Secure CSN credential. */
     Accesscontrol_credentials_CreateRhombusSecureCsnCredentialWSRequest: {
@@ -6878,6 +7225,7 @@ export interface components {
     Accesscontrol_credentials_DeletePinCredentialWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to delete an unassigned access control credential. */
     Accesscontrol_credentials_DeleteUnassignedAccessControlCredentialWSRequest: {
@@ -6989,6 +7337,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to find Rhombus Secure mobile credentials for current user. */
     Accesscontrol_credentials_FindRhombusSecureMobileCredentialsForCurrentUserWSRequest: {
@@ -7012,6 +7361,7 @@ export interface components {
       errorMsg?: string | null;
       /** The generated PIN code */
       pinCode?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get detailed information about a PIN credential including sensitive data. */
     Accesscontrol_credentials_GetPinCredentialDetailsWSRequest: {
@@ -7023,6 +7373,7 @@ export interface components {
       credential?: components["schemas"]["AccessControlCredentialType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get Rhombus Secure CSN credential details. */
     Accesscontrol_credentials_GetRhombusSecureCsnCredentialDetailsWSRequest: {
@@ -7101,6 +7452,7 @@ export interface components {
     Accesscontrol_credentials_RevokePinCredentialWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to revoke Rhombus Secure mobile credential for current user. */
     Accesscontrol_credentials_RevokeRhombusSecureMobileCredentialForCurrentUserWSRequest: {
@@ -7131,6 +7483,7 @@ export interface components {
       credential?: components["schemas"]["AccessControlCredentialType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to suspend an access control credential. */
     Accesscontrol_credentials_SuspendAccessControlCredentialWSRequest: {
@@ -7173,6 +7526,7 @@ export interface components {
       credential?: components["schemas"]["AccessControlCredentialType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update Rhombus Key mobile app state for current user. */
     Accesscontrol_credentials_UpdateRhombusKeyMobileAppStateForCurrentUserWSRequest: {
@@ -7248,6 +7602,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       exception?: components["schemas"]["DoorScheduleExceptionType"];
+      warningMsg?: string | null;
     };
     /** Request to delete a specific door schedule exception by UUID. */
     Accesscontrol_doorexception_DeleteDoorScheduleExceptionWSRequest: {
@@ -7258,6 +7613,7 @@ export interface components {
     Accesscontrol_doorexception_DeleteDoorScheduleExceptionWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to search for door schedule exceptions for a specific door with optional date range filtering. */
     Accesscontrol_doorexception_FindDoorScheduleExceptionsForDoorWSRequest: {
@@ -7271,6 +7627,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of door schedule exceptions found for the specified door. */
       exceptions?: components["schemas"]["DoorScheduleExceptionType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to search for door schedule exceptions for a specific location with optional date range filtering. */
     Accesscontrol_doorexception_FindDoorScheduleExceptionsForLocationWSRequest: {
@@ -7284,6 +7641,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of door schedule exceptions found for the specified location. */
       exceptions?: components["schemas"]["DoorScheduleExceptionType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to search for door schedule exceptions with optional date range filtering. */
     Accesscontrol_doorexception_FindDoorScheduleExceptionsWSRequest: {
@@ -7295,6 +7653,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of door schedule exceptions found in the search. */
       exceptions?: components["schemas"]["DoorScheduleExceptionType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve a specific door schedule exception by UUID. */
     Accesscontrol_doorexception_GetDoorScheduleExceptionWSRequest: {
@@ -7306,6 +7665,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       exception?: components["schemas"]["DoorScheduleExceptionType"];
+      warningMsg?: string | null;
     };
     /** Request to update an existing door schedule exception. */
     Accesscontrol_doorexception_UpdateDoorScheduleExceptionWSRequest: {
@@ -7320,6 +7680,7 @@ export interface components {
       expiredACDLicensesDoorUuids?: (string | null)[] | null;
       /** Set of door UUIDs with unassigned access control licenses. */
       unassignedACDLicensesDoorUuids?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request to apply door auth first-in state to all doors in a first-in settings group. */
     Accesscontrol_firstin_ApplyDoorAuthFirstInGroupStateWSRequest: {
@@ -7360,6 +7721,26 @@ export interface components {
     /** Response containing the updated door after applying door schedule first-in state. */
     Accesscontrol_firstin_ApplyDoorScheduleFirstInStateWSResponse: {
       door?: components["schemas"]["AccessControlledDoorType"];
+    };
+    /** Request to apply access schedule first-in state to a specific elevator landing. */
+    Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      elevatorLandingUuid?: string | null;
+      state?: components["schemas"]["FirstInStatus"];
+    };
+    /** Response containing the updated elevator landing after applying access schedule first-in state. */
+    Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSResponse: {
+      elevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
+    };
+    /** Request to apply auth first-in state to a specific elevator landing. */
+    Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      elevatorLandingUuid?: string | null;
+      state?: components["schemas"]["FirstInStatus"];
+    };
+    /** Response containing the updated elevator landing after applying auth first-in state. */
+    Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSResponse: {
+      elevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
     };
     /** Request to create new location first-in settings. */
     Accesscontrol_firstin_CreateLocationFirstInSettingsWSRequest: {
@@ -7435,6 +7816,15 @@ export interface components {
     Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSResponse: {
       settings?: components["schemas"]["LocationFirstInSettings"];
     };
+    /** Request to remove an elevator landing from its assigned location first-in settings. */
+    Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      elevatorLandingUuid?: string | null;
+    };
+    /** Response containing the updated location first-in settings after removing the elevator landing. */
+    Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSResponse: {
+      settings?: components["schemas"]["LocationFirstInSettings"];
+    };
     /** Request to update existing location first-in settings with selective field updates. */
     Accesscontrol_firstin_UpdateLocationFirstInSettingsWSRequest: {
       /** Optional description for the first-in settings. */
@@ -7445,6 +7835,8 @@ export interface components {
       doorScheduleRequirementEnabled?: boolean | null;
       /** Optional sorted set of door UUIDs to assign to these settings. */
       doorUuids?: (string | null)[] | null;
+      /** Optional sorted set of elevator landing UUIDs to assign to these settings. */
+      elevatorLandingUuids?: (string | null)[] | null;
       /** Optional sorted set of group UUIDs to assign to these settings. */
       groupUuids?: (string | null)[] | null;
       /** Optional name for the first-in settings. */
@@ -7488,6 +7880,38 @@ export interface components {
       result?: components["schemas"]["LockdownActivationResultEnumType"];
       state?: components["schemas"]["LocationLockdownStateType"];
     };
+    /** Request to activate lockdown for multiple locations via Rhombus Key with optional optimistic locking. */
+    Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSRequest: {
+      /**
+       * Mapping of lockdown plan UUIDs by location UUID. Indicates which lockdown plans to activate for
+       * each location.
+       */
+      lockdownPlansByLocation: {
+        [key: string]: (string | null)[] | null;
+      } | null;
+      /**
+       * Optional timestamp used for optimistic locking. It ensures that a user can update only the most
+       * recent record for a given location. The lockdown state is updated only if the provided timestamp
+       * matches the timestamp of the most recent update.
+       */
+      stateUpdatedAtMillis?: number | null;
+    };
+    /** Response containing the results of activating lockdown for multiple locations via Rhombus key. */
+    Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse: {
+      /** The results of the lockdown activation attempt per location. */
+      lockdownResults?: {
+        [
+          key: string
+        ]: components["schemas"]["Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownActivationResult"];
+      } | null;
+    };
+    /** The results of the lockdown activation attempt per location. */
+    Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownActivationResult: {
+      /** Additional info regarding the outcome of the activation attempt. */
+      info?: string | null;
+      result?: components["schemas"]["LockdownActivationResultEnumType"];
+      state?: components["schemas"]["LocationLockdownStateType"];
+    };
     /** Request to create a new location lockdown plan. */
     Accesscontrol_lockdownplan_CreateLocationLockdownPlanWSRequest: {
       lockdownPlan?: components["schemas"]["LocationLockdownPlanType"];
@@ -7506,6 +7930,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       ruleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to deactivate lockdown for a specific location via Rhombus Key with optional optimistic locking. */
     Accesscontrol_lockdownplan_DeactivateLockdownForLocationViaRhombusKeyWSRequest: {
@@ -7528,6 +7953,33 @@ export interface components {
     };
     /** Response containing the result of deactivating lockdown for a location. */
     Accesscontrol_lockdownplan_DeactivateLockdownForLocationWSResponse: {
+      result?: components["schemas"]["LockdownDeactivationResultEnumType"];
+      state?: components["schemas"]["LocationLockdownStateType"];
+    };
+    /** Request to deactivate lockdown for multiple locations via Rhombus Key with optional optimistic locking. */
+    Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSRequest: {
+      /** Set of location UUIDs to deactivate lockdown for. */
+      locationUuids: (string | null)[] | null;
+      /**
+       * Optional timestamp used for optimistic locking. It ensures that a user can update only the most
+       * recent record for a given location. The lockdown state is updated only if the provided timestamp
+       * matches the timestamp of the most recent update.
+       */
+      stateUpdatedAtMillis?: number | null;
+    };
+    /** Response containing the results of deactivating lockdown for multiple locations via Rhombus key. */
+    Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse: {
+      /** The results of the lockdown activation attempt per location. */
+      lockdownResults?: {
+        [
+          key: string
+        ]: components["schemas"]["Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownDeactivationResult"];
+      } | null;
+    };
+    /** The results of the lockdown activation attempt per location. */
+    Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownDeactivationResult: {
+      /** Additional info regarding the outcome of the deactivation attempt. */
+      info?: string | null;
       result?: components["schemas"]["LockdownDeactivationResultEnumType"];
       state?: components["schemas"]["LocationLockdownStateType"];
     };
@@ -7563,6 +8015,7 @@ export interface components {
     Accesscontrol_lockdownplan_DeleteLockdownRuleForLocationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to disable test mode for lockdown at a specific location. */
     Accesscontrol_lockdownplan_DisableLockdownTestModeForLocationWSRequest: {
@@ -7663,6 +8116,7 @@ export interface components {
       rules?:
         | components["schemas"]["Accesscontrol_lockdownplan_ExternalLockdownPlanRuleType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve an existing lockdown state or create one for a specific location. */
     Accesscontrol_lockdownplan_GetOrCreateLocationLockdownStateWSRequest: {
@@ -7740,7 +8194,14 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
     };
+    /** Region of allowed or disallowed activities. Activities are allowed if region group is inclusive. Activities are disallowed if region group is exclusive. Region must have at least one activity specified. */
     ActivityEnum: ActivityEnum;
+    ActivityEventData: {
+      activities?: components["schemas"]["ActivityEnum"][] | null;
+      boundingBoxes?: components["schemas"]["ClipBoundingBoxType"][] | null;
+      durationSec?: number | null;
+      timestampMs?: number | null;
+    };
     AddOnLicense: AddOnLicenseEnum;
     AddOnLicenseInvoiceType: {
       cloudArchiveDays?: number | null;
@@ -7938,6 +8399,7 @@ export interface components {
     Alertmonitoring_AcceptAlertMonitoringTermsOfServiceResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Alertmonitoring_AddPromptThreatQualificationsWSRequest: {
       threatQualification?: components["schemas"]["NoonlightPromptSelection"];
@@ -7945,6 +8407,7 @@ export interface components {
     Alertmonitoring_AddPromptThreatQualificationsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Information about who modified an alert monitoring configuration and when. */
     Alertmonitoring_AmModifiedBy: {
@@ -7972,6 +8435,7 @@ export interface components {
       errorMsg?: string | null;
       /** Indicates whether the threat case cancellation was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Represents count data for a specific day and month with activation/deactivation information. */
     Alertmonitoring_CountType: {
@@ -8001,6 +8465,7 @@ export interface components {
       alreadyExists?: boolean | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create alert monitoring settings for a location. */
     Alertmonitoring_CreateNoonlightSettingsForLocationRequest: {
@@ -8010,6 +8475,7 @@ export interface components {
     Alertmonitoring_CreateNoonlightSettingsForLocationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create a PIN for alert monitoring at a specific location. */
     Alertmonitoring_CreatePinForNoonlightWSRequest: {
@@ -8026,6 +8492,7 @@ export interface components {
       errorMsg?: string | null;
       /** The generated PIN code */
       pin?: string | null;
+      warningMsg?: string | null;
     };
     /** Chart data containing daily and cumulative monthly verification counts. */
     Alertmonitoring_CumulativeChartData: {
@@ -8047,6 +8514,7 @@ export interface components {
     Alertmonitoring_DeleteNoonlightSettingsForLocationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to delete a PIN for alert monitoring at a specific location. */
     Alertmonitoring_DeletePinForNoonlightWSRequest: {
@@ -8059,6 +8527,7 @@ export interface components {
     Alertmonitoring_DeletePinForNoonlightWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Alertmonitoring_DeletePromptThreatQualificationByTitleWSRequest: {
       title?: string | null;
@@ -8066,6 +8535,7 @@ export interface components {
     Alertmonitoring_DeletePromptThreatQualificationByTitleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to disable alert monitoring for a specific location. */
     Alertmonitoring_DisableLocationRequest: {
@@ -8078,6 +8548,7 @@ export interface components {
     Alertmonitoring_DisableLocationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to dismiss a threat case in alert monitoring. */
     Alertmonitoring_DismissThreatCaseWSRequest: {
@@ -8094,6 +8565,7 @@ export interface components {
       errorMsg?: string | null;
       /** Indicates whether the threat case dismissal was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request to enable alert monitoring for a specific location. */
     Alertmonitoring_EnableLocationRequest: {
@@ -8106,6 +8578,7 @@ export interface components {
     Alertmonitoring_EnableLocationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to escalate a threat case to an alarm for alert monitoring. */
     Alertmonitoring_EscalateThreatCaseToAlarmWSRequest: {
@@ -8118,6 +8591,7 @@ export interface components {
     Alertmonitoring_EscalateThreatCaseToAlarmWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to generate monthly verifications for year report for alert monitoring at specific locations. */
     Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSRequest: {
@@ -8132,6 +8606,7 @@ export interface components {
       verificationsPerMonthPerLocation?: {
         [key: string]: { [key: string]: number | null } | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to generate report data for alert monitoring at a specific location. */
     Alertmonitoring_GenerateReportDataForLocationWSRequest: {
@@ -8161,6 +8636,7 @@ export interface components {
       verificationsByDevice?:
         | components["schemas"]["Alertmonitoring_AMDeviceHistogramItem"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to get the count of tripwire groups for alert monitoring. */
     Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest: {
@@ -8173,6 +8649,7 @@ export interface components {
       count?: number | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve all monitored door sensors for a location. */
     Alertmonitoring_GetMonitoredDoorSensorsForLocationWSRequest: {
@@ -8185,6 +8662,7 @@ export interface components {
       doorStates?: components["schemas"]["Door_MinimalDoorStateType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve alert monitoring settings for a specific location. */
     Alertmonitoring_GetNoonlightSettingsForLocationWSRequest: {
@@ -8202,6 +8680,7 @@ export interface components {
       previousVersions?:
         | components["schemas"]["NoonlightVersionedSettingsType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve alert monitoring settings. */
     Alertmonitoring_GetNoonlightSettingsWSRequest: { [key: string]: unknown };
@@ -8215,6 +8694,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Alertmonitoring_GetPromptThreatQualificationsWSRequest: {
       [key: string]: unknown;
@@ -8225,6 +8705,7 @@ export interface components {
       threatQualifications?:
         | components["schemas"]["NoonlightPromptSelection"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve alarm monitoring status for a specific location. */
     Alertmonitoring_LocationStatusWSRequest: {
@@ -8236,6 +8717,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       status?: components["schemas"]["MonitoringEnableStatus"];
+      warningMsg?: string | null;
     };
     /** Web service settings for Noonlight integration with alert monitoring. */
     Alertmonitoring_NoonlightWSSettings: {
@@ -8290,6 +8772,7 @@ export interface components {
       locationStatuses?: {
         [key: string]: components["schemas"]["MonitoringEnableStatus"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to reset the count of tripwire groups for alert monitoring. */
     Alertmonitoring_ResetAlertMonitoringTripwireGroupCountWSRequest: {
@@ -8302,6 +8785,7 @@ export interface components {
     Alertmonitoring_ResetAlertMonitoringTripwireGroupCountWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Report item containing threat case information with device and alert details. */
     Alertmonitoring_ThreatCaseReportItem: {
@@ -8357,6 +8841,7 @@ export interface components {
     Alertmonitoring_UpdateNoonlightSettingsForLocationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Alertmonitoring_UpdatePromptThreatQualificationWSRequest: {
       promptSelection?: components["schemas"]["NoonlightPromptSelection"];
@@ -8364,12 +8849,14 @@ export interface components {
     Alertmonitoring_UpdatePromptThreatQualificationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Base response containing alert monitoring PIN information. */
     Alertmonitoring_pin_BasePinWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       pin?: components["schemas"]["AlertMonitoringPIN"];
+      warningMsg?: string | null;
     };
     /** Response containing multiple alert monitoring PINs for bulk operations. */
     Alertmonitoring_pin_BulkPinsWSResponse: {
@@ -8379,6 +8866,7 @@ export interface components {
       failedUsers?: (string | null)[] | null;
       /** List of alert monitoring PINs created or updated. */
       pins?: components["schemas"]["AlertMonitoringPIN"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to bulk provision alert monitoring PINs for multiple users. */
     Alertmonitoring_pin_BulkProvisionPinsWSRequest: {
@@ -8437,6 +8925,7 @@ export interface components {
       lastEvaluatedKey?: string | null;
       /** List of alert monitoring PINs found. */
       pins?: components["schemas"]["AlertMonitoringPIN"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to get an available PIN code for alert monitoring. */
     Alertmonitoring_pin_GetAvailableALMPinCodeWSRequest: {
@@ -8449,6 +8938,7 @@ export interface components {
       errorMsg?: string | null;
       /** The generated PIN code for alert monitoring. */
       pinCode?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve an alert monitoring PIN by UUID. */
     Alertmonitoring_pin_GetPinWSRequest: {
@@ -9100,6 +9590,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the delete operation */
       responseStatus?: DeleteAudioGatewayWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Request to get configuration for an audio gateway. */
     Audiogateway_GetAudioGatewayConfigWSRequest: {
@@ -9111,6 +9602,7 @@ export interface components {
       config?: components["schemas"]["IAudioUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get offline LAN streaming information for all audio gateways. */
     Audiogateway_GetAudioGatewayOfflineLanStreamingInfoWSRequest: {
@@ -9126,6 +9618,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Audiogateway_AudioGatewayOfflineLanStreamingInfo"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to get audio seek points for an audio gateway. */
     Audiogateway_GetAudioSeekpointsWSRequest: {
@@ -9144,6 +9637,7 @@ export interface components {
       footageSeekPoints?:
         | components["schemas"]["FootageSeekPointV2Type"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to get detailed information about the state of a specified audio gateway. */
     Audiogateway_GetFullAudioGatewayStateWSRequest: {
@@ -9157,6 +9651,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       fullAudioGatewayState?: components["schemas"]["FullDeviceStateType"];
+      warningMsg?: string | null;
     };
     /** Request to get media URIs for an audio gateway to retrieve footage. */
     Audiogateway_GetMediaUrisWSRequest: {
@@ -9181,6 +9676,7 @@ export interface components {
       wanLiveOpusUri?: string | null;
       /** WAN VOD MPD URI template for video on demand content */
       wanVodMpdUriTemplate?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get basic state information for all audio gateways. */
     Audiogateway_GetMinimalAudioGatewayStatesWSRequest: {
@@ -9194,6 +9690,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to reboot the specified audio gateway. */
     Audiogateway_RebootAudioGatewayWSRequest: {
@@ -9240,6 +9737,7 @@ export interface components {
     Audiogateway_UpdateAudioGatewayConfigWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update details for an audio gateway. Note: uuid is a required field. */
     Audiogateway_UpdateAudioGatewayDetailsWSRequest: {
@@ -9279,6 +9777,7 @@ export interface components {
     Audiogateway_UpdateAudioGatewayDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to cancel looping audio playback on audio devices. */
     Audioplayback_CancelLoopingAudioPlaybackWSRequest: {
@@ -9291,6 +9790,7 @@ export interface components {
       errorMsg?: string | null;
       /** Map of audio device UUIDs to success status for canceling playback */
       successMap?: { [key: string]: boolean | null } | null;
+      warningMsg?: string | null;
     };
     /** Request to delete audio upload metadata. */
     Audioplayback_DeleteAudioUploadMetadataWSRequest: {
@@ -9301,6 +9801,7 @@ export interface components {
     Audioplayback_DeleteAudioUploadMetadataWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get audio upload metadata for organization. */
     Audioplayback_GetAudioUploadMetadataForOrgWSRequest: {
@@ -9314,6 +9815,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to play an uploaded audio clip through audio devices. */
     Audioplayback_PlayAudioUploadWSRequest: {
@@ -9332,6 +9834,7 @@ export interface components {
       errorMsg?: string | null;
       /** Indicates if audio playback was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request to update audio upload metadata. */
     Audioplayback_UpdateAudioUploadMetadataWSRequest: {
@@ -9346,6 +9849,7 @@ export interface components {
     Audioplayback_UpdateAudioUploadMetadataWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response from uploading PCM audio clip. */
     Audioplayback_UploadAudioPcmWSResponse: {
@@ -9355,6 +9859,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to upload text for audio synthesis. */
     Audioplayback_UploadAudioTextWSRequest: {
@@ -9381,6 +9886,7 @@ export interface components {
       synthesisFailure?: boolean | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     AuditRuleTriggerType:
       | ({
@@ -9582,12 +10088,14 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the delete operation */
       responseStatus?: DeleteBadgeReaderWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Response containing badge reader configuration. */
     Badgereader_GetBadgeReaderConfigWSResponse: {
-      config?: components["schemas"]["Deviceconfig_userconfig_ExternalReadableFacetedUserConfig"];
+      config?: components["schemas"]["Device_config_userconfig_ExternalReadableFacetedUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response containing full state information for a badge reader. */
     Badgereader_GetBadgeReaderFullStateWSResponse: {
@@ -9605,7 +10113,7 @@ export interface components {
     };
     /** Request to update badge reader configuration. */
     Badgereader_UpdateBadgeReaderConfigWSRequest: {
-      configUpdate?: components["schemas"]["Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig"];
+      configUpdate?: components["schemas"]["Device_config_userconfig_ExternalUpdateableFacetedUserConfig"];
     };
     /** Request to update badge reader device details. */
     Badgereader_UpdateBadgeReaderDetailsWSRequest: {
@@ -9626,10 +10134,21 @@ export interface components {
       /** Optional name for the badge reader */
       name?: string | null;
     };
+    BaseAccessStateOverride: {
+      originator?: components["schemas"]["BaseEventOriginator"];
+      requestedAtMillis?: number | null;
+      type?: components["schemas"]["ManualAccessStateChangeEnum"];
+    };
+    BaseAccessStateOverride_Minimal: {
+      originator?: components["schemas"]["BaseEventOriginator_Minimal"];
+      requestedAtMillis?: number | null;
+      type?: components["schemas"]["ManualAccessStateChangeEnum_Minimal"];
+    };
     /** Base response object denoting success, or failure with a reason, for an endpoint. */
     BaseApiResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     BaseBadgeTemplateElement: (
       | components["schemas"]["CustomTextElement"]
@@ -9701,16 +10220,6 @@ export interface components {
       updatedAtMillis?: number | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
-    };
-    BaseDoorStateOverride: {
-      originator?: components["schemas"]["BaseEventOriginator"];
-      requestedAtMillis?: number | null;
-      type?: components["schemas"]["ManualDoorStateChangeEnum"];
-    };
-    BaseDoorStateOverride_Minimal: {
-      originator?: components["schemas"]["BaseEventOriginator_Minimal"];
-      requestedAtMillis?: number | null;
-      type?: components["schemas"]["ManualDoorStateChangeEnum_Minimal"];
     };
     BaseEventOriginator: (
       | components["schemas"]["SupportAuthorityEventOriginator"]
@@ -9891,8 +10400,10 @@ export interface components {
       errorMsg?: string | null;
       sessionId?: string | null;
       sessionUrl?: string | null;
+      warningMsg?: string | null;
     };
     Billing_CreateSubscriptionWSRequest: {
+      billingCycleTimezone?: string | null;
       maxSpendPerMonth?: number | null;
       paymentMethodId?: string | null;
       termsOfServiceAccepted?: boolean | null;
@@ -9904,6 +10415,24 @@ export interface components {
       paymentMethodId?: string | null;
       status?: string | null;
       subscriptionId?: string | null;
+      warningMsg?: string | null;
+    };
+    Billing_CustomEventsMonthlyBreakdownWSRequest: {
+      date?: string | null;
+    };
+    Billing_CustomEventsMonthlyBreakdownWSResponse: {
+      breakdowns?:
+        | components["schemas"]["Billing_CustomEventsMonthlyBreakdownWSResponse_BreakdownElement"][]
+        | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
+    };
+    Billing_CustomEventsMonthlyBreakdownWSResponse_BreakdownElement: {
+      eventCount?: number | null;
+      promptName?: string | null;
+      /** base 64 (url-safe) uuid string */
+      promptUuid?: string | null;
     };
     Billing_DeletePaymentMethodWSRequest: {
       paymentMethodId?: string | null;
@@ -9912,11 +10441,13 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       removed?: boolean | null;
+      warningMsg?: string | null;
     };
     Billing_FreeTrialEligibilityWSResponse: {
       customEvents?: boolean | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Billing_GetCustomerInformationWSRequest: { [key: string]: unknown };
     Billing_GetCustomerInformationWSResponse: {
@@ -9932,6 +10463,7 @@ export interface components {
       errorMsg?: string | null;
       individualName?: string | null;
       phone?: string | null;
+      warningMsg?: string | null;
     };
     Billing_GetInvoicesWSRequest: {
       limit?: number | null;
@@ -9946,6 +10478,7 @@ export interface components {
       invoices?:
         | components["schemas"]["Billing_GetInvoicesWSResponse_Invoice"][]
         | null;
+      warningMsg?: string | null;
     };
     Billing_GetInvoicesWSResponse_Invoice: {
       amount?: number | null;
@@ -9976,6 +10509,7 @@ export interface components {
       meters?:
         | components["schemas"]["Billing_GetMetersWSResponse_Meter"][]
         | null;
+      warningMsg?: string | null;
     };
     Billing_GetMetersWSResponse_Meter: {
       archived?: boolean | null;
@@ -9992,6 +10526,7 @@ export interface components {
       paymentMethods?:
         | components["schemas"]["Billing_GetPaymentMethodsWSResponse_PaymentMethod"][]
         | null;
+      warningMsg?: string | null;
     };
     Billing_GetPaymentMethodsWSResponse_PaymentMethod: {
       brand?: string | null;
@@ -10007,6 +10542,7 @@ export interface components {
       products?:
         | components["schemas"]["Billing_GetProductsWSResponse_Product"][]
         | null;
+      warningMsg?: string | null;
     };
     Billing_GetProductsWSResponse_Price: {
       active?: boolean | null;
@@ -10046,6 +10582,7 @@ export interface components {
       subscriptions?:
         | components["schemas"]["Billing_GetSubscriptionWSResponse_Subscription"][]
         | null;
+      warningMsg?: string | null;
     };
     Billing_GetSubscriptionWSResponse_Subscription: {
       cancelAtPeriodEnd?: boolean | null;
@@ -10079,6 +10616,7 @@ export interface components {
           | components["schemas"]["Billing_HistoricalUsageWSResponse_HistoricalUsageElement"][]
           | null;
       } | null;
+      warningMsg?: string | null;
     };
     Billing_HistoricalUsageWSResponse_HistoricalUsageElement: {
       costInCent?: number | null;
@@ -10092,6 +10630,7 @@ export interface components {
     Billing_SetDefaultPaymentMethodForSubscriptionWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Billing_SetDefaultPaymentMethodWSRequest: {
       overrideAllSubscriptionPaymentMethods?: boolean | null;
@@ -10100,6 +10639,7 @@ export interface components {
     Billing_SetDefaultPaymentMethodWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Billing_SetupSubscriptionWSRequest: { [key: string]: unknown };
     Billing_SetupSubscriptionWSResponse: {
@@ -10107,6 +10647,7 @@ export interface components {
       customerId?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Billing_UnsubscribeWSRequest: {
       subscriptionId?: string | null;
@@ -10118,6 +10659,7 @@ export interface components {
       errorMsg?: string | null;
       status?: string | null;
       subscriptionId?: string | null;
+      warningMsg?: string | null;
     };
     Billing_UpdateCustomerInformationWSRequest: {
       addressCity?: string | null;
@@ -10134,6 +10676,7 @@ export interface components {
     Billing_UpdateCustomerInformationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Billing_UpdateSubscriptionMaxSpendWSRequest: {
       maxSpendPerMonth?: number | null;
@@ -10144,6 +10687,7 @@ export interface components {
       errorMsg?: string | null;
       maxSpendPerMonth?: number | null;
       subscriptionId?: string | null;
+      warningMsg?: string | null;
     };
     /** Map of binary count reports */
     BinaryAggregationValue: {
@@ -10190,6 +10734,7 @@ export interface components {
       baseStations?: (string | null)[] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response containing secure secrets for registered BLE devices. */
     Ble_GetSecureSecretForRegisteredWSResponse: {
@@ -10203,6 +10748,7 @@ export interface components {
       keyToRegisteredDevice?: {
         [key: string]: components["schemas"]["Ble_BleRegisteredDeviceWSType"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Response containing secure secrets for unregistered BLE devices. */
     Ble_GetSecureSecretForUnregisteredWSResponse: {
@@ -10214,6 +10760,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Ble_BleUnregisteredHardwareWSType"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to get firmware update details for BLE sensors. */
     Ble_GetSensorHardwareFirmwareUpdateDetailsRequest: {
@@ -10247,6 +10794,7 @@ export interface components {
       deviceUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to unregister a BLE sensor. */
     Ble_UnregisterSensorWSRequest: {
@@ -10261,6 +10809,7 @@ export interface components {
       failureReason?: string | null;
       /** Indicates if the unregistration was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     BoardPhysicalPortConfigType: {
       boardNum?: number | null;
@@ -10518,6 +11067,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       ruleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to delete a rule for a button sensor. */
     Button_DeleteRuleForButtonWSRequest: {
@@ -10530,6 +11080,7 @@ export interface components {
     Button_DeleteRuleForButtonWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** External button rule configuration. */
     Button_ExternalButtonRuleType: {
@@ -10560,6 +11111,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of button press events for the sensor */
       events?: components["schemas"]["ButtonEventType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to get rules for all buttons in an organization. */
     Button_GetButtonRulesForOrgWSRequest: { [key: string]: unknown };
@@ -10573,6 +11125,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get minimal state information for all button sensors. */
     Button_GetMinimalButtonStatesWSRequest: { [key: string]: unknown };
@@ -10582,6 +11135,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of minimal button state information */
       states?: components["schemas"]["Button_MinimalButtonStateType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to get rules for a button sensor. */
     Button_GetRulesForButtonWSRequest: {
@@ -10594,6 +11148,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of rules configured for the button sensor */
       rules?: components["schemas"]["Button_ExternalButtonRuleType"][] | null;
+      warningMsg?: string | null;
     };
     /** Minimal state information for a button sensor. */
     Button_MinimalButtonStateType: {
@@ -10636,7 +11191,7 @@ export interface components {
     };
     /** Request to update button sensor configuration. */
     Button_UpdateButtonConfigWSRequest: {
-      configUpdate?: components["schemas"]["Deviceconfig_userconfig_IExternalUpdateableButtonUserConfig"];
+      configUpdate?: components["schemas"]["Device_config_userconfig_IExternalUpdateableButtonUserConfig"];
     };
     /** Request to update button sensor details. */
     Button_UpdateButtonDetailsWSRequest: {
@@ -10685,6 +11240,7 @@ export interface components {
       /** RUUID with optional appended facet information */
       cameraUuid?: string | null;
       checkConditionOverride?: components["schemas"]["CheckCondition"];
+      exampleImages?: components["schemas"]["ExampleImage"][] | null;
       promptExtension?: string | null;
       promptOverride?: string | null;
       region?: components["schemas"]["RegionPolygonType"];
@@ -10697,6 +11253,7 @@ export interface components {
       object_type_id?: number | null;
       out_roi?: components["schemas"]["RegionPolygonType"][] | null;
     };
+    CameraDewarpModeEnum: CameraDewarpModeEnum;
     CameraHumanLoiteringSettingsType: {
       roi?: components["schemas"]["RegionPolygonType"][] | null;
     };
@@ -10948,11 +11505,13 @@ export interface components {
     Camera_CreateFootageBoundingBoxesWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response indicating the result of creating footage seek points. */
     Camera_CreateFootageSeekpointsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create a shared live video stream for a camera. */
     Camera_CreateSharedLiveVideoStreamWSRequest: {
@@ -10988,6 +11547,7 @@ export interface components {
       sharedLiveVideoStreamUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       sharedLiveVideoStreamUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create a shared video wall. */
     Camera_CreateSharedVideoWallWSRequest: {
@@ -11012,6 +11572,7 @@ export interface components {
       sharedLiveVideoStreamUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       sharedLiveVideoStreamUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create a video wall. */
     Camera_CreateVideoWallWSRequest: {
@@ -11023,6 +11584,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to delete a camera from the system. */
     Camera_DeleteCameraWSRequest: {
@@ -11037,6 +11599,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the delete operation */
       responseStatus?: DeleteCameraWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Request to delete custom footage seek points for cameras within a time range. */
     Camera_DeleteCustomFootageSeekpointsWSRequest: {
@@ -11059,6 +11622,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response indicating the result of deleting seek points for a camera. */
     Camera_DeleteCustomFootageSeekpointsWSResponse_SeekPointDeleteResponse: {
@@ -11085,6 +11649,7 @@ export interface components {
     Camera_DeleteSharedVideoWallWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to delete a video wall configuration. */
     Camera_DeleteVideoWallWSRequest: {
@@ -11095,6 +11660,7 @@ export interface components {
     Camera_DeleteVideoWallWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to permanently erase a camera from the system. */
     Camera_EraseCameraWSRequest: {
@@ -11105,6 +11671,7 @@ export interface components {
     Camera_EraseCameraWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to find all shared live video streams. */
     Camera_FindAllSharedLiveVideoStreamsWSRequest: { [key: string]: unknown };
@@ -11116,6 +11683,7 @@ export interface components {
       sharedLiveVideoStreams?:
         | components["schemas"]["Camera_SharedLiveVideoStreamWS"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to find shared live video streams for a camera. */
     Camera_FindSharedLiveVideoStreamsForWSRequest: {
@@ -11130,6 +11698,7 @@ export interface components {
       sharedLiveVideoStreams?:
         | components["schemas"]["Camera_SharedLiveVideoStreamWS"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to find shared video walls for a video wall. */
     Camera_FindSharedVideoWallsWSRequest: {
@@ -11144,6 +11713,7 @@ export interface components {
       sharedVideoWalls?:
         | components["schemas"]["Camera_SharedVideoWallWS"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Summary of footage bounding boxes by device. */
     Camera_FootageBoundingBoxSummaryType: {
@@ -11210,6 +11780,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       userUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve batch registration token usage information. */
     Camera_GetBatchRegistrationTokenUsageRequest: {
@@ -11250,6 +11821,7 @@ export interface components {
       maxEventDurationMs?: number | null;
       /** Confidence threshold for vehicle detection. 0 or null means the built-in default. */
       vehicleConfidenceThreshold?: number | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve detailed information for multiple cameras. */
     Camera_GetCameraDetailsWSRequest: {
@@ -11262,6 +11834,7 @@ export interface components {
       cameras?: components["schemas"]["Camera_CameraExternalType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve cloud archived media information for a camera. */
     Camera_GetCloudArchivedMediaInfoWSRequest: {
@@ -11274,6 +11847,7 @@ export interface components {
       errorMsg?: string | null;
       /** Timestamp of the oldest archived video segment in seconds since epoch */
       oldestArchivedVideoSegmentSecs?: number | null;
+      warningMsg?: string | null;
     };
     /** Request to get cloud archiving configuration. */
     Camera_GetCloudArchivingConfigWSRequest: {
@@ -11285,6 +11859,7 @@ export interface components {
       archivingConfig?: components["schemas"]["ScopedCloudArchivingConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve camera configuration settings. */
     Camera_GetConfigWSRequest: {
@@ -11293,9 +11868,10 @@ export interface components {
     };
     /** Response containing camera configuration settings. */
     Camera_GetConfigWSResponse: {
-      config?: components["schemas"]["Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig"];
+      config?: components["schemas"]["Device_config_userconfig_IExternalReadableAudioVideoUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve the current state of a camera (deprecated). */
     Camera_GetCurrentStateWSRequest: {
@@ -11309,6 +11885,7 @@ export interface components {
       cameraState?: components["schemas"]["Camera_CameraCurrentStateType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve custom footage seek points V2 for cameras within a time range. */
     Camera_GetCustomFootageSeekpointsV2WSRequest: {
@@ -11333,6 +11910,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Camera_GetFacetedCameraDetailsWSResponse: {
       cameras?:
@@ -11340,6 +11918,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve footage bounding boxes for multiple cameras within a time range. */
     Camera_GetFootageBoundingBoxesForMultipleWSRequest: {
@@ -11360,6 +11939,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Camera_FootageBoundingBoxSummaryType"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve footage bounding boxes for a camera within a time range. */
     Camera_GetFootageBoundingBoxesWSRequest: {
@@ -11378,6 +11958,7 @@ export interface components {
       footageBoundingBoxes?:
         | components["schemas"]["FootageBoundingBoxType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve footage seek points for multiple cameras within a time range. */
     Camera_GetFootageSeekpointsForMultipleWSRequest: {
@@ -11400,6 +11981,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Camera_FootageSeekPointSummaryType"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve footage seek points V2 for a camera within a time range. */
     Camera_GetFootageSeekpointsV2WSRequest: {
@@ -11420,6 +12002,7 @@ export interface components {
       footageSeekPoints?:
         | components["schemas"]["FootageSeekPointV2Type"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve footage seek points for a camera within a time range (deprecated). */
     Camera_GetFootageSeekpointsWSRequest: {
@@ -11438,6 +12021,7 @@ export interface components {
       footageSeekPoints?:
         | components["schemas"]["FootageSeekPointType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve the full state information of a camera. */
     Camera_GetFullCameraStateWSRequest: {
@@ -11451,6 +12035,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       fullCameraState?: components["schemas"]["FullDeviceStateType"];
+      warningMsg?: string | null;
     };
     /** Request to get line crossing enabled cameras for a location. */
     Camera_GetLineCrossingEnabledCamerasForLocationWSRequest: {
@@ -11463,10 +12048,11 @@ export interface components {
       camerasToConfigs?: {
         [
           key: string
-        ]: components["schemas"]["Deviceconfig_userconfig_ExternalReadableFacetedUserConfig"];
+        ]: components["schemas"]["Device_config_userconfig_ExternalReadableFacetedUserConfig"];
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get media URIs for a camera device. */
     Camera_GetMediaUrisWSRequest: {
@@ -11485,6 +12071,8 @@ export interface components {
       lanLiveM3u8Uris?: (string | null)[] | null;
       /** List of LAN MPD live streaming URIs */
       lanLiveMpdUris?: (string | null)[] | null;
+      /** List of LAN URIs for live Opus audio streams */
+      lanLiveOpusUris?: (string | null)[] | null;
       /** List of LAN M3U8 VOD URI templates */
       lanVodM3u8UrisTemplates?: (string | null)[] | null;
       /** List of LAN MPD VOD URI templates */
@@ -11495,12 +12083,15 @@ export interface components {
       wanLiveM3u8Uri?: string | null;
       /** WAN MPD live streaming URI */
       wanLiveMpdUri?: string | null;
+      /** WAN URI for live Opus audio stream */
+      wanLiveOpusUri?: string | null;
       /** WAN H.264 VOD URI template */
       wanVodH264UriTemplate?: string | null;
       /** WAN M3U8 VOD URI template */
       wanVodM3u8UriTemplate?: string | null;
       /** WAN MPD VOD URI template */
       wanVodMpdUriTemplate?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve a mapping of cameras to their location information. */
     Camera_GetMinimalCameraLocationMapWSRequest: { [key: string]: unknown };
@@ -11514,6 +12105,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Information about a camera's location. */
     Camera_GetMinimalCameraLocationMapWSResponse_CameraLocationInfo: {
@@ -11535,6 +12127,7 @@ export interface components {
       cameraStates?: components["schemas"]["MinimalDeviceStateType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve a minimal list of cameras (deprecated). */
     Camera_GetMinimalListWSRequest: {
@@ -11547,6 +12140,7 @@ export interface components {
       cameras?: components["schemas"]["Camera_MinimalCameraType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get occupancy enabled cameras. */
     Camera_GetOccupancyEnabledCamerasWSRequest: { [key: string]: unknown };
@@ -11562,6 +12156,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Camera_CameraOfflineLanStreamingInfo"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve presence windows for a camera within a time range. */
     Camera_GetPresenceWindowsWSRequest: {
@@ -11580,11 +12175,13 @@ export interface components {
       presenceWindows?: {
         [key: string]: components["schemas"]["TimeWindowSeconds"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     Camera_GetSharedCameraCurrentStateWSResponse: {
       cameraState?: components["schemas"]["Camera_SharedCameraCurrentStateType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to get storage recovery file for a device. */
     Camera_GetStorageRecoveryFileWSRequest: {
@@ -11611,6 +12208,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of uptime windows */
       uptimeWindows?: components["schemas"]["TimeWindowSeconds"][] | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve all video wall configurations. */
     Camera_GetVideoWallsWSRequest: { [key: string]: unknown };
@@ -11624,6 +12222,7 @@ export interface components {
       videoWalls?:
         | components["schemas"]["Camera_VideoWallSummaryType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Minimal camera information type. */
     Camera_MinimalCameraType: {
@@ -11683,6 +12282,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status enumeration for reboot web service responses. */
       status?: RebootCameraWSResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     Camera_RevertCameraToDefaultsWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -11691,6 +12291,7 @@ export interface components {
     Camera_RevertCameraToDefaultsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Current state information for a shared camera. */
     Camera_SharedCameraCurrentStateType: {
@@ -11791,6 +12392,7 @@ export interface components {
     Camera_UpdateCameraAIThresholdsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update camera firmware. */
     Camera_UpdateCameraFirmwareWSRequest: {
@@ -11803,6 +12405,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the firmware update operation */
       status?: UpdateCameraFirmwareWSResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Request to update human loitering configuration for a camera. */
     Camera_UpdateCameraHumanLoiteringConfigWSRequest: {
@@ -11815,6 +12418,7 @@ export interface components {
     Camera_UpdateCameraHumanLoiteringWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update line crossing thresholds for a camera. */
     Camera_UpdateCameraLineCrossingThresholdsWSRequest: {
@@ -11840,6 +12444,7 @@ export interface components {
     Camera_UpdateCameraLineCrossingThresholdsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update camera information V2 with partial update support. */
     Camera_UpdateCameraV2WSRequest: {
@@ -11901,6 +12506,7 @@ export interface components {
     Camera_UpdateCameraV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update camera information (deprecated). */
     Camera_UpdateCameraWSRequest: {
@@ -11910,6 +12516,7 @@ export interface components {
     Camera_UpdateCameraWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update multiple cameras in bulk V2. */
     Camera_UpdateCamerasBulkV2WSRequest: {
@@ -11920,7 +12527,7 @@ export interface components {
     };
     /** Request to update camera configuration settings. */
     Camera_UpdateConfigWSRequest: {
-      config?: components["schemas"]["Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig"];
+      config?: components["schemas"]["Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig"];
     };
     /** Request to update a video wall configuration. */
     Camera_UpdateVideoWallWSRequest: {
@@ -11930,6 +12537,7 @@ export interface components {
     Camera_UpdateVideoWallWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update WiFi settings for one or more cameras. */
     Camera_UpdateWifiWSRequest: {
@@ -11948,6 +12556,7 @@ export interface components {
       errorMsg?: string | null;
       /** Mapping of camera UUIDs to WiFi update success status */
       status?: { [key: string]: boolean | null } | null;
+      warningMsg?: string | null;
     };
     /** Summary information for a video wall. */
     Camera_VideoWallSummaryType: {
@@ -11974,13 +12583,13 @@ export interface components {
       _audioDevices?: (string | null)[] | null;
       audioDevices?: (string | null)[] | null;
     };
-    CancelledDoorStateOverride:
+    CancelledAccessStateOverride:
       | ({
-          cancelledDoorStateOverride?: components["schemas"]["DoorStateOverride"];
+          cancelledDoorStateOverride?: components["schemas"]["AccessStateOverride"];
         } & {
           originator?: components["schemas"]["BaseEventOriginator"];
           requestedAtMillis?: number | null;
-          type?: components["schemas"]["ManualDoorStateChangeEnum"];
+          type?: components["schemas"]["ManualAccessStateChangeEnum"];
         })
       | null;
     /** Change type enum for exposing to OpenAPI component schemas */
@@ -12045,18 +12654,21 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       settings?: components["schemas"]["AutomatedPrompt"];
+      warningMsg?: string | null;
     };
     /** Response object for retrieving or updating a chat record. */
     Chatbot_BaseChatWSResponse: {
       chat?: components["schemas"]["ChatRecord"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object for creating, updating or retrieving Rhombus MIND config. */
     Chatbot_BaseChatbotConfigWSResponse: {
       config?: components["schemas"]["ChatbotConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating chatbot automation settings. */
     Chatbot_CreateAutomatedPromptWSRequest: {
@@ -12103,6 +12715,7 @@ export interface components {
       lastEvaluatedKey?: string | null;
       /** List of chatbot automation settings for this org. */
       settingsList?: components["schemas"]["AutomatedPrompt"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a user's chat history for a given conversation with Rhombus MIND. */
     Chatbot_GetChatHistoryByContextIdWSRequest: {
@@ -12123,6 +12736,7 @@ export interface components {
       errorMsg?: string | null;
       /** Pagination key to resume a paginated query. */
       lastEvaluatedKey?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a chat record. */
     Chatbot_GetChatRecordWSRequest: {
@@ -12143,6 +12757,7 @@ export interface components {
       errorMsg?: string | null;
       /** Pagination key to resume a paginated query. */
       lastEvaluatedKey?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a publicly viewable chat record. */
     Chatbot_GetPublicChatRecordWSRequest: {
@@ -12161,6 +12776,7 @@ export interface components {
       chatRecords?: components["schemas"]["ChatRecord"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving the current org's LLM token usage history. */
     Chatbot_GetTokenUsageHistoryWSRequest: { [key: string]: unknown };
@@ -12199,6 +12815,7 @@ export interface components {
       chatRecordUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     } | null;
     /** Request object for submitting a report query to Rhombus MIND. */
     Chatbot_SubmitCreateReportWSRequest: {
@@ -12215,6 +12832,7 @@ export interface components {
       chatRecordUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for submitting a test prompt with Rhombus MIND. */
     Chatbot_SubmitTestPromptWSRequest: {
@@ -12229,6 +12847,7 @@ export interface components {
       chatUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating chatbot automation settings. */
     Chatbot_UpdateAutomatedPromptWSRequest: {
@@ -12251,6 +12870,7 @@ export interface components {
       conversation?: components["schemas"]["ContextRecord"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for rescheduling an automated prompt that became inactive. */
     Chatbot_VerifyJobScheduledWSRequest: {
@@ -12265,6 +12885,102 @@ export interface components {
       scheduleExpression?: string | null;
       /** Timezone the schedule expression is in. */
       scheduleTimezone?: string | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for adding a timeline event to an AI report */
+    Chatbot_report_AddAIReportTimelineEventWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      reportUuid?: string | null;
+      status?: components["schemas"]["QueryStatus"];
+      /** Timestamp in milliseconds for the timeline event */
+      timestampMs?: number | null;
+    };
+    /** Response object for retrieving or updating an AI report group */
+    Chatbot_report_BaseAIReportGroupWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      group?: components["schemas"]["AIReportGroup"];
+      warningMsg?: string | null;
+    };
+    /** Response object for retrieving or updating an AI report */
+    Chatbot_report_BaseAIReportWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      report?: components["schemas"]["AIReport"];
+      warningMsg?: string | null;
+    };
+    /** Request object for generating an AI report. */
+    Chatbot_report_CreateReportWSRequest: {
+      params: components["schemas"]["AIReportGenerateParams"];
+      privacy: components["schemas"]["ChatPrivacy"];
+    };
+    /** Response object for generating an AI report. */
+    Chatbot_report_CreateReportWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** base 64 (url-safe) uuid string */
+      reportUuid?: string | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for deleting an AI report group */
+    Chatbot_report_DeleteAIReportGroupWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      groupUuid?: string | null;
+    };
+    /** Request object for deleting an AI report */
+    Chatbot_report_DeleteAIReportWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      reportUuid?: string | null;
+    };
+    /** Request object for retrieving AI report groups by organization */
+    Chatbot_report_GetAIReportGroupsByOrgWSRequest: {
+      pageRequest?: components["schemas"]["DynamoPageRequest"];
+    };
+    /** Response object for retrieving AI report groups by organization UUID */
+    Chatbot_report_GetAIReportGroupsByOrgWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** List of AI reports */
+      groups?: components["schemas"]["AIReportGroup"][] | null;
+      lastEvaluatedKey?: components["schemas"]["DynamoPageRequest"];
+      warningMsg?: string | null;
+    };
+    /** Request object for retrieving an AI report */
+    Chatbot_report_GetAIReportWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      reportUuid?: string | null;
+    };
+    /** Request object for retrieving AI reports by group */
+    Chatbot_report_GetAIReportsByGroupWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      groupUuid?: string | null;
+      pageRequest?: components["schemas"]["DynamoPageRequest"];
+    };
+    /** Response object for retrieving AI reports by group */
+    Chatbot_report_GetAIReportsByGroupWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      lastEvaluatedKey?: components["schemas"]["DynamoPageRequest"];
+      /** List of AI reports */
+      reports?: components["schemas"]["AIReport"][] | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for retrieving AI reports by organization */
+    Chatbot_report_GetAIReportsByOrgWSRequest: {
+      pageRequest?: components["schemas"]["DynamoPageRequest"];
+    };
+    /** Response object for retrieving AI reports by organization */
+    Chatbot_report_GetAIReportsByOrgWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      lastEvaluatedKey?: components["schemas"]["DynamoPageRequest"];
+      /** List of AI reports */
+      reports?: components["schemas"]["AIReport"][] | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for updating an AI report */
+    Chatbot_report_UpdateAIReportWSRequest: {
+      report?: components["schemas"]["AIReport"];
     };
     CheckCondition: {
       operator?: CheckConditionOperatorEnum | null;
@@ -12401,6 +13117,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the delete operation */
       responseStatus?: DeleteEnvironmentalGatewayWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve climate events for an environmental sensor. */
     Climate_GetClimateEventsForSensorWSRequest: {
@@ -12419,6 +13136,7 @@ export interface components {
       climateEvents?: components["schemas"]["ClimateEventType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve configuration for an environmental sensor. */
     Climate_GetClimateSensorConfigWSRequest: {
@@ -12430,6 +13148,7 @@ export interface components {
       config?: components["schemas"]["IClimateUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve environmental gateway shadows. */
     Climate_GetEnvironmentalGatewayShadowsWSRequest: { [key: string]: unknown };
@@ -12441,6 +13160,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve events for an environmental gateway. */
     Climate_GetEventsForEnvironmentalGatewayWSRequest: {
@@ -12470,6 +13190,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve minimal environmental gateway states. */
     Climate_GetMinimalEnvironmentalGatewayStatesWSRequest: {
@@ -12484,6 +13205,7 @@ export interface components {
       minimalEnvironmentalGatewayStates?:
         | components["schemas"]["Climate_MinimalEnvironmentalGatewayStateType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Minimal climate state information for environmental sensors. */
     Climate_MinimalClimateStateType: {
@@ -12705,6 +13427,7 @@ export interface components {
     Climate_UpdateClimateSensorDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to update details for an environmental gateway. */
     Climate_UpdateEnvironmentalGatewayDetailsWSRequest: {
@@ -12760,7 +13483,6 @@ export interface components {
       allowedUsers?: (string | null)[] | null;
       visibility?: components["schemas"]["ClipVisibility"];
     };
-    /** List of bounding boxes for the clip */
     ClipBoundingBoxType: {
       activity?: components["schemas"]["ActivityEnum"];
       alert?: boolean | null;
@@ -12904,6 +13626,7 @@ export interface components {
       footageBoundingBoxes?:
         | components["schemas"]["FootageBoundingBoxType"][]
         | null;
+      warningMsg?: string | null;
     };
     Common_devices_GetCameraOrDoorbellCameraSeekpointsWSRequest: {
       activitySet?: components["schemas"]["ActivityEnum"][] | null;
@@ -12943,6 +13666,7 @@ export interface components {
       presenceWindows?: {
         [key: string]: components["schemas"]["TimeWindowSeconds"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** General seekpoints search request parameters */
     Common_devices_GetSeekpointsWSRequest: {
@@ -12958,6 +13682,7 @@ export interface components {
       footageSeekPoints?:
         | components["schemas"]["FootageSeekPointV2Type"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to get uptime information for a device. */
     Common_devices_GetUptimeWindowsWSRequest: {
@@ -12974,6 +13699,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of uptime windows for the device */
       uptimeWindows?: components["schemas"]["TimeWindowSeconds"][] | null;
+      warningMsg?: string | null;
     };
     /** Response indicating the result of rebooting a device. */
     Common_devices_RebootDeviceWSResponse: {
@@ -12984,10 +13710,12 @@ export interface components {
     Common_devices_UpdateConfigWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Common_devices_UpdateDeviceDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to create a raw HTTP stream for a device. */
     Common_devices_rawstream_CreateRawHttpStreamWSRequest: {
@@ -13007,6 +13735,7 @@ export interface components {
       lanVideoLowResUrl?: string | null;
       /** LAN video URL for the raw stream */
       lanVideoUrl?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to delete raw HTTP streams for a device. */
     Common_devices_rawstream_DeleteRawHttpStreamWSRequest: {
@@ -13019,6 +13748,7 @@ export interface components {
     Common_devices_rawstream_DeleteRawHttpStreamWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve all raw HTTP streams. */
     Common_devices_rawstream_FindAllRawHttpStreamsWSRequest: {
@@ -13032,6 +13762,7 @@ export interface components {
       rawHttpStreams?:
         | components["schemas"]["Common_devices_rawstream_LanSpecificRawStreamType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request to retrieve raw HTTP streams for a device. */
     Common_devices_rawstream_GetRawHttpStreamsWSRequest: {
@@ -13046,6 +13777,7 @@ export interface components {
       rawHttpStreams?:
         | components["schemas"]["Common_devices_rawstream_LanSpecificRawStreamType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** List of raw HTTP streams */
     Common_devices_rawstream_LanSpecificRawStreamType: {
@@ -13197,6 +13929,14 @@ export interface components {
     Component_AddAccessControlledDoorLabelWSResponse: {
       [key: string]: unknown;
     };
+    Component_AddAccessControlledElevatorLandingLabelWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid?: string | null;
+      label?: string | null;
+    };
+    Component_AddAccessControlledElevatorLandingLabelWSResponse: {
+      [key: string]: unknown;
+    };
     Component_AggregatedCredentialReceivedEventInfo: {
       firstEvent?: components["schemas"]["CredentialReceivedEventType"];
       lastEvent?: components["schemas"]["CredentialReceivedEventType"];
@@ -13220,12 +13960,37 @@ export interface components {
     Component_ApplyAccessControlledDoorStateOverrideWSResponse: {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
     };
+    /** Elevator landing state overrides are temporary changes to landings's lock/unlock state even if otherwise scheduled. They can be superseded or cancelled at anytime. */
+    Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid: string | null;
+      accessScheduleFirstInState?: components["schemas"]["FirstInStatus"];
+      authFirstInState?: components["schemas"]["FirstInStatus"];
+      expireEarlyMode?: components["schemas"]["EarlyExpireModeEnum"];
+      /** A millisecond epoch time that represents when the override will end if not ended earlier by a regular schedule interval. Cannot be longer than 24 hours and default is 24hours long */
+      expiresAtMillis?: number | null;
+      /** Default is false if not specified, the elevator landing state override will ignore schedule first-in requirements (if applicable) if false */
+      followFirstInRules?: boolean | null;
+      /** Default is 0 if not specified, determines how long to wait before applying the override */
+      startDelaySeconds?: number | null;
+      state: components["schemas"]["AccessControlledDoorStateEnumType"];
+    };
+    Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSResponse: {
+      accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
+    };
     Component_CancelAccessControlledDoorStateOverrideWSRequest: {
       /** base 64 (url-safe) uuid string */
       accessControlledDoorUuid: string | null;
     };
     Component_CancelAccessControlledDoorStateOverrideWSResponse: {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
+    };
+    Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid: string | null;
+    };
+    Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSResponse: {
+      accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
     };
     Component_CreateAccessControlledDoorSeekpointsWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -13236,6 +14001,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       successMsg?: string | null;
+      warningMsg?: string | null;
     };
     Component_CreateAccessControlledDoorWSRequest: {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
@@ -13245,7 +14011,8 @@ export interface components {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
       error?: boolean | null;
       errorMsg?: string | null;
-    } | null;
+      warningMsg?: string | null;
+    };
     Component_CreateAccessControlledElevatorLandingWSRequest: {
       accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
       accessControlledElevatorLandingLabels?: (string | null)[] | null;
@@ -13254,6 +14021,7 @@ export interface components {
       accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Component_CreateAccessControlledElevatorWSRequest: {
       accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
@@ -13262,7 +14030,8 @@ export interface components {
       accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
       error?: boolean | null;
       errorMsg?: string | null;
-    };
+      warningMsg?: string | null;
+    } | null;
     /** The Aperio-assigned ID of the door(s) and the Aperio-assigned ID of their lock device. */
     Component_CreateAperioDoorInfo: {
       aperioDoorDeviceId?: string | null;
@@ -13281,6 +14050,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       failedDoors?: components["schemas"]["AccessControlledDoorType"][] | null;
+      warningMsg?: string | null;
     };
     Component_CreateAperioGatewayWSRequest: {
       /** The Aperio-assigned ID of the gateway, given as a hex string, e.g. "034AB5". */
@@ -13296,6 +14066,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       failedDoors?: components["schemas"]["AccessControlledDoorType"][] | null;
+      warningMsg?: string | null;
     };
     Component_CreateIntegratedDoorPositionIndicatorWSRequest: {
       name?: string | null;
@@ -13450,8 +14221,6 @@ export interface components {
     };
     Component_FindAccessControlledDoorShadowsWSRequest: {
       lastEvaluatedKey?: string | null;
-      /** base 64 (url-safe) uuid string */
-      locationUuid?: string | null;
       maxPageSize?: number | null;
     };
     Component_FindAccessControlledDoorShadowsWSResponse: {
@@ -13488,6 +14257,28 @@ export interface components {
         | components["schemas"]["AccessControlledDoorType"][]
         | null;
       lastEvaluatedKey?: string | null;
+    };
+    Component_FindAccessControlledElevatorLandingShadowsByLocationWSRequest: {
+      lastEvaluatedKey?: string | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      maxPageSize?: number | null;
+    };
+    Component_FindAccessControlledElevatorLandingShadowsByLocationWSResponse: {
+      lastEvaluatedKey?: string | null;
+      shadows?:
+        | components["schemas"]["AccessControlledElevatorLandingShadow"][]
+        | null;
+    };
+    Component_FindAccessControlledElevatorLandingShadowsWSRequest: {
+      lastEvaluatedKey?: string | null;
+      maxPageSize?: number | null;
+    };
+    Component_FindAccessControlledElevatorLandingShadowsWSResponse: {
+      lastEvaluatedKey?: string | null;
+      shadows?:
+        | components["schemas"]["AccessControlledElevatorLandingShadow"][]
+        | null;
     };
     Component_FindAccessControlledElevatorLandingsByLocationWSRequest: {
       lastEvaluatedKey?: string | null;
@@ -13562,6 +14353,21 @@ export interface components {
       componentEvents?: components["schemas"]["ComponentEventType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
+    };
+    Component_FindComponentEventsByAccessControlledElevatorWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorUuid?: string | null;
+      createdAfterMs?: number | null;
+      createdBeforeMs?: number | null;
+      limit?: number | null;
+      typeFilter?: components["schemas"]["ComponentEventEnumType"][] | null;
+    };
+    Component_FindComponentEventsByAccessControlledElevatorWSResponse: {
+      componentEvents?: components["schemas"]["ComponentEventType"][] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Component_FindComponentEventsByApiTokenWSRequest: {
       createdAfterMs?: number | null;
@@ -13703,6 +14509,7 @@ export interface components {
       componentEvents?: components["schemas"]["ComponentEventType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Component seekpoints search for access controlled door */
     Component_FindComponentSeekPointsByAccessControlledDoorWSRequest: {
@@ -13844,6 +14651,14 @@ export interface components {
         [key: string]: (string | null)[] | null;
       } | null;
     };
+    Component_GetAccessControlledElevatorLandingLabelsForOrgWSRequest: {
+      [key: string]: unknown;
+    };
+    Component_GetAccessControlledElevatorLandingLabelsForOrgWSResponse: {
+      accessControlledElevatorLandingLabels?: {
+        [key: string]: (string | null)[] | null;
+      } | null;
+    };
     /** Determines the expected door state based on the current time and current door configuration */
     Component_GetCurrentExpectedAccessControlledDoorStateWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -13851,16 +14666,34 @@ export interface components {
     };
     Component_GetCurrentExpectedAccessControlledDoorStateWSResponse: {
       activeDoorState?: components["schemas"]["AccessControlledDoorStateEnumType"];
-      activeDoorStateSource?: components["schemas"]["Schedule_AccessControlledDoorStateSourceEnum"];
-      defaultDoorStateSource?: components["schemas"]["Schedule_AccessControlledDoorStateSourceEnum"];
+      activeDoorStateSource?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
+      defaultDoorStateSource?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
       defaultState?: components["schemas"]["AccessControlledDoorStateEnumType"];
       doorStateIfFirstInRequired?: components["schemas"]["AccessControlledDoorStateEnumType"];
       doorStateIfFirstInSatisfied?: components["schemas"]["AccessControlledDoorStateEnumType"];
-      doorStateSourceIfFirstInRequired?: components["schemas"]["Schedule_AccessControlledDoorStateSourceEnum"];
-      doorStateSourceIfFirstInSatisfied?: components["schemas"]["Schedule_AccessControlledDoorStateSourceEnum"];
+      doorStateSourceIfFirstInRequired?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
+      doorStateSourceIfFirstInSatisfied?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
       firstInRequirementEnabled?: boolean | null;
       firstInRequirementSatisfied?: boolean | null;
-      nextNearestSchedule?: components["schemas"]["Schedule_AccessControlledDoorNextNearestSchedule"];
+      nextNearestSchedule?: components["schemas"]["Schedule_AccessStatefulComponentCompositeNextNearestSchedule"];
+    };
+    /** Determines the expected access state based on the current time and current elevator landing configuration */
+    Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid: string | null;
+    };
+    Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSResponse: {
+      accessStateIfFirstInRequired?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      accessStateIfFirstInSatisfied?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      accessStateSourceIfFirstInRequired?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
+      accessStateSourceIfFirstInSatisfied?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
+      activeAccessState?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      activeAccessStateSource?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
+      defaultDoorStateSource?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
+      defaultState?: components["schemas"]["AccessControlledDoorStateEnumType"];
+      firstInRequirementEnabled?: boolean | null;
+      firstInRequirementSatisfied?: boolean | null;
+      nextNearestSchedule?: components["schemas"]["Schedule_AccessStatefulComponentCompositeNextNearestSchedule"];
     };
     Component_GetFullAccessControlledDoorShadowWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -13893,6 +14726,14 @@ export interface components {
       label?: string | null;
     };
     Component_RemoveAccessControlledDoorLabelWSResponse: {
+      [key: string]: unknown;
+    };
+    Component_RemoveAccessControlledElevatorLandingLabelWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      accessControlledElevatorLandingUuid?: string | null;
+      label?: string | null;
+    };
+    Component_RemoveAccessControlledElevatorLandingLabelWSResponse: {
       [key: string]: unknown;
     };
     Component_UpdateAccessControlledDoorWSRequest: {
@@ -13937,6 +14778,7 @@ export interface components {
       accessControlledDoor?: components["schemas"]["AccessControlledDoorType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Component_UpdateAccessControlledElevatorLandingWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -13957,6 +14799,7 @@ export interface components {
       accessControlledElevatorLanding?: components["schemas"]["AccessControlledElevatorLanding"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Component_UpdateAccessControlledElevatorWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -13993,6 +14836,7 @@ export interface components {
       accessControlledElevator?: components["schemas"]["AccessControlledElevator"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Component_UpdateIntegratedDoorPositionIndicatorWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -14122,8 +14966,10 @@ export interface components {
     ConnectAudioDeviceToPhoneNumberActionType: {
       /** base 64 (url-safe) uuid string */
       audioDeviceUuid?: string | null;
+      deviceType?: components["schemas"]["DeviceTypeEnum"];
       /** base 64 (url-safe) uuid string */
       doorUuid?: string | null;
+      optionalGreeting?: string | null;
       phoneNumber?: string | null;
     };
     Consignee: {
@@ -14341,6 +15187,9 @@ export interface components {
         })
       | null;
     CustomLLMActionType: {
+      deviceActivityEvents?: {
+        [key: string]: components["schemas"]["ActivityEventData"][] | null;
+      } | null;
       deviceFacetUuids?: (string | null)[] | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -14424,6 +15273,7 @@ export interface components {
     Customer_DeleteNotificationSnoozeSettingWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving details about the current authenticated partner user. */
     Customer_GetCurrentPartnerUserWSRequest: { [key: string]: unknown };
@@ -14438,6 +15288,7 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       permissionGroupUuid?: string | null;
       user?: components["schemas"]["WrappedRhombusOrgUserType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving RhombusKey user configuration and details for the current user. */
     Customer_GetCurrentRhombusKeyUserWSRequest: { [key: string]: unknown };
@@ -14477,6 +15328,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of active sessions for the current user */
       sessions?: components["schemas"]["SessionInfoWSType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving detailed information about the current authenticated user. */
     Customer_GetCurrentUserWSRequest: { [key: string]: unknown };
@@ -14492,12 +15344,14 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       permissionGroupUuid?: string | null;
       user?: components["schemas"]["WrappedRhombusOrgUserType"];
+      warningMsg?: string | null;
     };
     /** Response object containing dashboard status and information for the current user. */
     Customer_GetDashboardStatusWSResponse: {
       dashboardStatus?: components["schemas"]["DashboardStatus"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving dashboard status and information for the current user. */
     Customer_GetDashboardstatusWSRequest: { [key: string]: unknown };
@@ -14533,6 +15387,7 @@ export interface components {
       snoozedForLocationsMap?: {
         [key: string]: components["schemas"]["ScheduledIntervalType"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for logging out all other active sessions for the current user. */
     Customer_LogoutAllOtherCurrentUserSessionsRequest: {
@@ -14562,6 +15417,7 @@ export interface components {
     Customer_SetFlagWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for snoozing all user notifications for the current user. */
     Customer_SnoozeAllNotificationsWSRequest: {
@@ -14574,6 +15430,7 @@ export interface components {
     Customer_SnoozeAllNotificationsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for snoozing user notifications for specific entities. */
     Customer_SnoozeNotificationsWSRequest: {
@@ -14592,6 +15449,7 @@ export interface components {
     Customer_SnoozeNotificationsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating details and information for the current authenticated partner user. */
     Customer_UpdateCurrentPartnerWSRequest: {
@@ -14613,6 +15471,7 @@ export interface components {
     Customer_UpdateCurrentPartnerWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating details and information for the current authenticated user. */
     Customer_UpdateCurrentUserWSRequest: {
@@ -14634,6 +15493,7 @@ export interface components {
     Customer_UpdateCurrentUserWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating dashboard customization settings for the current user. */
     Customer_UpdateDashboardCustomizationsWSRequest: {
@@ -14666,6 +15526,7 @@ export interface components {
     Customer_UpdateDashboardCustomizationsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating frontend customization settings for the current user. */
     Customer_UpdateFrontendCustomizationsWSRequest: {
@@ -14676,6 +15537,7 @@ export interface components {
     Customer_UpdateFrontendCustomizationsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating the RhombusKey mobile app preferences for the current user. */
     Customer_UpdateRhombusKeyPreferencesForCurrentUserWSRequest: {
@@ -14720,6 +15582,7 @@ export interface components {
       totalLocations?: number | null;
       totalProximitySensors?: number | null;
     };
+    DataSource: DataSourceEnum;
     /** Optional date range filter to limit search results. */
     DateRangeFilter: {
       /** End of the date range to filter local end date. This date is inclusive. */
@@ -14742,6 +15605,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       eventListenerUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting an event listener. */
     Developer_DeleteEventListenerWSRequest: {
@@ -14752,6 +15616,7 @@ export interface components {
     Developer_DeleteEventListenerWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a list of all event listeners. */
     Developer_GetAllEventListenersWSRequest: { [key: string]: unknown };
@@ -14761,6 +15626,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of all event listeners */
       eventListeners?: components["schemas"]["EventListenerType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a list of event listeners for a specific device. */
     Developer_GetEventListenersForDeviceWSRequest: {
@@ -14773,6 +15639,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of event listeners for the specified device */
       eventListeners?: components["schemas"]["EventListenerType"][] | null;
+      warningMsg?: string | null;
     };
     DeviceActivityRuleTriggerType:
       | ({
@@ -14813,6 +15680,12 @@ export interface components {
           productType?: DeviceCatalogItemProductTypeEnum | null;
         })
       | null;
+    /** List of organization devices for which health tracking is disabled. */
+    DeviceDisabledHealthTrackingInfo: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+      reEnableCondition?: components["schemas"]["ReEnableDeviceHealthTrackingCondition"];
+    };
     DeviceEventRecordType: {
       activities?: components["schemas"]["ActivityEnum"][] | null;
       /** base 64 (url-safe) uuid string */
@@ -14948,23 +15821,25 @@ export interface components {
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
     };
     /** Request object for retrieving a device's configuration. */
-    Deviceconfig_GetConfigWSRequest: {
+    Device_config_GetConfigWSRequest: {
       /** base 64 (url-safe) uuid string */
       deviceUuid?: string | null;
     };
     /** Response object containing a device's faceted user configuration. */
-    Deviceconfig_GetFacetedUserConfigWSResponse: {
-      config?: components["schemas"]["Deviceconfig_userconfig_ExternalReadableFacetedUserConfig"];
+    Device_config_GetFacetedUserConfigWSResponse: {
+      config?: components["schemas"]["Device_config_userconfig_ExternalReadableFacetedUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a device's faceted user configuration. */
-    Deviceconfig_UpdateFacetedUserConfigWSRequest: {
-      configUpdate?: components["schemas"]["Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig"];
+    Device_config_UpdateFacetedUserConfigWSRequest: {
+      configUpdate?: components["schemas"]["Device_config_userconfig_ExternalUpdateableFacetedUserConfig"];
     };
     /** Update Audio settings */
-    Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate: {
+    Device_config_settings_ExternalAudioSettingsSelectiveUpdate: {
       audio_aec_via_software?: boolean | null;
+      audio_ai_disabled?: boolean | null;
       audio_external_mic_boost?: number | null;
       audio_external_mic_volume?: number | null;
       audio_external_speaker_volume?: number | null;
@@ -14990,12 +15865,13 @@ export interface components {
       frontendNoiseSuppression?: boolean | null;
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
     };
-    Deviceconfig_settings_ExternalDeviceSettingsSelectiveUpdate: {
+    Device_config_settings_ExternalDeviceSettingsSelectiveUpdate: {
+      ai_license_invalid?: boolean | null;
       bandwidth_reports_disabled?: boolean | null;
       firmware_dev_settings?: { [key: string]: string | null } | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: ExternalDeviceSettingsSelectiveUpdateLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: ExternalDeviceSettingsSelectiveUpdateLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
       live_license_invalid?: boolean | null;
@@ -15009,7 +15885,7 @@ export interface components {
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
     };
     /** Update Door Controller settings */
-    Deviceconfig_settings_ExternalDoorControllerSettingsSelectiveUpdate: {
+    Device_config_settings_ExternalDoorControllerSettingsSelectiveUpdate: {
       autocomponentize_readers?: boolean | null;
       autoregister_readers?: boolean | null;
       flip_display_orientation?: boolean | null;
@@ -15018,8 +15894,9 @@ export interface components {
       proximity_sensor_tamper_distance_threshold?: number | null;
       updatedSetMethodMap?: { [key: string]: boolean | null } | null;
     };
-    Deviceconfig_settings_ExternalReadableAudioSettings: {
+    Device_config_settings_ExternalReadableAudioSettings: {
       audio_aec_via_software?: boolean | null;
+      audio_ai_disabled?: boolean | null;
       audio_analysis_enabled?: boolean | null;
       audio_external_mic_boost?: number | null;
       audio_external_mic_volume?: number | null;
@@ -15045,11 +15922,12 @@ export interface components {
       frontendEqualizerPeaking3?: components["schemas"]["FrontendEqualizerSettings"];
       frontendNoiseSuppression?: boolean | null;
     };
-    Deviceconfig_settings_ExternalReadableButtonSettings: {
+    Device_config_settings_ExternalReadableButtonSettings: {
       button_emergency_onsite_contact?: components["schemas"]["EmergencyContact"];
       button_test_mode_enabled?: boolean | null;
     };
-    Deviceconfig_settings_ExternalReadableDeviceSettings: {
+    Device_config_settings_ExternalReadableDeviceSettings: {
+      ai_license_invalid?: boolean | null;
       bandwidth_reports_disabled?: boolean | null;
       cloud_archive_days?: number | null;
       cloud_archive_upload_schedule?:
@@ -15060,8 +15938,8 @@ export interface components {
       cloud_archive_upload_schedule_uuid?: string | null;
       firmware_dev_settings?: { [key: string]: string | null } | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: ExternalReadableDeviceSettingsLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: ExternalReadableDeviceSettingsLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
       live_license_invalid?: boolean | null;
@@ -15074,7 +15952,7 @@ export interface components {
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: ExternalReadableDeviceSettingsThumbstripUploadTargetEnum | null;
     };
-    Deviceconfig_settings_ExternalReadableDeviceVideoSettings: {
+    Device_config_settings_ExternalReadableDeviceVideoSettings: {
       alert_rate_limit_human_only?: components["schemas"]["BurstyRateLimit"];
       alert_rate_limit_motion_only?: components["schemas"]["BurstyRateLimit"];
       alert_rate_limit_vehicle_only?: components["schemas"]["BurstyRateLimit"];
@@ -15082,7 +15960,7 @@ export interface components {
       ir_filter_mode?: ExternalReadableDeviceVideoSettingsIrFilterModeEnum | null;
       ir_leds_mode?: ExternalReadableDeviceVideoSettingsIrLedsModeEnum | null;
     };
-    Deviceconfig_settings_ExternalReadableDoorControllerSettings: {
+    Device_config_settings_ExternalReadableDoorControllerSettings: {
       autocomponentize_readers?: boolean | null;
       autoregister_readers?: boolean | null;
       flip_display_orientation?: boolean | null;
@@ -15090,7 +15968,7 @@ export interface components {
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
     };
-    Deviceconfig_settings_ExternalReadableVideoSettings: {
+    Device_config_settings_ExternalReadableVideoSettings: {
       ai_dewarp_config?: components["schemas"]["CameraAiDewarpConfigType"];
       behavior_detection?: boolean | null;
       blocked_debounce_time_ms?: number | null;
@@ -15101,7 +15979,8 @@ export interface components {
       con_vehicle_filter?: number | null;
       cross_counting?: boolean | null;
       cross_counting_settings?: components["schemas"]["CameraCrossCountingSettingsType"];
-      dewarpMode?: ExternalReadableVideoSettingsDewarpModeEnum | null;
+      custom_events?: boolean | null;
+      dewarpMode?: components["schemas"]["CameraDewarpModeEnum"];
       disabled_schedule?:
         | components["schemas"]["WeeklyMinuteIntervalType"][]
         | null;
@@ -15152,6 +16031,7 @@ export interface components {
       occupancy_counting?: boolean | null;
       people_counting?: boolean | null;
       person_ai_threshold?: number | null;
+      person_reidentification?: boolean | null;
       pose_detection?: boolean | null;
       ppe_detection?: boolean | null;
       privacy_window_polygons?:
@@ -15164,10 +16044,12 @@ export interface components {
       region_of_interest_groups?:
         | components["schemas"]["RegionOfInterestGroup"][]
         | null;
-      resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
+      resolution?: components["schemas"]["Device_config_settings_ExternalVideoResolution"];
       rotation?: number | null;
+      rtsp_encoder?: number | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
+      shared_fov?: (string | null)[] | null;
       shutter_time_max?: number | null;
       shutter_time_min?: number | null;
       snapshot_height?: number | null;
@@ -15183,6 +16065,7 @@ export interface components {
       vehicle_ai_threshold?: number | null;
       vehicle_counting?: boolean | null;
       vehicle_detection?: boolean | null;
+      video_ai_disabled?: boolean | null;
       video_persist_disabled?: boolean | null;
       visual_tamper_config?: components["schemas"]["CameraVisualTamperConfigType"];
       wdr_enabled?: boolean | null;
@@ -15190,16 +16073,17 @@ export interface components {
       zero_motion_video_bitrate_percent?: number | null;
       zero_motion_video_quality?: number | null;
     };
-    Deviceconfig_settings_ExternalVideoResolution: {
+    Device_config_settings_ExternalVideoResolution: {
       height?: number | null;
       width?: number | null;
     };
     /** Update Video Settings */
-    Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate: {
+    Device_config_settings_ExternalVideoSettingsSelectiveUpdate: {
       blocked_debounce_time_ms?: number | null;
       blocked_threshold?: number | null;
       char_threshold?: number | null;
-      dewarpMode?: ExternalVideoSettingsSelectiveUpdateDewarpModeEnum | null;
+      custom_events?: boolean | null;
+      dewarpMode?: components["schemas"]["CameraDewarpModeEnum"];
       disabled_schedule?:
         | components["schemas"]["WeeklyMinuteIntervalType"][]
         | null;
@@ -15233,6 +16117,7 @@ export interface components {
       night_shutter_time_min?: number | null;
       object_search?: boolean | null;
       occupancy_counting?: boolean | null;
+      person_reidentification?: boolean | null;
       privacy_window_polygons?:
         | components["schemas"]["RegionPolygonType"][]
         | null;
@@ -15243,10 +16128,12 @@ export interface components {
       region_of_interest_groups?:
         | components["schemas"]["RegionOfInterestGroup"][]
         | null;
-      resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
+      resolution?: components["schemas"]["Device_config_settings_ExternalVideoResolution"];
       rotation?: number | null;
+      rtsp_encoder?: number | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
+      shared_fov?: (string | null)[] | null;
       shutter_time_max?: number | null;
       shutter_time_min?: number | null;
       snapshot_height?: number | null;
@@ -15256,91 +16143,96 @@ export interface components {
       upload_all_detections?: boolean | null;
       use_onboard_lpr?: boolean | null;
       vehicle_detection?: boolean | null;
+      video_ai_disabled?: boolean | null;
       video_persist_disabled?: boolean | null;
       wdr_enabled?: boolean | null;
       wdr_strength?: number | null;
       zero_motion_video_bitrate_percent?: number | null;
     };
-    Deviceconfig_settings_IntRange: {
+    Device_config_settings_IntRange: {
       max?: number | null;
       min?: number | null;
     };
     /** Map of hardware variations to default video configurations */
-    Deviceconfig_settings_VideoConfigurationDefault: {
+    Device_config_settings_VideoConfigurationDefault: {
       humanDetection?: boolean | null;
-      resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
+      resolution?: components["schemas"]["Device_config_settings_ExternalVideoResolution"];
       segmentMaxBytes?: number | null;
       sensorGainMax?: number | null;
       shutterTimeMin?: number | null;
       vehicleDetection?: boolean | null;
     };
     /** Map of hardware variations to available video configuration options */
-    Deviceconfig_settings_VideoConfigurationOption: {
-      maxBitrateRange?: components["schemas"]["Deviceconfig_settings_IntRange"];
+    Device_config_settings_VideoConfigurationOption: {
+      maxBitrateRange?: components["schemas"]["Device_config_settings_IntRange"];
       maxZoomPercent?: number | null;
-      resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
-      wdrRange?: components["schemas"]["Deviceconfig_settings_IntRange"];
+      resolution?: components["schemas"]["Device_config_settings_ExternalVideoResolution"];
+      wdrRange?: components["schemas"]["Device_config_settings_IntRange"];
     };
     /** Device's faceted user configuration */
-    Deviceconfig_userconfig_ExternalReadableFacetedUserConfig: {
+    Device_config_userconfig_ExternalReadableFacetedUserConfig: {
       audioFacetSettings?: {
         [
           key: string
-        ]: components["schemas"]["Deviceconfig_settings_ExternalReadableAudioSettings"];
+        ]: components["schemas"]["Device_config_settings_ExternalReadableAudioSettings"];
       } | null;
-      buttonSettings?: components["schemas"]["Deviceconfig_settings_ExternalReadableButtonSettings"];
+      buttonSettings?: components["schemas"]["Device_config_settings_ExternalReadableButtonSettings"];
       climateSettings?: components["schemas"]["ClimateSettings"];
-      deviceSettings?: components["schemas"]["Deviceconfig_settings_ExternalReadableDeviceSettings"];
+      deviceSettings?: components["schemas"]["Device_config_settings_ExternalReadableDeviceSettings"];
       /** base 64 (url-safe) uuid string */
       deviceUuid?: string | null;
-      deviceVideoSettings?: components["schemas"]["Deviceconfig_settings_ExternalReadableDeviceVideoSettings"];
-      doorControllerSettings?: components["schemas"]["Deviceconfig_settings_ExternalReadableDoorControllerSettings"];
+      deviceVideoSettings?: components["schemas"]["Device_config_settings_ExternalReadableDeviceVideoSettings"];
+      doorControllerSettings?: components["schemas"]["Device_config_settings_ExternalReadableDoorControllerSettings"];
       doorReaderSettings?: components["schemas"]["DoorReaderSettings"];
       doorSensorSettings?: components["schemas"]["DoorSensorSettings"];
       environmentalGatewaySettings?: components["schemas"]["EnvironmentalGatewaySettings"];
       lastModified?: number | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
+      robotSettings?: components["schemas"]["RobotSettings"];
       tamperSettings?: components["schemas"]["TamperSettings"];
       thirdPartyCameraSettings?: components["schemas"]["ThirdPartyCameraSettings"];
       videoDoorbellSettings?: components["schemas"]["VideoDoorbellSettings"];
       videoFacetSettings?: {
         [
           key: string
-        ]: components["schemas"]["Deviceconfig_settings_ExternalReadableVideoSettings"];
+        ]: components["schemas"]["Device_config_settings_ExternalReadableVideoSettings"];
       } | null;
     };
     /** Configuration updates to apply to the device */
-    Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig: {
+    Device_config_userconfig_ExternalUpdateableFacetedUserConfig: {
       /** Update Audio settings */
       audioFacetSettings?: {
         [
           key: string
-        ]: components["schemas"]["Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate"];
+        ]: components["schemas"]["Device_config_settings_ExternalAudioSettingsSelectiveUpdate"];
       } | null;
       buttonSettings?: components["schemas"]["ButtonSettingsSelectiveUpdate"];
       climateSettings?: components["schemas"]["ClimateSettingsSelectiveUpdate"];
-      deviceSettings?: components["schemas"]["Deviceconfig_settings_ExternalDeviceSettingsSelectiveUpdate"];
+      deviceSettings?: components["schemas"]["Device_config_settings_ExternalDeviceSettingsSelectiveUpdate"];
       /** base 64 (url-safe) uuid string */
       deviceUuid?: string | null;
       deviceVideoSettings?: components["schemas"]["DeviceVideoSettingsSelectiveUpdate"];
-      doorControllerSettings?: components["schemas"]["Deviceconfig_settings_ExternalDoorControllerSettingsSelectiveUpdate"];
+      doorControllerSettings?: components["schemas"]["Device_config_settings_ExternalDoorControllerSettingsSelectiveUpdate"];
       doorReaderSettings?: components["schemas"]["DoorReaderSettingsSelectiveUpdate"];
       doorSensorSettings?: components["schemas"]["DoorSensorSettingsSelectiveUpdate"];
       environmentalGatewaySettings?: components["schemas"]["EnvironmentalGatewaySettingsSelectiveUpdate"];
+      robotSettings?: components["schemas"]["RobotSettingsSelectiveUpdate"];
       tamperSettings?: components["schemas"]["TamperSettingsSelectiveUpdate"];
       videoDoorbellSettings?: components["schemas"]["VideoDoorbellSettingsSelectiveUpdate"];
       /** Update Video Settings */
       videoFacetSettings?: {
         [
           key: string
-        ]: components["schemas"]["Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate"];
+        ]: components["schemas"]["Device_config_settings_ExternalVideoSettingsSelectiveUpdate"];
       } | null;
     };
     /** Doorbell camera configuration settings */
-    Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: {
+    Device_config_userconfig_IExternalReadableAudioVideoUserConfig: {
       ai_dewarp_config?: components["schemas"]["CameraAiDewarpConfigType"];
+      ai_license_invalid?: boolean | null;
       audio_aec_via_software?: boolean | null;
+      audio_ai_disabled?: boolean | null;
       audio_analysis_enabled?: boolean | null;
       audio_external_mic_boost?: number | null;
       audio_external_mic_volume?: number | null;
@@ -15373,12 +16265,13 @@ export interface components {
       con_vehicle_filter?: number | null;
       cross_counting?: boolean | null;
       cross_counting_settings?: components["schemas"]["CameraCrossCountingSettingsType"];
+      custom_events?: boolean | null;
       /** base 64 (url-safe) uuid string */
       deviceUuid?: string | null;
       device_mic_enabled?: boolean | null;
       device_near_audio_silenced?: boolean | null;
       device_speaker_enabled?: boolean | null;
-      dewarpMode?: IExternalReadableAudioVideoUserConfigDewarpModeEnum | null;
+      dewarpMode?: components["schemas"]["CameraDewarpModeEnum"];
       disabled_schedule?:
         | components["schemas"]["WeeklyMinuteIntervalType"][]
         | null;
@@ -15413,8 +16306,8 @@ export interface components {
       img_sharpness?: number | null;
       lastModified?: number | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: IExternalReadableAudioVideoUserConfigLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: IExternalReadableAudioVideoUserConfigLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       licenseplate_detection?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
@@ -15448,6 +16341,7 @@ export interface components {
       orgUuid?: string | null;
       people_counting?: boolean | null;
       person_ai_threshold?: number | null;
+      person_reidentification?: boolean | null;
       pose_detection?: boolean | null;
       ppe_detection?: boolean | null;
       privacy_window_polygons?:
@@ -15460,11 +16354,12 @@ export interface components {
       region_of_interest_groups?:
         | components["schemas"]["RegionOfInterestGroup"][]
         | null;
-      resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
+      resolution?: components["schemas"]["Device_config_settings_ExternalVideoResolution"];
       rotation?: number | null;
-      scanner_agent_disabled?: boolean | null;
+      rtsp_encoder?: number | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
+      shared_fov?: (string | null)[] | null;
       shutter_time_max?: number | null;
       shutter_time_min?: number | null;
       snapshot_height?: number | null;
@@ -15484,6 +16379,7 @@ export interface components {
       vehicle_ai_threshold?: number | null;
       vehicle_counting?: boolean | null;
       vehicle_detection?: boolean | null;
+      video_ai_disabled?: boolean | null;
       video_persist_disabled?: boolean | null;
       visual_tamper_config?: components["schemas"]["CameraVisualTamperConfigType"];
       wdr_enabled?: boolean | null;
@@ -15492,7 +16388,8 @@ export interface components {
       zero_motion_video_quality?: number | null;
     };
     /** Door controller configuration settings */
-    Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig: {
+    Device_config_userconfig_IExternalReadableDoorControllerUserConfig: {
+      ai_license_invalid?: boolean | null;
       autocomponentize_readers?: boolean | null;
       autoregister_readers?: boolean | null;
       bandwidth_reports_disabled?: boolean | null;
@@ -15509,8 +16406,8 @@ export interface components {
       flip_display_orientation?: boolean | null;
       lastModified?: number | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: IExternalReadableDoorControllerUserConfigLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: IExternalReadableDoorControllerUserConfigLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
       live_license_invalid?: boolean | null;
@@ -15522,15 +16419,16 @@ export interface components {
       pressure_switch_tamper_normally_open?: boolean | null;
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
-      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: IExternalReadableDoorControllerUserConfigSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: IExternalReadableDoorControllerUserConfigThumbstripUploadTargetEnum | null;
     };
     /** Audio/video user configuration update */
-    Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: {
+    Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig: {
+      ai_license_invalid?: boolean | null;
       audio_aec_via_software?: boolean | null;
+      audio_ai_disabled?: boolean | null;
       audio_external_mic_boost?: number | null;
       audio_external_mic_volume?: number | null;
       audio_external_speaker_volume?: number | null;
@@ -15549,12 +16447,13 @@ export interface components {
       blocked_debounce_time_ms?: number | null;
       blocked_threshold?: number | null;
       char_threshold?: number | null;
+      custom_events?: boolean | null;
       /** base 64 (url-safe) uuid string */
       deviceUuid?: string | null;
       device_mic_enabled?: boolean | null;
       device_near_audio_silenced?: boolean | null;
       device_speaker_enabled?: boolean | null;
-      dewarpMode?: IExternalUpdateableAudioVideoUserConfigDewarpModeEnum | null;
+      dewarpMode?: components["schemas"]["CameraDewarpModeEnum"];
       disabled_schedule?:
         | components["schemas"]["WeeklyMinuteIntervalType"][]
         | null;
@@ -15582,8 +16481,8 @@ export interface components {
       img_sharpness?: number | null;
       lastModified?: number | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: IExternalUpdateableAudioVideoUserConfigLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: IExternalUpdateableAudioVideoUserConfigLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
       live_license_invalid?: boolean | null;
@@ -15606,6 +16505,7 @@ export interface components {
       on_demand_license_invalid?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
+      person_reidentification?: boolean | null;
       privacy_window_polygons?:
         | components["schemas"]["RegionPolygonType"][]
         | null;
@@ -15616,11 +16516,12 @@ export interface components {
       region_of_interest_groups?:
         | components["schemas"]["RegionOfInterestGroup"][]
         | null;
-      resolution?: components["schemas"]["Deviceconfig_settings_ExternalVideoResolution"];
+      resolution?: components["schemas"]["Device_config_settings_ExternalVideoResolution"];
       rotation?: number | null;
-      scanner_agent_disabled?: boolean | null;
+      rtsp_encoder?: number | null;
       segment_max_bytes?: number | null;
       sensor_gain_max?: number | null;
+      shared_fov?: (string | null)[] | null;
       shutter_time_max?: number | null;
       shutter_time_min?: number | null;
       snapshot_height?: number | null;
@@ -15633,13 +16534,14 @@ export interface components {
       upload_all_detections?: boolean | null;
       use_onboard_lpr?: boolean | null;
       vehicle_detection?: boolean | null;
+      video_ai_disabled?: boolean | null;
       video_persist_disabled?: boolean | null;
       wdr_enabled?: boolean | null;
       wdr_strength?: number | null;
       zero_motion_video_bitrate_percent?: number | null;
     };
     /** Configuration update for the button sensor */
-    Deviceconfig_userconfig_IExternalUpdateableButtonUserConfig: {
+    Device_config_userconfig_IExternalUpdateableButtonUserConfig: {
       button_emergency_onsite_contact?: components["schemas"]["EmergencyContact"];
       button_test_mode_enabled?: boolean | null;
       /** base 64 (url-safe) uuid string */
@@ -15649,7 +16551,8 @@ export interface components {
       orgUuid?: string | null;
     };
     /** Configuration update for the door controller */
-    Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig: {
+    Device_config_userconfig_IExternalUpdateableDoorControllerUserConfig: {
+      ai_license_invalid?: boolean | null;
       autocomponentize_readers?: boolean | null;
       autoregister_readers?: boolean | null;
       bandwidth_reports_disabled?: boolean | null;
@@ -15659,8 +16562,8 @@ export interface components {
       flip_display_orientation?: boolean | null;
       lastModified?: number | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: IExternalUpdateableDoorControllerUserConfigLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: IExternalUpdateableDoorControllerUserConfigLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
       live_license_invalid?: boolean | null;
@@ -15671,12 +16574,77 @@ export interface components {
       pressure_switch_tamper_normally_open?: boolean | null;
       proximity_sensor_tamper_disabled?: boolean | null;
       proximity_sensor_tamper_distance_threshold?: number | null;
-      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: IExternalUpdateableDoorControllerUserConfigSnapshotUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
       storage_target_free_space_permyriad?: number | null;
       thumbstrip_upload_target?: IExternalUpdateableDoorControllerUserConfigThumbstripUploadTargetEnum | null;
     };
+    /** Request object for disabling device health tracking. */
+    Device_health_DisableDeviceHealthTrackingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+      reEnableCondition?: components["schemas"]["ReEnableDeviceHealthTrackingCondition"];
+    };
+    /** Response object for disabling device health tracking. */
+    Device_health_DisableDeviceHealthTrackingWSResponse: {
+      [key: string]: unknown;
+    };
+    /** Request object for enabling device health tracking. */
+    Device_health_EnableDeviceHealthTrackingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+    };
+    /** Response object for enabling device health tracking. */
+    Device_health_EnableDeviceHealthTrackingWSResponse: {
+      [key: string]: unknown;
+    };
+    /** Request object for finding devices with disabled health tracking. */
+    Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSRequest: {
+      [key: string]: unknown;
+    };
+    /** Response object for finding devices with disabled health tracking. */
+    Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSResponse: {
+      /** List of organization devices for which health tracking is disabled. */
+      disabledHealthTrackingInfos?:
+        | components["schemas"]["DeviceDisabledHealthTrackingInfo"][]
+        | null;
+    };
+    /** Request object for getting device health tracking. */
+    Device_health_GetDeviceHealthTrackingWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+    };
+    /** Response object for getting device health tracking. */
+    Device_health_GetDeviceHealthTrackingWSResponse: {
+      /** Whether device health tracking is currently enabled for this device. */
+      enabled?: boolean | null;
+      reEnableCondition?: components["schemas"]["ReEnableDeviceHealthTrackingCondition"];
+    };
+    /** Request object for adding a label to a device. */
+    Device_label_AddDeviceLabelWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+      /** Label to add to the device */
+      label?: string | null;
+    };
+    /** Response object for adding a label to a device. */
+    Device_label_AddDeviceLabelWSResponse: { [key: string]: unknown };
+    /** Request object for finding device labels by organization. */
+    Device_label_FindDeviceLabelsByOrgWSRequest: { [key: string]: unknown };
+    /** Response object containing device labels by organization. */
+    Device_label_FindDeviceLabelsByOrgWSResponse: {
+      /** Map of device UUIDs to their associated labels */
+      labelsByDevice?: { [key: string]: (string | null)[] | null } | null;
+    };
+    /** Request object for removing a label from a device. */
+    Device_label_RemoveDeviceLabelWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+      /** Label to remove from the device. */
+      label?: string | null;
+    };
+    /** Response object for removing a label from a device. */
+    Device_label_RemoveDeviceLabelWSResponse: { [key: string]: unknown };
     DewarpedView: {
       aspectRatio?: components["schemas"]["AspectRatio"];
       pitchDegrees?: number | null;
@@ -16111,7 +17079,7 @@ export interface components {
           componentCompositeUuid?: string | null;
           newState?: components["schemas"]["AccessControlledDoorStateEnumType"];
           originator?: components["schemas"]["BaseEventOriginator"];
-          source?: components["schemas"]["DoorStateSourceEnum"];
+          source?: components["schemas"]["AccessStateSourceEnum"];
         } & {
           /** base 64 (url-safe) uuid string */
           componentUuid?: string | null;
@@ -16129,22 +17097,6 @@ export interface components {
           uuid?: string | null;
         })
       | null;
-    DoorStateOverride: {
-      expireEarlyMode?: components["schemas"]["EarlyExpireModeEnum"];
-      expiresAtMillis?: number | null;
-      followFirstInRules?: boolean | null;
-      originator?: components["schemas"]["BaseEventOriginator"];
-      requestedAtMillis?: number | null;
-      startDelaySeconds?: number | null;
-      state?: components["schemas"]["AccessControlledDoorStateEnumType"];
-      type?: components["schemas"]["ManualDoorStateChangeEnum"];
-    } | null;
-    DoorStateShadow: {
-      source?: components["schemas"]["DoorStateSourceEnum"];
-      state?: components["schemas"]["AccessControlledDoorStateEnumType"];
-      stateUpdateEventTimestampMs?: number | null;
-    };
-    DoorStateSourceEnum: DoorStateSourceEnum;
     DoorType: {
       id?: number | null;
       name?: string | null;
@@ -16168,6 +17120,7 @@ export interface components {
       doorEvents?: components["schemas"]["DoorEventType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving basic state information for all door sensors. */
     Door_GetMinimalDoorStatesWSRequest: { [key: string]: unknown };
@@ -16177,6 +17130,7 @@ export interface components {
       doorStates?: components["schemas"]["Door_MinimalDoorStateType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Minimal state information for a door sensor. */
     Door_MinimalDoorStateType: {
@@ -16266,6 +17220,7 @@ export interface components {
     Door_UpdateDoorSensorDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     DoorbellEventType:
       | ({
@@ -16299,6 +17254,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       ruleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a shared live video stream for a doorbell camera. */
     Doorbellcamera_CreateSharedLiveVideoStreamWSRequest: {
@@ -16330,6 +17286,7 @@ export interface components {
       sharedLiveVideoStreamUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       sharedLiveVideoStreamUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for removing a doorbell camera from the organization. */
     Doorbellcamera_DeleteDoorbellCameraWSRequest: {
@@ -16344,6 +17301,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the delete operation */
       responseStatus?: DeleteDoorbellCameraWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a rule for a doorbell camera. */
     Doorbellcamera_DeleteRuleForDoorbellCameraWSRequest: {
@@ -16356,6 +17314,7 @@ export interface components {
     Doorbellcamera_DeleteRuleForDoorbellCameraWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Information for offline LAN streaming of doorbell camera content. */
     Doorbellcamera_DoorbellCameraOfflineLanStreamingInfo: {
@@ -16397,6 +17356,7 @@ export interface components {
       componentEvents?: components["schemas"]["ComponentEventType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving component seekpoints for a doorbell camera. */
     Doorbellcamera_FindComponentSeekPointsForDoorbellCameraWSRequest: {
@@ -16413,6 +17373,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of component seekpoints for the doorbell camera */
       seekpoints?: components["schemas"]["ComponentSeekPointType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding shared live video streams for a doorbell camera. */
     Doorbellcamera_FindSharedLiveVideoStreamsForWSRequest: {
@@ -16427,12 +17388,14 @@ export interface components {
       sharedLiveVideoStreams?:
         | components["schemas"]["Camera_SharedLiveVideoStreamWS"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Response object containing doorbell camera configuration. */
     Doorbellcamera_GetDoorbellCameraConfigWSResponse: {
-      config?: components["schemas"]["Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig"];
+      config?: components["schemas"]["Device_config_userconfig_IExternalReadableAudioVideoUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object containing detailed state information for a doorbell camera. */
     Doorbellcamera_GetDoorbellCameraFullStateWSResponse: {
@@ -16484,6 +17447,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Doorbellcamera_DoorbellCameraOfflineLanStreamingInfo"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving rules for all doorbell cameras in an organization. */
     Doorbellcamera_GetDoorbellCameraRulesForOrgWSRequest: {
@@ -16499,6 +17463,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving all rules for a doorbell camera. */
     Doorbellcamera_GetRulesForDoorbellCameraWSRequest: {
@@ -16513,6 +17478,7 @@ export interface components {
       rules?:
         | components["schemas"]["Doorbellcamera_ExternalDoorbellCameraComponentRuleType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for rebooting a doorbell camera. */
     Doorbellcamera_RebootDoorbellCameraWSRequest: {
@@ -16521,7 +17487,7 @@ export interface components {
     };
     /** Request object for updating doorbell camera configuration. */
     Doorbellcamera_UpdateDoorbellCameraConfigWSRequest: {
-      configUpdate?: components["schemas"]["Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig"];
+      configUpdate?: components["schemas"]["Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig"];
     };
     /** Request object for updating hardware details of a doorbell camera. */
     Doorbellcamera_UpdateDoorbellCameraDetailsWSRequest: {
@@ -16557,6 +17523,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       rule?: components["schemas"]["RuleType"];
+      warningMsg?: string | null;
     };
     /** Request object for deleting a rule owned by a door controller. */
     Doorcontroller_DeleteDoorControllerRuleWSRequest: {
@@ -16582,6 +17549,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the delete operation */
       responseStatus?: DeleteDoorControllerWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Discovered Aperio door device information. */
     Doorcontroller_DoorControllerDiscoveredAperioDoor: {
@@ -16718,9 +17686,10 @@ export interface components {
     };
     /** Response object containing door controller configuration. */
     Doorcontroller_GetDoorControllerConfigWSResponse: {
-      config?: components["schemas"]["Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig"];
+      config?: components["schemas"]["Device_config_userconfig_IExternalReadableDoorControllerUserConfig"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a specific rule owned by a door controller. */
     Doorcontroller_GetDoorControllerRuleWSRequest: {
@@ -16744,6 +17713,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of rules owned by the door controller */
       rules?: components["schemas"]["RuleType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving state information for all door controllers in an organization. */
     Doorcontroller_GetDoorControllerStateListWSRequest: {
@@ -16757,6 +17727,7 @@ export interface components {
       stateList?:
         | components["schemas"]["Doorcontroller_DoorControllerStateType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for registering a Rhombus reader discovered by a door controller. */
     Doorcontroller_RegisterDiscoveredRhombusReaderWSRequest: {
@@ -16775,7 +17746,7 @@ export interface components {
     };
     /** Request object for updating door controller configuration. */
     Doorcontroller_UpdateDoorControllerConfigWSRequest: {
-      configUpdate?: components["schemas"]["Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig"];
+      configUpdate?: components["schemas"]["Device_config_userconfig_IExternalUpdateableDoorControllerUserConfig"];
     };
     /** Request object for updating details for a door controller. */
     Doorcontroller_UpdateDoorControllerDetailsWSRequest: {
@@ -16800,6 +17771,7 @@ export interface components {
     Doorcontroller_UpdateDoorControllerDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a rule owned by a door controller. */
     Doorcontroller_UpdateDoorControllerRuleWSRequest: {
@@ -16918,6 +17890,17 @@ export interface components {
       emergencyContactList?: components["schemas"]["EmergencyContact"][] | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
+    };
+    EnableDisableAudioRecordActionRecordType: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+      enable?: boolean | null;
+      succeeded?: boolean | null;
+    };
+    EnableDisableAudioRecordActionType: {
+      /** base 64 (url-safe) uuid string */
+      audioDeviceUuid?: string | null;
+      enable?: boolean | null;
     };
     /** Entity object for exposing to OpenAPI component schemas */
     Entity: EntityEnum;
@@ -17138,6 +18121,7 @@ export interface components {
       configJson?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     EventCount: {
       count?: number | null;
@@ -17180,6 +18164,7 @@ export interface components {
       shareUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting alert monitoring threat cases by status. */
     Event_DeleteAlertMonitoringThreatCaseByStatusWSRequest: {
@@ -17189,6 +18174,7 @@ export interface components {
     Event_DeleteAlertMonitoringThreatCaseByStatusWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting alert monitoring threat cases. */
     Event_DeleteAlertMonitoringThreatCaseWSRequest: {
@@ -17199,6 +18185,7 @@ export interface components {
     Event_DeleteAlertMonitoringThreatCaseWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a saved clip. */
     Event_DeleteSavedClipWSRequest: {
@@ -17209,6 +18196,7 @@ export interface components {
     Event_DeleteSavedClipWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a shared clip group. */
     Event_DeleteSharedClipGroupWSRequest: {
@@ -17219,6 +18207,7 @@ export interface components {
     Event_DeleteSharedClipGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for dismissing all policy alerts for specific devices. */
     Event_DismissAllPolicyAlertsForDeviceWSRequest: {
@@ -17229,6 +18218,7 @@ export interface components {
     Event_DismissAllPolicyAlertsForDeviceWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for dismissing all policy alerts. */
     Event_DismissAllPolicyAlertsWSRequest: { [key: string]: unknown };
@@ -17236,6 +18226,7 @@ export interface components {
     Event_DismissAllPolicyAlertsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for dismissing a policy alert. */
     Event_DismissPolicyAlertWSRequest: {
@@ -17246,6 +18237,7 @@ export interface components {
     Event_DismissPolicyAlertWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for dismissing multiple policy alerts. */
     Event_DismissPolicyAlertsWSRequest: {
@@ -17256,6 +18248,7 @@ export interface components {
     Event_DismissPolicyAlertsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Represents a cell in the motion grid with column and row coordinates. */
     Event_FrontendCell: {
@@ -17274,6 +18267,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       threatCase?: components["schemas"]["AlertMonitoringThreatCaseType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving alert monitoring threat cases with filtering and pagination options. */
     Event_GetAlertMonitoringThreatCasesWSRequest: {
@@ -17307,6 +18301,7 @@ export interface components {
       threatCases?:
         | components["schemas"]["AlertMonitoringThreatCaseType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a specific clip with progress information. */
     Event_GetClipWithProgressWSRequest: {
@@ -17318,6 +18313,7 @@ export interface components {
       clip?: components["schemas"]["Event_SavedClipWithProgressType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving clips with progress information and filtering options. */
     Event_GetClipsWithProgressWSRequest: {
@@ -17356,6 +18352,7 @@ export interface components {
       savedClips?:
         | components["schemas"]["Event_SavedClipWithProgressType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving expiring policy alerts. */
     Event_GetExpiringPolicyAlertsWSRequest: {
@@ -17372,6 +18369,7 @@ export interface components {
       lastEvaluatedKey?: string | null;
       /** List of expiring policy alerts */
       policyAlerts?: components["schemas"]["BasePolicyAlertType"][] | null;
+      warningMsg?: string | null;
     };
     /** Response object containing motion grid counts for a device. */
     Event_GetMotionGridCountsWSResponse: {
@@ -17379,6 +18377,7 @@ export interface components {
       countGrid?: ((number | null)[] | null)[] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving motion grid data for a device. */
     Event_GetMotionGridWSRequest: {
@@ -17397,6 +18396,7 @@ export interface components {
       motionCells?: {
         [key: string]: components["schemas"]["Event_FrontendCell"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving the count of policy alerts. */
     Event_GetPolicyAlertCountWSRequest: {
@@ -17409,6 +18409,7 @@ export interface components {
       count?: number | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving detailed information about a policy alert. */
     Event_GetPolicyAlertDetailsWSRequest: {
@@ -17420,6 +18421,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       policyAlert?: components["schemas"]["PolicyAlertWithDetailsType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving policy alert groups for a specific device. */
     Event_GetPolicyAlertGroupsForDeviceWSRequest: {
@@ -17440,6 +18442,7 @@ export interface components {
       policyAlertGroups?:
         | components["schemas"]["Event_PolicyAlertGroupV2"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving policy alert groups for a specific location. */
     Event_GetPolicyAlertGroupsForLocationWSRequest: {
@@ -17460,6 +18463,7 @@ export interface components {
       policyAlertGroups?:
         | components["schemas"]["Event_PolicyAlertGroupV2"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving policy alert groups V2 with pagination options. */
     Event_GetPolicyAlertGroupsV2WSRequest: {
@@ -17478,6 +18482,7 @@ export interface components {
       policyAlertGroups?:
         | components["schemas"]["Event_PolicyAlertGroupV2"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a specific policy alert V2. */
     Event_GetPolicyAlertV2WSRequest: {
@@ -17489,6 +18494,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       policyAlert?: components["schemas"]["PolicyAlertV2Type"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving a specific policy alert. */
     Event_GetPolicyAlertWSRequest: {
@@ -17500,6 +18506,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       policyAlert?: components["schemas"]["BasePolicyAlertType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving policy alerts V2 with filtering and pagination options. */
     Event_GetPolicyAlertsV2WSRequest: {
@@ -17525,6 +18532,7 @@ export interface components {
       oldestPolicyAlert?: components["schemas"]["PolicyAlertV2Type"];
       /** List of policy alerts V2 matching the request criteria */
       policyAlerts?: components["schemas"]["PolicyAlertV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving policy alerts with filtering and pagination options. */
     Event_GetPolicyAlertsWSRequest: {
@@ -17551,6 +18559,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of policy alerts matching the request criteria */
       policyAlerts?: components["schemas"]["BasePolicyAlertType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving the count of saved clips with filtering options. */
     Event_GetSavedClipCountWSRequest: {
@@ -17571,6 +18580,7 @@ export interface components {
       errorMsg?: string | null;
       /** Count of private saved clips matching the filter criteria */
       privateCount?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving detailed information about a saved clip. */
     Event_GetSavedClipDetailsWSRequest: {
@@ -17582,6 +18592,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       savedClip?: components["schemas"]["SavedClipWithDetailsType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving saved clips by external transaction ID. */
     Event_GetSavedClipsByExternalTransactionIdWSRequest: {
@@ -17594,6 +18605,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of saved clips matching the external transaction ID */
       savedClips?: components["schemas"]["SavedClipV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving saved clips with pagination. */
     Event_GetSavedClipsV2WSRequest: {
@@ -17606,8 +18618,11 @@ export interface components {
     Event_GetSavedClipsV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      /** Timestamp of the last evaluated clip for pagination */
+      lastEvaluatedTimestampMs?: number | null;
       /** List of saved clips */
       savedClips?: components["schemas"]["SavedClipV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving saved clips (deprecated). */
     Event_GetSavedClipsWSRequest: { [key: string]: unknown };
@@ -17617,6 +18632,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of saved clips */
       savedClips?: components["schemas"]["SavedClipV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving detailed information about a shared clip group. */
     Event_GetSharedClipGroupDetailsWSRequest: {
@@ -17628,6 +18644,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       sharedClipGroup?: components["schemas"]["SharedClipGroupWithDetailsType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving shared clip groups with date filtering. */
     Event_GetSharedClipGroupsV2WSRequest: {
@@ -17644,6 +18661,7 @@ export interface components {
       sharedClipGroups?:
         | components["schemas"]["SharedClipGroupWrapperV2Type"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving shared clip groups (deprecated). */
     Event_GetSharedClipGroupsWSRequest: { [key: string]: unknown };
@@ -17655,6 +18673,7 @@ export interface components {
       sharedClipGroups?:
         | components["schemas"]["SharedClipGroupWrapperType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving spliced clips in progress (deprecated). */
     Event_GetSplicedClipsInProgressWSRequest: { [key: string]: unknown };
@@ -17664,6 +18683,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of spliced clips currently in progress */
       splicedClips?: components["schemas"]["SplicedClipType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving unhealthy device alerts. */
     Event_GetUnhealthyDeviceAlertsWSRequest: { [key: string]: unknown };
@@ -17675,6 +18695,7 @@ export interface components {
       unhealthyDeviceAlerts?:
         | components["schemas"]["UnHealthyDeviceAlertType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for muting notifications for a specific device. */
     Event_MuteNotificationsForDevicetWSRequest: {
@@ -17687,6 +18708,7 @@ export interface components {
     Event_MuteNotificationsForDevicetWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Group of policy alerts V2 with time range information. */
     Event_PolicyAlertGroupV2: {
@@ -17705,6 +18727,7 @@ export interface components {
     Event_ReportBadPolicyAlertWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Wrapper object containing UUIDs for alerts and events. */
     Event_RuuidWrapper: {
@@ -17730,6 +18753,7 @@ export interface components {
     Event_SavePolicyAlertWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Saved clip with progress information for processing operations. */
     Event_SavedClipWithProgressType: {
@@ -17740,6 +18764,7 @@ export interface components {
       analyzed?: boolean | null;
       byteCount?: number | null;
       clipLocation?: components["schemas"]["MetaDataLocationType"];
+      clipLocationV2?: string | null;
       consoleDelete?: boolean | null;
       createdAtMs?: number | null;
       /** Current operation being performed on the clip */
@@ -17772,6 +18797,7 @@ export interface components {
       sourceAlertUuid?: string | null;
       status?: SavedClipWithProgressStatusEnum | null;
       thumbnailLocation?: components["schemas"]["MetaDataLocationType"];
+      thumbnailLocationV2?: string | null;
       timestampMs?: number | null;
       title?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -17797,6 +18823,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of timestamps where motion was detected in the specified cells */
       timeUtcSecsList?: (number | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching motion grid data with activity information. */
     Event_SearchMotionGridWithActivitiesWSRequest: {
@@ -17819,6 +18846,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Event_SearchMotionGridWithActivitiesWSResponse_MotionGridActivity"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Activity information with object ID. */
     Event_SearchMotionGridWithActivitiesWSResponse_ActivityWithId: {
@@ -17847,6 +18875,7 @@ export interface components {
     Event_UnSavePolicyAlertWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating the text description of a policy alert. */
     Event_UpdatePolicyAlertTextDescriptionWSRequest: {
@@ -17859,6 +18888,7 @@ export interface components {
     Event_UpdatePolicyAlertTextDescriptionWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a saved clip. */
     Event_UpdateSavedClipWSRequest: {
@@ -17874,6 +18904,7 @@ export interface components {
     Event_UpdateSavedClipWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a shared clip group. */
     Event_UpdateSharedClipGroupWSRequest: {
@@ -17895,6 +18926,7 @@ export interface components {
       shareUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a clip group. */
     Event_groups_CreateClipGroupWSRequest: {
@@ -17911,6 +18943,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a clip group. */
     Event_groups_DeleteClipGroupWSRequest: {
@@ -17921,6 +18954,7 @@ export interface components {
     Event_groups_DeleteClipGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving detailed information about a clip group. */
     Event_groups_GetClipGroupDetailsWSRequest: {
@@ -17932,6 +18966,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       group?: components["schemas"]["ClipGroupWithDetailsType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving clip groups for an organization with date filtering. */
     Event_groups_GetClipGroupsForOrgWSRequest: {
@@ -17946,6 +18981,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of clip groups for the organization */
       groups?: components["schemas"]["ClipGroupType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a clip group. */
     Event_groups_UpdateClipGroupWSRequest: {
@@ -17962,6 +18998,7 @@ export interface components {
     Event_groups_UpdateClipGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Combined seekpoint type containing information from various event sources including timestamps, activities, and metadata. */
     Eventsearch_CombinedSeekPointType: {
@@ -18001,6 +19038,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving event seekpoints V2 with enhanced filtering and clustering options. */
     Eventsearch_GetEventSeekpointsV2WSRequest: {
@@ -18053,6 +19091,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching clothing and vehicle events by color with time and device filtering. */
     Eventsearch_SearchClothingAndVehicleByColorWSRequest: {
@@ -18081,6 +19120,11 @@ export interface components {
       startTime?: number | null;
       /** Whether to use multi-camera search functionality */
       useMultiCamera?: boolean | null;
+    };
+    ExampleImage: {
+      description?: string | null;
+      image?: string | null;
+      label?: string | null;
     };
     /** Request object for exporting audit events to CSV format with filtering options. */
     Export_ExportAuditEventsWSRequest: {
@@ -18116,6 +19160,8 @@ export interface components {
       startDate?: string | null;
       /** Start datetime as a UNIX timestamp in milliseconds */
       startTimeMs: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
       /** Type of alert to fetch */
       type: ExportCountReportsWSRequestTypeEnum | null;
       /** Enter the UUID of device(s) or location(s) */
@@ -18274,10 +19320,6 @@ export interface components {
       orgUuid?: string | null;
       /** base 64 (url-safe) uuid string */
       personUuid?: string | null;
-      /** Pitch angle of the detected face */
-      pitch?: number | null;
-      /** Roll angle of the detected face */
-      roll?: number | null;
       selectedPersonMatch?: components["schemas"]["Facerecognition_faceevent_ExternalPersonMatch"];
       subLocationsHierarchyKey?: components["schemas"]["SubLocationsHierarchyKey"];
       /** S3 key for the face event thumbnail */
@@ -18288,8 +19330,6 @@ export interface components {
         | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
-      /** Yaw angle of the detected face */
-      yaw?: number | null;
     };
     /** Search filter for face events with embedding presence filtering. */
     Facerecognition_faceevent_ExternalFaceEventSearchFilter: {
@@ -18732,6 +19772,7 @@ export interface components {
       featureList?:
         | components["schemas"]["Feature_DeviceFeaturesType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving enabled features for a device. */
     Feature_GetDeviceFeaturesWSRequest: {
@@ -18743,6 +19784,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       features?: components["schemas"]["Feature_DeviceFeaturesType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving the feature compatibility matrix. */
     Feature_GetFeatureCompatabilityMatrixWSRequest: { [key: string]: unknown };
@@ -18754,6 +19796,7 @@ export interface components {
       featureCompatabilityMatrix?:
         | components["schemas"]["FeatureCompatabilityType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating enabled features for a device. */
     Feature_UpdateDeviceFeaturesWSRequest: {
@@ -18766,6 +19809,7 @@ export interface components {
     Feature_UpdateDeviceFeaturesWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     FirmwareUpdateIntervalType: {
       minuteOfWeekStart?: number | null;
@@ -18803,7 +19847,6 @@ export interface components {
     };
     FirstInStatus: FirstInStatusEnum;
     FirstInStatus_Minimal: FirstInStatus_MinimalEnum;
-    /** Fisheye display mode of the shared video wall device */
     FisheyeDisplayMode: FisheyeDisplayModeEnum;
     FlicDevice: {
       flicAction?: string | null;
@@ -19213,6 +20256,8 @@ export interface components {
       embeddingId?: string | null;
       /** bounding box - left permyriad */
       l?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
       model?: components["schemas"]["ObjectSearchModelEnum"];
       objectId?: number | null;
       objectType?: string | null;
@@ -19220,6 +20265,7 @@ export interface components {
       orgUuid?: string | null;
       /** bounding box - right permyriad */
       r?: number | null;
+      stableTrackId?: string | null;
       /** bounding box - top permyriad */
       t?: number | null;
       thumbnailUri?: string | null;
@@ -19290,6 +20336,8 @@ export interface components {
       embedding?: (number | null)[] | null;
       embeddingId?: string | null;
       endTimeMs?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
       model?: components["schemas"]["VideoSimilarityModelEnum"];
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -19708,6 +20756,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       redirectUrl?: string | null;
+      warningMsg?: string | null;
     };
     /** Base request object for guest management operations. */
     Guestmanagement_BaseGuestManagementWSRequest: { [key: string]: unknown };
@@ -19721,6 +20770,7 @@ export interface components {
     Guestmanagement_CreateGuestManagementSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a guest with optional file attachment. */
     Guestmanagement_CreateGuestWSRequest: {
@@ -19757,6 +20807,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of all guest invites */
       guestInvites?: components["schemas"]["GuestInvite"][] | null;
+      warningMsg?: string | null;
     };
     /** Response object containing all guests. */
     Guestmanagement_GetAllGuestsWSResponse: {
@@ -19764,6 +20815,7 @@ export interface components {
       allGuests?: components["schemas"]["Guest"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Guestmanagement_GetGuestActivityLogsWSRequest: {
       createdAfterMs?: number | null;
@@ -19774,12 +20826,14 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       guestActivities?: components["schemas"]["GuestActivityLog"][] | null;
+      warningMsg?: string | null;
     };
     /** Response object containing guest invite information. */
     Guestmanagement_GetGuestInviteWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       guestInvite?: components["schemas"]["GuestInvite"];
+      warningMsg?: string | null;
     };
     /** Response object containing guest invites. */
     Guestmanagement_GetGuestInvitesWSResponse: {
@@ -19787,17 +20841,20 @@ export interface components {
       errorMsg?: string | null;
       /** List of guest invites */
       guestInvites?: components["schemas"]["GuestInvite"][] | null;
+      warningMsg?: string | null;
     };
     Guestmanagement_GetGuestManagementSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       settings?: components["schemas"]["GuestManagementOrgSettings"];
+      warningMsg?: string | null;
     };
     /** Response object containing guest information. */
     Guestmanagement_GetGuestWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       guest?: components["schemas"]["Guest"];
+      warningMsg?: string | null;
     };
     Guestmanagement_GetInvitesForOrgWSRequest: {
       invitedAfterMs?: number | null;
@@ -19808,11 +20865,13 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       kiosk?: components["schemas"]["Kiosk"];
+      warningMsg?: string | null;
     };
     Guestmanagement_GetKiosksForOrgWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       kiosks?: components["schemas"]["Kiosk"][] | null;
+      warningMsg?: string | null;
     };
     Guestmanagement_GetNametagTemplateForGuestWSRequest: {
       email?: string | null;
@@ -19822,6 +20881,7 @@ export interface components {
       companyLogoUrl?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding a guest by email address. */
     Guestmanagement_GuestByEmailWSRequest: {
@@ -19859,6 +20919,7 @@ export interface components {
     Guestmanagement_UpdateGuestManagementSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating guest information. */
     Guestmanagement_UpdateGuestWSRequest: {
@@ -19949,6 +21010,7 @@ export interface components {
       success?: boolean | null;
       /** ID of the created support ticket */
       ticketId?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving open support tickets V2 with time range filtering. */
     Help_GetOpenTicketsV2WSRequest: {
@@ -19965,6 +21027,7 @@ export interface components {
       tickets?: components["schemas"]["Help_TicketInformation"][] | null;
       /** List of user-specific support tickets */
       userTickets?: components["schemas"]["Help_TicketInformation"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving open support tickets with pagination. */
     Help_GetOpenTicketsWSRequest: {
@@ -19983,6 +21046,7 @@ export interface components {
       tickets?: components["schemas"]["Help_TicketInformation"][] | null;
       /** Total number of tickets, not limited to the current page */
       totalTickets?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for processing a Return Merchandise Authorization (RMA). */
     Help_ProcessRMAWSRequest: {
@@ -20008,6 +21072,7 @@ export interface components {
       success?: boolean | null;
       /** ID of the RMA ticket created */
       ticketId?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for sending system feedback. */
     Help_SendFeedbackWSRequest: {
@@ -20022,6 +21087,7 @@ export interface components {
       failureReason?: string | null;
       /** Whether the feedback was sent successfully */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Shipping address information for RMA returns. */
     Help_ShippingAddress: {
@@ -20072,6 +21138,7 @@ export interface components {
       suggestedArticles?: (string | null)[] | null;
       /** List of device uptime time windows */
       uptimeWindows?: components["schemas"]["TimeWindowSeconds"][] | null;
+      warningMsg?: string | null;
     };
     HttpHeaders:
       | ({
@@ -20204,7 +21271,9 @@ export interface components {
     };
     /** Audio gateway configuration settings */
     IAudioUserConfig: {
+      ai_license_invalid?: boolean | null;
       audio_aec_via_software?: boolean | null;
+      audio_ai_disabled?: boolean | null;
       audio_analysis_enabled?: boolean | null;
       audio_analysis_params?: components["schemas"]["AudioParamConfig"];
       audio_external_mic_boost?: number | null;
@@ -20245,8 +21314,8 @@ export interface components {
       frontendNoiseSuppression?: boolean | null;
       lastModified?: number | null;
       led_mode_blink_period_ms?: number | null;
-      led_mode_when_active?: IAudioUserConfigLedModeWhenActiveEnum | null;
-      led_mode_when_inactive?: IAudioUserConfigLedModeWhenInactiveEnum | null;
+      led_mode_when_active?: components["schemas"]["LEDModeEnum"];
+      led_mode_when_inactive?: components["schemas"]["LEDModeEnum"];
       led_stealth_mode?: boolean | null;
       lightweight_detection_disabled?: boolean | null;
       live_license_invalid?: boolean | null;
@@ -20255,7 +21324,6 @@ export interface components {
       on_demand_license_invalid?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
-      scanner_agent_disabled?: boolean | null;
       snapshot_upload_target?: IAudioUserConfigSnapshotUploadTargetEnum | null;
       splice_clip_upload_target?: IAudioUserConfigSpliceClipUploadTargetEnum | null;
       storage_target_free_megabytes?: number | null;
@@ -20885,6 +21953,62 @@ export interface components {
       enabled?: boolean | null;
       serverUrl?: string | null;
     };
+    /** Response for segmentation using box prompts. */
+    Inference_SegmentWithBoxesWSResponse: {
+      /** Bounding boxes in [x1, y1, x2, y2] pixel coordinates. */
+      boxesXyxy?: ((number | null)[] | null)[] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** Height of the input image in pixels. */
+      imageHeight?: number | null;
+      /** Width of the input image in pixels. */
+      imageWidth?: number | null;
+      /** Format of the returned masks (ex: png_base64). */
+      maskFormat?: string | null;
+      /** Base64-encoded mask images. */
+      masks?: (string | null)[] | null;
+      /** Confidence score for each returned mask. */
+      scores?: (number | null)[] | null;
+      warningMsg?: string | null;
+    };
+    /** Response for segmentation using point prompts. */
+    Inference_SegmentWithPointsWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** Height of the input image in pixels. */
+      imageHeight?: number | null;
+      /** Width of the input image in pixels. */
+      imageWidth?: number | null;
+      /** Point labels payload that was provided. */
+      labels?: string | null;
+      /** Format of the returned masks (ex: png_base64). */
+      maskFormat?: string | null;
+      /** Base64-encoded mask images. */
+      masks?: (string | null)[] | null;
+      /** Point coordinates payload that was provided. */
+      points?: string | null;
+      warningMsg?: string | null;
+    };
+    /** Response for segmentation using a text prompt. */
+    Inference_SegmentWithTextWSResponse: {
+      /** Bounding boxes in [x1, y1, x2, y2] pixel coordinates. */
+      boxesXyxy?: ((number | null)[] | null)[] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** Height of the input image in pixels. */
+      imageHeight?: number | null;
+      /** Width of the input image in pixels. */
+      imageWidth?: number | null;
+      /** Format of the returned masks (ex: png_base64). */
+      maskFormat?: string | null;
+      /** Base64-encoded mask images. */
+      masks?: (string | null)[] | null;
+      /** Confidence score for each returned mask. */
+      scores?: (number | null)[] | null;
+      /** The text prompt used for segmentation. */
+      text?: string | null;
+      warningMsg?: string | null;
+    };
     InformacastScenario: {
       id?: string | null;
       name?: string | null;
@@ -21115,11 +22239,13 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       integrations?: components["schemas"]["IntegrationEnum"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetAllGuestsWSResponse: {
       allGuests?: components["schemas"]["Guest"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetAllOrgIntegrationsV2WSResponse: {
       error?: boolean | null;
@@ -21127,6 +22253,7 @@ export interface components {
       orgIntegrationsV2?: {
         [key: string]: components["schemas"]["IBaseIntegrationType"];
       } | null;
+      warningMsg?: string | null;
     };
     Integration_GetAmtReadersWSRequest: {
       email?: string | null;
@@ -21143,12 +22270,14 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetApiTokenApplicationsWSRequest: { [key: string]: unknown };
     Integration_GetApiTokenApplicationsWSResponse: {
       applications?: components["schemas"]["ApiTokenApplicationType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving API tokens. */
     Integration_GetApiTokensWSRequest: {
@@ -21161,24 +22290,28 @@ export interface components {
       apiTokens?: components["schemas"]["ApiTokenType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetBadgeIntegrationDoorsWSResponse: {
       authError?: boolean | null;
       doors?: components["schemas"]["DoorType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetBadgeIntegrationGenericDoorsWSResponse: {
       authError?: boolean | null;
       doors?: components["schemas"]["GenericDoorType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetBadgeIntegrationPlacesWSResponse: {
       authError?: boolean | null;
       error?: boolean | null;
       errorMsg?: string | null;
       places?: components["schemas"]["PlaceType"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetBrivoDoorsWSRequest: {
       password?: string | null;
@@ -21189,6 +22322,7 @@ export interface components {
       doors?: components["schemas"]["DoorType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetButterflymxPanelsWSRequest: {
       email?: string | null;
@@ -21199,6 +22333,7 @@ export interface components {
       buildings?: components["schemas"]["ButterflymxBuilding"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetCalendlyEventDetailsWSRequest: {
       eventUuid?: string | null;
@@ -21210,6 +22345,7 @@ export interface components {
       errorMsg?: string | null;
       name?: string | null;
       startTimeMs?: number | null;
+      warningMsg?: string | null;
     };
     Integration_GetEnvoyDeliveriesWSRequest: {
       endTimestampMs?: number | null;
@@ -21221,6 +22357,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       pendingDeliveries?: components["schemas"]["EnvoyDelivery"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetEnvoyEmployeesWSRequest: {
       locationIds?: (string | null)[] | null;
@@ -21229,6 +22366,7 @@ export interface components {
       employees?: components["schemas"]["EnvoyPersonInfo"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetEnvoyLocationsWSRequest: { [key: string]: unknown };
     Integration_GetEnvoyLocationsWSResponse: {
@@ -21236,6 +22374,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       locationList?: components["schemas"]["EnvoyLocation"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetEnvoyVisitorsWSRequest: {
       endTimestampMs?: number | null;
@@ -21248,10 +22387,12 @@ export interface components {
       errorMsg?: string | null;
       invites?: components["schemas"]["EnvoyExpectedGuest"][] | null;
       visitors?: components["schemas"]["EnvoyGuest"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetFlicDevicesWSRequest: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetFlicDevicesWSResponse: {
       authError?: boolean | null;
@@ -21259,6 +22400,7 @@ export interface components {
       errorMsg?: string | null;
       flicDevices?: components["schemas"]["FlicDevice"][] | null;
       flicModule?: components["schemas"]["FlicDevice"];
+      warningMsg?: string | null;
     };
     Integration_GetGeneaDoorsWSRequest: {
       apiToken?: string | null;
@@ -21268,28 +22410,33 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       panelList?: components["schemas"]["PanelType"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetGuestWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       guest?: components["schemas"]["Guest"];
+      warningMsg?: string | null;
     };
     Integration_GetInformacastScenariosWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       scenarios?: components["schemas"]["InformacastScenario"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetInnerRangeConsolesWSRequest: { [key: string]: unknown };
     Integration_GetInnerRangeConsolesWSResponse: {
       consoles?: components["schemas"]["InnerRangeConsoleType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetInnerRangeDoorsWSRequest: { [key: string]: unknown };
     Integration_GetInnerRangeDoorsWSResponse: {
       doors?: components["schemas"]["InnerRangeDoorType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetIntegrationDiagnosticEventsWSRequest: {
       timestampMsAfter?: number | null;
@@ -21301,6 +22448,7 @@ export interface components {
       integrationDiagnosticEvents?:
         | components["schemas"]["IntegrationDiagnosticEventType"][]
         | null;
+      warningMsg?: string | null;
     };
     Integration_GetKisiDoorsWSRequest: {
       apiSecretKey?: string | null;
@@ -21312,6 +22460,7 @@ export interface components {
       placeToDoorMap?: {
         [key: string]: components["schemas"]["DoorType"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Response object containing Kisi integration settings. */
     Integration_GetKisiIntegrationWSResponse: {
@@ -21324,6 +22473,7 @@ export interface components {
       kisiSettings?: components["schemas"]["KisiSettings"];
       /** List of door names that are assigned to multiple Rhombus locations */
       misconfiguredDoors?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     Integration_GetKisiPlacesWSRequest: {
       apiSecretKey?: string | null;
@@ -21332,12 +22482,14 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       teamsMap?: { [key: string]: string | null } | null;
+      warningMsg?: string | null;
     };
     Integration_GetNineOneOneCSZonesWSRequest: { [key: string]: unknown };
     Integration_GetNineOneOneCSZonesWSResponse: {
       authError?: boolean | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       zone?: components["schemas"]["SecurityZoneInfoType"];
       zoneMap?: {
         [key: string]: components["schemas"]["SecurityZoneInfoType"];
@@ -21353,6 +22505,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of available OpenAI models */
       models?: components["schemas"]["OpenAIModel"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetOpenpathDoorsWSRequest: {
       email?: string | null;
@@ -21363,6 +22516,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       lockdownPlans?: components["schemas"]["LockdownType"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetOpentechAllianceFacilitiesWSRequest: {
       [key: string]: unknown;
@@ -21373,11 +22527,13 @@ export interface components {
       facilities?:
         | components["schemas"]["OpentechAllianceFacilityType"][]
         | null;
+      warningMsg?: string | null;
     };
     Integration_GetOrgIntegrationsV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       orgIntegrationV2?: components["schemas"]["IBaseIntegrationType"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving organization integrations. */
     Integration_GetOrgIntegrationsWSRequest: { [key: string]: unknown };
@@ -21386,6 +22542,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       orgIntegrations?: components["schemas"]["OrgIntegrationsType"];
+      warningMsg?: string | null;
     };
     Integration_GetPartnerApiTokensWSRequest: { [key: string]: unknown };
     Integration_GetPdkDoorsWSRequest: {
@@ -21396,6 +22553,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       panelList?: components["schemas"]["PanelType"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetPdkSystemIdWSRequest: {
       configurationToken?: string | null;
@@ -21404,6 +22562,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       systemId?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetPlaceOsDoorsWSRequest: {
       apiUrl?: string | null;
@@ -21412,11 +22571,13 @@ export interface components {
       buildings?: components["schemas"]["RaptorBuilding"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Integration_GetRaptorTemplatesWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       templates?: components["schemas"]["RaptorTemplate"][] | null;
+      warningMsg?: string | null;
     };
     Integration_GetToastEventsTableAllLocationsWSRequest: {
       businessDate?: string | null;
@@ -21428,6 +22589,7 @@ export interface components {
         | components["schemas"]["Integration_GetToastEventsTableWSResponse_EventTableRow"][]
         | null;
       failedGuids?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     Integration_GetToastEventsTableWSRequest: {
       businessDate?: string | null;
@@ -21439,6 +22601,7 @@ export interface components {
       eventTable?:
         | components["schemas"]["Integration_GetToastEventsTableWSResponse_EventTableRow"][]
         | null;
+      warningMsg?: string | null;
     };
     Integration_GetToastEventsTableWSResponse_EventTableRow: {
       assignedCameraList?: (string | null)[] | null;
@@ -21461,6 +22624,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       serviceAreas?: components["schemas"]["GenericPosType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for guest-related operations. */
     Integration_GuestWSRequest: {
@@ -21468,6 +22632,7 @@ export interface components {
       email?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for initiating Brivo OAuth authentication flow with API key. */
     Integration_InitiateBrivoOAuthWSRequest: {
@@ -21487,6 +22652,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       integratorUrl?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for initiating OAuth authentication flow. */
     Integration_InitiateOAuthWSRequest: {
@@ -21503,6 +22669,7 @@ export interface components {
       errorMsg?: string | null;
       /** OAuth redirect URL for authentication */
       redirectUrl?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for refreshing Google access token. */
     Integration_RefreshGoogleAccessTokenWSRequest: {
@@ -21515,6 +22682,7 @@ export interface components {
       accessToken?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for revoking an API token. */
     Integration_RevokeApiTokenWSRequest: {
@@ -21525,6 +22693,7 @@ export interface components {
     Integration_RevokeApiTokenWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for revoking Google Drive access permissions. */
     Integration_RevokeGoogleDriveAccessWSRequest: {
@@ -21548,6 +22717,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       validCSR?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for subscribing to Zapier webhook events. */
     Integration_SubscribeZapierWebhookWSRequest: {
@@ -21573,6 +22743,7 @@ export interface components {
     Integration_SubscribeZapierWebhookWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       webhookId?: string | null;
     };
@@ -21589,11 +22760,13 @@ export interface components {
       errorMsg?: string | null;
       /** New power state after toggle (0=off, 1=on) */
       newState?: number | null;
+      warningMsg?: string | null;
     };
     /** Response object for door unlock operations. */
     Integration_UnlockDoorWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for unlocking a Genea door. */
     Integration_UnlockGeneaDoorWSRequest: {
@@ -21648,6 +22821,7 @@ export interface components {
     Integration_UpdateApiTokenWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating Avigilon Alta V2 integration settings. */
     Integration_UpdateAvigilonAltaV2WSRequest: {
@@ -21807,6 +22981,7 @@ export interface components {
     Integration_UpdateOmnialertIntegrationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       webhookToken?: string | null;
     };
@@ -21835,6 +23010,7 @@ export interface components {
       failedGuids?: (string | null)[] | null;
       /** List of door names that are assigned to multiple Rhombus locations */
       misconfiguredDoors?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating PagerDuty incident management integration settings. */
     Integration_UpdatePagerDutyIntegrationWSRequest: {
@@ -21910,6 +23086,7 @@ export interface components {
     Integration_UpdateWebhookIntegrationV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       webhookSecret?: string | null;
     };
     /** Request object for updating webhook integration settings. */
@@ -22033,6 +23210,7 @@ export interface components {
     Integration_aperio_ClearAperioDtcWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for downloading Aperio certificate. */
     Integration_aperio_DownloadCertificateWSRequest: {
@@ -22067,6 +23245,7 @@ export interface components {
     Integration_aperio_RebootAperioGatewayWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for adding a partner as a super admin to an organization. */
     Internal_AddPartnerAsSuperAdminWSRequest: {
@@ -22087,6 +23266,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       superAdminGroupUuid?: string | null;
+      warningMsg?: string | null;
     };
     Internal_CreateCombinedLicensesFromV1WSRequest: {
       accountDataMap?: {
@@ -22128,6 +23308,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a new partner organization. */
     Internal_CreatePartnerOrgWSRequest: {
@@ -22148,6 +23329,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a returned inventory audit reservation. */
     Internal_CreateReturnedInventoryAuditReservationWSRequest: {
@@ -22172,6 +23354,7 @@ export interface components {
       auditReservationUuids?: (string | null)[] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a support authority. */
     Internal_CreateSupportAuthorityWSRequest: {
@@ -22183,6 +23366,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       supportAuthorityUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for enrolling in the developer newsletter. */
     Internal_DeveloperNewsletterEnrollWSRequest: {
@@ -22203,6 +23387,7 @@ export interface components {
     Internal_DeveloperNewsletterEnrollWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting the super admin group UUID for an organization. */
     Internal_GetSuperAdminGroupUUIDWSRequest: {
@@ -22215,11 +23400,13 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       superAdminGroupUUID?: string | null;
+      warningMsg?: string | null;
     };
     Internal_GetWarrantyApprovedRMAsWSRequest: { [key: string]: unknown };
     Internal_GetWarrantyApprovedRMAsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       zendeskTickets?: (number | null)[] | null;
     };
     /** Request object for initiating a shipment process. */
@@ -22249,6 +23436,7 @@ export interface components {
     Internal_ParentLifetimeSpendWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Internal_RemediateMissingFirstAssignedDatesWSRequest: {
       orgUuids?: (string | null)[] | null;
@@ -22259,6 +23447,7 @@ export interface components {
       updateOrgUuidsToUpdatedLicenseUuids?: {
         [key: string]: (string | null)[] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for requesting hardware for development purposes. */
     Internal_RequestHardwareForDevelopmentWSRequest: {
@@ -22291,6 +23480,7 @@ export interface components {
     Internal_RequestHardwareForDevelopmentWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for sending shipment shipped email notification. */
     Internal_SendShipmentShippedEmailWSRequest: {
@@ -22314,6 +23504,7 @@ export interface components {
     Internal_SetOpportunityForPurchaseOrderWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object for shipment email operations. */
     Internal_ShipmentEmailWSResponse: {
@@ -22325,11 +23516,13 @@ export interface components {
       legacyMsg?: string | null;
       /** Tracking identifier for the shipment */
       trackingIdentifier?: string | null;
+      warningMsg?: string | null;
     };
     Internal_VerifyCanMigrateOrgFromV1WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       invalidOrgsToErrorMessages?: { [key: string]: string | null } | null;
+      warningMsg?: string | null;
     };
     IntuifaceSettings: {
       deviceToTriggerMap?: {
@@ -22423,12 +23616,14 @@ export interface components {
       errorMsg?: string | null;
       /** Whether the invoice was previously initialized for charging */
       previouslyInitialized?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Response object containing invoice details version 1. */
     Invoice_InvoiceDetailsV1WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       invoice?: components["schemas"]["Invoice_InvoiceV1Type"];
+      warningMsg?: string | null;
     };
     Invoice_InvoiceDetailsV2WSRequest: {
       netsuiteInvoiceUuid?: string | null;
@@ -22437,6 +23632,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       invoice?: components["schemas"]["NetsuiteInvoiceDetails"];
+      warningMsg?: string | null;
     };
     /** Request object for retrieving invoice details. */
     Invoice_InvoiceDetailsWSRequest: {
@@ -22448,6 +23644,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       invoice?: components["schemas"]["InvoiceType"];
+      warningMsg?: string | null;
     };
     /** Line item information for invoice version 1. */
     Invoice_InvoiceV1LineItemType: {
@@ -22577,6 +23774,7 @@ export interface components {
     Keypad_ClaimKeypadActivationTokenResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting the current keypad information. */
     Keypad_GetCurrentKeypadWSRequest: { [key: string]: unknown };
@@ -22585,6 +23783,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       keypad?: components["schemas"]["KeypadConfigType"];
+      warningMsg?: string | null;
     };
     /** Request object for getting all registered keypads for a specific location. */
     Keypad_GetKeypadsForLocationWSRequest: {
@@ -22597,6 +23796,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of all registered keypads for the specified location */
       keypads?: components["schemas"]["KeypadConfigType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all registered keypads for an organization. */
     Keypad_GetKeypadsForOrgWSRequest: { [key: string]: unknown };
@@ -22606,6 +23806,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of all registered keypads for the organization */
       keypads?: components["schemas"]["KeypadConfigType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for keypad online/offline checkin processing. */
     Keypad_KeypadCheckinWSRequest: {
@@ -22633,6 +23834,7 @@ export interface components {
     Keypad_UnregisterKeypadResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating keypad settings and configuration. */
     Keypad_UpdateKeypadRequest: {
@@ -22669,6 +23871,7 @@ export interface components {
     Keypad_UpdateKeypadResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** List of all registered kiosks for the organization */
     Kiosk: {
@@ -22710,6 +23913,8 @@ export interface components {
       /** Activation token for claiming the kiosk */
       activationToken?: string | null;
       /** base 64 (url-safe) uuid string */
+      hostUserUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
       /** Name for the kiosk */
       name?: string | null;
@@ -22720,6 +23925,7 @@ export interface components {
     Kiosk_ClaimKioskActivationTokenResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a kiosk. */
     Kiosk_DeleteKioskWSRequest: {
@@ -22730,6 +23936,7 @@ export interface components {
     Kiosk_DeleteKioskWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting the current kiosk information. */
     Kiosk_GetCurrentKioskWSRequest: { [key: string]: unknown };
@@ -22738,6 +23945,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       kiosk?: components["schemas"]["Kiosk_KioskWithInfo"];
+      warningMsg?: string | null;
     };
     /** Request object for getting all registered kiosks for a specific location. */
     Kiosk_GetKiosksForLocationWSRequest: {
@@ -22750,6 +23958,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of all registered kiosks for the specified location */
       kiosks?: components["schemas"]["Kiosk"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all registered kiosks for an organization. */
     Kiosk_GetKiosksForOrgWSRequest: { [key: string]: unknown };
@@ -22759,6 +23968,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of all registered kiosks for the organization */
       kiosks?: components["schemas"]["Kiosk"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for kiosk heartbeat and online/offline processing. */
     Kiosk_KioskCheckinWSRequest: {
@@ -22797,11 +24007,13 @@ export interface components {
     Kiosk_UnregisterKioskResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object for updating kiosk settings. */
     Kiosk_UpdateKioskResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for selectively updating kiosk settings. */
     Kiosk_UpdateKioskSelectiveRequest: {
@@ -22853,6 +24065,7 @@ export interface components {
           userUuid?: string | null;
         })
       | null;
+    LEDModeEnum: LEDModeEnum;
     LabelIdentificationActivityEventType:
       | ({
           alertLabelSet?: (string | null)[] | null;
@@ -23034,6 +24247,7 @@ export interface components {
     License_CreateACUDoorLicenseWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating alert monitoring license. */
     License_CreateAlertMonitoringLicenseWSRequest: {
@@ -23046,6 +24260,7 @@ export interface components {
     License_CreateAlertMonitoringLicenseWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     License_CreateDeviceLicenseWSRequest: {
       deviceType?: components["schemas"]["DeviceTypeEnum"];
@@ -23059,6 +24274,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       licenseUuid?: string | null;
+      warningMsg?: string | null;
     };
     License_CreateLicenseWSRequest: {
       cloudArchiveDays?: number | null;
@@ -23073,6 +24289,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       licenseUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting alert monitoring license. */
     License_DeleteAlertMonitoringLicenseWSRequest: {
@@ -23085,6 +24302,7 @@ export interface components {
     License_DeleteAlertMonitoringLicenseWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting an unassigned device license from an organization. */
     License_DeleteDeviceLicenseWSRequest: {
@@ -23097,6 +24315,7 @@ export interface components {
     License_DeleteDeviceLicenseWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting an unassigned add-on license from an organization. */
     License_DeleteLicenseWSRequest: {
@@ -23109,6 +24328,7 @@ export interface components {
     License_DeleteLicenseWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding licenses by claim key. */
     License_FindLicensesByClaimKeyWSRequest: {
@@ -23121,6 +24341,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of licenses found by claim key */
       licenses?: components["schemas"]["BaseLicenseType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting list of access controlled door licenses available for a client organization. */
     License_GetACUDoorLicensesForClientOrgWSRequest: {
@@ -23140,6 +24361,7 @@ export interface components {
       acuDoorLicenses?: components["schemas"]["ACUDoorLicenseType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting list of alert monitoring licenses available for a client organization. */
     License_GetAlertMonitoringLicensesForClientOrgWSRequest: {
@@ -23163,6 +24385,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting list of device licenses available for a client organization. */
     License_GetDeviceLicensesForClientOrgWSRequest: {
@@ -23184,6 +24407,7 @@ export interface components {
       deviceLicenses?: components["schemas"]["DeviceLicenseType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting list of licenses available for a client organization. */
     License_GetLicensesForClientOrgWSRequest: {
@@ -23205,6 +24429,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of add-on licenses available in the organization */
       licenses?: components["schemas"]["LicenseUsageType"][] | null;
+      warningMsg?: string | null;
     };
     License_catalog_FindCatalogItemsWSRequest: {
       /** The product type used to filter license catalog items. If not specified, no filtering by product type is done. */
@@ -23214,6 +24439,7 @@ export interface components {
       catalogItems?: components["schemas"]["BaseCatalogItem"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     License_catalog_GetCatalogItemByProductCodeWSRequest: {
       productCode?: string | null;
@@ -23222,6 +24448,7 @@ export interface components {
       catalogItem?: components["schemas"]["BaseCatalogItem"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     License_claimkey_ClaimLicensesForClientOrgWSRequest: {
       claimCode?: string | null;
@@ -23240,6 +24467,7 @@ export interface components {
       claimKeyUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     License_claimkey_CreateClaimKeyWSRequest: {
       endDate?: string | null;
@@ -23254,6 +24482,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     License_claimkey_CreateRenewalClaimKeyWSRequest: {
       endDate?: string | null;
@@ -23268,6 +24497,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     License_claimkey_FindClaimKeysByOrgWSRequest: {
       claimKeySearchFilter?: components["schemas"]["ClaimKeySearchFilter"];
@@ -23276,6 +24506,7 @@ export interface components {
       claimKeys?: components["schemas"]["BaseClaimKey"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     License_claimkey_GetClaimKeyByCodeForClientOrgWSRequest: {
       claimCode?: string | null;
@@ -23299,6 +24530,7 @@ export interface components {
       claimKey?: components["schemas"]["BaseClaimKey"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     License_claimkey_ReturnClaimKeyProductQuantitiesWSRequest: {
       productQuantities?: { [key: string]: number | null } | null;
@@ -23308,6 +24540,7 @@ export interface components {
     License_claimkey_ReturnClaimKeyProductQuantitiesWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     LineItems: {
       description?: string | null;
@@ -23398,6 +24631,7 @@ export interface components {
       doorScheduleFirstInState?: components["schemas"]["FirstInState"];
       doorScheduleRequirementEnabled?: boolean | null;
       doorUuids?: (string | null)[] | null;
+      elevatorLandingUuids?: (string | null)[] | null;
       groupUuids?: (string | null)[] | null;
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
@@ -23504,6 +24738,7 @@ export interface components {
     Location_AddLocationLabelWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a location. */
     Location_CreateLocationWSRequest: {
@@ -23517,6 +24752,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for removing a location. */
     Location_DeleteLocationWSRequest: {
@@ -23527,6 +24763,7 @@ export interface components {
     Location_DeleteLocationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting the latitude and longitude of an address. */
     Location_GeoCodeWSRequest: {
@@ -23541,6 +24778,7 @@ export interface components {
       latitude?: number | null;
       /** Longitude coordinate of the address */
       longitude?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all location labels for an organization. */
     Location_GetLocationLabelsForOrgWSRequest: { [key: string]: unknown };
@@ -23550,6 +24788,7 @@ export interface components {
       errorMsg?: string | null;
       /** Map of location name or location id to label set */
       locationLabels?: { [key: string]: (string | null)[] | null } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting location by ID. */
     Location_GetLocationWSRequest: {
@@ -23563,6 +24802,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       location?: components["schemas"]["LocationType"];
+      warningMsg?: string | null;
     };
     /** Request object for getting list of locations given latitude and longitude. */
     Location_GetLocationsByGeoRequest: {
@@ -23585,6 +24825,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       location?: components["schemas"]["LocationType"];
+      warningMsg?: string | null;
     };
     /** Request object for getting list of locations in organization with pagination support. */
     Location_GetLocationsV2WSRequest: {
@@ -23599,6 +24840,7 @@ export interface components {
       lastEvaluatedKey?: string | null;
       /** List of locations in the organization */
       locations?: components["schemas"]["LocationType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting list of locations in organization. */
     Location_GetLocationsWSRequest: {
@@ -23611,6 +24853,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of locations in the organization */
       locations?: components["schemas"]["LocationType"][] | null;
+      warningMsg?: string | null;
     };
     /** Qualified address with validation information */
     Location_QualifiedAddressTypeWithValidation: {
@@ -23645,6 +24888,7 @@ export interface components {
     Location_RemoveLocationLabelWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for selectively updating a location. */
     Location_SelectiveUpdateLocationWSRequest: {
@@ -23684,6 +24928,7 @@ export interface components {
     Location_SelectiveUpdateLocationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a location. NOTE: This will replace old settings meaning if you leave a field blank it will be overrode to blank. For selective field updates use the endpoint /selectiveUpdateLocation. */
     Location_UpdateLocationWSRequest: {
@@ -23693,6 +24938,7 @@ export interface components {
     Location_UpdateLocationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for validating a location address for Alarm Monitoring. */
     Location_ValidateLocationWSRequest: {
@@ -23706,6 +24952,7 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
       qualifiedAddress?: components["schemas"]["Location_QualifiedAddressTypeWithValidation"];
+      warningMsg?: string | null;
     };
     LockdownActivatedStateEventType:
       | ({
@@ -23792,6 +25039,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of RMAs (Return Merchandise Authorizations) */
       rmaList?: components["schemas"]["RMAType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shipments within a time range. */
     Logistics_GetShipmentsWSRequest: {
@@ -23808,6 +25056,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     LumeoSettings: {
       enabled?: boolean | null;
@@ -23827,8 +25076,8 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       userUuid?: string | null;
     } | null;
-    ManualDoorStateChangeEnum: ManualDoorStateChangeEnum;
-    ManualDoorStateChangeEnum_Minimal: ManualDoorStateChangeEnum_Minimal;
+    ManualAccessStateChangeEnum: ManualAccessStateChangeEnum;
+    ManualAccessStateChangeEnum_Minimal: ManualAccessStateChangeEnum_Minimal;
     /** Request object for generating a map URL. */
     Maps_GenerateMapUrlWSRequest: {
       /** Base URL for the map */
@@ -23876,6 +25125,7 @@ export interface components {
           key: string
         ]: components["schemas"]["Mediadevice_MediaDeviceDetailsType"];
       } | null;
+      warningMsg?: string | null;
     };
     /** Detailed information about a media device including streaming URLs and device characteristics. */
     Mediadevice_MediaDeviceDetailsType: {
@@ -23936,6 +25186,7 @@ export interface components {
     Metric_LogEventWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for reporting errors. */
     Metric_ReportErrorWSRequest: {
@@ -23946,6 +25197,7 @@ export interface components {
     Metric_ReportErrorWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     MicrosoftTeamsChannelSettings: {
       botInstallationId?: string | null;
@@ -24165,6 +25417,57 @@ export interface components {
       wifiBars?: number | null;
       wifiSignalStrength?: number | null;
     };
+    /** List of minimal device state information for robots */
+    MinimalRobotStateType: {
+      associatedCameras?: (string | null)[] | null;
+      batteryPercent?: number | null;
+      charging?: boolean | null;
+      connectionStatus?: components["schemas"]["DeviceStatusEnum"];
+      createdAtMillis?: number | null;
+      defaultInterface?: string | null;
+      defaultInterfaceMac?: string | null;
+      directionRadians?: number | null;
+      externalIPAddress?: string | null;
+      facetNameMap?: { [key: string]: string | null } | null;
+      firmwareUpdateInProgress?: boolean | null;
+      firmwareVersion?: string | null;
+      floorNumber?: number | null;
+      healthStatus?: components["schemas"]["DeviceStatusEnum"];
+      healthStatusDetails?: components["schemas"]["DeviceHealthStatusDetailsEnum"];
+      hwVariation?: components["schemas"]["HardwareVariationEnum"];
+      lanAddresses?: (string | null)[] | null;
+      latitude?: number | null;
+      liveStreamShared?: boolean | null;
+      liveStreamsSharedCount?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      longitude?: number | null;
+      /** base 64 (url-safe) uuid string */
+      mapId?: string | null;
+      mediaRegion?: string | null;
+      /** RUUID with optional appended facet information */
+      mediaStorageDeviceUuid?: string | null;
+      mode?: MinimalRobotStateModeEnum | null;
+      mummified?: boolean | null;
+      name?: string | null;
+      orientation?: components["schemas"]["Quaternion"];
+      /** base 64 (url-safe) uuid string */
+      policyUuid?: string | null;
+      position?: components["schemas"]["Point"];
+      region?: string | null;
+      roamingLatitude?: number | null;
+      roamingLongitude?: number | null;
+      secondaryLanAddresses?: (string | null)[] | null;
+      serialNumber?: string | null;
+      ssid?: string | null;
+      subLocationsHierarchyKey?: components["schemas"]["SubLocationsHierarchyKey"];
+      supportedFacets?: components["schemas"]["DeviceFacet"][] | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+      wifiApMac?: string | null;
+      wifiBars?: number | null;
+      wifiSignalStrength?: number | null;
+    };
     /** List of threshold crossing events for the device */
     MinimalThresholdEventType: {
       crossingObject?: MinimalThresholdEventCrossingObjectEnum | null;
@@ -24338,6 +25641,7 @@ export interface components {
     Modularai_AddModelToDeviceWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a modular AI distribution. */
     Modularai_CreateModularAIDistributionWSRequest: {
@@ -24352,6 +25656,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a modular AI pipeline config. */
     Modularai_CreateModularAIPipelineConfigWSRequest: {
@@ -24370,6 +25675,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting devices running a modular AI model. */
     Modularai_GetDevicesForModelWSRequest: {
@@ -24382,6 +25688,7 @@ export interface components {
       devices?: (string | null)[] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting modular AI models added to a device. */
     Modularai_GetModelsAddedToDeviceWSRequest: {
@@ -24394,6 +25701,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of modular AI models added to the device */
       models?: components["schemas"]["ModularAIConfig"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting modular AI models for a given distribution. */
     Modularai_GetModelsForDistributionWSRequest: {
@@ -24406,6 +25714,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of available modular AI models */
       models?: components["schemas"]["ModularAIConfig"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting available modular AI models. */
     Modularai_GetModelsWSRequest: { [key: string]: unknown };
@@ -24415,6 +25724,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of available modular AI models */
       models?: components["schemas"]["ModularAIConfig"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting available modular AI distributions. */
     Modularai_ListModularAIDistributionsWSRequest: { [key: string]: unknown };
@@ -24424,6 +25734,7 @@ export interface components {
       distributions?: components["schemas"]["ModularAIDistribution"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for removing a modular AI model from a device. */
     Modularai_RemoveModelFromDeviceWSRequest: {
@@ -24436,6 +25747,7 @@ export interface components {
     Modularai_RemoveModelFromDeviceWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating modular AI model configuration. */
     Modularai_UpdateModelWSRequest: {
@@ -24740,7 +26052,7 @@ export interface components {
       sum?: number | null;
       timestampMs?: number | null;
       utcDate?: string | null;
-    } | null;
+    };
     /** OAuth application details */
     OAuthApplication: {
       /** base 64 (url-safe) uuid string */
@@ -24761,6 +26073,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of OAuth applications for the organization */
       oauthApplications?: components["schemas"]["OAuthApplication"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting OAuth application by client ID. */
     Oauth_GetApplicationByClientIdWSRequest: {
@@ -24772,6 +26085,7 @@ export interface components {
       application?: components["schemas"]["OAuthApplication"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for OAuth application management. */
     Oauth_OAuthApplicationWSRequest: {
@@ -24794,6 +26108,7 @@ export interface components {
       clientSecret?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Object search model to use for embeddings */
     ObjectSearchModelEnum: ObjectSearchModelEnum;
@@ -24847,6 +26162,7 @@ export interface components {
       occupancySensorStates?:
         | components["schemas"]["Occupancysensor_MinimalOccupancySensorStateType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting occupancy events for a specific sensor. */
     Occupancysensor_GetOccupancyEventsForSensorWSRequest: {
@@ -24865,6 +26181,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of occupancy events for the sensor */
       events?: components["schemas"]["OccupancyEventType"][] | null;
+      warningMsg?: string | null;
     };
     /** Minimal state information for occupancy sensors including health, location, and sensor data. */
     Occupancysensor_MinimalOccupancySensorStateType: {
@@ -24959,6 +26276,7 @@ export interface components {
     Occupancysensor_UpdateOccupancySensorDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     OccupiedActivityEventType:
       | ({
@@ -25237,6 +26555,7 @@ export interface components {
     /** List of SAML settings to update */
     OrgSamlSettingsType: {
       addUsersOnRoleMismatch?: boolean | null;
+      domain?: components["schemas"]["RhombusSamlDomainEnum"];
       enabled?: boolean | null;
       enabledForRhombusKey?: boolean | null;
       idpMetaDataXml?: string | null;
@@ -25352,6 +26671,7 @@ export interface components {
     Org_ClaimActivationTokenWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Org_ClaimShipmentRegistrationTokenWSRequest: {
       claimList?:
@@ -25363,6 +26683,7 @@ export interface components {
     Org_ClaimShipmentRegistrationTokenWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating pending hardware registration. */
     Org_CreatePendingRegistrationRequest: {
@@ -25381,6 +26702,7 @@ export interface components {
     Org_CreatePendingRegistrationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting cloud archiving configuration. */
     Org_DeleteCloudArchivingConfigWSRequest: {
@@ -25392,6 +26714,7 @@ export interface components {
     Org_DeleteCloudArchivingConfigWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting keypad logo. */
     Org_DeleteKeypadLogoWSRequest: { [key: string]: unknown };
@@ -25399,16 +26722,19 @@ export interface components {
     Org_DeleteKeypadLogoWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting Rhombus Key logo. */
     Org_DeleteRhombusKeyLogoWSRequest: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object for deleting Rhombus Key logo. */
     Org_DeleteRhombusKeyLogoWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Org_DeviceRegistrationClaimType: {
       deviceName?: string | null;
@@ -25492,6 +26818,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting device flags. */
     Org_GetDeviceFlagsWSRequest: {
@@ -25504,6 +26831,7 @@ export interface components {
       errorMsg?: string | null;
       /** Map of device flags */
       flags?: { [key: string]: string | null } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting organization features. */
     Org_GetFeaturesWSRequest: { [key: string]: unknown };
@@ -25533,6 +26861,7 @@ export interface components {
       rulesEngine?: boolean | null;
       /** Whether vehicle counting is enabled */
       vehicleCounting?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting location flags. */
     Org_GetLocationFlagsWSRequest: { [key: string]: unknown };
@@ -25544,6 +26873,7 @@ export interface components {
       flagsMap?: {
         [key: string]: { [key: string]: string | null } | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting organization integrations (deprecated, use integration package). */
     Org_GetOrgIntegrationsWSRequest: { [key: string]: unknown };
@@ -25552,12 +26882,14 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       orgIntegrations?: components["schemas"]["OrgIntegrationsType"];
+      warningMsg?: string | null;
     };
     /** Response object containing organization notification template V2. */
     Org_GetOrgNotificationTemplateV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       notificationSettings?: components["schemas"]["UserNotificationSettingsV4Type"];
+      warningMsg?: string | null;
     };
     /** Request object for getting organization notification template. */
     Org_GetOrgNotificationTemplateWSRequest: { [key: string]: unknown };
@@ -25566,6 +26898,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       notificationSettings?: components["schemas"]["UserNotificationSettingsV3Type"];
+      warningMsg?: string | null;
     };
     /** Request object for getting organization details V2. */
     Org_GetOrgV2WSRequest: { [key: string]: unknown };
@@ -25575,12 +26908,12 @@ export interface components {
       cameraConfigDefaults?: {
         [
           key: string
-        ]: components["schemas"]["Deviceconfig_settings_VideoConfigurationDefault"];
+        ]: components["schemas"]["Device_config_settings_VideoConfigurationDefault"];
       } | null;
       /** Map of hardware variations to available video configuration options */
       cameraConfigOptions?: {
         [key: string]:
-          | components["schemas"]["Deviceconfig_settings_VideoConfigurationOption"][]
+          | components["schemas"]["Device_config_settings_VideoConfigurationOption"][]
           | null;
       } | null;
       error?: boolean | null;
@@ -25588,6 +26921,7 @@ export interface components {
       /** Map of feature flags for the organization */
       featureFlags?: { [key: string]: string | null } | null;
       org?: components["schemas"]["OrgV2Type"];
+      warningMsg?: string | null;
     };
     /** Request object for getting organization details (deprecated). */
     Org_GetOrgWSRequest: { [key: string]: unknown };
@@ -25598,6 +26932,7 @@ export interface components {
       /** Map of feature flags for the organization */
       featureFlags?: { [key: string]: string | null } | null;
       org?: components["schemas"]["OrgType"];
+      warningMsg?: string | null;
     };
     /** Request object for getting SAML settings V2. */
     Org_GetSAMLSettingsV2WSRequest: { [key: string]: unknown };
@@ -25607,6 +26942,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of SAML settings for the organization */
       samlSettings?: components["schemas"]["OrgSamlSettingsType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting SAML settings (deprecated). */
     Org_GetSAMLSettingsWSRequest: { [key: string]: unknown };
@@ -25615,6 +26951,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       samlSettings?: components["schemas"]["OrgSamlSettingsType"];
+      warningMsg?: string | null;
     };
     /** Response object containing SCIM display information. */
     Org_GetScimDisplayInfoResponse: {
@@ -25639,6 +26976,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       hardwareUuidList?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     Org_PendingRegistrationInfoType: {
       /** base 64 (url-safe) uuid string */
@@ -25666,6 +27004,7 @@ export interface components {
     Org_SetFlagWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for setting up SCIM access for organization. */
     Org_SetupSCIMAccessForOrgWSRequest: {
@@ -25691,6 +27030,7 @@ export interface components {
     Org_UpdateAiTrainingSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating cloud archiving configuration. */
     Org_UpdateCloudArchivingConfigWSRequest: {
@@ -25700,6 +27040,7 @@ export interface components {
     Org_UpdateCloudArchivingConfigWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating firmware settings. */
     Org_UpdateFirmwareSettingsWSRequest: {
@@ -25714,6 +27055,7 @@ export interface components {
     Org_UpdateFirmwareSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating general organization settings. */
     Org_UpdateGeneralSettingsWSRequest: {
@@ -25736,6 +27078,7 @@ export interface components {
     Org_UpdateGeneralSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating MFA settings. */
     Org_UpdateMFASettingsWSRequest: {
@@ -25749,6 +27092,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       org?: components["schemas"]["OrgV2Type"];
+      warningMsg?: string | null;
     };
     /** Request object for updating organization audio analysis policy. */
     Org_UpdateOrgAudioAnalysisPolicyWSRequest: {
@@ -25759,6 +27103,7 @@ export interface components {
     Org_UpdateOrgAudioAnalysisPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating organization audio recording policy. */
     Org_UpdateOrgAudioRecordingPolicyWSRequest: {
@@ -25769,6 +27114,7 @@ export interface components {
     Org_UpdateOrgAudioRecordingPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating organization integrations (deprecated, use integration package). */
     Org_UpdateOrgIntegrationsWSRequest: {
@@ -25778,6 +27124,7 @@ export interface components {
     Org_UpdateOrgIntegrationsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating organization LLM usage opt-in policy. */
     Org_UpdateOrgLLMUsagePolicyWSRequest: {
@@ -25788,6 +27135,7 @@ export interface components {
     Org_UpdateOrgLLMUsagePolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating organization notification template V2. */
     Org_UpdateOrgNotificationTemplateV2WSRequest: {
@@ -25798,6 +27146,7 @@ export interface components {
     Org_UpdateOrgNotificationTemplateV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating organization notification template. */
     Org_UpdateOrgNotificationTemplateWSRequest: {
@@ -25812,6 +27161,7 @@ export interface components {
     Org_UpdateOrgNotificationTemplateWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating organization details (deprecated). */
     Org_UpdateOrgWSRequest: {
@@ -25835,6 +27185,7 @@ export interface components {
     Org_UpdatePendingRegistrationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating SAML settings V2. */
     Org_UpdateSAMLSettingsV2WSRequest: {
@@ -25845,6 +27196,7 @@ export interface components {
     Org_UpdateSAMLSettingsV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating SAML settings (deprecated). */
     Org_UpdateSAMLSettingsWSRequest: {
@@ -25854,6 +27206,7 @@ export interface components {
     Org_UpdateSAMLSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating SCIM settings for organization. */
     Org_UpdateSCIMSettingsForOrgWSRequest: {
@@ -25869,6 +27222,7 @@ export interface components {
     Org_UpdateSCIMSettingsForOrgWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     OsdpDoorReaderType: {
       allowUnencrypted?: boolean | null;
@@ -26080,6 +27434,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       responseStatus?: components["schemas"]["Partner_PartnerWebResponseStatusEnum"];
+      warningMsg?: string | null;
     };
     /** Request object for customizing client device settings and configurations. */
     Partner_CustomizeClientDeviceWSRequest: {
@@ -26087,7 +27442,7 @@ export interface components {
       clientDeviceUuid?: string | null;
       /** base 64 (url-safe) uuid string */
       clientOrgUuid?: string | null;
-      configUpdate?: components["schemas"]["Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig"];
+      configUpdate?: components["schemas"]["Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig"];
       customizations?: components["schemas"]["Partner_ClientDeviceCustomizationsType"];
     };
     /** Response object containing the applied client device customization settings. */
@@ -26095,6 +27450,7 @@ export interface components {
       customizations?: components["schemas"]["Partner_ClientCustomizationsType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for customizing client settings and configurations. */
     Partner_CustomizeClientWSRequest: {
@@ -26107,6 +27463,7 @@ export interface components {
       customizations?: components["schemas"]["Partner_ClientCustomizationsType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a partner client account. */
     Partner_DeleteClientWebRequest: {
@@ -26187,6 +27544,7 @@ export interface components {
       manuallySendLicenseExpirationEmailEnabled?: boolean | null;
       /** Number of recent policy alerts */
       recentPolicyAlertCount?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting list of all client devices. */
     Partner_GetListOfAllClientDevicesRequest: { [key: string]: unknown };
@@ -26228,6 +27586,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all partner clients. */
     Partner_GetPartnerClientsWSRequest: { [key: string]: unknown };
@@ -26237,6 +27596,7 @@ export interface components {
       clients?: components["schemas"]["Partner_PartnerClientWebType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting partner users in organization. */
     Partner_GetPartnerUsersInOrgWSRequest: { [key: string]: unknown };
@@ -26260,6 +27620,7 @@ export interface components {
       partnerUsers?:
         | components["schemas"]["WrappedRhombusOrgUserType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting client shipments within a time range. */
     Partner_GetShipmentsWSRequest: {
@@ -26278,6 +27639,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for granting support access to a client account. */
     Partner_GrantSupportAccessToClientWSRequest: {
@@ -26290,6 +27652,7 @@ export interface components {
       errMessage?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Partner client information including organization details and device counts. */
     Partner_PartnerClientWebType: {
@@ -26351,6 +27714,7 @@ export interface components {
       clients?: components["schemas"]["Partner_PartnerClientWebType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for requesting access to a client account (deprecated, use V2). */
     Partner_RequestAccessToClientAccountRequest: {
@@ -26421,6 +27785,7 @@ export interface components {
     Partner_UpdateManuallySendLicenseExpirationEmailWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for initiating a forgot password flow with captcha verification. */
     Password_ForgotPasswordWSRequest: {
@@ -26438,6 +27803,7 @@ export interface components {
       failureReason?: string | null;
       /** Whether the forgot password request was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for resetting user password using a reset token. */
     Password_ResetPasswordWSRequest: {
@@ -26456,6 +27822,7 @@ export interface components {
       failureReasonType?: ResetPasswordWSResponseFailureReasonTypeEnum | null;
       /** Whether the password reset was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for user signup with invitation token, password, and EULA acceptance. */
     Password_UserSignupWSRequest: {
@@ -26474,6 +27841,7 @@ export interface components {
       failureReason?: string | null;
       /** Whether the user signup was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     /** List of people count events */
     PeopleCountEventType: {
@@ -26503,6 +27871,7 @@ export interface components {
     Permission_AssignUserPermissionWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a new partner permission group. */
     Permission_CreatePartnerPermissionGroupWSRequest: {
@@ -26514,6 +27883,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a new permission group. */
     Permission_CreatePermissionGroupWSRequest: {
@@ -26525,6 +27895,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a partner permission group. */
     Permission_DeletePartnerPermissionGroupWSRequest: {
@@ -26535,6 +27906,7 @@ export interface components {
     Permission_DeletePartnerPermissionGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a permission group. */
     Permission_DeletePermissionGroupWSRequest: {
@@ -26545,6 +27917,7 @@ export interface components {
     Permission_DeletePermissionGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object containing partner permission groups and client permission group mappings. */
     Permission_GetPartnerPermissionGroupWSResponse: {
@@ -26563,6 +27936,7 @@ export interface components {
       permissionGroups?:
         | components["schemas"]["PartnerUserPermissionGroupType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting partner permission groups for the organization. */
     Permission_GetPartnerPermissionGroupsWSRequest: { [key: string]: unknown };
@@ -26579,6 +27953,7 @@ export interface components {
       permissionGroups?:
         | components["schemas"]["UserPermissionGroupType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all permission groups in the organization. */
     Permission_GetPermissionGroupsWSRequest: { [key: string]: unknown };
@@ -26594,6 +27969,7 @@ export interface components {
       permissionGroups?:
         | components["schemas"]["UserPermissionGroupType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting permissions for the current partner user. */
     Permission_GetPermissionsForCurrentPartnerWSRequest: {
@@ -26619,6 +27995,7 @@ export interface components {
       permissionGroupName?: string | null;
       /** Whether the partner user has super admin privileges */
       superAdmin?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting permissions for the current user. */
     Permission_GetPermissionsForCurrentUserWSRequest: {
@@ -26658,6 +28035,7 @@ export interface components {
       permissionGroupName?: string | null;
       /** Whether the user has super admin privileges */
       superAdmin?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating an existing partner permission group. */
     Permission_UpdatePartnerPermissionGroupWSRequest: {
@@ -26667,6 +28045,7 @@ export interface components {
     Permission_UpdatePartnerPermissionGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating an existing permission group. */
     Permission_UpdatePermissionGroupWSRequest: {
@@ -26676,6 +28055,7 @@ export interface components {
     Permission_UpdatePermissionGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     PermyriadRect: {
       h?: number | null;
@@ -26687,6 +28067,7 @@ export interface components {
     /** The updated person */
     Person: {
       createdOn?: string | null;
+      email?: string | null;
       name?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -26697,6 +28078,7 @@ export interface components {
     /** Selective update information for the person */
     PersonSelectiveUpdate: {
       createdOn?: string | null;
+      email?: string | null;
       name?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -26852,6 +28234,11 @@ export interface components {
       timestampSec?: number | null;
       typPartSize?: number | null;
       vocIdx?: number | null;
+    };
+    Point: {
+      x?: number | null;
+      y?: number | null;
+      z?: number | null;
     };
     PointType: {
       x?: number | null;
@@ -27061,6 +28448,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating an audio policy. */
     Policy_CreateAudioPolicyWSRequest: {
@@ -27072,6 +28460,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a camera policy. */
     Policy_CreateCameraPolicyWSRequest: {
@@ -27083,6 +28472,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a climate policy. */
     Policy_CreateClimatePolicyWSRequest: {
@@ -27094,6 +28484,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a door sensor policy. */
     Policy_CreateDoorPolicyWSRequest: {
@@ -27105,6 +28496,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     Policy_CreateOccupancyPolicyWSRequest: {
       policy?: components["schemas"]["Policy_MinimalOccupancyPolicyType"];
@@ -27114,6 +28506,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a policy addendum for a location. */
     Policy_CreatePolicyAddendumForLocationRequest: {
@@ -27130,6 +28523,7 @@ export interface components {
     Policy_CreatePolicyAddendumForLocationResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating policy addendums for multiple devices. */
     Policy_CreatePolicyAddendumsForDevicesRequest: {
@@ -27146,6 +28540,7 @@ export interface components {
     Policy_CreatePolicyAddendumsForDevicesResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     Policy_CreateProximityPolicyWSRequest: {
       policy?: components["schemas"]["Policy_MinimalProximityPolicyType"];
@@ -27155,6 +28550,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a schedule to be used for policy creation. */
     Policy_CreateScheduleWSRequest: {
@@ -27166,6 +28562,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
+      warningMsg?: string | null;
     };
     Policy_CreateVideoIntercomPolicyWSRequest: {
       policy?: components["schemas"]["Policy_MinimalVideoIntercomPolicyType"];
@@ -27175,6 +28572,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting an access controlled door policy. */
     Policy_DeleteAccessControlledDoorPolicyWSRequest: {
@@ -27185,6 +28583,7 @@ export interface components {
     Policy_DeleteAccessControlledDoorPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting an audio policy. */
     Policy_DeleteAudioPolicyWSRequest: {
@@ -27195,6 +28594,7 @@ export interface components {
     Policy_DeleteAudioPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a camera policy. */
     Policy_DeleteCameraPolicyWSRequest: {
@@ -27205,6 +28605,7 @@ export interface components {
     Policy_DeleteCameraPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a climate policy. */
     Policy_DeleteClimatePolicyWSRequest: {
@@ -27215,6 +28616,7 @@ export interface components {
     Policy_DeleteClimatePolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting device policy addendums. */
     Policy_DeleteDevicePolicyAddendumsWSRequest: {
@@ -27225,6 +28627,7 @@ export interface components {
     Policy_DeleteDevicePolicyAddendumsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a door sensor policy. */
     Policy_DeleteDoorPolicyWSRequest: {
@@ -27235,6 +28638,7 @@ export interface components {
     Policy_DeleteDoorPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a location policy addendum. */
     Policy_DeleteLocationPolicyAddendumWSRequest: {
@@ -27245,6 +28649,7 @@ export interface components {
     Policy_DeleteLocationPolicyAddendumWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting an occupancy policy. */
     Policy_DeleteOccupancyPolicyWSRequest: {
@@ -27255,6 +28660,7 @@ export interface components {
     Policy_DeleteOccupancyPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a policy pause setting. */
     Policy_DeletePolicyPauseSettingWSRequest: {
@@ -27265,6 +28671,7 @@ export interface components {
     Policy_DeletePolicyPauseSettingWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a proximity policy. */
     Policy_DeleteProximityPolicyWSRequest: {
@@ -27275,6 +28682,7 @@ export interface components {
     Policy_DeleteProximityPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a schedule used for policy creation. */
     Policy_DeleteScheduleWSRequest: {
@@ -27285,6 +28693,7 @@ export interface components {
     Policy_DeleteScheduleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a video intercom policy. */
     Policy_DeleteVideoIntercomPolicyWSRequest: {
@@ -27297,6 +28706,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** List of audio policies in the organization */
     Policy_ExternalAudioPolicyType: {
@@ -27360,6 +28770,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of schedules in the organization */
       schedules?: components["schemas"]["WeeklyRepeatingScheduleType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all access controlled door policies in the organization. */
     Policy_GetAccessControlledDoorPoliciesWSRequest: { [key: string]: unknown };
@@ -27371,6 +28782,7 @@ export interface components {
       policies?:
         | components["schemas"]["AccessControlledDoorPolicyType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all audio policies in the organization. */
     Policy_GetAudioPoliciesWSRequest: { [key: string]: unknown };
@@ -27382,6 +28794,7 @@ export interface components {
       policies?:
         | components["schemas"]["Policy_ExternalAudioPolicyType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all camera policies in the organization. */
     Policy_GetCameraPoliciesWSRequest: { [key: string]: unknown };
@@ -27391,6 +28804,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of camera policies in the organization */
       policies?: components["schemas"]["CameraPolicyV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all climate policies in the organization. */
     Policy_GetClimatePoliciesWSRequest: { [key: string]: unknown };
@@ -27400,6 +28814,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of climate policies in the organization */
       policies?: components["schemas"]["ClimatePolicyType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all door sensor policies in the organization. */
     Policy_GetDoorPoliciesWSRequest: { [key: string]: unknown };
@@ -27409,6 +28824,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of door sensor policies in the organization */
       policies?: components["schemas"]["DoorPolicyType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all occupancy policies in the organization. */
     Policy_GetOccupancyPoliciesWSRequest: { [key: string]: unknown };
@@ -27418,6 +28834,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of occupancy policies in the organization */
       policies?: components["schemas"]["OccupancyPolicyType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all policies that use a specific schedule. */
     Policy_GetPoliciesUsingScheduleWSRequest: {
@@ -27452,6 +28869,7 @@ export interface components {
       videoIntercomPolicyList?:
         | components["schemas"]["VideoIntercomPolicyType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting policy addendums. */
     Policy_GetPolicyAddendumsWSRequest: { [key: string]: unknown };
@@ -27467,6 +28885,7 @@ export interface components {
       locationAddendumsMap?: {
         [key: string]: components["schemas"]["ScheduledIntervalType"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting policy pause settings. */
     Policy_GetPolicyPauseSettingsWSRequest: { [key: string]: unknown };
@@ -27486,6 +28905,7 @@ export interface components {
       policiesPausedForLocationsMap?: {
         [key: string]: components["schemas"]["ScheduledIntervalType"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all proximity policies in the organization. */
     Policy_GetProximityPoliciesWSRequest: { [key: string]: unknown };
@@ -27495,6 +28915,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of proximity policies in the organization */
       policies?: components["schemas"]["ProximityPolicyType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all video intercom policies in the organization. */
     Policy_GetVideoIntercomPoliciesWSRequest: { [key: string]: unknown };
@@ -27506,6 +28927,7 @@ export interface components {
       policies?:
         | components["schemas"]["Policy_ExternalVideoIntercomPolicyType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Updated access controlled door policy configuration */
     Policy_MinimalAccessControlledDoorPolicyType: {
@@ -27669,6 +29091,7 @@ export interface components {
     Policy_PauseAlertPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating an access controlled door policy. */
     Policy_UpdateAccessControlledDoorPolicyWSRequest: {
@@ -27678,6 +29101,7 @@ export interface components {
     Policy_UpdateAccessControlledDoorPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating an audio policy. */
     Policy_UpdateAudioPolicyWSRequest: {
@@ -27687,6 +29111,7 @@ export interface components {
     Policy_UpdateAudioPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a camera policy. */
     Policy_UpdateCameraPolicyWSRequest: {
@@ -27696,6 +29121,7 @@ export interface components {
     Policy_UpdateCameraPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a climate policy. */
     Policy_UpdateClimatePolicyWSRequest: {
@@ -27705,6 +29131,7 @@ export interface components {
     Policy_UpdateClimatePolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a door sensor policy. */
     Policy_UpdateDoorPolicyWSRequest: {
@@ -27714,6 +29141,7 @@ export interface components {
     Policy_UpdateDoorPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating an occupancy policy. */
     Policy_UpdateOccupancyPolicyWSRequest: {
@@ -27723,6 +29151,7 @@ export interface components {
     Policy_UpdateOccupancyPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a proximity policy. */
     Policy_UpdateProximityPolicyWSRequest: {
@@ -27732,6 +29161,7 @@ export interface components {
     Policy_UpdateProximityPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a schedule used for policy creation. */
     Policy_UpdateScheduleWSRequest: {
@@ -27741,6 +29171,7 @@ export interface components {
     Policy_UpdateScheduleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a video intercom policy. */
     Policy_UpdateVideoIntercomPolicyWSRequest: {
@@ -27750,6 +29181,7 @@ export interface components {
     Policy_UpdateVideoIntercomPolicyWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     PortSupervisionConfigurationType: {
       mode?: components["schemas"]["SupervisionModeEnumType"];
@@ -27839,6 +29271,7 @@ export interface components {
       checkCondition?: components["schemas"]["CheckCondition"];
       description?: string | null;
       generateAlertForActionNewlyAddedCameras?: boolean | null;
+      multiImageTimeDeltasSeconds?: (number | null)[] | null;
       name?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
@@ -27976,6 +29409,7 @@ export interface components {
       locomotionEvents?:
         | components["schemas"]["ProximityTagLocomotionEventType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting basic state information about all proximity tags in the organization. */
     Proximity_GetMinimalProximityStatesWSRequest: { [key: string]: unknown };
@@ -27987,6 +29421,7 @@ export interface components {
       proximityStates?:
         | components["schemas"]["Proximity_MinimalProximityStateType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting recent events for a specified proximity tag with filtering options. */
     Proximity_GetProximityEventsForTagWSRequest: {
@@ -28007,6 +29442,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of proximity events for the specified tag */
       proximityEvents?: components["schemas"]["ProximityEventType"][] | null;
+      warningMsg?: string | null;
     };
     /** Minimal proximity state information for a proximity tag. */
     Proximity_MinimalProximityStateType: {
@@ -28071,6 +29507,7 @@ export interface components {
     Proximity_UpdateProximitySensorDetailsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Optionally present qualified address after some validation.  Used for Alarm Monitoring if available. */
     QualifiedAddressType: {
@@ -28086,6 +29523,12 @@ export interface components {
       postalCode?: string | null;
       /** country */
       regionCode?: string | null;
+    };
+    Quaternion: {
+      w?: number | null;
+      x?: number | null;
+      y?: number | null;
+      z?: number | null;
     };
     QueryStatus: QueryStatusEnum;
     QueryTimelineEvent: {
@@ -28145,6 +29588,8 @@ export interface components {
       prevShippingInfoUsedBy?: string | null;
       prevShippingInfoUsedByAtSec?: number | null;
       proactiveReplacement?: boolean | null;
+      /** base 64 (url-safe) uuid string */
+      rctpPartnerOrgUuid?: string | null;
       recipientName?: string | null;
       recipientPhoneNumber?: string | null;
       replacementCourier?: string | null;
@@ -28194,6 +29639,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of stream URLs for the closest 10 feeds */
       streamUrls?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     RaptorBuilding: {
       name?: string | null;
@@ -28224,6 +29670,8 @@ export interface components {
           userUuid?: string | null;
         })
       | null;
+    /** Condition under which device health tracking will be re-enabled. */
+    ReEnableDeviceHealthTrackingCondition: ReEnableDeviceHealthTrackingConditionEnum;
     RealtimeRelativeSecondsScheduleType:
       | ({
           pastSeconds?: number | null;
@@ -28254,7 +29702,7 @@ export interface components {
     RegionConfigType: {
       inverted?: boolean | null;
       polygons?: components["schemas"]["RegionPolygonType"][] | null;
-    };
+    } | null;
     RegionCoordinateType: {
       x?: number | null;
       y?: number | null;
@@ -28317,6 +29765,7 @@ export interface components {
       deviceUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for assigning a third-party camera to a relay camera. */
     Relay_AssignThirdPartyCameraToRelayCameraWSRequest: {
@@ -28335,6 +29784,7 @@ export interface components {
       deviceUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for authenticating a third-party camera with RTSP URL. */
     Relay_AuthenticateThirdPartyCameraWSRequest: {
@@ -28358,6 +29808,7 @@ export interface components {
       result?: components["schemas"]["DiscoveredThirdPartyCameraType"];
       /** Status of the RTSP URL validation */
       rtspUrlStatus?: AuthenticateThirdPartyCameraWSResponseRtspUrlStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a third-party camera password. */
     Relay_CreateThirdPartyCameraPasswordWSRequest: {
@@ -28374,7 +29825,15 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       passwordUuid?: string | null;
+      warningMsg?: string | null;
     };
+    /** Request object for deleting a third-party camera discovery. */
+    Relay_DeleteThirdPartyCameraDiscoveryWSRequest: {
+      /** MAC address of the third-party camera to delete */
+      thirdPartyCameraMacAddress?: string | null;
+    };
+    /** Request object for creating a third-party camera password. */
+    Relay_DeleteThirdPartyCameraDiscoveryWSResponse: { [key: string]: unknown };
     /** Request object for deleting a third-party camera password. */
     Relay_DeleteThirdPartyCameraPasswordWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -28384,6 +29843,7 @@ export interface components {
     Relay_DeleteThirdPartyCameraPasswordWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Discovery information with unassigned RTSP endpoints available for assignment. */
     Relay_DiscoveryWithUnassignedRtspEndpoints: {
@@ -28415,6 +29875,7 @@ export interface components {
     Relay_ExecuteThirdPartyCameraDiscoveryWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** External RTSP endpoint configuration for camera streams. */
     Relay_ExternalRtspEndpoint: {
@@ -28466,6 +29927,7 @@ export interface components {
       assignedCameras?: components["schemas"]["CameraType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting detailed information about the state of a specified NVR. */
     Relay_GetFullNVRStateWSRequest: {
@@ -28479,6 +29941,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       fullNVRState?: components["schemas"]["FullDeviceStateType"];
+      warningMsg?: string | null;
     };
     /** Response object for getting the import format for third-party cameras. */
     Relay_GetImportThirdPartyCamerasFormatWSResponse: {
@@ -28495,6 +29958,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of minimal NVR state information for all NVRs in the organization */
       nvrstates?: components["schemas"]["MinimalNVRStateType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting basic state information about all third-party cameras in the organization. */
     Relay_GetMinimalThirdPartyCameraStateListWSRequest: {
@@ -28508,6 +29972,7 @@ export interface components {
       thirdPartyCameraStateList?:
         | components["schemas"]["Relay_MinimalThirdPartyCameraStateType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting details for specified NVRs. */
     Relay_GetNVRDetailsWSRequest: {
@@ -28520,6 +29985,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of NVR details for the specified NVRs */
       nvrs?: components["schemas"]["Relay_NVRExternalType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting RTSP endpoints for a device with the specified MAC address. */
     Relay_GetRtspEndpointsWSRequest: {
@@ -28543,6 +30009,7 @@ export interface components {
       passwords?:
         | components["schemas"]["ThirdPartyCameraPasswordType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Response object for importing third-party cameras. */
     Relay_ImportThirdPartyCamerasWSResponse: {
@@ -28573,6 +30040,7 @@ export interface components {
       result?: components["schemas"]["DiscoveredThirdPartyCameraType"];
       /** Status of the RTSP URL validation */
       rtspUrlStatus?: ManualDiscoverThirdPartyCameraWSResponseRtspUrlStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Minimal third-party camera state information. */
     Relay_MinimalThirdPartyCameraStateType: {
@@ -28635,7 +30103,7 @@ export interface components {
       wifiBars?: number | null;
       wifiSignalStrength?: number | null;
     };
-    /** External NVR type with secondary static IP address support. */
+    /** External NVR type. */
     Relay_NVRExternalType: {
       archiveRegion?: string | null;
       cameraFramerate?: number | null;
@@ -28659,8 +30127,11 @@ export interface components {
       pending?: boolean | null;
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
+      primaryLinkSpeedMbps?: number | null;
+      secondaryLinkSpeedMbps?: number | null;
       serialNumber?: string | null;
       subLocationsHierarchyKey?: components["schemas"]["SubLocationsHierarchyKey"];
+      totalStreamingPixels?: number | null;
       type?: components["schemas"]["DeviceTypeEnum"];
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
@@ -28680,6 +30151,7 @@ export interface components {
     Relay_PTZMoveWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting PTZ status of a camera. */
     Relay_PTZStatusWSRequest: {
@@ -28690,6 +30162,7 @@ export interface components {
     Relay_PTZStatusWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       /** Current X-axis position in permyriad units */
       xpositionPermyriad?: number | null;
       /** Current Y-axis position in permyriad units */
@@ -28708,6 +30181,7 @@ export interface components {
       errorMsg?: string | null;
       /** Result of the reboot operation */
       result?: RebootNVRVWSResponseResultEnum | null;
+      warningMsg?: string | null;
     };
     /** Result of importing a third-party camera. */
     Relay_ThirdPartyCameraImportResult: {
@@ -28732,6 +30206,7 @@ export interface components {
     Relay_UnassignThirdPartyCameraWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for unregistering an NVR from the system. */
     Relay_UnregisterNVRWSRequest: {
@@ -28744,6 +30219,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the unregister operation */
       responseStatus?: UnregisterNVRWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** Status enumeration for firmware update web service responses. */
     Relay_UpdateFirmwareWSStatus: Relay_UpdateFirmwareWSStatusEnum;
@@ -28757,6 +30233,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       status?: components["schemas"]["Relay_UpdateFirmwareWSStatus"];
+      warningMsg?: string | null;
     };
     /** Request object for updating NVR details. */
     Relay_UpdateNVRVWSRequest: {
@@ -28798,6 +30275,7 @@ export interface components {
     Relay_UpdateNVRVWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     RemoteDoorUnlockActionType: {
       doorId?: string | null;
@@ -28865,6 +30343,21 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
+    /** Request object for getting audit feed for a specific principal. */
+    Report_GetAuditFeedForPrincipalWSRequest: {
+      /** Max number of audit records to retrieve */
+      maxResults?: number | null;
+      /** base 64 (url-safe) uuid string */
+      principalUuid: string | null;
+    };
+    /** Response object for getting audit feed for a specific principal. */
+    Report_GetAuditFeedForPrincipalWSResponse: {
+      /** List of audit events for the principal */
+      auditEvents?: components["schemas"]["Report_AuditEventWeb"][] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
+    };
     /** Request object for getting audit feed for a specific target. */
     Report_GetAuditFeedForTargetWSRequest: {
       /** Max number of audit records to retrieve */
@@ -28878,6 +30371,7 @@ export interface components {
       auditEvents?: components["schemas"]["Report_AuditEventWeb"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting audit feed. */
     Report_GetAuditFeedWSRequest: {
@@ -28896,6 +30390,7 @@ export interface components {
       auditEvents?: components["schemas"]["Report_AuditEventWeb"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting average reports. */
     Report_GetAverageReportWSRequest: {
@@ -28920,6 +30415,7 @@ export interface components {
       errorMsg?: string | null;
       /** Map of group IDs to their average values */
       groupAverageMap?: { [key: string]: number | null } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting average reports. */
     Report_GetAverageReportsWSRequest: {
@@ -28944,6 +30440,24 @@ export interface components {
       groupAverageMap?: {
         [key: string]: { [key: string]: number | null } | null;
       } | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for getting batch threshold crossing count reports. */
+    Report_GetBatchThresholdCrossingCountReportWSRequest: {
+      /** Size of the report buckets */
+      bucketSize?: GetBatchThresholdCrossingCountReportWSRequestBucketSizeEnum | null;
+      /** Type of crossing object to count */
+      crossingObject?: GetBatchThresholdCrossingCountReportWSRequestCrossingObjectEnum | null;
+      /** Whether to deduplicate the results */
+      dedupe?: boolean | null;
+      /** UUID of devices to get threshold crossing count report for */
+      deviceUuids?: (string | null)[] | null;
+      /** End time in milliseconds */
+      endTimeMs?: number | null;
+      /** Start time in milliseconds */
+      startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
     };
     /** Request object for getting count reports V2. */
     Report_GetCountReportV2WSRequest: {
@@ -28959,6 +30473,8 @@ export interface components {
       startDate?: string | null;
       /** Start datetime provided as a UNIX timestamp in milliseconds */
       startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
       /** Types of reports to receive */
       types: (GetCountReportV2WSRequestTypesEnum | null)[] | null;
       /** base 64 (url-safe) uuid string */
@@ -28987,6 +30503,7 @@ export interface components {
       timeSeriesDataPoints?:
         | components["schemas"]["TimeSeriesDataPointV2Type"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting count reports for devices at a specific location. */
     Report_GetCountReportsForDevicesAtLocationWSRequest: {
@@ -29015,6 +30532,8 @@ export interface components {
       startDate?: string | null;
       /** Start datetime provided as a UNIX timestamp in milliseconds */
       startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
       /** Type of reports to receive */
       type: GetCountReportsWSRequestTypeEnum | null;
     };
@@ -29028,6 +30547,7 @@ export interface components {
           | components["schemas"]["TimeSeriesDataPointV2Type"][]
           | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Response object for custom LLM numeric reports. */
     Report_GetCustomLLMNumericWSResponse: {
@@ -29039,13 +30559,15 @@ export interface components {
           | components["schemas"]["NumericAggregationValue"][]
           | null;
       } | null;
-    } | null;
+      warningMsg?: string | null;
+    };
     /** Request object for custom LLM reports. */
     Report_GetCustomLLMReportWSRequest: {
       /** Uuids of the selected devices */
       deviceFacetUuids?: (string | null)[] | null;
       /** The end timestamp (in Unix epoch milliseconds) of the selected interval */
       endTimeMs?: number | null;
+      extendedResponse?: boolean | null;
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -29059,6 +30581,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of time series data points */
       timeSeriesDataPoints?: components["schemas"]["SceneQueryReport"][] | null;
+      warningMsg?: string | null;
     };
     /** Response object for custom LLM binary reports. */
     Report_GetCustomLLMWBinaryWSResponse: {
@@ -29068,6 +30591,7 @@ export interface components {
       reports?: {
         [key: string]: components["schemas"]["BinaryAggregationValue"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for custom LLM reports. */
     Report_GetCustomLLMWSRequest: {
@@ -29093,6 +30617,7 @@ export interface components {
       diagnosticEvents?: components["schemas"]["DiagnosticEventType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting license plates by device. */
     Report_GetLicensePlatesByDeviceWSRequest: {
@@ -29113,6 +30638,7 @@ export interface components {
       licensePlateEvents?:
         | components["schemas"]["VehicleEventIndexType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting most recent people count. */
     Report_GetMostRecentPeopleCountWSRequest: {
@@ -29127,6 +30653,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of people count events */
       events?: components["schemas"]["PeopleCountEventType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting occupancy count from a device. */
     Report_GetOccupancyCountWSRequest: {
@@ -29145,6 +30672,7 @@ export interface components {
       errorMsg?: string | null;
       /** Estimated occupancy count */
       estimatedCount?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting occupancy counts from a device. */
     Report_GetOccupancyCountsWSRequest: {
@@ -29165,6 +30693,7 @@ export interface components {
       timeSeriesDataPoints?:
         | components["schemas"]["Report_TimeSeriesDataPointV2ExtendedType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting proximity tag locations by date. */
     Report_GetProximityTagLocationsByDateWSRequest: {
@@ -29187,6 +30716,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting running average statistics. */
     Report_GetRunningAverageWSRequest: {
@@ -29202,6 +30732,8 @@ export interface components {
       startDate?: string | null;
       /** Start datetime provided as a UNIX timestamp in milliseconds */
       startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
@@ -29213,6 +30745,7 @@ export interface components {
       statsDataPoints?:
         | components["schemas"]["WeeklyStatisticsDataPoint"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting summary count reports. */
     Report_GetSummaryCountReportWSRequest: {
@@ -29228,6 +30761,8 @@ export interface components {
       startDate?: string | null;
       /** Start datetime provided as a UNIX timestamp in milliseconds */
       startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
       /** Type of report to receive */
       type: GetSummaryCountReportWSRequestTypeEnum | null;
     };
@@ -29239,6 +30774,22 @@ export interface components {
       timeSeriesDataPoints?:
         | components["schemas"]["SummaryCountTimeSeriesDataPointType"][]
         | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for getting org wide threshold crossing count reports. */
+    Report_GetThresholdCrossingCountReportForOrgWSRequest: {
+      /** Size of the report buckets */
+      bucketSize?: GetThresholdCrossingCountReportForOrgWSRequestBucketSizeEnum | null;
+      /** Type of crossing object to count */
+      crossingObject?: GetThresholdCrossingCountReportForOrgWSRequestCrossingObjectEnum | null;
+      /** Whether to deduplicate the results */
+      dedupe?: boolean | null;
+      /** End time in milliseconds */
+      endTimeMs?: number | null;
+      /** Start time in milliseconds */
+      startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
     };
     /** Request object for getting threshold crossing count reports. */
     Report_GetThresholdCrossingCountReportWSRequest: {
@@ -29254,6 +30805,8 @@ export interface components {
       endTimeMs?: number | null;
       /** Start time in milliseconds */
       startTimeMs?: number | null;
+      /** String of timezone for bucketing */
+      timeZone?: string | null;
     };
     /** Response object for getting threshold crossing count reports. */
     Report_GetThresholdCrossingCountReportWSResponse: {
@@ -29261,6 +30814,7 @@ export interface components {
       crossingCounts?: components["schemas"]["CrossingCountsType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting threshold crossing counts. */
     Report_GetThresholdCrossingCountsWSRequest: {
@@ -29283,6 +30837,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Threshold crossing count data point. */
     Report_GetThresholdCrossingCountsWSResponse_ThresholdCrossingCountType: {
@@ -29316,6 +30871,7 @@ export interface components {
       thresholdCrossingEvents?:
         | components["schemas"]["MinimalThresholdEventType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting threshold crossing events. */
     Report_GetThresholdCrossingEventsWSRequest: {
@@ -29338,6 +30894,7 @@ export interface components {
       } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for resetting running average. */
     Report_ResetRunningAverageWSRequest: {
@@ -29350,6 +30907,7 @@ export interface components {
     Report_ResetRunningAverageWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Extended time series data point with additional timestamp information. */
     Report_TimeSeriesDataPointV2ExtendedType: {
@@ -29753,6 +31311,7 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
+    RhombusSamlDomainEnum: RhombusSamlDomainEnum;
     RhombusSecureCsnType:
       | ({
           algorithm?: components["schemas"]["SecureTokenAlgorithm"];
@@ -29925,6 +31484,190 @@ export interface components {
       salesForceOpportunityId?: string | null;
       zendeskTicketNumber?: string | null;
     } | null;
+    RobotSettings: {
+      home_latitude?: number | null;
+      home_longitude?: number | null;
+      map_created_at_ms?: number | null;
+      /** base 64 (url-safe) uuid string */
+      map_id?: string | null;
+    };
+    RobotSettingsSelectiveUpdate: {
+      home_latitude?: number | null;
+      home_longitude?: number | null;
+      map_created_at_ms?: number | null;
+      /** base 64 (url-safe) uuid string */
+      map_id?: string | null;
+      updatedSetMethodMap?: { [key: string]: boolean | null } | null;
+    };
+    /** Request to delete a robot device. */
+    Robot_DeleteRobotWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid: string | null;
+      /** Whether to mummify the device instead of hard delete */
+      mummify: boolean | null;
+    };
+    /** Response from deleting a robot device. */
+    Robot_DeleteRobotWSResponse: {
+      /** Status of the delete operation */
+      responseStatus?: DeleteRobotWSResponseResponseStatusEnum | null;
+    };
+    /** Request to deploy the robot to a mapped location. */
+    Robot_DeployRobotWSRequest: {
+      destOrientation?: components["schemas"]["Quaternion"];
+      destination?: components["schemas"]["Point"];
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+    };
+    /** Response from deleting a robot device. */
+    Robot_DeployRobotWSResponse: { [key: string]: unknown };
+    /** Response containing robot configuration. */
+    Robot_GetRobotConfigWSResponse: {
+      config?: components["schemas"]["Device_config_userconfig_ExternalReadableFacetedUserConfig"];
+    };
+    /** Response containing full state information for a robot. */
+    Robot_GetRobotFullStateWSResponse: {
+      fullState?: components["schemas"]["Robot_RobotFullDeviceStateType"];
+    };
+    /** Response containing the robot's map image. */
+    Robot_GetRobotMapImageWSRequest: {
+      /** base 64 (url-safe) uuid string */
+      robotUuid?: string | null;
+    };
+    /** Response containing the robot's map meta. */
+    Robot_GetRobotMapMetaRequest: {
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+    };
+    /** Robot Map Meta. */
+    Robot_GetRobotMapMetaResponse: {
+      origin?: components["schemas"]["Robot_GetRobotMapMetaResponse_Origin"];
+      resolution?: number | null;
+    };
+    Robot_GetRobotMapMetaResponse_Origin: {
+      x?: number | null;
+      y?: number | null;
+      yaw?: number | null;
+    };
+    Robot_GetRobotMediaUrisWSResponse: {
+      /** List of LAN check URLs to verify device availability on local network */
+      lanCheckUrls?: (string | null)[] | null;
+      /** List of LAN URIs for live H.264 video streams */
+      lanLiveH264Uris?: (string | null)[] | null;
+      /** List of LAN URIs for live MPD streams */
+      lanLiveMpdUris?: (string | null)[] | null;
+      /** List of LAN URIs for live Opus audio streams */
+      lanLiveOpusUris?: (string | null)[] | null;
+      /** List of LAN URI templates for VOD M3U8 streams */
+      lanVodM3u8UrisTemplates?: (string | null)[] | null;
+      /** List of LAN URI templates for VOD MPD streams */
+      lanVodMpdUrisTemplates?: (string | null)[] | null;
+      /** WAN URI for live H.264 video stream */
+      wanLiveH264Uri?: string | null;
+      /** WAN URI for live MPD stream */
+      wanLiveMpdUri?: string | null;
+      /** WAN URI for live Opus audio stream */
+      wanLiveOpusUri?: string | null;
+      wanLiveRobotUri?: string | null;
+      /** WAN URI template for VOD M3U8 streams */
+      wanVodM3u8UriTemplate?: string | null;
+      /** WAN URI template for VOD MPD streams */
+      wanVodMpdUriTemplate?: string | null;
+    };
+    /** Response containing minimal state information for all robots in organization. */
+    Robot_GetRobotMinimalStateListWSResponse: {
+      /** List of minimal device state information for robots */
+      minimalStates?: components["schemas"]["MinimalRobotStateType"][] | null;
+    };
+    /** Full device state information for the robot */
+    Robot_RobotFullDeviceStateType: {
+      afSupport?: boolean | null;
+      audioSupported?: boolean | null;
+      baseVideoOperationUri?: string | null;
+      batteryPercent?: number | null;
+      charging?: boolean | null;
+      connectionStatus?: components["schemas"]["DeviceStatusEnum"];
+      connectionTimestampMs?: number | null;
+      createdAtMillis?: number | null;
+      defaultInterface?: string | null;
+      defaultInterfaceMac?: string | null;
+      directionRadians?: number | null;
+      externalIPAddress?: string | null;
+      facetNameMap?: { [key: string]: string | null } | null;
+      firmwareUpdateInProgress?: boolean | null;
+      firmwareVersion?: string | null;
+      floorNumber?: number | null;
+      healthStatus?: components["schemas"]["DeviceStatusEnum"];
+      healthStatusDetails?: components["schemas"]["DeviceHealthStatusDetailsEnum"];
+      hwVariation?: components["schemas"]["HardwareVariationEnum"];
+      lanAddresses?: (string | null)[] | null;
+      latestFirmwareVersion?: string | null;
+      latitude?: number | null;
+      liveStreamShared?: boolean | null;
+      liveStreamsSharedCount?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      longitude?: number | null;
+      /** base 64 (url-safe) uuid string */
+      mapId?: string | null;
+      maxZoomPercent?: number | null;
+      mediaRegion?: string | null;
+      /** RUUID with optional appended facet information */
+      mediaStorageDeviceUuid?: string | null;
+      mode?: RobotFullDeviceStateModeEnum | null;
+      mummified?: boolean | null;
+      name?: string | null;
+      onCameraState?: {
+        [key: string]: { [key: string]: unknown } | null;
+      } | null;
+      onCloudState?: {
+        [key: string]: { [key: string]: unknown } | null;
+      } | null;
+      orientation?: components["schemas"]["Quaternion"];
+      /** base 64 (url-safe) uuid string */
+      policyUuid?: string | null;
+      position?: components["schemas"]["Point"];
+      region?: string | null;
+      roamingLatitude?: number | null;
+      roamingLongitude?: number | null;
+      secondaryLanAddresses?: (string | null)[] | null;
+      serialNumber?: string | null;
+      ssid?: string | null;
+      stateUpdatedTimestampMs?: number | null;
+      subLocationsHierarchyKey?: components["schemas"]["SubLocationsHierarchyKey"];
+      supportedFacets?: components["schemas"]["DeviceFacet"][] | null;
+      /** base 64 (url-safe) uuid string */
+      uuid?: string | null;
+      versionsBehind?: number | null;
+      wifiApMac?: string | null;
+      wifiBars?: number | null;
+      wifiSignalStrength?: number | null;
+    };
+    /** Request to update robot configuration. */
+    Robot_UpdateRobotConfigWSRequest: {
+      configUpdate?: components["schemas"]["Device_config_userconfig_ExternalUpdateableFacetedUserConfig"];
+    };
+    /** Response indicating the result of updating robot device configuration. */
+    Robot_UpdateRobotConfigWSResponse: {
+      config?: components["schemas"]["Device_config_userconfig_ExternalReadableFacetedUserConfig"];
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
+    };
+    /** Request to update robot details. */
+    Robot_UpdateRobotDetailsWSRequest: {
+      /** Optional description for the robot */
+      description?: string | null;
+      /** base 64 (url-safe) uuid string */
+      deviceUuid?: string | null;
+      /** Optional latitude coordinate */
+      latitude?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      /** Optional longitude coordinate */
+      longitude?: number | null;
+      /** Optional name for the robot */
+      name?: string | null;
+    };
     RtspEndpoint: {
       audioSupported?: boolean | null;
       lastRtspUrlStatus?: RtspEndpointLastRtspUrlStatusEnum | null;
@@ -29945,6 +31688,9 @@ export interface components {
       cancelLoopingAudioPlaybackAction?: components["schemas"]["CancelLoopingAudioPlaybackActionType"];
       connectAudioDeviceToPhoneNumberAction?: components["schemas"]["ConnectAudioDeviceToPhoneNumberActionType"];
       customLLMActions?: components["schemas"]["CustomLLMActionType"][] | null;
+      enableDisableAudioRecordActions?:
+        | components["schemas"]["EnableDisableAudioRecordActionType"][]
+        | null;
       integrationCommandActions?:
         | components["schemas"]["IntegrationCommandActionType"][]
         | null;
@@ -30018,6 +31764,9 @@ export interface components {
       deviceEventRecords?:
         | components["schemas"]["DeviceEventRecordType"][]
         | null;
+      enableDisableAudioRecordActionRecords?:
+        | components["schemas"]["EnableDisableAudioRecordActionRecordType"][]
+        | null;
       integrationActionStatuses?: {
         [key: string]: components["schemas"]["IntegrationActionStatusEnum"];
       } | null;
@@ -30053,6 +31802,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       ruleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a rule pause setting. */
     Rules_DeleteRulePauseSettingWSRequest: {
@@ -30063,6 +31813,7 @@ export interface components {
     Rules_DeleteRulePauseSettingWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a rule. */
     Rules_DeleteRuleWSRequest: {
@@ -30073,6 +31824,7 @@ export interface components {
     Rules_DeleteRuleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object for getting rule pause settings. */
     Rules_GetRulePauseSettingsResponse: {
@@ -30082,6 +31834,7 @@ export interface components {
       rulesPausedMap?: {
         [key: string]: components["schemas"]["ScheduledIntervalType"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting rule pause settings. */
     Rules_GetRulePauseSettingsWSRequest: { [key: string]: unknown };
@@ -30093,6 +31846,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of rules for the organization */
       rules?: components["schemas"]["RuleType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for pausing a rule. */
     Rules_PauseRuleWSRequest: {
@@ -30107,6 +31861,7 @@ export interface components {
     Rules_PauseRuleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a rule. */
     Rules_UpdateRuleWSRequest: {
@@ -30116,6 +31871,7 @@ export interface components {
     Rules_UpdateRuleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a rules event record. */
     Rules_records_DeleteRulesEventRecordWSRequest: {
@@ -30169,12 +31925,15 @@ export interface components {
       idpMetaDataXml?: string | null;
       justInTimeAccountProvisioningEnabled?: boolean | null;
     };
+    SCIMRolesFormatEnum: SCIMRolesFormatEnum;
     SCIMSettingsType: {
       addUsersOnRoleMismatch?: boolean | null;
       createdAtMillis?: number | null;
+      forceRolesStrictSchemaFormat?: boolean | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
       rhombusKeyAppSettings?: components["schemas"]["RhombusKeyAppSettingsType"];
+      rolesFormat?: components["schemas"]["SCIMRolesFormatEnum"];
       sendWelcomeEmailToNewRhombusKeyUsers?: boolean | null;
       sendWelcomeEmailToNewUsers?: boolean | null;
       updatedAtMillis?: number | null;
@@ -30200,6 +31959,7 @@ export interface components {
       analyzed?: boolean | null;
       byteCount?: number | null;
       clipLocation?: components["schemas"]["MetaDataLocationType"];
+      clipLocationV2?: string | null;
       consoleDelete?: boolean | null;
       createdAtMs?: number | null;
       description?: string | null;
@@ -30226,6 +31986,7 @@ export interface components {
       sourceAlertUuid?: string | null;
       status?: SavedClipV2StatusEnum | null;
       thumbnailLocation?: components["schemas"]["MetaDataLocationType"];
+      thumbnailLocationV2?: string | null;
       timestampMs?: number | null;
       title?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -30244,6 +32005,7 @@ export interface components {
       boundingBoxes?: components["schemas"]["ClipBoundingBoxType"][] | null;
       byteCount?: number | null;
       clipLocation?: components["schemas"]["MetaDataLocationType"];
+      clipLocationV2?: string | null;
       consoleDelete?: boolean | null;
       createdAtMs?: number | null;
       description?: string | null;
@@ -30271,6 +32033,7 @@ export interface components {
       sourceAlertUuid?: string | null;
       status?: SavedClipWithDetailsStatusEnum | null;
       thumbnailLocation?: components["schemas"]["MetaDataLocationType"];
+      thumbnailLocationV2?: string | null;
       timestampMs?: number | null;
       title?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -30291,6 +32054,8 @@ export interface components {
     /** Scene query report event from the triggered prompt */
     SceneQueryReportEvent: {
       checkCondition?: boolean | null;
+      image?: string | null;
+      prompt?: string | null;
       timestampMs?: number | null;
       value?: string | null;
     };
@@ -30303,6 +32068,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       promptConfiguration?: components["schemas"]["PromptConfigurationType"];
+      warningMsg?: string | null;
     };
     /** Request object for deleting a prompt configuration. */
     Scenequery_DeletePromptConfigurationWSRequest: {
@@ -30313,6 +32079,7 @@ export interface components {
     Scenequery_DeletePromptConfigurationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding all prompt configurations. */
     Scenequery_FindAllPromptConfigurationsWSRequest: { [key: string]: unknown };
@@ -30324,6 +32091,7 @@ export interface components {
       promptConfigurations?:
         | components["schemas"]["PromptConfigurationType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting a prompt configuration. */
     Scenequery_GetPromptConfigurationWSRequest: {
@@ -30335,6 +32103,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       promptConfiguration?: components["schemas"]["PromptConfigurationType"];
+      warningMsg?: string | null;
     };
     /** Request object for selectively updating a prompt configuration. */
     Scenequery_SelectiveUpdatePromptConfigurationWSRequest: {
@@ -30368,6 +32137,7 @@ export interface components {
     Scenequery_SelectiveUpdatePromptConfigurationWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for triggering a prompt. */
     Scenequery_TriggerPromptWSRequest: {
@@ -30386,6 +32156,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       event?: components["schemas"]["SceneQueryReportEvent"];
+      warningMsg?: string | null;
     };
     /** Request object for updating a prompt configuration. */
     Scenequery_UpdatePromptConfigurationWSRequest: {
@@ -30396,22 +32167,23 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       promptConfiguration?: components["schemas"]["PromptConfigurationType"];
+      warningMsg?: string | null;
     };
     /** Information about the next nearest schedule for access controlled doors. */
-    Schedule_AccessControlledDoorNextNearestSchedule: {
+    Schedule_AccessStatefulComponentCompositeNextNearestSchedule: {
       /** Whether the schedule is currently active */
       currentlyActive?: boolean | null;
       doorState?: components["schemas"]["AccessControlledDoorStateEnumType"];
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
-      source?: components["schemas"]["Schedule_AccessControlledDoorStateSourceEnum"];
+      source?: components["schemas"]["Schedule_AccessStatefulComponentCompositeStateSourceEnum"];
       /** Start time in milliseconds (inclusive) */
       startsAtMillisInclusive?: number | null;
       /** Stop time in milliseconds (inclusive) */
       stopsAtMillisInclusive?: number | null;
     };
     /** Source of the door state */
-    Schedule_AccessControlledDoorStateSourceEnum: Schedule_AccessControlledDoorStateSourceEnum;
+    Schedule_AccessStatefulComponentCompositeStateSourceEnum: Schedule_AccessStatefulComponentCompositeStateSourceEnum;
     /** Request object for creating an absolute schedule. */
     Schedule_CreateAbsoluteScheduleWSRequest: {
       schedule?: components["schemas"]["AbsoluteSecondsScheduleType"];
@@ -30422,6 +32194,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a relative datetime intervals schedule. */
     Schedule_CreateRelativeDateTimeIntervalsScheduleWSRequest: {
@@ -30433,6 +32206,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a relative schedule. */
     Schedule_CreateRelativeScheduleWSRequest: {
@@ -30444,6 +32218,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a weekly schedule. */
     Schedule_CreateWeeklyScheduleWSRequest: {
@@ -30455,6 +32230,7 @@ export interface components {
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
       scheduleUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding an absolute schedule. */
     Schedule_FindAbsoluteScheduleWSRequest: {
@@ -30466,6 +32242,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       schedule?: components["schemas"]["AbsoluteSecondsScheduleType"];
+      warningMsg?: string | null;
     };
     /** Request object for finding a relative datetime intervals schedule. */
     Schedule_FindRelativeDateTimeIntervalsScheduleWSRequest: {
@@ -30477,6 +32254,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       schedule?: components["schemas"]["RelativeDateTimeIntervalsScheduleType"];
+      warningMsg?: string | null;
     };
     /** Request object for finding a relative schedule. */
     Schedule_FindRelativeScheduleWSRequest: {
@@ -30488,6 +32266,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       schedule?: components["schemas"]["RealtimeRelativeSecondsScheduleType"];
+      warningMsg?: string | null;
     };
     /** Request object for finding a weekly schedule. */
     Schedule_FindWeeklyScheduleWSRequest: {
@@ -30499,6 +32278,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       schedule?: components["schemas"]["WeeklyRepeatingScheduleType"];
+      warningMsg?: string | null;
     };
     /** Request object for getting schedule data v2. */
     Schedule_GetScheduleDataV2WSRequest: {
@@ -30509,12 +32289,14 @@ export interface components {
     Schedule_GetScheduleDataV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       weeklyScheduleData?: components["schemas"]["Schedule_WeeklyRepeatingScheduleDataType"];
     };
     /** Response object for getting schedule data. */
     Schedule_GetScheduleDataWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
       /** List of weekly schedule data */
       weeklyScheduleData?:
         | components["schemas"]["Schedule_WeeklyRepeatingScheduleDataType"][]
@@ -30538,6 +32320,7 @@ export interface components {
       relativeSchedules?:
         | components["schemas"]["RealtimeRelativeSecondsScheduleType"][]
         | null;
+      warningMsg?: string | null;
       /** List of weekly repeating schedules */
       weeklySchedules?:
         | components["schemas"]["WeeklyRepeatingScheduleType"][]
@@ -30620,6 +32403,7 @@ export interface components {
     Search_DeleteVideoEmbeddingWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for indexing video embeddings. */
     Search_IndexVideoEmbeddingWSRequest: {
@@ -30629,6 +32413,7 @@ export interface components {
     Search_IndexVideoEmbeddingWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching license plates. */
     Search_SearchLicensePlatesWSRequest: {
@@ -30653,6 +32438,7 @@ export interface components {
       vehicleEvents?:
         | components["schemas"]["VehicleEventSearchHitType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching objects by color. */
     Search_SearchObjectsByColorWSRequest: {
@@ -30673,6 +32459,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of objects matching the color search criteria */
       objects?: components["schemas"]["FootageBoundingBoxType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching similar object embeddings by text. */
     Search_SearchSimilarObjectEmbeddingsByTextWSRequest: {
@@ -30746,6 +32533,7 @@ export interface components {
       similarEmbeddings?:
         | components["schemas"]["GenericObjectEmbeddingMatch"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching similar video embeddings by time window. */
     Search_SearchSimilarVideoEmbeddingsByTimeWindowWSRequest: {
@@ -30779,6 +32567,7 @@ export interface components {
       similarEmbeddings?:
         | components["schemas"]["GenericVideoEmbeddingMatch"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for searching similar video embeddings. */
     Search_SearchSimilarVideoEmbeddingsWSRequest: {
@@ -30804,6 +32593,7 @@ export interface components {
       similarEmbeddings?:
         | components["schemas"]["GenericVideoEmbeddingMatch"][]
         | null;
+      warningMsg?: string | null;
     };
     SecureTokenAlgorithm: SecureTokenAlgorithmEnum;
     SecurityZoneInfoType: {
@@ -30892,6 +32682,7 @@ export interface components {
       seekPoints?:
         | components["schemas"]["Sensor_FootageSensorSeekPointDisplayType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting sensor seekpoints for a location. */
     Sensor_GetFootageSensorSeekpointsForLocationWSRequest: {
@@ -30910,6 +32701,7 @@ export interface components {
       seekPoints?:
         | components["schemas"]["Sensor_FootageSensorSeekPointDisplayType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting sensor seekpoints for a specific sensor. */
     Sensor_GetFootageSensorSeekpointsForSensorWSRequest: {
@@ -30932,6 +32724,7 @@ export interface components {
       seekPoints?:
         | components["schemas"]["Sensor_FootageSensorSeekPointDisplayType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrieving stored video information for a sensor. */
     Sensor_GetSensorPresenceWindowsWSRequest: {
@@ -30948,6 +32741,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of presence windows for the sensor */
       presenceWindows?: components["schemas"]["TimeWindowSeconds"][] | null;
+      warningMsg?: string | null;
     };
     ServiceNowSettings: {
       enabled?: boolean | null;
@@ -30990,6 +32784,7 @@ export interface components {
         | null;
       /** Title of the shared clip */
       title?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared footage bounding boxes. */
     Share_GetSharedFootageBoundingBoxesWSRequest: {
@@ -31006,6 +32801,7 @@ export interface components {
       boundingBoxes?: components["schemas"]["FootageBoundingBoxType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared footage seekpoints V2. */
     Share_GetSharedFootageSeekpointsV2WSRequest: {
@@ -31026,6 +32822,7 @@ export interface components {
         | null;
       /** List of shared footage seekpoints (deprecated) */
       seekPoints?: components["schemas"]["FootageSeekPointV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared footage seekpoints. */
     Share_GetSharedFootageSeekpointsWSRequest: {
@@ -31040,6 +32837,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of shared footage seekpoints */
       seekPoints?: components["schemas"]["FootageSeekPointType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared footage sensor seekpoints for a camera. */
     Share_GetSharedFootageSensorSeekpointsForCameraWSRequest: {
@@ -31056,6 +32854,7 @@ export interface components {
       seekPoints?:
         | components["schemas"]["Sensor_FootageSensorSeekPointDisplayType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Response object containing shared live stream information. */
     Share_GetSharedLiveStreamInfoWSResponse: {
@@ -31091,6 +32890,7 @@ export interface components {
       } | null;
       /** Whether VOD is enabled for the shared live stream */
       vodEnabled?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared media URIs. */
     Share_GetSharedMediaUrisWSRequest: { [key: string]: unknown };
@@ -31114,6 +32914,7 @@ export interface components {
       wanVodM3u8UriTemplate?: string | null;
       /** WAN VOD MPD URI template for the shared media */
       wanVodMpdUriTemplate?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared presence windows. */
     Share_GetSharedPresenceWindowsWSRequest: {
@@ -31130,6 +32931,7 @@ export interface components {
       presenceWindows?: {
         [key: string]: components["schemas"]["TimeWindowSeconds"][] | null;
       } | null;
+      warningMsg?: string | null;
     };
     /** Response object containing shared timelapse data V2. */
     Share_GetSharedTimelapseDataV2WSResponse: {
@@ -31143,6 +32945,7 @@ export interface components {
       publicTimelapseUuids?: (string | null)[] | null;
       /** Title of the shared timelapse */
       title?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared timelapse data. */
     Share_GetSharedTimelapseDataWSRequest: { [key: string]: unknown };
@@ -31154,6 +32957,7 @@ export interface components {
       errorMsg?: string | null;
       /** Name of the organization */
       orgName?: string | null;
+      warningMsg?: string | null;
     };
     /** Response object containing shared video wall information. */
     Share_GetSharedVideoWallInfoWSResponse: {
@@ -31169,6 +32973,7 @@ export interface components {
       settings?: { [key: string]: { [key: string]: unknown } | null } | null;
       /** Whether VOD is enabled for the video wall */
       vodEnabled?: boolean | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting shared video wall media URIs. */
     Share_GetSharedVideoWallMediaUrisWSRequest: {
@@ -31189,6 +32994,7 @@ export interface components {
       wanVodM3u8UriTemplate?: string | null;
       /** WAN VOD MPD URI template for the shared video wall */
       wanVodMpdUriTemplate?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for sharing a link via phone numbers and email addresses. */
     Share_ShareLinkWSRequest: {
@@ -31203,6 +33009,7 @@ export interface components {
     Share_ShareLinkWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Public type for shared clips with comprehensive metadata. */
     Share_SharedClipPublicType: {
@@ -31634,6 +33441,7 @@ export interface components {
       authorityUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for allowing support authority access. */
     Support_AlllowSupportAuthorityAccessWSRequest: {
@@ -31644,6 +33452,7 @@ export interface components {
     Support_AlllowSupportAuthorityAccessWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding support authority sessions. */
     Support_FindSupportAuthoritySessionsWSRequest: {
@@ -31656,6 +33465,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of support authority sessions */
       sessions?: components["schemas"]["SessionInfoWSType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting support authorities. */
     Support_GetSupportAuthoritiesWSRequest: { [key: string]: unknown };
@@ -31667,6 +33477,7 @@ export interface components {
         | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for logging out all support authority sessions. */
     Support_LogoutAllSupportAuthoritySessionsWSRequest: {
@@ -31677,6 +33488,7 @@ export interface components {
     Support_LogoutAllSupportAuthoritySessionsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for looking up support partner authorities. */
     Support_LookupSupportPartnerAuthoritiesWSRequest: {
@@ -31691,6 +33503,7 @@ export interface components {
       supportPartnerAuthorities?:
         | components["schemas"]["Support_SupportPartnerAuthorityWSType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for removing a support authority from the organization. */
     Support_RemoveSupportAuthorityWSRequest: {
@@ -31701,6 +33514,7 @@ export interface components {
     Support_RemoveSupportAuthorityWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for revoking support authority access. */
     Support_RevokeSupportAuthorityAccessWSRequest: {
@@ -31711,6 +33525,7 @@ export interface components {
     Support_RevokeSupportAuthorityAccessWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Selective update type for support authority with optional fields. */
     Support_SupportAuthoritySelectiveUpdateWSType: {
@@ -31772,6 +33587,7 @@ export interface components {
     Support_UpdateSupportAuthorityWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     TPLinkSettings: {
       cameraToSwitchMap?: { [key: string]: string | null } | null;
@@ -32028,6 +33844,7 @@ export interface components {
       config?: components["schemas"]["TvOsConfigType"];
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all tvOs configurations for the organization. */
     Tvos_GetTvOsConfigsForOrgWsRequest: { [key: string]: unknown };
@@ -32037,6 +33854,7 @@ export interface components {
       configs?: components["schemas"]["TvOsConfigType"][] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a tvOs configuration. */
     Tvos_UpdateTvOsConfigWsRequest: {
@@ -32046,6 +33864,7 @@ export interface components {
     Tvos_UpdateTvOsConfigWsResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     TwilioSettings: {
       enabled?: boolean | null;
@@ -32269,6 +34088,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       messages?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Request object for changing a user's email address. */
     User_ChangeUserEmailWSRequest: {
@@ -32281,6 +34101,7 @@ export interface components {
     User_ChangeUserEmailWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for changing a user's password. */
     User_ChangeUserPasswordWSRequest: {
@@ -32295,6 +34116,7 @@ export interface components {
       errorMsg?: string | null;
       /** Status of the password change response */
       responseStatus?: ChangeUserPasswordWSResponseResponseStatusEnum | null;
+      warningMsg?: string | null;
     };
     /** CreateUserWSRequest */
     User_CreateUserWSRequest: {
@@ -32320,6 +34142,7 @@ export interface components {
       responseStatus?: CreateUserWSResponseResponseStatusEnum | null;
       /** base 64 (url-safe) uuid string */
       userUuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a user. */
     User_DeleteUserWSRequest: {
@@ -32330,6 +34153,7 @@ export interface components {
     User_DeleteUserWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting the virtual MFA device for the current user. */
     User_DeleteVirtualMfaDeviceForCurrentUserWSRequest: {
@@ -32339,6 +34163,7 @@ export interface components {
     User_DeleteVirtualMfaDeviceForCurrentUserWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for finding a user by email. */
     User_FindUserByEmailWSRequest: {
@@ -32358,20 +34183,6 @@ export interface components {
     User_FindUserWSResponse: {
       user?: components["schemas"]["WrappedRhombusOrgUserType"];
     };
-    User_GetBulkProvisionCredentialsFormatWSResponse: {
-      accessControlEnabled?: boolean | null;
-      error?: boolean | null;
-      errorMsg?: string | null;
-      example?: string | null;
-      explanation?: string | null;
-    };
-    User_GetImportUsersFormatWSResponse: {
-      accessControlEnabled?: boolean | null;
-      error?: boolean | null;
-      errorMsg?: string | null;
-      example?: string | null;
-      explanation?: string | null;
-    };
     User_GetRhombusKeyConfigForUserWSRequest: {
       /** base 64 (url-safe) uuid string */
       userUuid?: string | null;
@@ -32387,6 +34198,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       userCustomizations?: { [key: string]: string | null } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting users in the organization for reports. */
     User_GetUsersInOrgForReportsWSRequest: { [key: string]: unknown };
@@ -32396,6 +34208,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of users in the organization for reports */
       users?: components["schemas"]["RhombusOrgUserType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all users in the organization. */
     User_GetUsersInOrgWSRequest: { [key: string]: unknown };
@@ -32425,6 +34238,7 @@ export interface components {
       userPermissions?: components["schemas"]["UserPermissionType"][] | null;
       /** List of users in the organization */
       users?: components["schemas"]["WrappedRhombusOrgUserType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting the virtual MFA device for the current user. */
     User_GetVirtualMfaDeviceForCurrentUserWSRequest: { [key: string]: unknown };
@@ -32433,11 +34247,13 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       virtualMfaDevice?: components["schemas"]["UserVirtualMfaDeviceType"];
+      warningMsg?: string | null;
     };
     User_ImportUsersWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
       messages?: (string | null)[] | null;
+      warningMsg?: string | null;
     };
     /** Organization details and summary information */
     User_RhombusKeyOrgDetailsType: {
@@ -32455,6 +34271,7 @@ export interface components {
     User_SendMobileDownloadSMSWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for sending a partner access granted email. */
     User_SendPartnerAccessGrantedEmailWSRequest: {
@@ -32471,6 +34288,7 @@ export interface components {
     User_SendPartnerAccessGrantedEmailWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for sending a Rhombus Key user welcome email. */
     User_SendRhombusKeyUserWelcomeEmailWSRequest: {
@@ -32481,6 +34299,7 @@ export interface components {
     User_SendRhombusKeyUserWelcomeEmailWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for sending a welcome email to a user. */
     User_SendUserWelcomeEmailWSRequest: {
@@ -32491,6 +34310,7 @@ export interface components {
     User_SendUserWelcomeEmailWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for setting up a virtual MFA device for the current user. */
     User_SetupVirtualMfaDeviceForCurrentUserWSRequest: {
@@ -32506,6 +34326,7 @@ export interface components {
       qrCodeSetupData?: string | null;
       /** Whether the MFA device setup was successful */
       success?: boolean | null;
+      warningMsg?: string | null;
     };
     User_UpdatePartnerUserNotificationSettingsWSRequest: {
       allClientsSelected?: boolean | null;
@@ -32528,6 +34349,7 @@ export interface components {
     User_UpdatePartnerUserNotificationSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     User_UpdatePartnerWSRequest: {
       bypassSaml?: boolean | null;
@@ -32545,6 +34367,7 @@ export interface components {
     User_UpdatePartnerWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     User_UpdateRhombusKeySettingsForUserWSRequest: {
       bypassSaml?: boolean | null;
@@ -32567,6 +34390,7 @@ export interface components {
     User_UpdateUserCustomizationFlagsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     User_UpdateUserNotificationSettingsWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -32581,6 +34405,7 @@ export interface components {
     User_UpdateUserNotificationSettingsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     User_UpdateUserSelectiveWSRequest: {
       bypassSaml?: boolean | null;
@@ -32623,6 +34448,7 @@ export interface components {
     User_UpdateUserWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** User snooze notification settings with location and device-specific snooze intervals. */
     User_UserSnoozeNotificationSettingsType: {
@@ -32772,6 +34598,7 @@ export interface components {
     Vehicle_AddVehicleLabelWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for associating vehicle events to a saved vehicle. */
     Vehicle_AssociateEventsToVehicleWSRequest: {
@@ -32784,6 +34611,7 @@ export interface components {
     Vehicle_AssociateEventsToVehicleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a vehicle. */
     Vehicle_DeleteVehicleWSRequest: {
@@ -32794,6 +34622,7 @@ export interface components {
     Vehicle_DeleteVehicleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting recent vehicle events by location (deprecated). */
     Vehicle_GetRecentVehicleEventsByLocationWSRequest: {
@@ -32810,6 +34639,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of recent vehicle events for the location */
       events?: components["schemas"]["VehicleEventIndexType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting recent vehicle events for a specific vehicle (deprecated). */
     Vehicle_GetRecentVehicleEventsForVehicleWSRequest: {
@@ -32826,6 +34656,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of recent vehicle events for the specific vehicle */
       events?: components["schemas"]["VehicleEventIndexType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting recent vehicle events (deprecated). */
     Vehicle_GetRecentVehicleEventsWSRequest: {
@@ -32842,6 +34673,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of recent vehicle events */
       events?: components["schemas"]["VehicleEventIndexType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting vehicle events with filters and additive queries. */
     Vehicle_GetVehicleEventsWSRequest: {
@@ -32870,6 +34702,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of vehicle events matching the query criteria */
       events?: components["schemas"]["VehicleEventIndexType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all vehicle labels for the organization. */
     Vehicle_GetVehicleLabelsForOrgWSRequest: { [key: string]: unknown };
@@ -32879,6 +34712,7 @@ export interface components {
       errorMsg?: string | null;
       /** Map of license plate to label set */
       vehicleLabels?: { [key: string]: (string | null)[] | null } | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all vehicles in the organization. */
     Vehicle_GetVehiclesWSRequest: { [key: string]: unknown };
@@ -32888,6 +34722,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of vehicles in the organization */
       vehicles?: components["schemas"]["VehicleV2Type"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for removing a label from a vehicle. */
     Vehicle_RemoveVehicleLabelWSRequest: {
@@ -32900,6 +34735,7 @@ export interface components {
     Vehicle_RemoveVehicleLabelWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for reporting a mis-detected license plate event. */
     Vehicle_ReportVehicleEventRequest: {
@@ -32912,6 +34748,7 @@ export interface components {
       collectedMediaForTraining?: boolean | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for saving a vehicle with license plate information. */
     Vehicle_SaveVehicleWSRequest: {
@@ -32934,6 +34771,7 @@ export interface components {
     Vehicle_SaveVehicleWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     VerificationHistory: {
       alertIndex?: number | null;
@@ -33019,6 +34857,7 @@ export interface components {
     Video_CancelSpliceV2WSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for canceling a spliced clip (deprecated). */
     Video_CancelSpliceWSRequest: {
@@ -33031,6 +34870,7 @@ export interface components {
     Video_CancelSpliceWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a shared timelapse group. */
     Video_CreateSharedTimelapseGroupWSRequest: {
@@ -33053,6 +34893,7 @@ export interface components {
       shareUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting a shared timelapse group. */
     Video_DeleteSharedTimelapseGroupWSRequest: {
@@ -33063,6 +34904,7 @@ export interface components {
     Video_DeleteSharedTimelapseGroupWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for deleting timelapse clips. */
     Video_DeleteTimelapseClipsWSRequest: {
@@ -33073,6 +34915,7 @@ export interface components {
     Video_DeleteTimelapseClipsWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for generating a timelapse clip. */
     Video_GenerateTimelapseClipWSRequest: {
@@ -33105,6 +34948,7 @@ export interface components {
       clipUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for generating URL to get an exact frame with optional crop from a camera. */
     Video_GetExactFrameUriWSRequest: {
@@ -33133,6 +34977,7 @@ export interface components {
       frameUri?: string | null;
       /** Response message from the frame generation */
       responseMessage?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting the max splice duration an organization can set. */
     Video_GetMaxSpliceDurationWSRequest: { [key: string]: unknown };
@@ -33142,6 +34987,7 @@ export interface components {
       errorMsg?: string | null;
       /** Maximum duration in seconds that can be set for a splice */
       maxDuration?: number | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all shared timelapse groups for the organization. */
     Video_GetSharedTimelapseGroupsWSRequest: { [key: string]: unknown };
@@ -33153,6 +34999,7 @@ export interface components {
       sharedTimelapses?:
         | components["schemas"]["SharedTimelapseGroupWrapperType"][]
         | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all spliced clips in progress. */
     Video_GetSplicedClipsInProgressWSRequest: { [key: string]: unknown };
@@ -33162,6 +35009,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of spliced clips currently in progress */
       splicedClips?: components["schemas"]["SplicedClipType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting all timelapse clips for the organization. */
     Video_GetTimelapseClipsWSRequest: { [key: string]: unknown };
@@ -33171,6 +35019,7 @@ export interface components {
       errorMsg?: string | null;
       /** List of timelapse clips for the organization */
       timelapseClips?: components["schemas"]["TimelapseClipType"][] | null;
+      warningMsg?: string | null;
     };
     /** Request object for getting timelapse metadata for cameras. */
     Video_GetTimelapseMetadataWSRequest: {
@@ -33183,6 +35032,7 @@ export interface components {
       earliestTimestampMap?: { [key: string]: string | null } | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for retrying a spliced clip. */
     Video_RetrySpliceWSRequest: {
@@ -33199,6 +35049,7 @@ export interface components {
     Video_RetrySpliceWSResponse: {
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for sharing timelapse clips (deprecated). */
     Video_ShareTimelapseClipsWSRequest: {
@@ -33211,6 +35062,7 @@ export interface components {
       errorMsg?: string | null;
       /** Map of clip UUIDs to their share URLs */
       shareUrlMap?: { [key: string]: string | null } | null;
+      warningMsg?: string | null;
     };
     /** Request object for creating a single image from a point in time. */
     Video_SpliceFrameWSRequest: {
@@ -33227,6 +35079,7 @@ export interface components {
       errorMsg?: string | null;
       /** Region where the frame clip is stored */
       region?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for splicing video clips V2 (deprecated). */
     Video_SpliceV2WSRequest: {
@@ -33251,6 +35104,7 @@ export interface components {
       clipUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for splicing video clips V3 with multiple cameras and advanced options. */
     Video_SpliceV3WSRequest: {
@@ -33289,6 +35143,7 @@ export interface components {
       clipUuidList?: (string | null)[] | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for splicing video clips (deprecated). */
     Video_SpliceWSRequest: {
@@ -33305,6 +35160,7 @@ export interface components {
       clipUuid?: string | null;
       error?: boolean | null;
       errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a shared timelapse group. */
     Video_UpdateSharedTimelapseGroupWSRequest: {
@@ -33335,6 +35191,7 @@ export interface components {
       shareUrl?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
+      warningMsg?: string | null;
     };
     /** Request object for updating a timelapse clip's editable metadata. */
     Video_UpdateTimelapseClipMetadataWSRequest: {
@@ -33451,7 +35308,7 @@ export interface components {
     WeeklyMinuteIntervalType: {
       minuteOfWeekStart?: number | null;
       minuteOfWeekStop?: number | null;
-    } | null;
+    };
     WeeklyRepeatingScheduleType:
       | ({
           intervalList?:
@@ -35334,6 +37191,50 @@ export interface operations {
       };
     };
   };
+  /** Attempts to apply the specified first-in state to the specified elevator landing */
+  applyElevatorLandingAccessScheduleFirstInState: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSRequest"];
+      };
+    };
+  };
+  /** Attempts to apply the specified first-in state to the specified elevator landing */
+  applyElevatorLandingAuthFirstInState: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSRequest"];
+      };
+    };
+  };
   /** Create settings for first-in that can be shared across the specified doors within a location */
   createLocationFirstInSettings: {
     parameters: {
@@ -35485,6 +37386,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSRequest"];
+      };
+    };
+  };
+  /** Removes the specified elevator landing from the first-in settings if currently assigned to one. Also possible via the updateLocationFirstInSettings method but this method will leave other elevator landings belonging assigned settings as-is rather than require the entire list. */
+  removeElevatorLandingLocationFirstInSettings: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSRequest"];
       };
     };
   };
@@ -35752,6 +37675,28 @@ export interface operations {
       };
     };
   };
+  /** Activate lockdown for multiple locations from Rhombus Key */
+  activateLockdownForLocationsViaRhombusKey: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSRequest"];
+      };
+    };
+  };
   /** Create location lockdown plan */
   createLocationLockdownPlan: {
     parameters: {
@@ -35837,6 +37782,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Accesscontrol_lockdownplan_DeactivateLockdownForLocationViaRhombusKeyWSRequest"];
+      };
+    };
+  };
+  /** Deactivate lockdown for multiple locations from Rhombus Key */
+  deactivateLockdownForLocationsViaRhombusKey: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSRequest"];
       };
     };
   };
@@ -36566,6 +38533,50 @@ export interface operations {
       };
     };
   };
+  /** Unlock an access controlled elevator */
+  unlockAccessControlledElevator: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_credentials_BaseUnlockAccessControlledDoorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_UnlockAccessControlledElevatorWSRequest"];
+      };
+    };
+  };
+  /** Unlock an access controlled elevator using authorization of supplied user token */
+  unlockAccessControlledElevatorForCurrentUser: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Accesscontrol_credentials_BaseUnlockAccessControlledDoorForCurrentUserWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Accesscontrol_UnlockAccessControlledElevatorForCurrentUserWSRequest"];
+      };
+    };
+  };
   /** Mark an access control credential as no longer suspended */
   unsuspendAccessControlCredential: {
     parameters: {
@@ -36783,6 +38794,204 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Accesscontrol_credentials_UpdateWiegandCredentialWSRequest"];
+      };
+    };
+  };
+  /** Adds a timeline event to an AI report to track its status. */
+  addTimelineEvent: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_BaseAIReportWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_AddAIReportTimelineEventWSRequest"];
+      };
+    };
+  };
+  /** Generates a new AI report. Creates an AI report record and submits it to the chatbot service for processing. */
+  createReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_CreateReportWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_CreateReportWSRequest"];
+      };
+    };
+  };
+  /** Deletes an AI report record. */
+  deleteAiReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BaseApiResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_DeleteAIReportWSRequest"];
+      };
+    };
+  };
+  /** Deletes an AI report group. This will also delete all associated reports. */
+  deleteAIReportGroup: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_BaseAIReportGroupWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_DeleteAIReportGroupWSRequest"];
+      };
+    };
+  };
+  /** Retrieves a specific AI report by UUID. */
+  getAIReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_BaseAIReportWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_GetAIReportWSRequest"];
+      };
+    };
+  };
+  /** Retrieves a paginated list of AI report groups for an organization. Groups are used to track revisions of the 'same' report. */
+  getAIReportGroupsByOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_GetAIReportGroupsByOrgWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_GetAIReportGroupsByOrgWSRequest"];
+      };
+    };
+  };
+  /** Retrieves a paginated list of AI reports for a specific group. Generally, these are revisions of 'same' report. */
+  getAIReportsByGroup: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_GetAIReportsByGroupWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_GetAIReportsByGroupWSRequest"];
+      };
+    };
+  };
+  /** Retrieves a paginated list of AI reports for an organization. */
+  getAIReportsByOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_GetAIReportsByOrgWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_GetAIReportsByOrgWSRequest"];
+      };
+    };
+  };
+  /** Updates an existing AI report record. */
+  updateAiReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_report_BaseAIReportWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_report_UpdateAIReportWSRequest"];
       };
     };
   };
@@ -38061,7 +40270,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_GetConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_GetConfigWSRequest"];
       };
     };
   };
@@ -38272,6 +40481,27 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Billing_GetSubscriptionWSRequest"];
+      };
+    };
+  };
+  getCustomEventsMonthlyBreakdown: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_CustomEventsMonthlyBreakdownWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Billing_CustomEventsMonthlyBreakdownWSRequest"];
       };
     };
   };
@@ -39546,13 +41776,13 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Deviceconfig_GetFacetedUserConfigWSResponse"];
+          "application/json": components["schemas"]["Device_config_GetFacetedUserConfigWSResponse"];
         };
       };
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_GetConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_GetConfigWSRequest"];
       };
     };
   };
@@ -40230,7 +42460,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_UpdateFacetedUserConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_UpdateFacetedUserConfigWSRequest"];
       };
     };
   };
@@ -41605,6 +43835,72 @@ export interface operations {
       };
     };
   };
+  /** Create a label that can be assigned to an access controlled elevator landing and referenced by an access grant or access revocation */
+  addAccessControlledElevatorLandingLabel: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_AddAccessControlledElevatorLandingLabelWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_AddAccessControlledElevatorLandingLabelWSRequest"];
+      };
+    };
+  };
+  /** Attempts to apply an access state override to an access controlled elevator landing that ignores the regular access schedule and access schedule exceptions. */
+  applyAccessControlledElevatorLandingAccessStateOverride: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSRequest"];
+      };
+    };
+  };
+  /** Attempts to cancel the access state override, if one has been applied, to an access controlled elevator landing. */
+  cancelAccessControlledElevatorLandingAccessStateOverride: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSRequest"];
+      };
+    };
+  };
   /** Create an access controlled elevator */
   createAccessControlledElevator: {
     parameters: {
@@ -41639,7 +43935,7 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Component_CreateAccessControlledDoorWSResponse"];
+          "application/json": components["schemas"]["Component_CreateAccessControlledElevatorWSResponse"];
         };
       };
     };
@@ -41690,6 +43986,50 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Component_DeleteAccessControlledElevatorLandingWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevator landing shadows within the org */
+  findAccessControlledElevatorLandingShadows: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingShadowsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingShadowsWSRequest"];
+      };
+    };
+  };
+  /** Find access controlled elevator landing shadows within the specified location */
+  findAccessControlledElevatorLandingShadowsByLocation: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingShadowsByLocationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindAccessControlledElevatorLandingShadowsByLocationWSRequest"];
       };
     };
   };
@@ -41800,6 +44140,72 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Component_FindAccessControlledElevatorsByOwnerDeviceWSRequest"];
+      };
+    };
+  };
+  /** Get all access controlled elevator landing labels for the organization */
+  getAccessControlledElevatorLandingLabelsForOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_GetAccessControlledElevatorLandingLabelsForOrgWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_GetAccessControlledElevatorLandingLabelsForOrgWSRequest"];
+      };
+    };
+  };
+  /** Attempts to determine what the current access state is expected to be based on the current elevator landing configuration and current time. */
+  getCurrentExpectedAccessControlledElevatorLandingState: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSRequest"];
+      };
+    };
+  };
+  /** Remove a label to an access controlled elevator landing */
+  removeAccessControlledElevatorLandingLabel: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_RemoveAccessControlledElevatorLandingLabelWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_RemoveAccessControlledElevatorLandingLabelWSRequest"];
       };
     };
   };
@@ -41998,6 +44404,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Component_FindComponentEventsByAccessControlledDoorWSRequest"];
+      };
+    };
+  };
+  /** Retrieve all component events relevant to the specified AccessControlledElevator */
+  findComponentEventsByAccessControlledElevator: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Component_FindComponentEventsByAccessControlledElevatorWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Component_FindComponentEventsByAccessControlledElevatorWSRequest"];
       };
     };
   };
@@ -43585,6 +46013,160 @@ export interface operations {
       };
     };
   };
+  /** Disable device health tracking. */
+  disableDeviceHealthTracking: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_health_DisableDeviceHealthTrackingWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_health_DisableDeviceHealthTrackingWSRequest"];
+      };
+    };
+  };
+  /** Enable device health tracking. */
+  enableDeviceHealthTracking: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_health_EnableDeviceHealthTrackingWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_health_EnableDeviceHealthTrackingWSRequest"];
+      };
+    };
+  };
+  /** Find devices for which health tracking is disabled. */
+  findDevicesWithDisabledHealthTrackingByOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSRequest"];
+      };
+    };
+  };
+  /** Get device health tracking information. */
+  getDeviceHealthTracking: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_health_GetDeviceHealthTrackingWSRequest"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_health_GetDeviceHealthTrackingWSRequest"];
+      };
+    };
+  };
+  /** Add a label to a device */
+  addDeviceLabel: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_label_AddDeviceLabelWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_label_AddDeviceLabelWSRequest"];
+      };
+    };
+  };
+  /** Find all device labels for organization. */
+  findDeviceLabelsByOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_label_FindDeviceLabelsByOrgWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_label_FindDeviceLabelsByOrgWSRequest"];
+      };
+    };
+  };
+  /** Remove a label from a device. */
+  removeDeviceLabel: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Device_label_RemoveDeviceLabelWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_label_RemoveDeviceLabelWSRequest"];
+      };
+    };
+  };
   /** Get a device's config */
   getFacetedConfig: {
     parameters: {
@@ -43597,13 +46179,13 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Deviceconfig_GetFacetedUserConfigWSResponse"];
+          "application/json": components["schemas"]["Device_config_GetFacetedUserConfigWSResponse"];
         };
       };
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_GetConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_GetConfigWSRequest"];
       };
     };
   };
@@ -43625,7 +46207,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_UpdateFacetedUserConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_UpdateFacetedUserConfigWSRequest"];
       };
     };
   };
@@ -44021,7 +46603,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_GetConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_GetConfigWSRequest"];
       };
     };
   };
@@ -44395,7 +46977,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Deviceconfig_GetConfigWSRequest"];
+        "application/json": components["schemas"]["Device_config_GetConfigWSRequest"];
       };
     };
   };
@@ -48064,6 +50646,72 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Help_TriageDeviceWSRequest"];
+      };
+    };
+  };
+  /** Uploads an image with box prompts and labels to produce segmentation masks. */
+  segmentWithBoxes: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Inference_SegmentWithBoxesWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["FormDataMultiPart"];
+      };
+    };
+  };
+  /** Uploads an image with point prompts and labels to produce segmentation masks. */
+  segmentWithPoints: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Inference_SegmentWithPointsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["FormDataMultiPart"];
+      };
+    };
+  };
+  /** Uploads an image with a text prompt to produce segmentation masks. */
+  segmentWithText: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Inference_SegmentWithTextWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["FormDataMultiPart"];
       };
     };
   };
@@ -59612,6 +62260,28 @@ export interface operations {
       };
     };
   };
+  /** Delete third party camera discovery if it has no assignments. */
+  deleteThirdPartyCameraDiscovery: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Relay_DeleteThirdPartyCameraDiscoveryWSRequest"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Relay_DeleteThirdPartyCameraDiscoveryWSRequest"];
+      };
+    };
+  };
   /** Delete a third party camera password */
   deleteThirdPartyCameraPasswords: {
     parameters: {
@@ -60096,6 +62766,28 @@ export interface operations {
       };
     };
   };
+  /** Get audit logs for a specified principal */
+  getAuditFeedForPrincipal: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report_GetAuditFeedForTargetWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetAuditFeedForPrincipalWSRequest"];
+      };
+    };
+  };
   /** Get audit logs for a specified entity */
   getAuditFeedForTarget: {
     parameters: {
@@ -60159,6 +62851,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Report_GetAverageReportsWSRequest"];
+      };
+    };
+  };
+  /** Get batch threshold crossing count report */
+  getBatchThresholdCrossingCountReport: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report_GetThresholdCrossingCountReportWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetBatchThresholdCrossingCountReportWSRequest"];
       };
     };
   };
@@ -60349,7 +63063,7 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Report_GetCustomLLMNumericWSResponse"];
+          "application/json": components["schemas"]["Report_GetCustomLLMReportWSResponse"];
         };
       };
     };
@@ -60458,7 +63172,7 @@ export interface operations {
       /** OK */
       200: {
         content: {
-          "application/json": components["schemas"]["Report_GetCustomLLMNumericWSResponse"];
+          "application/json": components["schemas"]["Report_GetCustomLLMReportWSResponse"];
         };
       };
     };
@@ -60759,7 +63473,7 @@ export interface operations {
       };
     };
   };
-  /** Get threshold crossing count report */
+  /** Get threshold crossing count report for device */
   getThresholdCrossingCountReport: {
     parameters: {
       header: {
@@ -60778,6 +63492,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Report_GetThresholdCrossingCountReportWSRequest"];
+      };
+    };
+  };
+  /** Get org wide batch threshold crossing count report */
+  getThresholdCrossingCountReportForOrg: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report_GetThresholdCrossingCountReportWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Report_GetThresholdCrossingCountReportForOrgWSRequest"];
       };
     };
   };
@@ -60910,6 +63646,227 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Report_ResetRunningAverageWSRequest"];
+      };
+    };
+  };
+  /** Remove the robot from the organization */
+  deleteRobot: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_DeleteRobotWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Robot_DeleteRobotWSRequest"];
+      };
+    };
+  };
+  /** Deploy the robot to a mapped point at its location */
+  deployRobot: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_DeployRobotWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Robot_DeployRobotWSRequest"];
+      };
+    };
+  };
+  /** Get a robot's config */
+  getRobotConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_GetRobotConfigWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Device_config_GetConfigWSRequest"];
+      };
+    };
+  };
+  /** Get detailed information about state of specified robot */
+  getRobotFullState: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_GetRobotFullStateWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Common_devices_GetFullDeviceStateWSRequest"];
+      };
+    };
+  };
+  /** Robot's map image */
+  getRobotMap: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "*/*": components["schemas"]["Response"];
+          "image/x-portable-graymap": components["schemas"]["Response"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Robot_GetRobotMapImageWSRequest"];
+      };
+    };
+  };
+  /** Get the robot's map meta */
+  getRobotMapMeta: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_GetRobotMapMetaResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Robot_GetRobotMapMetaRequest"];
+      };
+    };
+  };
+  /** Get media uris for robot to retrieve footage and audio */
+  getRobotMediaUris: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_GetRobotMediaUrisWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Common_devices_GetMediaUrisWSRequest"];
+      };
+    };
+  };
+  /** Get basic state information about all robots in organization */
+  getRobotMinimalStateList: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Robot_GetRobotMinimalStateListWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Common_devices_GetMinimalDeviceStateListWSRequest"];
+      };
+    };
+  };
+  /** Update a robot's config */
+  updateRobotConfig: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Common_devices_UpdateConfigWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Robot_UpdateRobotConfigWSRequest"];
+      };
+    };
+  };
+  /** Update hardware details of robot. */
+  updateRobotDetails: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Common_devices_UpdateDeviceDetailsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Robot_UpdateRobotDetailsWSRequest"];
       };
     };
   };
@@ -62439,6 +65396,96 @@ export interface operations {
       };
     };
   };
+  /** Deletes the image associated with a specific access controlled elevator, removing the file from S3 storage. */
+  deleteAccessControlledElevatorPicture: {
+    parameters: {
+      path: {
+        accessControlledElevatorUuidStr: string | null;
+      };
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Response"];
+        };
+      };
+    };
+  };
+  /** Uploads an image for a specific access controlled elevator, supporting various image formats with size validation and automatic storage to S3. */
+  uploadAccessControlledElevatorPicture: {
+    parameters: {
+      path: {
+        accessControlledElevatorUuidStr: string | null;
+      };
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Response"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["FormDataMultiPart"];
+      };
+    };
+  };
+  /** Deletes the image associated with a specific access controlled elevator landing, removing the file from S3 storage. */
+  deleteAccessControlledElevatorLandingPicture: {
+    parameters: {
+      path: {
+        accessControlledElevatorLandingUuidStr: string | null;
+      };
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Response"];
+        };
+      };
+    };
+  };
+  /** Uploads an image for a specific access controlled elevator landing, supporting various image formats with size validation and automatic storage to S3. */
+  uploadAccessControlledElevatorLandingPicture: {
+    parameters: {
+      path: {
+        accessControlledElevatorLandingUuidStr: string | null;
+      };
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Response"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["FormDataMultiPart"];
+      };
+    };
+  };
   /** Uploads images for badge templates with associated metadata, supporting JPEG and PNG formats with size validation and automatic S3 storage. */
   uploadBadgeTemplateImages: {
     parameters: {
@@ -62913,40 +65960,6 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["User_FindUserByEmailWSRequest"];
-      };
-    };
-  };
-  /** Returns format for bulk provisioning credentials, providing CSV template examples and field explanations based on access control configuration. */
-  getBulkProvisionCredentialsFormat: {
-    parameters: {
-      header: {
-        /** Authentication scheme indicator ("api-token"). */
-        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
-      };
-    };
-    responses: {
-      /** OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["User_GetBulkProvisionCredentialsFormatWSResponse"];
-        };
-      };
-    };
-  };
-  /** Returns format for importing users, providing CSV template examples and field explanations based on access control configuration. */
-  getImportUsersFormat: {
-    parameters: {
-      header: {
-        /** Authentication scheme indicator ("api-token"). */
-        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
-      };
-    };
-    responses: {
-      /** OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["User_GetImportUsersFormatWSResponse"];
-        };
       };
     };
   };
@@ -64336,6 +67349,17 @@ export enum MinimalSubTypeEnum {
   APERIO = "APERIO",
 }
 
+export enum AccessStateSourceEnum {
+  DEFAULT_STATE = "DEFAULT_STATE",
+  SCHEDULE = "SCHEDULE",
+  SCHEDULE_EXCEPTION = "SCHEDULE_EXCEPTION",
+  FIRST_IN = "FIRST_IN",
+  DOOR_STATE_OVERRIDE = "DOOR_STATE_OVERRIDE",
+  LOCKDOWN = "LOCKDOWN",
+  PRIVACY = "PRIVACY",
+  UNKNOWN = "UNKNOWN",
+}
+
 export enum BaseSendUserPresenceForCurrentUserWsResponseTypeEnum {
   ERROR = "ERROR",
   SUCCESS = "SUCCESS",
@@ -64383,6 +67407,39 @@ export enum UnlockAccessControlledDoorSuccessWSResponseTypeEnum {
   SUCCESS = "SUCCESS",
 }
 
+export enum UnlockAccessControlledElevatorErrorWSResponseTypeEnum {
+  ERROR = "ERROR",
+  SUCCESS = "SUCCESS",
+}
+
+export enum UnlockAccessControlledElevatorErrorWSResponseErrorTypeEnum {
+  FAILED_SENDING_ACU_UNLOCK_REQUEST = "FAILED_SENDING_ACU_UNLOCK_REQUEST",
+  ELEVATOR_NOT_CONFIGURED_WITH_LANDING = "ELEVATOR_NOT_CONFIGURED_WITH_LANDING",
+}
+
+export enum UnlockAccessControlledElevatorForCurrentUserErrorWSResponseTypeEnum {
+  ERROR = "ERROR",
+  SUCCESS = "SUCCESS",
+}
+
+export enum UnlockAccessControlledElevatorForCurrentUserErrorWSResponseErrorTypeEnum {
+  INACTIVE_CREDENTIAL = "INACTIVE_CREDENTIAL",
+  FAILED_SENDING_ACU_UNLOCK_REQUEST = "FAILED_SENDING_ACU_UNLOCK_REQUEST",
+  GEOFENCE_RESTRICTED = "GEOFENCE_RESTRICTED",
+  ELEVATOR_NOT_CONFIGURED_WITH_LANDINGS = "ELEVATOR_NOT_CONFIGURED_WITH_LANDINGS",
+  INVALID_LANDINGS = "INVALID_LANDINGS",
+}
+
+export enum UnlockAccessControlledElevatorForCurrentUserSuccessWSResponseTypeEnum {
+  ERROR = "ERROR",
+  SUCCESS = "SUCCESS",
+}
+
+export enum UnlockAccessControlledElevatorSuccessWSResponseTypeEnum {
+  ERROR = "ERROR",
+  SUCCESS = "SUCCESS",
+}
+
 export enum BaseProvisionMobileAccessControlCredentialForCurrentUserWSResponseTypeEnum {
   ERROR = "ERROR",
   SUCCESS = "SUCCESS",
@@ -64394,6 +67451,16 @@ export enum BaseUnlockAccessControlledDoorForCurrentUserWSResponseTypeEnum {
 }
 
 export enum BaseUnlockAccessControlledDoorWSResponseTypeEnum {
+  ERROR = "ERROR",
+  SUCCESS = "SUCCESS",
+}
+
+export enum BaseUnlockAccessControlledElevatorForCurrentUserWSResponseTypeEnum {
+  ERROR = "ERROR",
+  SUCCESS = "SUCCESS",
+}
+
+export enum BaseUnlockAccessControlledElevatorWSResponseTypeEnum {
   ERROR = "ERROR",
   SUCCESS = "SUCCESS",
 }
@@ -64960,6 +68027,17 @@ export enum CameraCrossCountingSettingsObjectTypeEnum {
   UNKNOWN = "UNKNOWN",
 }
 
+export enum CameraDewarpModeEnum {
+  NO_TRANSFORM = "NO_TRANSFORM",
+  NORMAL = "NORMAL",
+  PANORAMA = "PANORAMA",
+  SUB_REGION = "SUB_REGION",
+  VERTICAL_PANORAMA = "VERTICAL_PANORAMA",
+  TRANSVERSE_MERCATOR = "TRANSVERSE_MERCATOR",
+  MERCATOR = "MERCATOR",
+  EQUIRECTANGULAR = "EQUIRECTANGULAR",
+}
+
 export enum CameraCurrentStateConnectionStatusEnum {
   RED = "RED",
   ORANGE = "ORANGE",
@@ -65256,6 +68334,7 @@ export enum ComponentCompositeEnumType_Minimal {
 
 export enum ComponentCompositeShadowEnum {
   AccessControlledDoorShadow = "AccessControlledDoorShadow",
+  AccessControlledElevatorLandingShadow = "AccessControlledElevatorLandingShadow",
 }
 
 export enum ComponentEnumType {
@@ -65393,6 +68472,29 @@ export enum DashboardStatusHealthStatusIndicatorEnum {
   GREEN = "GREEN",
   YELLOW = "YELLOW",
   RED = "RED",
+}
+
+export enum DataSourceEnum {
+  ACCESS_CONTROL_EVENTS = "ACCESS_CONTROL_EVENTS",
+  BANDWIDTH_USAGE = "BANDWIDTH_USAGE",
+  CAMERA_EVENTS = "CAMERA_EVENTS",
+  CAMERAS = "CAMERAS",
+  CLIMATE_SENSOR_EVENTS = "CLIMATE_SENSOR_EVENTS",
+  CLIPS = "CLIPS",
+  COMPONENT_EVENTS = "COMPONENT_EVENTS",
+  CROWD = "CROWD",
+  CUSTOM_LLM_EVENTS = "CUSTOM_LLM_EVENTS",
+  ENTITIES = "ENTITIES",
+  ENVIRONMENTAL_GATEWAY_EVENTS = "ENVIRONMENTAL_GATEWAY_EVENTS",
+  FACES = "FACES",
+  LICENSE_PLATE_RECOGNITION = "LICENSE_PLATE_RECOGNITION",
+  LINE_CROSSING = "LINE_CROSSING",
+  LOCATIONS = "LOCATIONS",
+  MOTION = "MOTION",
+  OCCUPANCY = "OCCUPANCY",
+  PEOPLE = "PEOPLE",
+  POLICY_ALERTS = "POLICY_ALERTS",
+  VEHICLES = "VEHICLES",
 }
 
 export enum DeviceCatalogItemProductTypeEnum {
@@ -65533,6 +68635,7 @@ export enum DeviceFeatureEnum {
   VISUAL_TAMPER = "VISUAL_TAMPER",
   REGION_CROSSING = "REGION_CROSSING",
   OCCUPANCY_COUNTING = "OCCUPANCY_COUNTING",
+  CUSTOM_EVENTS = "CUSTOM_EVENTS",
   AUDIO_AI_ANALYTICS = "AUDIO_AI_ANALYTICS",
   AUDIO_ENTERPRISE_CLOUD_ARCHIVING = "AUDIO_ENTERPRISE_CLOUD_ARCHIVING",
   AUDIO_SPEAKER_ENABLED = "AUDIO_SPEAKER_ENABLED",
@@ -65631,6 +68734,7 @@ export enum DeviceTypeEnum {
   IO_BOARD = "IO_BOARD",
   ENVIRONMENTAL_GATEWAY = "ENVIRONMENTAL_GATEWAY",
   NVR = "NVR",
+  ROBOT = "ROBOT",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -65646,28 +68750,6 @@ export enum DeviceVideoSettingsSelectiveUpdateIrLedsModeEnum {
   AUTO = "AUTO",
 }
 
-export enum ExternalDeviceSettingsSelectiveUpdateLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum ExternalDeviceSettingsSelectiveUpdateLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
 export enum ExternalDeviceSettingsSelectiveUpdateSnapshotUploadTargetEnum {
   V_0 = "0",
   V_1 = "1",
@@ -65678,28 +68760,6 @@ export enum ExternalDeviceSettingsSelectiveUpdateThumbstripUploadTargetEnum {
   V_0 = "0",
   V_1 = "1",
   V_2 = "2",
-}
-
-export enum ExternalReadableDeviceSettingsLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum ExternalReadableDeviceSettingsLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
 }
 
 export enum ExternalReadableDeviceSettingsSnapshotUploadTargetEnum {
@@ -65726,17 +68786,6 @@ export enum ExternalReadableDeviceVideoSettingsIrLedsModeEnum {
   AUTO = "AUTO",
 }
 
-export enum ExternalReadableVideoSettingsDewarpModeEnum {
-  NO_TRANSFORM = "NO_TRANSFORM",
-  NORMAL = "NORMAL",
-  PANORAMA = "PANORAMA",
-  SUB_REGION = "SUB_REGION",
-  VERTICAL_PANORAMA = "VERTICAL_PANORAMA",
-  TRANSVERSE_MERCATOR = "TRANSVERSE_MERCATOR",
-  MERCATOR = "MERCATOR",
-  EQUIRECTANGULAR = "EQUIRECTANGULAR",
-}
-
 export enum ExternalReadableVideoSettingsMountingDirectionEnum {
   DOWN = "DOWN",
   UP = "UP",
@@ -65744,55 +68793,11 @@ export enum ExternalReadableVideoSettingsMountingDirectionEnum {
   UNKNOWN = "UNKNOWN",
 }
 
-export enum ExternalVideoSettingsSelectiveUpdateDewarpModeEnum {
-  NO_TRANSFORM = "NO_TRANSFORM",
-  NORMAL = "NORMAL",
-  PANORAMA = "PANORAMA",
-  SUB_REGION = "SUB_REGION",
-  VERTICAL_PANORAMA = "VERTICAL_PANORAMA",
-  TRANSVERSE_MERCATOR = "TRANSVERSE_MERCATOR",
-  MERCATOR = "MERCATOR",
-  EQUIRECTANGULAR = "EQUIRECTANGULAR",
-}
-
 export enum ExternalVideoSettingsSelectiveUpdateMountingDirectionEnum {
   DOWN = "DOWN",
   UP = "UP",
   SIDEWAYS = "SIDEWAYS",
   UNKNOWN = "UNKNOWN",
-}
-
-export enum IExternalReadableAudioVideoUserConfigDewarpModeEnum {
-  NO_TRANSFORM = "NO_TRANSFORM",
-  NORMAL = "NORMAL",
-  PANORAMA = "PANORAMA",
-  SUB_REGION = "SUB_REGION",
-  VERTICAL_PANORAMA = "VERTICAL_PANORAMA",
-  TRANSVERSE_MERCATOR = "TRANSVERSE_MERCATOR",
-  MERCATOR = "MERCATOR",
-  EQUIRECTANGULAR = "EQUIRECTANGULAR",
-}
-
-export enum IExternalReadableAudioVideoUserConfigLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum IExternalReadableAudioVideoUserConfigLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
 }
 
 export enum IExternalReadableAudioVideoUserConfigMountingDirectionEnum {
@@ -65814,28 +68819,6 @@ export enum IExternalReadableAudioVideoUserConfigThumbstripUploadTargetEnum {
   V_2 = "2",
 }
 
-export enum IExternalReadableDoorControllerUserConfigLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum IExternalReadableDoorControllerUserConfigLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
 export enum IExternalReadableDoorControllerUserConfigSnapshotUploadTargetEnum {
   V_0 = "0",
   V_1 = "1",
@@ -65846,39 +68829,6 @@ export enum IExternalReadableDoorControllerUserConfigThumbstripUploadTargetEnum 
   V_0 = "0",
   V_1 = "1",
   V_2 = "2",
-}
-
-export enum IExternalUpdateableAudioVideoUserConfigDewarpModeEnum {
-  NO_TRANSFORM = "NO_TRANSFORM",
-  NORMAL = "NORMAL",
-  PANORAMA = "PANORAMA",
-  SUB_REGION = "SUB_REGION",
-  VERTICAL_PANORAMA = "VERTICAL_PANORAMA",
-  TRANSVERSE_MERCATOR = "TRANSVERSE_MERCATOR",
-  MERCATOR = "MERCATOR",
-  EQUIRECTANGULAR = "EQUIRECTANGULAR",
-}
-
-export enum IExternalUpdateableAudioVideoUserConfigLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum IExternalUpdateableAudioVideoUserConfigLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
 }
 
 export enum IExternalUpdateableAudioVideoUserConfigMountingDirectionEnum {
@@ -65898,28 +68848,6 @@ export enum IExternalUpdateableAudioVideoUserConfigThumbstripUploadTargetEnum {
   V_0 = "0",
   V_1 = "1",
   V_2 = "2",
-}
-
-export enum IExternalUpdateableDoorControllerUserConfigLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum IExternalUpdateableDoorControllerUserConfigLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
 }
 
 export enum IExternalUpdateableDoorControllerUserConfigSnapshotUploadTargetEnum {
@@ -66024,6 +68952,7 @@ export enum DiagnosticEventActivityEnum {
   FLIC_WEBHOOK_FAILURE = "FLIC_WEBHOOK_FAILURE",
   PIMLOC_WEBHOOK_FAILURE = "PIMLOC_WEBHOOK_FAILURE",
   NINEONEONECELLULAR_WEBHOOK_FAILURE = "NINEONEONECELLULAR_WEBHOOK_FAILURE",
+  EXTERNAL_WEBHOOK_FAILURE = "EXTERNAL_WEBHOOK_FAILURE",
   CV_FAILURE = "CV_FAILURE",
   NFC_HW_FAILURE = "NFC_HW_FAILURE",
   CONFIG_ERROR = "CONFIG_ERROR",
@@ -66044,6 +68973,7 @@ export enum DiagnosticEventActivityEnum {
   SUPERVISION_INVALID_SETUP = "SUPERVISION_INVALID_SETUP",
   THIRD_PARTY_DEVICE_CONNECTED = "THIRD_PARTY_DEVICE_CONNECTED",
   THIRD_PARTY_DEVICE_DISCONNECTED = "THIRD_PARTY_DEVICE_DISCONNECTED",
+  NVR_STREAMING_STATUS = "NVR_STREAMING_STATUS",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -66110,17 +69040,6 @@ export enum DoorRelayPhysicalPortEnumType {
 export enum DoorRelayStateEnumType {
   UNLOCKED = "UNLOCKED",
   LOCKED = "LOCKED",
-  UNKNOWN = "UNKNOWN",
-}
-
-export enum DoorStateSourceEnum {
-  DEFAULT_STATE = "DEFAULT_STATE",
-  SCHEDULE = "SCHEDULE",
-  SCHEDULE_EXCEPTION = "SCHEDULE_EXCEPTION",
-  FIRST_IN = "FIRST_IN",
-  DOOR_STATE_OVERRIDE = "DOOR_STATE_OVERRIDE",
-  LOCKDOWN = "LOCKDOWN",
-  PRIVACY = "PRIVACY",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -66259,6 +69178,8 @@ export enum EntityEnum {
   THIRD_PARTY_CAMERA_CREDENTIAL = "THIRD_PARTY_CAMERA_CREDENTIAL",
   CHATBOT_QUERY = "CHATBOT_QUERY",
   KEYPAD_COMMAND = "KEYPAD_COMMAND",
+  PRIORITY_DETECTION = "PRIORITY_DETECTION",
+  LIVE_DETECTION = "LIVE_DETECTION",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -66661,6 +69582,8 @@ export enum ExportAuditEventsWSRequestExcludeActionsEnum {
   ORG_LLM_USAGE_UPDATE = "ORG_LLM_USAGE_UPDATE",
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
+  ELEVATOR_ACCESS_UNLOCK = "ELEVATOR_ACCESS_UNLOCK",
+  RHOMBUS_KEY_ELEVATOR_UNLOCK = "RHOMBUS_KEY_ELEVATOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
@@ -66712,6 +69635,8 @@ export enum ExportAuditEventsWSRequestExcludeActionsEnum {
   AC_COMPONENT_POWER_CYCLE = "AC_COMPONENT_POWER_CYCLE",
   AC_DOOR_STATE_OVERRIDE_APPLIED = "AC_DOOR_STATE_OVERRIDE_APPLIED",
   AC_DOOR_STATE_OVERRIDE_CANCELLED = "AC_DOOR_STATE_OVERRIDE_CANCELLED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED",
   SCIM_GET_ALL_USERS = "SCIM_GET_ALL_USERS",
   SCIM_POST_CREATE_USER = "SCIM_POST_CREATE_USER",
   SCIM_PUT_UPDATE_USER = "SCIM_PUT_UPDATE_USER",
@@ -67069,6 +69994,8 @@ export enum ExportAuditEventsWSRequestIncludeActionsEnum {
   ORG_LLM_USAGE_UPDATE = "ORG_LLM_USAGE_UPDATE",
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
+  ELEVATOR_ACCESS_UNLOCK = "ELEVATOR_ACCESS_UNLOCK",
+  RHOMBUS_KEY_ELEVATOR_UNLOCK = "RHOMBUS_KEY_ELEVATOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
@@ -67120,6 +70047,8 @@ export enum ExportAuditEventsWSRequestIncludeActionsEnum {
   AC_COMPONENT_POWER_CYCLE = "AC_COMPONENT_POWER_CYCLE",
   AC_DOOR_STATE_OVERRIDE_APPLIED = "AC_DOOR_STATE_OVERRIDE_APPLIED",
   AC_DOOR_STATE_OVERRIDE_CANCELLED = "AC_DOOR_STATE_OVERRIDE_CANCELLED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED",
   SCIM_GET_ALL_USERS = "SCIM_GET_ALL_USERS",
   SCIM_POST_CREATE_USER = "SCIM_POST_CREATE_USER",
   SCIM_PUT_UPDATE_USER = "SCIM_PUT_UPDATE_USER",
@@ -67328,6 +70257,7 @@ export enum FunctionalityEnum {
   GUEST_MANAGEMENT_VIEWONLY = "GUEST_MANAGEMENT_VIEWONLY",
   CLIP_MANAGEMENT = "CLIP_MANAGEMENT",
   VIEW_SAVED_VIDEO = "VIEW_SAVED_VIDEO",
+  VIEW_AND_MANAGE_SAVED_VIDEO = "VIEW_AND_MANAGE_SAVED_VIDEO",
   CLLM_ADMINISTRATION = "CLLM_ADMINISTRATION",
   UNKNOWN = "UNKNOWN",
 }
@@ -67452,6 +70382,8 @@ export enum HardwareVariationEnum {
   CAMERA_R130 = "CAMERA_R130",
   NVR_N500 = "NVR_N500",
   CAMERA_R150 = "CAMERA_R150",
+  ROBOT_RC1 = "ROBOT_RC1",
+  CAMERA_R210 = "CAMERA_R210",
   UNSPECIFIED = "UNSPECIFIED",
 }
 
@@ -67471,28 +70403,6 @@ export enum IAudioUserConfigEventClipUploadTargetEnum {
   V_0 = "0",
   V_1 = "1",
   V_2 = "2",
-}
-
-export enum IAudioUserConfigLedModeWhenActiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
-}
-
-export enum IAudioUserConfigLedModeWhenInactiveEnum {
-  LED_OFF = "LED_OFF",
-  LED_RED_SOLID = "LED_RED_SOLID",
-  LED_GREEN_SOLID = "LED_GREEN_SOLID",
-  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
-  LED_RED_BLINK = "LED_RED_BLINK",
-  LED_GREEN_BLINK = "LED_GREEN_BLINK",
-  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
-  LED_NORMAL = "LED_NORMAL",
 }
 
 export enum IAudioUserConfigSnapshotUploadTargetEnum {
@@ -67621,6 +70531,7 @@ export enum IntegrationDiagnosticEventActivityEnum {
   FLIC_WEBHOOK_FAILURE = "FLIC_WEBHOOK_FAILURE",
   PIMLOC_WEBHOOK_FAILURE = "PIMLOC_WEBHOOK_FAILURE",
   NINEONEONECELLULAR_WEBHOOK_FAILURE = "NINEONEONECELLULAR_WEBHOOK_FAILURE",
+  EXTERNAL_WEBHOOK_FAILURE = "EXTERNAL_WEBHOOK_FAILURE",
   CV_FAILURE = "CV_FAILURE",
   NFC_HW_FAILURE = "NFC_HW_FAILURE",
   CONFIG_ERROR = "CONFIG_ERROR",
@@ -67641,6 +70552,7 @@ export enum IntegrationDiagnosticEventActivityEnum {
   SUPERVISION_INVALID_SETUP = "SUPERVISION_INVALID_SETUP",
   THIRD_PARTY_DEVICE_CONNECTED = "THIRD_PARTY_DEVICE_CONNECTED",
   THIRD_PARTY_DEVICE_DISCONNECTED = "THIRD_PARTY_DEVICE_DISCONNECTED",
+  NVR_STREAMING_STATUS = "NVR_STREAMING_STATUS",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -67696,6 +70608,7 @@ export enum CreateReturnedInventoryAuditReservationWSRequestReturnTypeEnum {
   TRIAL = "TRIAL",
   SALES = "SALES",
   RMA = "RMA",
+  WARRANTY = "WARRANTY",
   OTHER = "OTHER",
   UNKNOWN = "UNKNOWN",
 }
@@ -67779,6 +70692,17 @@ export enum KioskWithInfoConnectionStatusEnum {
   ONLINE = "ONLINE",
   OFFLINE = "OFFLINE",
   UNKNOWN = "UNKNOWN",
+}
+
+export enum LEDModeEnum {
+  LED_OFF = "LED_OFF",
+  LED_RED_SOLID = "LED_RED_SOLID",
+  LED_GREEN_SOLID = "LED_GREEN_SOLID",
+  LED_ORANGE_SOLID = "LED_ORANGE_SOLID",
+  LED_RED_BLINK = "LED_RED_BLINK",
+  LED_GREEN_BLINK = "LED_GREEN_BLINK",
+  LED_ORANGE_BLINK = "LED_ORANGE_BLINK",
+  LED_NORMAL = "LED_NORMAL",
 }
 
 export enum LicenseEnum {
@@ -67920,14 +70844,22 @@ export enum LockdownStateEventEnumType {
   LOCKDOWN_DEACTIVATED = "LOCKDOWN_DEACTIVATED",
 }
 
-export enum ManualDoorStateChangeEnum {
+export enum ManualAccessStateChangeEnum {
   DOOR_STATE_OVERRIDE = "DOOR_STATE_OVERRIDE",
   CANCELLED_DOOR_STATE_OVERRIDE = "CANCELLED_DOOR_STATE_OVERRIDE",
 }
 
-export enum ManualDoorStateChangeEnum_Minimal {
+export enum ManualAccessStateChangeEnum_Minimal {
   DOOR_STATE_OVERRIDE = "DOOR_STATE_OVERRIDE",
   CANCELLED_DOOR_STATE_OVERRIDE = "CANCELLED_DOOR_STATE_OVERRIDE",
+}
+
+export enum MinimalRobotStateModeEnum {
+  UNKNOWN = "UNKNOWN",
+  DOCKED = "DOCKED",
+  DISCOVERY = "DISCOVERY",
+  PATROL = "PATROL",
+  MANUAL = "MANUAL",
 }
 
 export enum MinimalThresholdEventCrossingObjectEnum {
@@ -68128,6 +71060,7 @@ export enum NotificationTimeFrameRowDiagnosticsEnum {
   FLIC_WEBHOOK_FAILURE = "FLIC_WEBHOOK_FAILURE",
   PIMLOC_WEBHOOK_FAILURE = "PIMLOC_WEBHOOK_FAILURE",
   NINEONEONECELLULAR_WEBHOOK_FAILURE = "NINEONEONECELLULAR_WEBHOOK_FAILURE",
+  EXTERNAL_WEBHOOK_FAILURE = "EXTERNAL_WEBHOOK_FAILURE",
   CV_FAILURE = "CV_FAILURE",
   NFC_HW_FAILURE = "NFC_HW_FAILURE",
   CONFIG_ERROR = "CONFIG_ERROR",
@@ -68148,6 +71081,7 @@ export enum NotificationTimeFrameRowDiagnosticsEnum {
   SUPERVISION_INVALID_SETUP = "SUPERVISION_INVALID_SETUP",
   THIRD_PARTY_DEVICE_CONNECTED = "THIRD_PARTY_DEVICE_CONNECTED",
   THIRD_PARTY_DEVICE_DISCONNECTED = "THIRD_PARTY_DEVICE_DISCONNECTED",
+  NVR_STREAMING_STATUS = "NVR_STREAMING_STATUS",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -68241,6 +71175,7 @@ export enum NotificationTimeFrameRowLocationOnlyDiagnosticsEnum {
   FLIC_WEBHOOK_FAILURE = "FLIC_WEBHOOK_FAILURE",
   PIMLOC_WEBHOOK_FAILURE = "PIMLOC_WEBHOOK_FAILURE",
   NINEONEONECELLULAR_WEBHOOK_FAILURE = "NINEONEONECELLULAR_WEBHOOK_FAILURE",
+  EXTERNAL_WEBHOOK_FAILURE = "EXTERNAL_WEBHOOK_FAILURE",
   CV_FAILURE = "CV_FAILURE",
   NFC_HW_FAILURE = "NFC_HW_FAILURE",
   CONFIG_ERROR = "CONFIG_ERROR",
@@ -68261,12 +71196,14 @@ export enum NotificationTimeFrameRowLocationOnlyDiagnosticsEnum {
   SUPERVISION_INVALID_SETUP = "SUPERVISION_INVALID_SETUP",
   THIRD_PARTY_DEVICE_CONNECTED = "THIRD_PARTY_DEVICE_CONNECTED",
   THIRD_PARTY_DEVICE_DISCONNECTED = "THIRD_PARTY_DEVICE_DISCONNECTED",
+  NVR_STREAMING_STATUS = "NVR_STREAMING_STATUS",
   UNKNOWN = "UNKNOWN",
 }
 
 export enum ObjectSearchModelEnum {
   CLIP_512 = "CLIP_512",
   UNKNOWN = "UNKNOWN",
+  REIDENTIFICATION_NET = "REIDENTIFICATION_NET",
 }
 
 export enum OccupancyEventStateEnum {
@@ -68479,6 +71416,7 @@ export enum PartnerNotificationClientSectionRowDiagnosticsEnum {
   FLIC_WEBHOOK_FAILURE = "FLIC_WEBHOOK_FAILURE",
   PIMLOC_WEBHOOK_FAILURE = "PIMLOC_WEBHOOK_FAILURE",
   NINEONEONECELLULAR_WEBHOOK_FAILURE = "NINEONEONECELLULAR_WEBHOOK_FAILURE",
+  EXTERNAL_WEBHOOK_FAILURE = "EXTERNAL_WEBHOOK_FAILURE",
   CV_FAILURE = "CV_FAILURE",
   NFC_HW_FAILURE = "NFC_HW_FAILURE",
   CONFIG_ERROR = "CONFIG_ERROR",
@@ -68499,6 +71437,7 @@ export enum PartnerNotificationClientSectionRowDiagnosticsEnum {
   SUPERVISION_INVALID_SETUP = "SUPERVISION_INVALID_SETUP",
   THIRD_PARTY_DEVICE_CONNECTED = "THIRD_PARTY_DEVICE_CONNECTED",
   THIRD_PARTY_DEVICE_DISCONNECTED = "THIRD_PARTY_DEVICE_DISCONNECTED",
+  NVR_STREAMING_STATUS = "NVR_STREAMING_STATUS",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -68712,6 +71651,11 @@ export enum RMAErrorCodeEnum {
   UNDISCOVERED_ISSUE = "UNDISCOVERED_ISSUE",
   FOCUS_ISSUES = "FOCUS_ISSUES",
   POTENTIAL_MANUFACTURING_DEFECT = "POTENTIAL_MANUFACTURING_DEFECT",
+  NO_FAULT_FOUND = "NO_FAULT_FOUND",
+  FDT_COMMAND_LINE_ERROR = "FDT_COMMAND_LINE_ERROR",
+  KERNEL_PANIC = "KERNEL_PANIC",
+  GET_DTB_FAILED = "GET_DTB_FAILED",
+  BOOTS_TO_AMBOOT = "BOOTS_TO_AMBOOT",
 }
 
 export enum RMAShipmentMethodEnum {
@@ -68730,6 +71674,11 @@ export enum RMAStatusEnum {
   STOLEN = "STOLEN",
   OPERATIONAL = "OPERATIONAL",
   FULFILLMENT_ERROR = "FULFILLMENT_ERROR",
+}
+
+export enum ReEnableDeviceHealthTrackingConditionEnum {
+  MANUAL = "MANUAL",
+  AUTOMATIC = "AUTOMATIC",
 }
 
 export enum RealtimeRelativeSecondsScheduleStrategyEnum {
@@ -69191,6 +72140,8 @@ export enum AuditEventWebActionEnum {
   ORG_LLM_USAGE_UPDATE = "ORG_LLM_USAGE_UPDATE",
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
+  ELEVATOR_ACCESS_UNLOCK = "ELEVATOR_ACCESS_UNLOCK",
+  RHOMBUS_KEY_ELEVATOR_UNLOCK = "RHOMBUS_KEY_ELEVATOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
@@ -69242,6 +72193,8 @@ export enum AuditEventWebActionEnum {
   AC_COMPONENT_POWER_CYCLE = "AC_COMPONENT_POWER_CYCLE",
   AC_DOOR_STATE_OVERRIDE_APPLIED = "AC_DOOR_STATE_OVERRIDE_APPLIED",
   AC_DOOR_STATE_OVERRIDE_CANCELLED = "AC_DOOR_STATE_OVERRIDE_CANCELLED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED",
   SCIM_GET_ALL_USERS = "SCIM_GET_ALL_USERS",
   SCIM_POST_CREATE_USER = "SCIM_POST_CREATE_USER",
   SCIM_PUT_UPDATE_USER = "SCIM_PUT_UPDATE_USER",
@@ -69614,6 +72567,8 @@ export enum GetAuditFeedWSRequestExcludeActionsEnum {
   ORG_LLM_USAGE_UPDATE = "ORG_LLM_USAGE_UPDATE",
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
+  ELEVATOR_ACCESS_UNLOCK = "ELEVATOR_ACCESS_UNLOCK",
+  RHOMBUS_KEY_ELEVATOR_UNLOCK = "RHOMBUS_KEY_ELEVATOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
@@ -69665,6 +72620,8 @@ export enum GetAuditFeedWSRequestExcludeActionsEnum {
   AC_COMPONENT_POWER_CYCLE = "AC_COMPONENT_POWER_CYCLE",
   AC_DOOR_STATE_OVERRIDE_APPLIED = "AC_DOOR_STATE_OVERRIDE_APPLIED",
   AC_DOOR_STATE_OVERRIDE_CANCELLED = "AC_DOOR_STATE_OVERRIDE_CANCELLED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED",
   SCIM_GET_ALL_USERS = "SCIM_GET_ALL_USERS",
   SCIM_POST_CREATE_USER = "SCIM_POST_CREATE_USER",
   SCIM_PUT_UPDATE_USER = "SCIM_PUT_UPDATE_USER",
@@ -70022,6 +72979,8 @@ export enum GetAuditFeedWSRequestIncludeActionsEnum {
   ORG_LLM_USAGE_UPDATE = "ORG_LLM_USAGE_UPDATE",
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
+  ELEVATOR_ACCESS_UNLOCK = "ELEVATOR_ACCESS_UNLOCK",
+  RHOMBUS_KEY_ELEVATOR_UNLOCK = "RHOMBUS_KEY_ELEVATOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
@@ -70073,6 +73032,8 @@ export enum GetAuditFeedWSRequestIncludeActionsEnum {
   AC_COMPONENT_POWER_CYCLE = "AC_COMPONENT_POWER_CYCLE",
   AC_DOOR_STATE_OVERRIDE_APPLIED = "AC_DOOR_STATE_OVERRIDE_APPLIED",
   AC_DOOR_STATE_OVERRIDE_CANCELLED = "AC_DOOR_STATE_OVERRIDE_CANCELLED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED",
   SCIM_GET_ALL_USERS = "SCIM_GET_ALL_USERS",
   SCIM_POST_CREATE_USER = "SCIM_POST_CREATE_USER",
   SCIM_PUT_UPDATE_USER = "SCIM_PUT_UPDATE_USER",
@@ -70183,6 +73144,24 @@ export enum GetAverageReportsWSRequestTypeEnum {
   ALERTS = "ALERTS",
   AM_VERIFICATION = "AM_VERIFICATION",
   DWELL = "DWELL",
+}
+
+export enum GetBatchThresholdCrossingCountReportWSRequestBucketSizeEnum {
+  QUARTER_HOUR = "QUARTER_HOUR",
+  HOUR = "HOUR",
+  DAY = "DAY",
+  WEEK = "WEEK",
+  MONTH = "MONTH",
+}
+
+export enum GetBatchThresholdCrossingCountReportWSRequestCrossingObjectEnum {
+  HUMAN = "HUMAN",
+  VEHICLE = "VEHICLE",
+  FACE = "FACE",
+  LPR = "LPR",
+  POSE = "POSE",
+  CLIP_EMBED = "CLIP_EMBED",
+  UNKNOWN = "UNKNOWN",
 }
 
 export enum GetCountReportV2WSRequestIntervalEnum {
@@ -70366,6 +73345,24 @@ export enum GetSummaryCountReportWSRequestTypeEnum {
   DWELL = "DWELL",
 }
 
+export enum GetThresholdCrossingCountReportForOrgWSRequestBucketSizeEnum {
+  QUARTER_HOUR = "QUARTER_HOUR",
+  HOUR = "HOUR",
+  DAY = "DAY",
+  WEEK = "WEEK",
+  MONTH = "MONTH",
+}
+
+export enum GetThresholdCrossingCountReportForOrgWSRequestCrossingObjectEnum {
+  HUMAN = "HUMAN",
+  VEHICLE = "VEHICLE",
+  FACE = "FACE",
+  LPR = "LPR",
+  POSE = "POSE",
+  CLIP_EMBED = "CLIP_EMBED",
+  UNKNOWN = "UNKNOWN",
+}
+
 export enum GetThresholdCrossingCountReportWSRequestBucketSizeEnum {
   QUARTER_HOUR = "QUARTER_HOUR",
   HOUR = "HOUR",
@@ -70457,6 +73454,11 @@ export enum RhombusOrgUserStatusEnum {
   UNKNOWN = "UNKNOWN",
 }
 
+export enum RhombusSamlDomainEnum {
+  RHOMBUS_COM = "RHOMBUS_COM",
+  RHOMBUS_SYSTEMS_COM = "RHOMBUS_SYSTEMS_COM",
+}
+
 export enum RhombusSecureMobileFeatureSettingStatusEnum {
   OPTIMAL = "OPTIMAL",
   INHIBITED = "INHIBITED",
@@ -70468,6 +73470,29 @@ export enum RhombusSecureMobileFeatureStatusEnum {
   OPTIMAL = "OPTIMAL",
   INHIBITED = "INHIBITED",
   UNKNOWN = "UNKNOWN",
+}
+
+export enum DeleteRobotWSResponseResponseStatusEnum {
+  BASIC_AUTH_FAILED = "BASIC_AUTH_FAILED",
+  PASSWORD_MISMATCH = "PASSWORD_MISMATCH",
+  SAME_PASSWORD = "SAME_PASSWORD",
+  USER_EXISTS = "USER_EXISTS",
+  USER_NOT_FOUND = "USER_NOT_FOUND",
+  DEVICE_NOT_FOUND = "DEVICE_NOT_FOUND",
+  POLICY_NOT_FOUND = "POLICY_NOT_FOUND",
+  LOCATION_NOT_FOUND = "LOCATION_NOT_FOUND",
+  ORG_NOT_FOUND = "ORG_NOT_FOUND",
+  BAD_INPUT = "BAD_INPUT",
+  SUCCESS = "SUCCESS",
+  PASSWORD_TOO_SHORT = "PASSWORD_TOO_SHORT",
+}
+
+export enum RobotFullDeviceStateModeEnum {
+  UNKNOWN = "UNKNOWN",
+  DOCKED = "DOCKED",
+  DISCOVERY = "DISCOVERY",
+  PATROL = "PATROL",
+  MANUAL = "MANUAL",
 }
 
 export enum RtspEndpointLastRtspUrlStatusEnum {
@@ -70514,6 +73539,11 @@ export enum RuleTypeEnum {
   CUSTOM_LLM_DEFINED = "CUSTOM_LLM_DEFINED",
 }
 
+export enum SCIMRolesFormatEnum {
+  LIST_OF_STRINGS = "LIST_OF_STRINGS",
+  LIST_OF_MULTI_VALUED_ATTRIBUTES = "LIST_OF_MULTI_VALUED_ATTRIBUTES",
+}
+
 export enum SavedClipV2StatusEnum {
   INITIATING = "INITIATING",
   UPLOADING = "UPLOADING",
@@ -70554,7 +73584,7 @@ export enum TriggerPromptWSRequestPromptTypeEnum {
   BOOLEAN = "BOOLEAN",
 }
 
-export enum Schedule_AccessControlledDoorStateSourceEnum {
+export enum Schedule_AccessStatefulComponentCompositeStateSourceEnum {
   DEFAULT_STATE = "DEFAULT_STATE",
   DOOR_SCHEDULE = "DOOR_SCHEDULE",
   DSE_DEFAULT_STATE = "DSE_DEFAULT_STATE",
@@ -70955,6 +73985,8 @@ export enum SimpleAuditEventAuditEventEnum {
   ORG_LLM_USAGE_UPDATE = "ORG_LLM_USAGE_UPDATE",
   DOOR_ACCESS_UNLOCK = "DOOR_ACCESS_UNLOCK",
   RHOMBUS_KEY_DOOR_UNLOCK = "RHOMBUS_KEY_DOOR_UNLOCK",
+  ELEVATOR_ACCESS_UNLOCK = "ELEVATOR_ACCESS_UNLOCK",
+  RHOMBUS_KEY_ELEVATOR_UNLOCK = "RHOMBUS_KEY_ELEVATOR_UNLOCK",
   UPLOAD_ACCESS_CONTROLLED_DOOR = "UPLOAD_ACCESS_CONTROLLED_DOOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR",
   UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING = "UPLOAD_ACCESS_CONTROLLED_ELEVATOR_LANDING",
@@ -71006,6 +74038,8 @@ export enum SimpleAuditEventAuditEventEnum {
   AC_COMPONENT_POWER_CYCLE = "AC_COMPONENT_POWER_CYCLE",
   AC_DOOR_STATE_OVERRIDE_APPLIED = "AC_DOOR_STATE_OVERRIDE_APPLIED",
   AC_DOOR_STATE_OVERRIDE_CANCELLED = "AC_DOOR_STATE_OVERRIDE_CANCELLED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_APPLIED",
+  AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED = "AC_ELEVATOR_LANDING_ACCESS_STATE_OVERRIDE_CANCELLED",
   SCIM_GET_ALL_USERS = "SCIM_GET_ALL_USERS",
   SCIM_POST_CREATE_USER = "SCIM_POST_CREATE_USER",
   SCIM_PUT_UPDATE_USER = "SCIM_PUT_UPDATE_USER",
@@ -71150,6 +74184,7 @@ export enum SimpleDiagnosticEventDiagnosticEventEnum {
   FLIC_WEBHOOK_FAILURE = "FLIC_WEBHOOK_FAILURE",
   PIMLOC_WEBHOOK_FAILURE = "PIMLOC_WEBHOOK_FAILURE",
   NINEONEONECELLULAR_WEBHOOK_FAILURE = "NINEONEONECELLULAR_WEBHOOK_FAILURE",
+  EXTERNAL_WEBHOOK_FAILURE = "EXTERNAL_WEBHOOK_FAILURE",
   CV_FAILURE = "CV_FAILURE",
   NFC_HW_FAILURE = "NFC_HW_FAILURE",
   CONFIG_ERROR = "CONFIG_ERROR",
@@ -71170,6 +74205,7 @@ export enum SimpleDiagnosticEventDiagnosticEventEnum {
   SUPERVISION_INVALID_SETUP = "SUPERVISION_INVALID_SETUP",
   THIRD_PARTY_DEVICE_CONNECTED = "THIRD_PARTY_DEVICE_CONNECTED",
   THIRD_PARTY_DEVICE_DISCONNECTED = "THIRD_PARTY_DEVICE_DISCONNECTED",
+  NVR_STREAMING_STATUS = "NVR_STREAMING_STATUS",
   UNKNOWN = "UNKNOWN",
 }
 
