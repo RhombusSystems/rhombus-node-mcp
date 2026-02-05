@@ -1,8 +1,14 @@
 import { z } from "zod";
 
 export const VideoWallSettings = z.object({
-	rowCount: z.number(),
-	columnCount: z.number(),
+  numVisibleDevicesAtOnce: z.number().nullable().describe(
+    `The number of devices to display at once. If there is no rotation strategy and/or interval,
+    then this value can be null.
+
+    If there is a rotation strategy, then this value must be between 1 and the number of devices.
+    Choose something reasonable, or ask the user for input.
+    `
+  ),
 	intervalSeconds: z.number().nullable(),
 	rotateStrategy: z.enum(["none", "motion", "interval"]),
 });
@@ -71,5 +77,6 @@ export const OUTPUT_SCHEMA = z.object({
 			"If requestType is `get`, then this field will be populated with the video wall.",
 		)
 		.optional(),
+  uuid: z.string().describe("The uuid of the created video wall.").optional(),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;
