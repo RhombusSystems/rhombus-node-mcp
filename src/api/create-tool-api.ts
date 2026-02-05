@@ -142,7 +142,7 @@ export async function createVideoWall(
 			},
 		},
 	};
-	
+
 	const response = await postApi<schema["Camera_CreateVideoWallWSResponse"]>({
 		route: "/camera/createVideoWall",
 		body,
@@ -202,7 +202,7 @@ export async function handleCreateVideoWallRequest(
 		);
 
 		return {
-			...response,
+			uuid: response?.uuid ?? undefined,
 			error: response?.errorMsg ?? undefined,
 		};
 	}
