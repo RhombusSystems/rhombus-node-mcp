@@ -1,7 +1,18 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestModifiers } from "../util.js";
-import { ApiPayloadSchema, TOOL_ARGS, ToolArgs } from "../types/clips-tool-types.js";
-import { getSavedClips, getExpiringClips } from "../api/clips-tool-api.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
+import {
+	ApiPayloadSchema,
+	OUTPUT_SCHEMA,
+	TOOL_ARGS,
+	type OutputSchema,
+	type ToolArgs,
+} from "../types/clips-tool-types.js";
+import {
+	getSavedClips,
+	getExpiringClips,
+	getSharedLiveStreams,
+	getTimelapseClips,
+} from "../api/clips-tool-api.js";
 
 const TOOL_NAME = "clips-tool";
 
@@ -10,12 +21,16 @@ Retrieves saved video clips from the Rhombus system. Saved clips can be viewed f
 Clips are either manually saved by the user, or automatically by some defined policy. Therefore, this tool
 is not for looking up the events that have occured.
 
-This tool allows you to filter clips by:
-* Whether or not they are expiring soon.
-* Specific devices using their UUIDs.
-* Specific locations using their UUIDs.
-* A simple string search on clip names.
-* A time range, specifying a start (timestampISOAfter) and/or end (timestampISOBefore) timestamp in ISO 8601 format.
+This tool allows you to:
+* Get saved clips or clips expiring soon (filter by devices, locations, search string, time range).
+* Get all shared live video streams for the organization.
+* Get all timelapse clips for the organization.
+
+Filter options (for saved and expiringSoon only):
+* Specific devices using their UUIDs (deviceUuidFilters).
+* Specific locations using their UUIDs (locationUuidFilters).
+* A simple string search on clip names (searchFilter).
+* A time range: start (timestampISOAfter) and/or end (timestampISOBefore) timestamp in ISO 8601 format.
 
 The tool returns a JSON object with the following structure and important fields:
 * **errorMsg (string | null):** An error message if the request failed.
@@ -34,31 +49,43 @@ The tool returns a JSON object with the following structure and important fields
     * **status (string):** The current processing status of the clip, with possible values such as INITIATING, UPLOADING, RENDERING, FAILED, COMPLETE, OFFLINE, or UNKNOWN.
     * **userUuid (string | null):** The UUID of the user associated with the clip, if applicable.
     * **sourceAlertUuid (string | null):** The UUID of the alert that triggered the creation of this clip, if any.
+* **sharedLiveVideoStreams (array):** When requestType is sharedLiveStreams, list of shared live video stream objects.
+* **timelapseClips (array):** When requestType is timelapseClips, list of timelapse clip objects.
 `;
 
-const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const payload = ApiPayloadSchema.parse(args);
-  let ret;
-  switch (args.queryType) {
-    case "saved":
-      ret = await getSavedClips(
-        payload,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-    case "expiringSoon":
-      ret = await getExpiringClips(
-        payload,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-  }
+const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
+	const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(ret) }],
-  };
+	const payload = ApiPayloadSchema.parse(args);
+	switch (args.requestType) {
+		case "saved": {
+			return createToolStructuredContent<OutputSchema>(
+				await getSavedClips(payload, requestModifiers, sessionId),
+			);
+		}
+		case "expiringSoon":
+			return createToolStructuredContent<OutputSchema>(
+				await getExpiringClips(payload, requestModifiers, sessionId),
+			);
+		case "sharedLiveStreams":
+			return createToolStructuredContent<OutputSchema>(
+				await getSharedLiveStreams(payload, requestModifiers, sessionId),
+			);
+		case "timelapseClips":
+			return createToolStructuredContent<OutputSchema>(
+				await getTimelapseClips(payload, requestModifiers, sessionId),
+			);
+	}
+
+	return createToolStructuredContent<OutputSchema>({
+		error: "Invalid requestType",
+	});
 };
 
 export function createTool(server: McpServer) {
-  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
+  server.registerTool(TOOL_NAME, {
+    description: TOOL_DESCRIPTION,
+    inputSchema: TOOL_ARGS,
+    outputSchema: OUTPUT_SCHEMA.shape,
+  }, TOOL_HANDLER);
 }
