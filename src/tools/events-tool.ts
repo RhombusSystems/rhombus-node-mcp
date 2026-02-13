@@ -98,6 +98,13 @@ This tool takes 3 arguments:
   * **duration (number):** Duration in seconds to search for human motion events. Default is 3600 (1 hour).
 
 The tool returns a JSON object with camera events data.
+
+When eventType is \`access-control\`:
+-  The \`credSource\` field describes the credential source of the event. 
+  - Remote is a "Rhombus Key Remote Unlock", through the Rhombus Key app.
+  - Remote (Admin) is a unlock triggered through the Rhombus console, the browser or mobile app.
+  - BLE_WAVE is a user badging in by physically waving their hand over the reader.
+  - NFC is a user badging in by tapping their phone on the reader.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {

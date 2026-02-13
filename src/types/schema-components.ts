@@ -889,6 +889,9 @@ export interface paths {
   "/billing/subscription/getCustomerInformation": {
     post: operations["getCustomerInformation"];
   };
+  "/billing/subscription/getFreeCreditEligibility": {
+    post: operations["getFreeCreditEligibility"];
+  };
   "/billing/subscription/getFreeTrialEligibility": {
     post: operations["getFreeTrialEligibility"];
   };
@@ -1315,6 +1318,10 @@ export interface paths {
   "/chatbot/config/getChatbotConfig": {
     /** Retrieves the current org's Rhombus MIND configuration. */
     post: operations["getChatbotConfig"];
+  };
+  "/chatbot/config/getRemainingTrialCredits": {
+    /** Retrieves the current org's remaining trial credits for MIND. */
+    post: operations["getRemainingTrialCredits"];
   };
   "/chatbot/config/getTokenUsageHistory": {
     /** Retrieves the current org's LLM token usage history. */
@@ -2569,6 +2576,18 @@ export interface paths {
     /** Update enabled features for a device */
     post: operations["updateDeviceFeatures"];
   };
+  "/fidoAuth/findLoginCredentialsForCurrentUser": {
+    /** Retrieves a list of registered login credentials for the user. */
+    post: operations["findLoginCredentialsForCurrentUser"];
+  };
+  "/fidoAuth/initiateLoginCredentialRegistration": {
+    /** Provide the registration request to an authenticator and return its response to /registerLoginCredentialForCurrentUser. */
+    post: operations["initiateLoginCredentialRegistrationForCurrentUser"];
+  };
+  "/fidoAuth/registerLoginCredentialForCurrentUser": {
+    /** Accepts a fido credential registration response to finalize the process of setting up a new FIDO2 login credential. */
+    post: operations["registerLoginCredentialForCurrentUser"];
+  };
   "/guestExternal/updateGuestByToken": {
     /** Updates guest information using a provided token. Validates the token, fetches location data, performs offender checks, and updates guest details including face images. This endpoint is used for external guest management forms. */
     post: operations["updateGuestByToken"];
@@ -2759,6 +2778,10 @@ export interface paths {
   "/help/triageDevice": {
     /** Triage a device connection/recording issue */
     post: operations["triageDevice"];
+  };
+  "/inference/getPersonReidentificationEmbeddingFromImage": {
+    /** Uploads an image to generate a reidentification embedding. */
+    post: operations["getPersonReidentificationEmbeddingFromImage"];
   };
   "/inference/segments/boxes": {
     /** Uploads an image with box prompts and labels to produce segmentation masks. */
@@ -4112,9 +4135,17 @@ export interface paths {
     /** Update a location **NOTE: This will replace old settings meaning if you leave a field blank it will be overrode to blank. For selective field updates use the endpoint /selectiveUpdateLocation */
     post: operations["updateLocation"];
   };
+  "/location/validateAndUpdateLocationAddress": {
+    /** Validate a location address for Alarm Monitoring, and only if acceptable then update the location address */
+    post: operations["validateAndUpdateLocationAddress"];
+  };
   "/location/validateLocation": {
-    /** Validate a location address for Alarm Monitoring */
+    /** Check if the currently set location address is acceptable for Alarm Monitoring */
     post: operations["validateLocation"];
+  };
+  "/location/validateLocationAddress": {
+    /** Submit an address to check if it is acceptable for Alarm Monitoring */
+    post: operations["validateLocationAddress"];
   };
   "/logistics/getRMAs": {
     /** Get RMAs */
@@ -4920,6 +4951,10 @@ export interface paths {
     /** Get a list of the third party camera passwords */
     post: operations["getThirdPartyCameraPasswords"];
   };
+  "/relay/getUptimeWindows": {
+    /** Get uptime information for an NVR. */
+    post: operations["getRelayUptimeWindows"];
+  };
   "/relay/importThirdPartyCameras/{locationUuid}": {
     /** Imports third party cameras in csv format */
     post: operations["importThirdPartyCameras"];
@@ -5279,6 +5314,10 @@ export interface paths {
     /** Find rules event historical records */
     post: operations["getRulesEventRecords"];
   };
+  "/scenequery/adHocPrompt": {
+    /** Exectue an existing prompt, ad-hoc */
+    post: operations["adHocPrompt"];
+  };
   "/scenequery/createPromptConfiguration": {
     /** Create scene query configuration */
     post: operations["createPromptConfiguration"];
@@ -5363,6 +5402,10 @@ export interface paths {
     /** Index video embedding, do not use unless you know what you're doing. */
     post: operations["indexVideoEmbedding"];
   };
+  "/search/listReidentificationEmbeddings": {
+    /** List reidentification embeddings */
+    post: operations["listReidentificationEmbeddings"];
+  };
   "/search/searchLicensePlates": {
     /** Fuzzy search for license plate sightings based on a partial or full plate number. Use /vehicle/getVehicleEvents instead. */
     post: operations["searchLicensePlates"];
@@ -5370,6 +5413,10 @@ export interface paths {
   "/search/searchObjectsByColor": {
     /** Search for objects by color */
     post: operations["searchObjectsByColor"];
+  };
+  "/search/searchReidentificationMatchesByEmbedding": {
+    /** Search for reidentification matches by embedding */
+    post: operations["searchReidentificationMatchesByEmbedding"];
   };
   "/search/searchSimilarObjectEmbeddings": {
     /** Search for similar objects by embedding */
@@ -5889,6 +5936,9 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       principalUuid?: string | null;
       privacy?: components["schemas"]["ChatPrivacy"];
+      scheduleUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      scheduledAiReportUuid?: string | null;
       startedAtMs?: number | null;
       structureJson?: string | null;
       timeline?: components["schemas"]["QueryTimelineEvent"][] | null;
@@ -5915,6 +5965,8 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       principalUuid?: string | null;
       privacy?: components["schemas"]["ChatPrivacy"];
+      /** base 64 (url-safe) uuid string */
+      scheduledAiReportUuid?: string | null;
       title?: string | null;
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
@@ -8275,6 +8327,7 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       locationUuid?: string | null;
       maxDeleteDate?: string | null;
+      monthlyFallbackVerificationLimit?: number | null;
       monthlyVerificationLimit?: number | null;
       monthsReset?: number | null;
       /** base 64 (url-safe) uuid string */
@@ -8285,6 +8338,7 @@ export interface components {
       productCode?: string | null;
       productType?: AlertMonitoringLicenseProductTypeEnum | null;
       remainingAlarms?: number | null;
+      remainingFallbackVerifications?: number | null;
       remainingVerifications?: number | null;
       state?: AlertMonitoringLicenseStateEnum | null;
       trial?: boolean | null;
@@ -9514,6 +9568,7 @@ export interface components {
           activityEvent?: components["schemas"]["ActivityEnum"];
         })
       | null;
+    /** Audio analysis parameters */
     AudioParamConfig: {
       expressions?:
         | components["schemas"]["AudioExpressionDetectionConfig"][]
@@ -9699,6 +9754,7 @@ export interface components {
     };
     /** Request to update configuration for an audio gateway. */
     Audiogateway_UpdateAudioGatewayConfigWSRequest: {
+      audioAnalysisParams?: components["schemas"]["AudioParamConfig"];
       /** Adjust boost for external mic. Integer between 0 and 3. */
       audioExternalMicBoost?: number | null;
       /** Adjust volume for external mic. Integer between 0 and 63. */
@@ -10443,6 +10499,20 @@ export interface components {
       removed?: boolean | null;
       warningMsg?: string | null;
     };
+    Billing_FreeCreditEligibilityWSResponse: {
+      customEvents?: components["schemas"]["Billing_FreeCreditEligibilityWSResponse_FreeCreditInfo"];
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
+    };
+    Billing_FreeCreditEligibilityWSResponse_FreeCreditInfo: {
+      freeCreditAmountCents?: number | null;
+      freeCreditRemainingCents?: number | null;
+      hasSubscription?: boolean | null;
+      isEligibleForVoucher?: boolean | null;
+      isOnVoucher?: boolean | null;
+      isVoucherExhausted?: boolean | null;
+    };
     Billing_FreeTrialEligibilityWSResponse: {
       customEvents?: boolean | null;
       error?: boolean | null;
@@ -10641,7 +10711,9 @@ export interface components {
       errorMsg?: string | null;
       warningMsg?: string | null;
     };
-    Billing_SetupSubscriptionWSRequest: { [key: string]: unknown };
+    Billing_SetupSubscriptionWSRequest: {
+      termsOfServiceAccepted?: boolean | null;
+    };
     Billing_SetupSubscriptionWSResponse: {
       clientSecret?: string | null;
       customerId?: string | null;
@@ -12636,14 +12708,14 @@ export interface components {
     ChatbotConfig: {
       /** LLM API key used by the chatbot service */
       apiKey?: string | null;
+      /** Billing type */
+      billingType: ChatbotConfigBillingTypeEnum | null;
       /** Epoch timestamp in milliseconds when this config was created */
       createdAtMs?: number | null;
       /** base 64 (url-safe) uuid string */
       lastUpdatedByPrincipal?: string | null;
       /** base 64 (url-safe) uuid string */
       orgUuid?: string | null;
-      /** Indicator if this org is using their own LLM API key */
-      selfManaged?: boolean | null;
       /** Indicator if the provided LLM API key is valid */
       tokenValid?: boolean | null;
       /** Epoch timestamp in milliseconds when this config was last updated */
@@ -12765,6 +12837,13 @@ export interface components {
       chatId: string | null;
       /** Base64-encoded org UUID. */
       orgId: string | null;
+    };
+    /** Request object for retrieving the current org's remaining trial credits for MIND. */
+    Chatbot_GetRemainingTrialCreditsWSRequest: { [key: string]: unknown };
+    /** Response object for retrieving the current org's remaining trial credits for MIND. */
+    Chatbot_GetRemainingTrialCreditsWSResponse: {
+      /** The current org's remaining trial credits for MIND. */
+      remainingTrialCredits?: number | null;
     };
     /** Request object for retrieving chat records shared with the current user. */
     Chatbot_GetSharedChatRecordsWSRequest: {
@@ -17877,8 +17956,10 @@ export interface components {
     };
     EmbeddingEncodingType: EmbeddingEncodingTypeEnum;
     EmergencyContact: {
-      name?: string | null;
-      phoneNumber?: string | null;
+      /** The name of the emergency contact. */
+      name: string | null;
+      /** The phone number for this emergency contact. */
+      phoneNumber: string | null;
     };
     EmergencyResponseContactsIntervalType: {
       emergencyContactList?: components["schemas"]["EmergencyContact"][] | null;
@@ -19122,7 +19203,6 @@ export interface components {
       useMultiCamera?: boolean | null;
     };
     ExampleImage: {
-      description?: string | null;
       image?: string | null;
       label?: string | null;
     };
@@ -19811,6 +19891,31 @@ export interface components {
       errorMsg?: string | null;
       warningMsg?: string | null;
     };
+    Fidoauth_FindLoginCredentialsForCurrentUserWSRequest: {
+      /** Should be null on first request and populated on subsequent requests if provided in the response to retrieve the next page */
+      lastEvaluatedKey?: string | null;
+      /** Max number of results to return. Response's lastEvaluatedKey will be null if no additional results are available */
+      maxPageSize?: number | null;
+    };
+    Fidoauth_FindLoginCredentialsForCurrentUserWSResponse: {
+      /** If a max page size was specified and there are additional results that can be retrievedthis will be non-null and should be supplied in the next request to retrieve the next page of results. */
+      lastEvaluatedKey?: string | null;
+      loginCredentials?:
+        | components["schemas"]["RhombusUserFidoCredential"][]
+        | null;
+    };
+    Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSRequest: {
+      [key: string]: unknown;
+    };
+    Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSResponse: {
+      registrationRequest?: components["schemas"]["JsonNode"];
+    };
+    Fidoauth_RegisterLoginCredentialForCurrentUserWSRequest: {
+      registrationResponse: components["schemas"]["JsonNode"];
+    };
+    Fidoauth_RegisterLoginCredentialForCurrentUserWSResponse: {
+      fidoLoginCredential?: components["schemas"]["RhombusUserFidoCredential"];
+    };
     FirmwareUpdateIntervalType: {
       minuteOfWeekStart?: number | null;
       minuteOfWeekStop?: number | null;
@@ -20265,7 +20370,7 @@ export interface components {
       orgUuid?: string | null;
       /** bounding box - right permyriad */
       r?: number | null;
-      stableTrackId?: string | null;
+      stableTrackId?: number | null;
       /** bounding box - top permyriad */
       t?: number | null;
       thumbnailUri?: string | null;
@@ -21395,6 +21500,7 @@ export interface components {
       | components["schemas"]["ToastType"]
       | components["schemas"]["WebhooksType"]
       | components["schemas"]["ZapierType"]
+      | components["schemas"]["ParPOSType"]
     ) & {
       enabled?: boolean | null;
       integration?: components["schemas"]["IntegrationEnum"];
@@ -21952,6 +22058,14 @@ export interface components {
       deviceList?: (string | null)[] | null;
       enabled?: boolean | null;
       serverUrl?: string | null;
+    };
+    /** Response for Person Reidentification embedding from image. */
+    Inference_GetPersonReidentificationEmbeddingFromImageWSResponse: {
+      /** Reidentification embedding for the uploaded image */
+      embedding?: (number | null)[] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
     };
     /** Response for segmentation using box prompts. */
     Inference_SegmentWithBoxesWSResponse: {
@@ -23720,6 +23834,8 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       uuid?: string | null;
     };
+    /** A WebAuthn credential registration response */
+    JsonNode: { [key: string]: unknown };
     /** Command being executed with the current keypad. */
     KeypadCommand: KeypadCommandEnum;
     /** List of all registered keypads for the organization */
@@ -23878,6 +23994,8 @@ export interface components {
       batteryLevel?: number | null;
       connectionStatus?: KioskConnectionStatusEnum | null;
       deleted?: boolean | null;
+      /** base 64 (url-safe) uuid string */
+      hostUserUuid?: string | null;
       lastUpdateTimeMs?: number | null;
       latitude?: number | null;
       /** base 64 (url-safe) uuid string */
@@ -23895,6 +24013,8 @@ export interface components {
       batteryLevel?: number | null;
       connectionStatus?: KioskSelectiveUpdateConnectionStatusEnum | null;
       deleted?: boolean | null;
+      /** base 64 (url-safe) uuid string */
+      hostUserUuid?: string | null;
       lastUpdateTimeMs?: number | null;
       latitude?: number | null;
       /** base 64 (url-safe) uuid string */
@@ -23984,6 +24104,8 @@ export interface components {
       batteryLevel?: number | null;
       connectionStatus?: KioskWithInfoConnectionStatusEnum | null;
       deleted?: boolean | null;
+      /** base 64 (url-safe) uuid string */
+      hostUserUuid?: string | null;
       lastUpdateTimeMs?: number | null;
       latitude?: number | null;
       /** Name of the location where the kiosk is installed */
@@ -24075,6 +24197,9 @@ export interface components {
           activityEvent?: components["schemas"]["ActivityEnum"];
         })
       | null;
+    LastSeenInfo: {
+      lastSeenAtMillis?: number | null;
+    };
     LeakProbeType: {
       adcMv?: number | null;
       adcRaw?: number | null;
@@ -24720,7 +24845,6 @@ export interface components {
       /** base 64 (url-safe) uuid string */
       policyUuid?: string | null;
       postalCode?: string | null;
-      qualifiedAddress?: components["schemas"]["QualifiedAddressType"];
       subLocations?: components["schemas"]["LocationType"][] | null;
       /** Timezone for this location */
       tz?: string | null;
@@ -24929,7 +25053,7 @@ export interface components {
       error?: boolean | null;
       errorMsg?: string | null;
       warningMsg?: string | null;
-    };
+    } | null;
     /** Request object for updating a location. NOTE: This will replace old settings meaning if you leave a field blank it will be overrode to blank. For selective field updates use the endpoint /selectiveUpdateLocation. */
     Location_UpdateLocationWSRequest: {
       location?: components["schemas"]["LocationType"];
@@ -24940,6 +25064,50 @@ export interface components {
       errorMsg?: string | null;
       warningMsg?: string | null;
     };
+    Location_ValidateAndUpdateLocationAddressWSRequest: {
+      address1?: string | null;
+      address2?: string | null;
+      administrativeArea?: string | null;
+      countryCode?: string | null;
+      locality?: string | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      overrideAllValidation?: boolean | null;
+      overrideMissingSubPremise?: boolean | null;
+      postalCode?: string | null;
+    };
+    /** Response object for validating and updating a location address for Alarm Monitoring. */
+    Location_ValidateAndUpdateLocationAddressWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      qualifiedAddress?: components["schemas"]["Location_QualifiedAddressTypeWithValidation"];
+      warningMsg?: string | null;
+    };
+    Location_ValidateLocationAddressV2WSRequest: {
+      address1?: string | null;
+      address2?: string | null;
+      administrativeArea?: string | null;
+      countryCode?: string | null;
+      locality?: string | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      postalCode?: string | null;
+    };
+    /** Response object for validating and updating a location address for Alarm Monitoring. */
+    Location_ValidateLocationAddressV2WSResponse: {
+      acceptable?: boolean | null;
+      acceptableExceptingSubPremise?: boolean | null;
+      acceptableIfOverridden?: boolean | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      hasChangedElements?: boolean | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      qualifiedAddress?: components["schemas"]["Location_QualifiedAddressTypeWithValidation"];
+      warningMsg?: string | null;
+    };
     /** Request object for validating a location address for Alarm Monitoring. */
     Location_ValidateLocationWSRequest: {
       /** base 64 (url-safe) uuid string */
@@ -24947,6 +25115,7 @@ export interface components {
     };
     /** Response object for validating a location address for Alarm Monitoring. */
     Location_ValidateLocationWSResponse: {
+      acceptable?: boolean | null;
       error?: boolean | null;
       errorMsg?: string | null;
       /** base 64 (url-safe) uuid string */
@@ -27309,6 +27478,23 @@ export interface components {
           uuid?: string | null;
         })
       | null;
+    ParPOSType:
+      | ({
+          accessToken?: string | null;
+          locationTokenMap?: { [key: string]: string | null } | null;
+          serverUrl?: string | null;
+        } & {
+          enabled?: boolean | null;
+          integration?: components["schemas"]["IntegrationEnum"];
+          integrationAuditMap?: {
+            [key: string]: components["schemas"]["IntegrationAuditEvent"];
+          } | null;
+          /** base 64 (url-safe) uuid string */
+          orgUuid?: string | null;
+          /** base 64 (url-safe) uuid string */
+          userUuid?: string | null;
+        })
+      | null;
     ParameterizedHeader: {
       parameters?: { [key: string]: string | null } | null;
       value?: string | null;
@@ -29509,7 +29695,7 @@ export interface components {
       errorMsg?: string | null;
       warningMsg?: string | null;
     };
-    /** Optionally present qualified address after some validation.  Used for Alarm Monitoring if available. */
+    /** Qualified address information for the keypad location */
     QualifiedAddressType: {
       /** apt, suite, or unit */
       addressLine2?: string | null;
@@ -31484,6 +31670,20 @@ export interface components {
       salesForceOpportunityId?: string | null;
       zendeskTicketNumber?: string | null;
     } | null;
+    /** If registration succeeded, this field will return non-sensitive metadata representing the newly registered WebAuthn credential. If registration failed it will be null. */
+    RhombusUserFidoCredential: {
+      createdAtMillis?: number | null;
+      credentialId?: string | null;
+      deleted?: boolean | null;
+      displayName?: string | null;
+      lastSeenInfoMap?: {
+        [key: string]: components["schemas"]["LastSeenInfo"];
+      } | null;
+      /** base 64 (url-safe) uuid string */
+      rhombusUserUuid?: string | null;
+      signatureCounterUnreliable?: boolean | null;
+      updatedAtMillis?: number | null;
+    };
     RobotSettings: {
       home_latitude?: number | null;
       home_longitude?: number | null;
@@ -32059,6 +32259,22 @@ export interface components {
       timestampMs?: number | null;
       value?: string | null;
     };
+    /** Request object for adhoc prompt. */
+    Scenequery_AdHocPromptWSRequest: {
+      /** RUUID with optional appended facet information */
+      deviceFacetUuid?: string | null;
+      /** base 64 (url-safe) uuid string */
+      promptUuid?: string | null;
+      /** Timestamp in milliseconds for the trigger */
+      timestampMs?: number | null;
+    };
+    /** Response object for triggering a prompt. */
+    Scenequery_AdHocPromptWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      event?: components["schemas"]["SceneQueryReportEvent"];
+      warningMsg?: string | null;
+    };
     /** Request object for creating a prompt configuration. */
     Scenequery_CreatePromptConfigurationWSRequest: {
       promptConfiguration?: components["schemas"]["PromptConfigurationType"];
@@ -32415,6 +32631,27 @@ export interface components {
       errorMsg?: string | null;
       warningMsg?: string | null;
     };
+    /** Request object for listing reidentification embeddings. */
+    Search_ListReidentificationEmbeddingsWSRequest: {
+      /** Optional devices filter */
+      deviceUuids?: (string | null)[] | null;
+      /** Window end time in milliseconds */
+      endTimestampMs?: number | null;
+      /** Max number of embeddings to return. */
+      limit?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      /** Window start time in milliseconds */
+      startTimestampMs?: number | null;
+    };
+    /** Response object for listing reidentification embeddings. */
+    Search_ListReidentificationEmbeddingsWSResponse: {
+      /** List of embeddings */
+      embeddings?: components["schemas"]["GenericObjectEmbedding"][] | null;
+      error?: boolean | null;
+      errorMsg?: string | null;
+      warningMsg?: string | null;
+    };
     /** Request object for searching license plates. */
     Search_SearchLicensePlatesWSRequest: {
       /** List of device facet UUIDs to search in */
@@ -32459,6 +32696,29 @@ export interface components {
       errorMsg?: string | null;
       /** List of objects matching the color search criteria */
       objects?: components["schemas"]["FootageBoundingBoxType"][] | null;
+      warningMsg?: string | null;
+    };
+    /** Request object for searching reIdentification matches by embedding. */
+    Search_SearchReidentificationMatchesByEmbeddingWSRequest: {
+      /** Set of devices to filter matches */
+      deviceUuids?: (string | null)[] | null;
+      /** Window end time in milliseconds */
+      endTimestampMs?: number | null;
+      /** Number of matches to return. */
+      limit?: number | null;
+      /** base 64 (url-safe) uuid string */
+      locationUuid?: string | null;
+      /** Search embedding vector */
+      searchEmbedding?: (number | null)[] | null;
+      /** Window start time in milliseconds */
+      startTimestampMs?: number | null;
+    };
+    /** Response object for searching reidentification matches by embedding. */
+    Search_SearchReidentificationMatchesByEmbeddingWSResponse: {
+      error?: boolean | null;
+      errorMsg?: string | null;
+      /** Result set containing reidentification matches */
+      matches?: components["schemas"]["GenericObjectEmbeddingMatch"][] | null;
       warningMsg?: string | null;
     };
     /** Request object for searching similar object embeddings by text. */
@@ -33298,6 +33558,7 @@ export interface components {
       sendToSharedStorage?: boolean | null;
       startTime?: number | null;
       status?: SplicedClipStatusEnum | null;
+      statusUpdatedAtMs?: number | null;
       thumbnailRelativeSecond?: number | null;
       timestampMs?: number | null;
       title?: string | null;
@@ -35038,12 +35299,6 @@ export interface components {
     Video_RetrySpliceWSRequest: {
       /** base 64 (url-safe) uuid string */
       clipUuid?: string | null;
-      /** base 64 (url-safe) uuid string */
-      deviceUuid?: string | null;
-      /** Duration in seconds for the retry */
-      duration?: number | null;
-      /** Start time in milliseconds for the retry */
-      startTime?: number | null;
     };
     /** Response object for retrying a spliced clip. */
     Video_RetrySpliceWSResponse: {
@@ -40526,6 +40781,22 @@ export interface operations {
       };
     };
   };
+  getFreeCreditEligibility: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Billing_FreeCreditEligibilityWSResponse"];
+        };
+      };
+    };
+  };
   getFreeTrialEligibility: {
     parameters: {
       header: {
@@ -42818,6 +43089,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Chatbot_GetChatbotConfigWSRequest"];
+      };
+    };
+  };
+  /** Retrieves the current org's remaining trial credits for MIND. */
+  getRemainingTrialCredits: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Chatbot_GetRemainingTrialCreditsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Chatbot_GetRemainingTrialCreditsWSRequest"];
       };
     };
   };
@@ -49616,6 +49909,72 @@ export interface operations {
       };
     };
   };
+  /** Retrieves a list of registered login credentials for the user. */
+  findLoginCredentialsForCurrentUser: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Fidoauth_FindLoginCredentialsForCurrentUserWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Fidoauth_FindLoginCredentialsForCurrentUserWSRequest"];
+      };
+    };
+  };
+  /** Provide the registration request to an authenticator and return its response to /registerLoginCredentialForCurrentUser. */
+  initiateLoginCredentialRegistrationForCurrentUser: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSRequest"];
+      };
+    };
+  };
+  /** Accepts a fido credential registration response to finalize the process of setting up a new FIDO2 login credential. */
+  registerLoginCredentialForCurrentUser: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Fidoauth_RegisterLoginCredentialForCurrentUserWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Fidoauth_RegisterLoginCredentialForCurrentUserWSRequest"];
+      };
+    };
+  };
   /** Updates guest information using a provided token. Validates the token, fetches location data, performs offender checks, and updates guest details including face images. This endpoint is used for external guest management forms. */
   updateGuestByToken: {
     parameters: {
@@ -50646,6 +51005,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Help_TriageDeviceWSRequest"];
+      };
+    };
+  };
+  /** Uploads an image to generate a reidentification embedding. */
+  getPersonReidentificationEmbeddingFromImage: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Inference_GetPersonReidentificationEmbeddingFromImageWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["FormDataMultiPart"];
       };
     };
   };
@@ -58103,7 +58484,29 @@ export interface operations {
       };
     };
   };
-  /** Validate a location address for Alarm Monitoring */
+  /** Validate a location address for Alarm Monitoring, and only if acceptable then update the location address */
+  validateAndUpdateLocationAddress: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Location_ValidateAndUpdateLocationAddressWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Location_ValidateAndUpdateLocationAddressWSRequest"];
+      };
+    };
+  };
+  /** Check if the currently set location address is acceptable for Alarm Monitoring */
   validateLocation: {
     parameters: {
       header: {
@@ -58122,6 +58525,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Location_ValidateLocationWSRequest"];
+      };
+    };
+  };
+  /** Submit an address to check if it is acceptable for Alarm Monitoring */
+  validateLocationAddress: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Location_SelectiveUpdateLocationWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Location_ValidateLocationAddressV2WSRequest"];
       };
     };
   };
@@ -62541,6 +62966,28 @@ export interface operations {
       };
     };
   };
+  /** Get uptime information for an NVR. */
+  getRelayUptimeWindows: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Common_devices_GetUptimeWindowsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Common_devices_GetUptimeWindowsWSRequest"];
+      };
+    };
+  };
   /** Imports third party cameras in csv format */
   importThirdPartyCameras: {
     parameters: {
@@ -64112,6 +64559,28 @@ export interface operations {
       };
     };
   };
+  /** Exectue an existing prompt, ad-hoc */
+  adHocPrompt: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Scenequery_AdHocPromptWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Scenequery_AdHocPromptWSRequest"];
+      };
+    };
+  };
   /** Create scene query configuration */
   createPromptConfiguration: {
     parameters: {
@@ -64574,6 +65043,28 @@ export interface operations {
       };
     };
   };
+  /** List reidentification embeddings */
+  listReidentificationEmbeddings: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Search_ListReidentificationEmbeddingsWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Search_ListReidentificationEmbeddingsWSRequest"];
+      };
+    };
+  };
   /** Fuzzy search for license plate sightings based on a partial or full plate number. Use /vehicle/getVehicleEvents instead. */
   searchLicensePlates: {
     parameters: {
@@ -64615,6 +65106,28 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Search_SearchObjectsByColorWSRequest"];
+      };
+    };
+  };
+  /** Search for reidentification matches by embedding */
+  searchReidentificationMatchesByEmbedding: {
+    parameters: {
+      header: {
+        /** Authentication scheme indicator ("api-token"). */
+        "x-auth-scheme": components["parameters"]["XAuthSchemeParam"];
+      };
+    };
+    responses: {
+      /** OK */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Search_SearchReidentificationMatchesByEmbeddingWSResponse"];
+        };
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Search_SearchReidentificationMatchesByEmbeddingWSRequest"];
       };
     };
   };
@@ -67494,6 +68007,7 @@ export enum ActivityEnum {
   MOTION_HUMAN = "MOTION_HUMAN",
   MOTION_CAR = "MOTION_CAR",
   MOTION_ANIMAL = "MOTION_ANIMAL",
+  MOTION_LPR = "MOTION_LPR",
   FACE = "FACE",
   FACE_IDENTIFIED = "FACE_IDENTIFIED",
   FACE_UNIDENTIFIED = "FACE_UNIDENTIFIED",
@@ -68138,6 +68652,12 @@ export enum ChatVisibilityEnum {
   PRIVATE = "PRIVATE",
 }
 
+export enum ChatbotConfigBillingTypeEnum {
+  SELF_MANAGED = "SELF_MANAGED",
+  MANAGED = "MANAGED",
+  TRIAL = "TRIAL",
+}
+
 export enum CheckConditionOperatorEnum {
   GT = "GT",
   LT = "LT",
@@ -68648,6 +69168,7 @@ export enum DeviceHealthStatusDetailsEnum {
   DISCONNECTED = "DISCONNECTED",
   FIRMWARE_BEHIND = "FIRMWARE_BEHIND",
   NOT_RECORDING = "NOT_RECORDING",
+  LINK_SPEED_LOW = "LINK_SPEED_LOW",
   MALFUNCTIONING_MODULES = "MALFUNCTIONING_MODULES",
   CALIBRATING = "CALIBRATING",
   DELAYED = "DELAYED",
@@ -70586,6 +71107,7 @@ export enum IntegrationEnum {
   NINEONEONE_CELLULAR = "NINEONEONE_CELLULAR",
   SLACK = "SLACK",
   APERIO = "APERIO",
+  PAR_POS = "PAR_POS",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -71597,6 +72119,9 @@ export enum QueryStatusEnum {
   GENERATING_RESPONSE = "GENERATING_RESPONSE",
   GENERATING_REPORT_OUTLINE = "GENERATING_REPORT_OUTLINE",
   GENERATING_REPORT_SECTIONS = "GENERATING_REPORT_SECTIONS",
+  GENERATING_REPORT_DRAFT = "GENERATING_REPORT_DRAFT",
+  FILLING_OUT_CHARTS = "FILLING_OUT_CHARTS",
+  REFINING_REPORT = "REFINING_REPORT",
   NOT_UNDERSTOOD = "NOT_UNDERSTOOD",
   INVALID_REQUEST = "INVALID_REQUEST",
   UNAUTHORIZED = "UNAUTHORIZED",
@@ -71607,6 +72132,7 @@ export enum QueryStatusEnum {
   INVALID_AUTH_DATA = "INVALID_AUTH_DATA",
   INVALID_API_TOKEN = "INVALID_API_TOKEN",
   MIND_DISABLED = "MIND_DISABLED",
+  OUT_OF_TRIAL_CREDITS = "OUT_OF_TRIAL_CREDITS",
   UNKNOWN = "UNKNOWN",
 }
 

@@ -26,6 +26,7 @@ export const authStore = new Map<
     }
   | {
       cookie: string;
+      sessionAlias?: string;
       createdMs: number;
     }
   | {
@@ -123,6 +124,7 @@ export default function streamableHttpTransport() {
             } else if (authScheme === AuthScheme.WEB2 && "x-auth-cookie" in req.headers) {
               authStore.set(sessionId, {
                 cookie: req.headers["x-auth-cookie"] as string,
+                sessionAlias: req.headers["x-auth-session-alias"] as string | undefined,
                 createdMs: Date.now(),
               });
             } else {

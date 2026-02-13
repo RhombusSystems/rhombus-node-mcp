@@ -78,6 +78,9 @@ export function constructRequestHeaders(
         "x-auth-scheme": "web2",
         cookie: auth.cookie,
       };
+      if ("sessionAlias" in auth) {
+        url = appendQueryParams(url, { _rs: auth.sessionAlias });
+      }
     }
   }
 
