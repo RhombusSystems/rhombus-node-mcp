@@ -22,56 +22,59 @@ const TOOL_NAME = "events-tool";
 
 // "faces" | "people" | "human" | "access-control"
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus events system to retrieve information about various types of events within the system. It has 5 modes of operation, determined by the "eventType" parameter: access-control, environmental-gateway, climate-sensor, component-events, and camera
+**Scope:** This tool returns **raw, event-level data** (individual events with timestamps). Use **report-tool** when you need aggregated counts, time-series summaries, or analytics over intervals.
 
-This tool should should be used any time someone is asking for specifics or reports for access control related events like unlocks, badge ins, credentials, arrivals etc., environmental gateway events, climate sensor events, camera motion events, or any other component events.
+This tool has 5 modes, set by "eventType": access-control, environmental-gateway, climate-sensor, component-events, camera. Use it when the user asks for specific events (unlocks, badge ins, credentials, arrivals, environmental readings, climate data, camera motion, or other component events). It can return large result sets; keep time ranges narrow. For ranges spanning more than ~24 hours, prefer report-tool for aggregates. For maximum flexibility across event types at a location, use eventType "component-events".
 
-For maximum flexibility, use eventType "component-events" which allows querying any combination of event types (doorbell pushes, badge scans, door state changes, button presses, etc.) for a location.
+---
 
-This tool retrieves a list of events captured by the access control door system pertaining to arrivals, badge ins, credentials received, etc. 
+When eventType is "access-control":
 
-This tool can return a lot of data. Please make sure the time range provided is not too large.
-  This tool takes 3 arguments:
-  * **accessControlledDoorUuid (string):** The unique identifier for the access controlled door.
-  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start or earliest time of access control events.
-  * **endTime (string):** The timestamp (in ISO 8601 format) representing the end or latest time of access control events.
+Retrieves access control events (arrivals, badge ins, credentials, unlocks) for the given door(s). Can return a lot of data—use a narrow time range.
 
-  The tool returns a JSON object with access control events data.
+Arguments:
+  * **accessControlledDoorUuids (array of strings):** UUIDs of the access-controlled doors.
+  * **startTime (string):** Start of the time range (ISO 8601).
+  * **endTime (string):** End of the time range (ISO 8601).
 
-When eventType is "environmental-gateway":
+The \`credSource\` field indicates how the event was triggered:
+  * **REMOTE:** Rhombus Key app remote unlock.
+  * **REMOTE (Admin):** Unlock via Rhombus console or browser/mobile app.
+  * **BLE_WAVE:** User waved hand over the reader.
+  * **NFC:** User tapped badge or phone on the reader.
 
-This tool retrieves environmental gateway events for a specific environmental gateway device within a time range. The data returned will have a timestamp that is in
-the timezone of the **device**, not necessarily UTC time.
+---
 
-This tool takes 3 arguments:
-  * **deviceUuid (string):** The unique identifier for the environmental gateway device.
-  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
-  * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
+Retrieves environmental gateway events (sensor readings, derived values) for a device in a time range. Timestamps are in the **device** timezone, not necessarily UTC.
 
-The tool returns a JSON object with environmental gateway events data.
+Arguments:
+  * **deviceUuid (string):** UUID of the environmental gateway device.
+  * **startTime (string):** Start of range (ISO 8601).
+  * **endTime (string):** End of range (ISO 8601).
+
+---
 
 When eventType is "climate-sensor":
 
-This tool retrieves climate sensor events for a specific climate sensor within a time range. The data returned will have a timestamp that is in
-the timezone of the **sensor**, not necessarily UTC time.
+Retrieves climate sensor events (temperature, humidity, air quality, etc.) for a sensor in a time range. Timestamps are in the **sensor** timezone, not necessarily UTC.
 
-This tool takes 4 arguments:
-  * **sensorUuid (string):** The unique identifier for the climate sensor.
-  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
-  * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
-  * **limit (number, optional):** Maximum number of climate events to return. Default is 1000.
+Arguments:
+  * **sensorUuid (string):** UUID of the climate sensor.
+  * **startTime (string):** Start of range (ISO 8601).
+  * **endTime (string):** End of range (ISO 8601).
+  * **limit (number, optional):** Max events to return. Default 1000.
 
-The tool returns a JSON object with climate sensor events data.
+---
 
 When eventType is "component-events":
 
-This tool retrieves ALL types of component events for a specific location within a time range. This is the most flexible option and allows filtering by specific event types. The data returned will have a timestamp that is in the timezone of the **location**, not necessarily UTC time.
+Retrieves all component event types for a location in a time range. Most flexible option; filter by event type via componentEventTypes. Timestamps are in the **location** timezone, not necessarily UTC.
 
-This tool takes 4 arguments:
-  * **locationUuid (string):** The unique identifier for the location.
-  * **componentEventTypes (array of strings, optional):** Array of event types to filter by. If empty or not provided, returns all event types.
-  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
-  * **endTime (string):** The timestamp (in ISO 8601 format) representing the end time of events.
+Arguments:
+  * **locationUuid (string):** UUID of the location.
+  * **componentEventTypes (array, optional):** Event types to include. If empty or omitted, returns all types.
+  * **startTime (string):** Start of range (ISO 8601).
+  * **endTime (string):** End of range (ISO 8601).
 
 Valid event types include:
   * **DoorbellEvent:** Doorbell button press events
@@ -86,25 +89,18 @@ Valid event types include:
   * **WaveToUnlockIntentExpiredEvent:** Wave-to-unlock timeout events
   * **DoorAuthFirstInStateEvent:** First-in authentication state events
   * **DoorScheduleFirstInStateEvent:** First-in schedule state events
-  * And more...
+  * And more (see input schema for full list).
+
+---
 
 When eventType is "camera":
 
-This tool retrieves human motion events detected by a specific camera within a time range. The data returned will have timestamps in milliseconds.
+Retrieves human motion events for a camera in a time range. Timestamps in milliseconds.
 
-This tool takes 3 arguments:
-  * **cameraUuid (string):** The unique identifier for the camera.
-  * **startTime (string):** The timestamp (in ISO 8601 format) representing the start time of events.
-  * **duration (number):** Duration in seconds to search for human motion events. Default is 3600 (1 hour).
-
-The tool returns a JSON object with camera events data.
-
-When eventType is \`access-control\`:
--  The \`credSource\` field describes the credential source of the event. 
-  - Remote is a "Rhombus Key Remote Unlock", through the Rhombus Key app.
-  - Remote (Admin) is a unlock triggered through the Rhombus console, the browser or mobile app.
-  - BLE_WAVE is a user badging in by physically waving their hand over the reader.
-  - NFC is a user badging in by tapping their phone on the reader.
+Arguments:
+  * **cameraUuid (string):** UUID of the camera.
+  * **startTime (string):** Start of range (ISO 8601).
+  * **duration (number):** Search window in seconds. Default 3600 (1 hour).
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {

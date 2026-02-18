@@ -22,39 +22,28 @@ import { logger } from "../logger.js";
 const TOOL_NAME = "report-tool";
 
 const TOOL_DESCRIPTION = `
-This tool generates summary count reports for various types of data within the Rhombus system.
-It provides aggregated counts over specified time intervals and scopes.
-This tool should be used when users need high level summary reports, analytics, or aggregated counts of system events and activities.
-If types contains PEOPLE please understand that this is not a unique person count, it is a count of people detection events. 
-It's useful for getting a high level count of people, but not for getting a unique person count.
+**Scope:** This tool returns **aggregated counts and time-series summaries** over specified intervals and scopes. Use **events-tool** when you need raw, event-level data (individual events with timestamps). Use this tool for high-level reports, analytics, and trends—especially over periods of a day or more.
 
-This tool can also retrieve a list of cameras that have occupancy reporting enabled, which is useful as a first step
-before running GET_SUMMARY_COUNT_REPORT since the uuid pulled from summaryCountRequest should always be present on
-the list returned from getOccupancyEnabledCameras.
+**PEOPLE type:** Not a unique person count; it is a count of people-detection events. Use for high-level occupancy or activity trends, not for deduplicated head counts.
 
-Additionally, this tool supports line crossing analytics:
-- GET_LINE_CROSSING_ENABLED_CAMERAS: Retrieves cameras at a location that have line crossing enabled, along with their configurations.
-  This should be called first to identify which cameras can be used for threshold crossing reports.
-- GET_THRESHOLD_CROSSING_COUNT_REPORT: Generates reports showing ingress and egress counts for line crossings over time.
-  Automatically calculates key metrics including:
-  • Average entries per hour
-  • Average exits per hour
-  • Hour with most entries (with timestamp and count)
-  • Hour with most exits (with timestamp and count)
-  • Busiest hour overall (total activity with breakdown)
-  Supports human and vehicle crossing detection with configurable time buckets (quarter hour, hour, day, week).
+---
 
-The tool also supports custom user-defined event reporting:
-- FIND_PROMPT_CONFIGURATIONS: Retrieves all custom event prompt configurations. This should be called first to discover
-  what custom events are available for reporting (e.g., "black dog sightings", "delivery truck arrivals", etc.).
-  Each configuration includes the prompt text, UUID, and promptType (COUNT, PERCENT, or BOOLEAN) needed for generating reports.
-- GET_CUSTOM_LLM_REPORT: Generates time series reports for a specific custom event using the prompt UUID.
-  The promptType field from the configuration determines which API endpoint is used:
-  • COUNT: Returns numeric counts (e.g., "3 black dogs detected")
-  • PERCENT: Returns percentage values (e.g., "75% occupancy")
-  • BOOLEAN: Returns true/false values (e.g., "parking lot full: true")
-  Returns aggregated data over specified time intervals (minutely, quarter-hourly, hourly, daily, weekly, monthly).
-  Use this after finding the appropriate prompt configuration to get historical data for custom events.
+**Summary and occupancy**
+- **GET_SUMMARY_COUNT_REPORT:** Aggregated counts (people, faces, motion, vehicles, etc.) over time at device, location, or org scope. Interval: minutely, hourly, daily, weekly, monthly, yearly.
+- **GET_OCCUPANCY_ENABLED_CAMERAS:** List of cameras with occupancy reporting enabled. Call this first; the UUID used in GET_SUMMARY_COUNT_REPORT (when scope is DEVICE) should be one of the camera UUIDs returned here.
+- **GET_OCCUPANCY_COUNT_REPORT:** Occupancy count time series for a specific device over a time range.
+
+---
+
+**Line crossing**
+- **GET_LINE_CROSSING_ENABLED_CAMERAS:** Cameras at a location with line crossing enabled, plus their configs. Call first to see which cameras support threshold crossing reports.
+- **GET_THRESHOLD_CROSSING_COUNT_REPORT:** Ingress/egress counts for line crossings over time. Supports human and vehicle detection; bucket size: quarter hour, hour, day, week. Response includes computed metrics: average entries/exits per hour, hour with most entries/exits, busiest hour (with breakdown).
+
+---
+
+**Custom LLM events**
+- **FIND_PROMPT_CONFIGURATIONS:** All custom event prompt configurations (e.g. "black dog sightings", "delivery truck arrivals"). Each has prompt text, UUID, and promptType (COUNT, PERCENT, BOOLEAN). Call first to discover available custom events.
+- **GET_CUSTOM_LLM_REPORT:** Time-series for one custom event by prompt UUID. promptType from the config selects the API: COUNT (numeric counts), PERCENT (percentages), BOOLEAN (true/false). Intervals: minutely, quarter-hourly, hourly, daily, weekly, monthly. Use after FIND_PROMPT_CONFIGURATIONS to get historical data.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
