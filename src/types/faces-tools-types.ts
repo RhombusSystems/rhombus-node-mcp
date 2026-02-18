@@ -5,6 +5,7 @@ import { createUuidSchema } from "../types.js";
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
   GET_REGISTERED_FACES = "get-registered-faces",
+  GET_PERSON_LABELS = "get-person-labels",
 }
 
 export const GetRegisteredFacesArgsSchema = z.object({
@@ -177,11 +178,33 @@ export const OUTPUT_SCHEMA = z.object({
           orgUuid: z.optional(z.string()),
           updatedOn: z.optional(z.number()),
           uuid: z.optional(z.string()),
+          labels: z.optional(z.array(z.string())).describe(
+            "Labels assigned to this person, useful for grouping (e.g., 'Engineering', 'Visitors')."
+          ),
         })
       )
     )
     .describe(
       "A list of all people (registered faces) currently known to the Rhombus system for your organization."
+    ),
+  getPersonLabelsResponse: z
+    .optional(
+      z.record(
+        z.string(),
+        z.array(z.string())
+      )
+    )
+    .describe(
+      "A map of person UUIDs to their assigned label arrays. Use this to discover what label groups exist and which people belong to them."
+    ),
+  resolvedNames: z
+    .optional(
+      z.record(z.string(), z.string().nullable())
+    )
+    .describe(
+      "When faceNames are provided in a get-face-events request, this shows how each queried name was automatically resolved to a registered face. " +
+      "Key is the queried name (e.g., 'Brandon'), value is the matched registered name (e.g., 'Brandon Salzberg') or null if no match was found. " +
+      "Use these resolved names when reporting results to the user."
     ),
   error: z.optional(z.string()),
 });

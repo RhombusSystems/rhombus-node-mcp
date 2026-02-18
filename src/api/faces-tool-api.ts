@@ -151,3 +151,15 @@ export async function getRegisteredFaces(
     sessionId,
   });
 }
+
+export async function getPersonLabels(
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  return await postApi<schema["Facerecognition_person_FindPersonLabelsByOrgWSResponse"]>({
+    route: "/faceRecognition/person/findPersonLabelsByOrg",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
+}
