@@ -23,6 +23,8 @@ If the requestType is "get-face-events":
 - This tool retrieves detailed face events such as detections and recognitions. It provides comprehensive information about each event, including details about the detected face, the person matched (if any), and the event context.
 - You can filter face events using parameters like 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
 - If you'd like to know about all face events at a location, pass in a location UUID and no device UUIDs. This will correctly return all face events at that location.
+- When the user asks about a specific person at a location (e.g. "Jane Doe at Main Office"), call get-registered-faces first to get the list of registered names, find the best match, then call get-face-events with that precise name. The tool expects precise names as stored in the system.
+- When querying faces at a location, pass only the location UUID in searchFilter; do not pass device UUIDs in searchFilter.deviceUuids, so the API returns all faces detected at that location.
 
 If the requestType is "get-registered-faces":
 - This tool retrieves a list of all people (registered faces) currently known to the Rhombus system for your organization. This list includes information about each registered person.
