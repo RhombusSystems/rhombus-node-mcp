@@ -188,11 +188,17 @@ export const OUTPUT_SCHEMA = z.object({
                 "NFC is a user badging in by tapping their badge or their phone on the reader. " +
                 "REMOTE is unlocking the door remotely through the Rhombus app."
             ),
+          timestampMs: z
+            .number()
+            .optional()
+            .describe("Timestamp in milliseconds when the event occurred"),
           datetime: z.string().optional().describe("Datetime string of when the event occurred"),
         })
       )
       .nullable()
-      .describe("Access control events data including badge ins, credentials, arrivals, etc.")
+      .describe(
+        "Access control events data including badge ins, credentials, arrivals, etc., sorted by timestamp (newest first)."
+      )
   ),
   environmentalGatewayEvents: z.optional(
     z

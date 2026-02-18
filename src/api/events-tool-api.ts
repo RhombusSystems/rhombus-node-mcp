@@ -45,6 +45,113 @@ type MappedClimateEvent = {
   orgUuid?: string | null;
 };
 
+type MappedAccessControlEvent = {
+  authenticationResult?: string | null;
+  authorizationResult?: string | null;
+  doorUuid?: string | null;
+  locationUuid?: string | null;
+  user?: string | null;
+  credSource?: string | null;
+  timestampMs?: number | null;
+  datetime?: string;
+};
+
+const ACCESS_CONTROL_EVENT_BATCH_SIZE = 1000;
+const ACCESS_CONTROL_EVENT_TYPE_FILTER =
+  ["CredentialReceivedEvent"] as NonNullable<
+    schema["Component_FindComponentEventsByAccessControlledDoorWSRequest"]["typeFilter"]
+  >;
+
+function mapAccessControlEvent(
+  credEvent: schema["CredentialReceivedEventType"],
+  timeZone: string
+): MappedAccessControlEvent {
+  return {
+    authenticationResult: credEvent?.authenticationResult,
+    authorizationResult: credEvent?.authorizationResult,
+    doorUuid: credEvent?.componentCompositeUuid,
+    locationUuid: credEvent?.locationUuid,
+    user: (credEvent?.originator as { username?: string } | undefined)?.username,
+    credSource: credEvent?.credSource,
+    timestampMs: credEvent?.timestampMs,
+    datetime: credEvent?.timestampMs ? formatTimestamp(credEvent.timestampMs, timeZone) : undefined,
+  };
+}
+
+async function getAccessControlEventsForDoor(
+  doorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<MappedAccessControlEvent[]> {
+  const allEvents: MappedAccessControlEvent[] = [];
+  let createdBeforeMs = endTime;
+
+  while (true) {
+    const body: schema["Component_FindComponentEventsByAccessControlledDoorWSRequest"] = {
+      accessControlledDoorUuid: doorUuid,
+      ...(startTime !== undefined ? { createdAfterMs: startTime } : {}),
+      ...(createdBeforeMs !== undefined ? { createdBeforeMs } : {}),
+      limit: ACCESS_CONTROL_EVENT_BATCH_SIZE,
+      typeFilter: ACCESS_CONTROL_EVENT_TYPE_FILTER,
+    };
+
+    const response = await postApi<schema["Component_FindComponentEventsByAccessControlledDoorWSResponse"]>(
+      {
+        route: "/component/findComponentEventsByAccessControlledDoor",
+        body,
+        modifiers: requestModifiers,
+        sessionId,
+      }
+    );
+
+    const componentEvents = response.componentEvents || [];
+    if (componentEvents.length === 0) {
+      break;
+    }
+
+    const mappedEvents = componentEvents
+      .map((credEvent: schema["CredentialReceivedEventType"]) =>
+        mapAccessControlEvent(credEvent, timeZone)
+      )
+      .filter(Boolean);
+    allEvents.push(...mappedEvents);
+
+    if (componentEvents.length < ACCESS_CONTROL_EVENT_BATCH_SIZE) {
+      break;
+    }
+
+    const oldestTimestamp = componentEvents.reduce<number | null>((oldest, event) => {
+      const ts = event?.timestampMs;
+      if (typeof ts !== "number") {
+        return oldest;
+      }
+      if (oldest === null || ts < oldest) {
+        return ts;
+      }
+      return oldest;
+    }, null);
+
+    if (oldestTimestamp === null) {
+      break;
+    }
+
+    // createdBeforeMs is exclusive. Moving the window to the oldest seen timestamp
+    // prevents duplicate pages and keeps fetching older events until the range is exhausted.
+    if (createdBeforeMs !== undefined && oldestTimestamp >= createdBeforeMs) {
+      break;
+    }
+    if (startTime !== undefined && oldestTimestamp <= startTime) {
+      break;
+    }
+    createdBeforeMs = oldestTimestamp;
+  }
+
+  return allEvents;
+}
+
 export async function getFaceEvents(
   _locationUuid: string | null | undefined,
   timeZone: string,
@@ -99,42 +206,22 @@ export async function getAccessControlEvents(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const bodies = doorUuids.map(doorUuid => ({
-    accessControlledDoorUuid: doorUuid,
-    ...(startTime ? { createdAfterMs: startTime } : {}),
-    ...(endTime ? { createdBeforeMs: endTime } : {}),
-    typeFilter: ["CredentialReceivedEvent"],
-  }));
-
   const responses = await Promise.all(
-    bodies.map(body =>
-      postApi<schema["Component_FindComponentEventsByAccessControlledDoorWSResponse"]>({
-        route: "/component/findComponentEventsByAccessControlledDoor",
-        body,
-        modifiers: requestModifiers,
-        sessionId,
-      }).then(response => {
-        return (response.componentEvents || [])
-          .map((credEvent: schema["CredentialReceivedEventType"]) => {
-            return {
-              authenticationResult: credEvent?.authenticationResult,
-              authorizationResult: credEvent?.authorizationResult,
-              doorUuid: credEvent?.componentCompositeUuid,
-              locationUuid: credEvent?.locationUuid,
-              user: (credEvent?.originator as { username?: string } | undefined)?.username,
-              credSource: credEvent?.credSource,
-              datetime: credEvent?.timestampMs
-                ? formatTimestamp(credEvent.timestampMs, timeZone)
-                : undefined,
-            };
-          })
-          .filter(Boolean);
-      })
+    doorUuids.map(doorUuid =>
+      getAccessControlEventsForDoor(
+        doorUuid,
+        startTime,
+        endTime,
+        timeZone,
+        requestModifiers,
+        sessionId
+      )
     )
   );
 
   // Flatten all componentEvents into a single array
   const accessControlEvents = responses.flatMap(events => events);
+  accessControlEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
   console.error(`componentEvents: ${JSON.stringify(accessControlEvents)}`);
   return accessControlEvents;
 }

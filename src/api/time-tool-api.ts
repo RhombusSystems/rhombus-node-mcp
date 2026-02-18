@@ -26,7 +26,9 @@ function normalizeTimeDescription(description: string): string {
 
   // Handle "this" time periods - always refer to today
   if (normalized === "this morning") {
-    return "today at 06:00";
+    // For occupancy/access-control investigations, "this morning" should include
+    // all events since local midnight unless a narrower range is explicitly requested.
+    return "today at 00:00";
   }
   if (normalized === "this afternoon") {
     return "today at 12:00";
