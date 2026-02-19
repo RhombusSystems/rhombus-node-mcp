@@ -70,8 +70,10 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
             JSON.stringify({ error: "query is required for object-by-text search." })
           );
         }
+        const textSearchDeviceUuids = args.deviceUuids
+          ?? (args.cameraUuid ? [args.cameraUuid] : null);
         const objectTextResults = await searchObjectsByText(
-          args.query, startTimeMs, endTimeMs, args.deviceUuids,
+          args.query, startTimeMs, endTimeMs, textSearchDeviceUuids,
           requestModifiers, sessionId
         );
         return createToolStructuredContent<OUTPUT_SCHEMA>({ objectTextResults });

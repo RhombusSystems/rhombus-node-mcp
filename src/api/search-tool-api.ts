@@ -85,11 +85,13 @@ export async function searchObjectsByText(
   sessionId?: string
 ) {
   const body = {
-    text: textQuery,
-    model: "CLIP",
-    startTimestampMs: startTimeMs,
-    endTimestampMs: endTimeMs,
-    deviceUuids: deviceUuids ?? undefined,
+    searchText: textQuery,
+    model: "CLIP_512",
+    queryStartTimeMs: startTimeMs,
+    queryEndTimeMs: endTimeMs,
+    queryDeviceUuids: deviceUuids ?? [],
+    maxNumResults: 100,
+    similarityThreshold: 0.5,
   } as any;
 
   const res = await postApi<any>({
@@ -104,10 +106,10 @@ export async function searchObjectsByText(
   }
 
   return (
-    res.results?.map((result: any) => ({
-      deviceUuid: result.deviceUuid ?? undefined,
-      timestampMs: result.timestampMs ?? undefined,
-      score: result.score ?? undefined,
+    res.similarEmbeddings?.map((match: any) => ({
+      deviceUuid: match.embedding?.deviceUuid ?? undefined,
+      timestampMs: match.embedding?.timestamp ?? undefined,
+      score: match.distance ?? undefined,
     })) ?? []
   );
 }
