@@ -10,6 +10,11 @@ export enum RequestType {
   GET_THRESHOLD_CROSSING_COUNT_REPORT = "get-threshold-crossing-count-report",
   FIND_PROMPT_CONFIGURATIONS = "find-prompt-configurations",
   GET_CUSTOM_LLM_REPORT = "get-custom-llm-report",
+  GET_AUDIT_FEED = "get-audit-feed",
+  GET_DIAGNOSTIC_FEED = "get-diagnostic-feed",
+  GET_THRESHOLD_CROSSING_EVENTS = "get-threshold-crossing-events",
+  GET_CUSTOM_EVENTS_REPORT = "get-custom-events-report",
+  GET_PEOPLE_COUNT_EVENTS = "get-people-count-events",
 }
 
 export const TOOL_ARGS = z.object({
@@ -21,6 +26,11 @@ export const TOOL_ARGS = z.object({
     RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT,
     RequestType.FIND_PROMPT_CONFIGURATIONS,
     RequestType.GET_CUSTOM_LLM_REPORT,
+    RequestType.GET_AUDIT_FEED,
+    RequestType.GET_DIAGNOSTIC_FEED,
+    RequestType.GET_THRESHOLD_CROSSING_EVENTS,
+    RequestType.GET_CUSTOM_EVENTS_REPORT,
+    RequestType.GET_PEOPLE_COUNT_EVENTS,
   ]),
   occupancyCountRequest: z.object({
     deviceUuid: z.string().describe("The uuid of the device to get occupancy count for"),
@@ -146,6 +156,37 @@ export const TOOL_ARGS = z.object({
       .enum(["MINUTELY", "QUARTERHOURLY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY"])
       .describe("The time interval for the report aggregation"),
   }),
+  auditFeedRequest: z.object({
+    startTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("Start of time range." + ISOTimestampFormatDescription),
+    endTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("End of time range." + ISOTimestampFormatDescription),
+  }).nullable().describe("Request for audit feed. Required for get-audit-feed, null for other request types."),
+  diagnosticFeedRequest: z.object({
+    startTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("Start of time range." + ISOTimestampFormatDescription),
+    endTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("End of time range." + ISOTimestampFormatDescription),
+  }).nullable().describe("Request for diagnostic feed. Required for get-diagnostic-feed, null for other request types."),
+  thresholdCrossingEventsRequest: z.object({
+    deviceUuid: z.string().describe("The uuid of the device"),
+    startTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("Start of time range." + ISOTimestampFormatDescription),
+    endTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("End of time range." + ISOTimestampFormatDescription),
+  }).nullable().describe("Request for threshold crossing events. Required for get-threshold-crossing-events, null for other request types."),
+  customEventsReportRequest: z.object({
+    promptUuid: z.string().describe("The uuid of the prompt configuration"),
+    startTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("Start of time range." + ISOTimestampFormatDescription),
+    endTime: z.string().datetime({ message: "Invalid datetime string.", offset: true })
+      .describe("End of time range." + ISOTimestampFormatDescription),
+    interval: z.enum(["MINUTELY", "QUARTERHOURLY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY"])
+      .describe("The time interval for aggregation"),
+  }).nullable().describe("Request for custom events report. Required for get-custom-events-report, null for other request types."),
+  peopleCountEventsRequest: z.object({
+    deviceUuids: z.array(z.string()).describe("Array of device UUIDs to get people count for"),
+  }).nullable().describe("Request for people count events. Required for get-people-count-events, null for other request types."),
 });
 
 const TOOL_ARGS_SCHEMA = TOOL_ARGS;
@@ -334,5 +375,55 @@ export const OUTPUT_SCHEMA = z.object({
     .describe(
       "Custom LLM report showing event data over time - supports COUNT, PERCENT, and BOOLEAN prompt types"
     ),
+  auditFeedReport: z.optional(z.object({
+    error: z.optional(z.boolean()),
+    errorMsg: z.optional(z.string()),
+    auditEvents: z.optional(z.array(z.object({
+      timestampMs: z.optional(z.number()),
+      action: z.optional(z.string()),
+      principalUuid: z.optional(z.string()),
+      principalType: z.optional(z.string()),
+      targetUuid: z.optional(z.string()),
+      targetType: z.optional(z.string()),
+      description: z.optional(z.string()),
+    }))),
+  })).describe("Audit feed showing user actions"),
+  diagnosticFeedReport: z.optional(z.object({
+    error: z.optional(z.boolean()),
+    errorMsg: z.optional(z.string()),
+    diagnosticEvents: z.optional(z.array(z.object({
+      timestampMs: z.optional(z.number()),
+      deviceUuid: z.optional(z.string()),
+      eventType: z.optional(z.string()),
+      description: z.optional(z.string()),
+    }))),
+  })).describe("Diagnostic feed showing device events"),
+  thresholdCrossingEventsReport: z.optional(z.object({
+    error: z.optional(z.boolean()),
+    errorMsg: z.optional(z.string()),
+    events: z.optional(z.array(z.object({
+      timestampMs: z.optional(z.number()),
+      direction: z.optional(z.string()),
+      objectType: z.optional(z.string()),
+    }))),
+  })).describe("Individual threshold crossing events"),
+  customEventsReport: z.optional(z.object({
+    error: z.optional(z.boolean()),
+    errorMsg: z.optional(z.string()),
+    timeSeriesDataPoints: z.optional(z.array(z.object({
+      dateLocal: z.optional(z.string()),
+      dateUtc: z.optional(z.string()),
+      eventCountMap: z.optional(z.record(z.any())),
+    }))),
+  })).describe("Custom events report time series"),
+  peopleCountEventsReport: z.optional(z.object({
+    error: z.optional(z.boolean()),
+    errorMsg: z.optional(z.string()),
+    events: z.optional(z.array(z.object({
+      deviceUuid: z.optional(z.string()),
+      timestampMs: z.optional(z.number()),
+      count: z.optional(z.number()),
+    }))),
+  })).describe("Most recent people count events"),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

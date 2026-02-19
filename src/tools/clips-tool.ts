@@ -12,6 +12,10 @@ import {
 	getExpiringClips,
 	getSharedLiveStreams,
 	getTimelapseClips,
+	getClipGroups,
+	getSharedClipGroups,
+	createClip,
+	deleteClip,
 } from "../api/clips-tool-api.js";
 
 const TOOL_NAME = "clips-tool";
@@ -75,6 +79,36 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 			return createToolStructuredContent<OutputSchema>(
 				await getTimelapseClips(payload, requestModifiers, sessionId),
 			);
+		case "clipGroups":
+			return createToolStructuredContent<OutputSchema>(
+				await getClipGroups(requestModifiers, sessionId),
+			);
+		case "sharedClips":
+			return createToolStructuredContent<OutputSchema>(
+				await getSharedClipGroups(requestModifiers, sessionId),
+			);
+		case "createClip": {
+			if (!args.spliceRequest) {
+				throw new Error("spliceRequest is required for 'createClip' requestType");
+			}
+			return createToolStructuredContent<OutputSchema>(
+				await createClip(
+					args.spliceRequest.cameraUuid,
+					args.spliceRequest.startTimeMs,
+					args.spliceRequest.endTimeMs,
+					requestModifiers,
+					sessionId,
+				),
+			);
+		}
+		case "deleteClip": {
+			if (!args.clipUuid) {
+				throw new Error("clipUuid is required for 'deleteClip' requestType");
+			}
+			return createToolStructuredContent<OutputSchema>(
+				await deleteClip(args.clipUuid, requestModifiers, sessionId),
+			);
+		}
 	}
 
 	return createToolStructuredContent<OutputSchema>({

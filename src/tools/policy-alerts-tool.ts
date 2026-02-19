@@ -1,6 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RequestModifiers } from "../util.js";
-import { getExpiringPolicyAlerts, getPolicyAlerts } from "../api/policy-alerts-tool-api.js";
+import {
+  getExpiringPolicyAlerts,
+  getPolicyAlerts,
+  getPolicyAlertDetails,
+  dismissPolicyAlert,
+  getUnhealthyDeviceAlerts,
+  getPolicyAlertGroups,
+} from "../api/policy-alerts-tool-api.js";
 import {
   ApiPayloadSchema,
   OUTPUT_SCHEMA,
@@ -28,7 +35,15 @@ policy alerts within the Rhombus system.
 This tool allows you to filter existing alerts by existing/expiring, a specific time range (before or after a timestamp in ISO 8601 format),
 by a list of device UUIDs, or by a list of location UUIDs.
 You can also specify the maximum number of results to return.
-The output is provided in JSON format.`;
+The output is provided in JSON format.
+
+IMPORTANT: The "unhealthy-devices" queryType returns historical alert notifications that were triggered for device health issues.
+It does NOT return live/real-time device connection status. If no device health alert policies are configured, or alerts were
+dismissed, this may return empty even when devices are offline.
+
+**To check which devices are currently online/offline, use the get-entity-tool instead.** The get-entity-tool returns the
+current state of all devices including their live connection status (the "connected" field). Request all entity types
+(CAMERA, DOORBELL_CAMERA, BADGE_READER, etc.) and check the "connected" field on each device to determine which are offline.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const payload = ApiPayloadSchema.parse(args);
@@ -43,7 +58,40 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       );
       break;
     case "expiringSoon":
-      await getExpiringPolicyAlerts(
+      ret = await getExpiringPolicyAlerts(
+        payload,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      break;
+    case "details":
+      if (!args.alertUuid) {
+        throw new Error("alertUuid is required for 'details' queryType");
+      }
+      ret = await getPolicyAlertDetails(
+        args.alertUuid,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      break;
+    case "dismiss":
+      if (!args.alertUuid) {
+        throw new Error("alertUuid is required for 'dismiss' queryType");
+      }
+      ret = await dismissPolicyAlert(
+        args.alertUuid,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      break;
+    case "unhealthy-devices":
+      ret = await getUnhealthyDeviceAlerts(
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      break;
+    case "alert-groups":
+      ret = await getPolicyAlertGroups(
         payload,
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId

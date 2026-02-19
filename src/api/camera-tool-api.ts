@@ -200,6 +200,28 @@ export async function getCameraSettings(
   };
 }
 
+export async function getCameraMediaUris(cameraUuid: string, requestModifiers?: RequestModifiers, sessionId?: string) {
+  const res = await postApi<schema["Camera_GetMediaUrisWSResponse"]>({
+    route: "/camera/getCameraMediaUris",
+    body: { deviceUuid: cameraUuid },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return res;
+}
+
+export async function getCameraAIThresholds(cameraUuid: string, requestModifiers?: RequestModifiers, sessionId?: string) {
+  const res = await postApi<schema["Camera_GetCameraAIThresholdsWSResponse"]>({
+    route: "/camera/getCameraAIThresholds",
+    body: { deviceUuid: cameraUuid },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return res;
+}
+
 export async function updateCameraSettings(
   cameraUuid: string,
   update: ExternalUpdateableFacetedUserConfig,

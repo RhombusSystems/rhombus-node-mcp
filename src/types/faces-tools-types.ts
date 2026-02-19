@@ -6,6 +6,9 @@ export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
   GET_REGISTERED_FACES = "get-registered-faces",
   GET_PERSON_LABELS = "get-person-labels",
+  SEARCH_SIMILAR_FACES = "search-similar-faces",
+  GET_FACE_MATCHMAKERS = "get-face-matchmakers",
+  GET_FACE_EVENTS_BY_PERSON = "get-face-events-by-person",
 }
 
 export const GetRegisteredFacesArgsSchema = z.object({
@@ -118,6 +121,8 @@ export const TOOL_ARGS = {
     .describe(
       "The timezone for formatting timestamps which should come from the location of the camera for the face event. This is necessary for the tool to produce accurate formatted timestamps."
     ),
+  faceEventUuid: z.string().nullable().describe("UUID of a face event to search similar faces from. Required for 'search-similar-faces'."),
+  personUuid: z.string().nullable().describe("UUID of a person to get face events for. Required for 'get-face-events-by-person'."),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
@@ -206,6 +211,23 @@ export const OUTPUT_SCHEMA = z.object({
       "Key is the queried name (e.g., 'Brandon'), value is the matched registered name (e.g., 'Brandon Salzberg') or null if no match was found. " +
       "Use these resolved names when reporting results to the user."
     ),
+  similarFaceEvents: z.array(z.object({
+    uuid: z.string().optional(),
+    personUuid: z.string().optional(),
+    similarity: z.number().optional(),
+    eventTimestamp: z.string().optional(),
+  })).optional().describe("Similar face event results"),
+  faceMatchmakers: z.array(z.object({
+    uuid: z.string().optional(),
+    personUuid: z.string().optional(),
+    name: z.string().optional(),
+  })).optional().describe("Face matchmaker records"),
+  personFaceEvents: z.array(z.object({
+    uuid: z.string().optional(),
+    personUuid: z.string().optional(),
+    eventTimestamp: z.string().optional(),
+    deviceUuid: z.string().optional(),
+  })).optional().describe("Face events for a specific person"),
   error: z.optional(z.string()),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

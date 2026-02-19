@@ -7,7 +7,7 @@ import {
 
 export const TOOL_ARGS = {
 	requestType: z
-		.enum(["saved", "expiringSoon", "sharedLiveStreams", "timelapseClips"])
+		.enum(["saved", "expiringSoon", "sharedLiveStreams", "timelapseClips", "clipGroups", "sharedClips", "createClip", "deleteClip"])
 		.describe(
 			'The type of data to retrieve. Use "saved" for regular saved clips, "expiringSoon" for clips nearing expiration, "sharedLiveStreams" for all shared live video streams, or "timelapseClips" for all timelapse clips.',
 		),
@@ -49,6 +49,12 @@ export const TOOL_ARGS = {
 			"The end of the time range for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned. Required when requestType is saved or expiringSoon." +
 				ISOTimestampFormatDescription,
 		),
+	clipUuid: z.string().nullable().describe("UUID of a clip. Required for 'deleteClip'."),
+	spliceRequest: z.object({
+		cameraUuid: z.string().describe("Camera UUID to create clip from"),
+		startTimeMs: z.number().describe("Start time in milliseconds"),
+		endTimeMs: z.number().describe("End time in milliseconds"),
+	}).nullable().describe("Required for 'createClip'. Specifies the camera and time range for the new clip."),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
@@ -57,7 +63,11 @@ export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
 	if (
 		args.requestType === "sharedLiveStreams" ||
-		args.requestType === "timelapseClips"
+		args.requestType === "timelapseClips" ||
+		args.requestType === "clipGroups" ||
+		args.requestType === "sharedClips" ||
+		args.requestType === "createClip" ||
+		args.requestType === "deleteClip"
 	) {
 		return {};
 	}
@@ -86,5 +96,21 @@ export const OUTPUT_SCHEMA = z.object({
 	expiringClips: z.array(z.any()).optional(),
 	sharedLiveVideoStreams: z.array(z.any()).optional(),
 	timelapseClips: z.array(z.any()).optional(),
+	clipGroups: z.array(z.object({
+		uuid: z.string().optional(),
+		name: z.string().optional(),
+		clipCount: z.number().optional(),
+	})).optional().describe("List of clip groups/folders"),
+	sharedClipGroups: z.array(z.object({
+		uuid: z.string().optional(),
+		name: z.string().optional(),
+	})).optional().describe("List of shared clip groups"),
+	spliceResult: z.object({
+		success: z.boolean().optional(),
+		clipUuid: z.string().optional(),
+	}).optional().describe("Result of creating a new clip"),
+	deleteResult: z.object({
+		success: z.boolean().optional(),
+	}).optional().describe("Result of deleting a clip"),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

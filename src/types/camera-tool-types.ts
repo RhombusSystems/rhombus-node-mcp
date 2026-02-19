@@ -252,7 +252,7 @@ export const BASE_TOOL_ARGS = {
       the timestamp for the image. This will default to 5 minutes before the current time. You can also call time-tool to parse the user's time description.
       ` + ISOTimestampFormatDescription
     ),
-  requestType: z.enum(["image", "get-settings"]),
+  requestType: z.enum(["image", "get-settings", "get-media-uris", "get-ai-thresholds"]),
 };
 
 const BASE_TOOL_ARGS_SCHEMA = z.object(BASE_TOOL_ARGS);

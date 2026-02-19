@@ -10,6 +10,10 @@ export enum EventsToolRequestType {
   CLIMATE_SENSOR = "climate-sensor",
   COMPONENT_EVENTS = "component-events",
   CAMERA = "camera",
+  BUTTON_PRESS = "button-press",
+  OCCUPANCY = "occupancy",
+  PROXIMITY = "proximity",
+  DOORBELL = "doorbell",
 }
 
 export const TOOL_ARGS = {
@@ -21,7 +25,11 @@ export const TOOL_ARGS = {
         "environmental-gateway: Environmental gateway events with sensor readings and derived values. " +
         "climate-sensor: Climate sensor events with temperature, humidity, air quality readings. " +
         "component-events: All types of component events for a location (most flexible option). " +
-        "camera: Human motion events detected by cameras."
+        "camera: Human motion events detected by cameras. " +
+        "button-press: Button press events from button sensors. " +
+        "occupancy: Occupancy sensor events with people count. " +
+        "proximity: Proximity tag events with RSSI readings. " +
+        "doorbell: Doorbell camera events."
     ),
   startTime: z
     .string()
@@ -100,6 +108,22 @@ export const TOOL_ARGS = {
     .describe(
       "Duration in seconds to search for human motion events. Required when eventType is 'camera'. Default is 3600 (1 hour)."
     ),
+  buttonSensorUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the button sensor. Required when eventType is 'button-press'."),
+  occupancySensorUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the occupancy sensor. Required when eventType is 'occupancy'."),
+  proximityTagUuids: z
+    .array(z.string())
+    .nullable()
+    .describe("Array of proximity tag UUIDs. Required when eventType is 'proximity'."),
+  doorbellCameraUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the doorbell camera. Required when eventType is 'doorbell'."),
   tempUnit: z
     .nativeEnum(TempUnit)
     .nullable()
@@ -153,6 +177,10 @@ export const OUTPUT_SCHEMA = z.object({
       "climate-sensor",
       "component-events",
       "camera",
+      "button-press",
+      "occupancy",
+      "proximity",
+      "doorbell",
     ])
     .optional(),
   accessControlEvents: z.optional(
@@ -310,6 +338,42 @@ export const OUTPUT_SCHEMA = z.object({
     .array(HumanEvent)
     .optional()
     .describe(`Camera events data, as requested with requestType ${EventsToolRequestType.CAMERA}`),
+  buttonPressEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      sensorUuid: z.string().optional(),
+      buttonState: z.string().optional(),
+    }))
+    .optional()
+    .describe("Button press events"),
+  occupancyEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      sensorUuid: z.string().optional(),
+      count: z.number().optional(),
+    }))
+    .optional()
+    .describe("Occupancy sensor events"),
+  proximityEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      tagUuid: z.string().optional(),
+      rssi: z.number().optional(),
+    }))
+    .optional()
+    .describe("Proximity tag events"),
+  doorbellEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      doorbellCameraUuid: z.string().optional(),
+      eventType: z.string().optional(),
+    }))
+    .optional()
+    .describe("Doorbell camera events"),
   needUserInput: z.boolean().optional(),
   commandForUser: z.string().optional(),
 });

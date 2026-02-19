@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getFaceEvents, getPersonLabels, getRegisteredFaces } from "../api/faces-tool-api.js";
+import { getFaceEvents, getPersonLabels, getRegisteredFaces, searchSimilarFaces, getFaceMatchmakers, getFaceEventsByPerson } from "../api/faces-tool-api.js";
 import {
   type GetFaceEventsArgs,
   type GetRegisteredFacesArgs,
@@ -193,6 +193,23 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         requestType: RequestType.GET_PERSON_LABELS,
         getPersonLabelsResponse: {},
       };
+    }
+  } else if (args.requestType === RequestType.SEARCH_SIMILAR_FACES) {
+    if (!args.faceEventUuid) {
+      ret = { requestType: RequestType.SEARCH_SIMILAR_FACES, error: "faceEventUuid is required for search-similar-faces" };
+    } else {
+      const similarEvents = await searchSimilarFaces(args.faceEventUuid, args.timeZone, requestModifiers, sessionId);
+      ret = { requestType: RequestType.SEARCH_SIMILAR_FACES, similarFaceEvents: similarEvents };
+    }
+  } else if (args.requestType === RequestType.GET_FACE_MATCHMAKERS) {
+    const matchmakers = await getFaceMatchmakers(requestModifiers, sessionId);
+    ret = { requestType: RequestType.GET_FACE_MATCHMAKERS, faceMatchmakers: matchmakers };
+  } else if (args.requestType === RequestType.GET_FACE_EVENTS_BY_PERSON) {
+    if (!args.personUuid) {
+      ret = { requestType: RequestType.GET_FACE_EVENTS_BY_PERSON, error: "personUuid is required for get-face-events-by-person" };
+    } else {
+      const events = await getFaceEventsByPerson(args.personUuid, args.timeZone, requestModifiers, sessionId);
+      ret = { requestType: RequestType.GET_FACE_EVENTS_BY_PERSON, personFaceEvents: events };
     }
   }
 

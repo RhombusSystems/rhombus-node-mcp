@@ -40,6 +40,9 @@ Future support planned for:
 - Climate sensors
 - Door controllers
 - Environmental gateways
+- Audio gateways
+- Doorbell cameras
+- Badge readers
 
 The tool uses elicitation forms for rich user interaction and shows current settings before updates.
 `;
@@ -302,6 +305,39 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         {
           type: "text" as const,
           text: "Environmental gateway updates are not yet implemented. Coming soon!",
+        },
+      ],
+    };
+  }
+
+  if (entityType === "audio-gateway") {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: "Audio gateway updates are not yet fully implemented. Coming soon!",
+        },
+      ],
+    };
+  }
+
+  if (entityType === "doorbell-camera") {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: "Doorbell camera updates are not yet fully implemented. Coming soon!",
+        },
+      ],
+    };
+  }
+
+  if (entityType === "badge-reader") {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: "Badge reader updates are not yet fully implemented. Coming soon!",
         },
       ],
     };

@@ -6,6 +6,9 @@ export const ENTITY_TYPE = z.enum([
   "climate-sensor",
   "door-controller",
   "environmental-gateway",
+  "audio-gateway",
+  "doorbell-camera",
+  "badge-reader",
 ]);
 export type EntityType = z.infer<typeof ENTITY_TYPE>;
 

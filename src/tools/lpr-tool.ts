@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getSavedVehicles, getVehicleEvents, getVehicleLabels } from "../api/lpr-tool-api.js";
+import { getSavedVehicles, getVehicleEvents, getVehicleLabels, searchLicensePlates, saveVehicle } from "../api/lpr-tool-api.js";
 import {
   LprToolRequestType,
   OUTPUT_SCHEMA,
@@ -77,6 +77,28 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         const vehicleLabels = await getVehicleLabels(requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({
           vehicleLabels,
+        });
+      }
+      case LprToolRequestType.SEARCH_LICENSE_PLATES: {
+        if (!args.licensePlateQuery) {
+          return createToolStructuredContent<OUTPUT_SCHEMA>({
+            error: "licensePlateQuery is required for search-license-plates.",
+          });
+        }
+        const results = await searchLicensePlates(args.licensePlateQuery, args.timeZone, requestModifiers, sessionId);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          licensePlateSearchResults: results,
+        });
+      }
+      case LprToolRequestType.SAVE_VEHICLE: {
+        if (!args.vehicleName || !args.vehicleLicensePlate) {
+          return createToolStructuredContent<OUTPUT_SCHEMA>({
+            error: "vehicleName and vehicleLicensePlate are required for save-vehicle.",
+          });
+        }
+        const result = await saveVehicle(args.vehicleName, args.vehicleLicensePlate, args.vehicleDescription ?? undefined, requestModifiers, sessionId);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          saveVehicleResult: result,
         });
       }
     }

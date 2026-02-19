@@ -14,6 +14,11 @@ import {
   getThresholdCrossingCountReport,
   findPromptConfigurations,
   getCustomLLMReport,
+  getAuditFeed,
+  getDiagnosticFeed,
+  getThresholdCrossingEvents,
+  getCustomEventsReport,
+  getPeopleCountEvents,
 } from "../api/report-tool-api.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
 import { DateTime } from "luxon";
@@ -240,6 +245,93 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       structuredContent: {
         customLLMReport: report,
       },
+    };
+  }
+
+  if (requestType === RequestType.GET_AUDIT_FEED) {
+    const { auditFeedRequest } = args;
+    if (!auditFeedRequest) {
+      throw new Error("auditFeedRequest is required");
+    }
+    const report = await getAuditFeed(
+      new Date(auditFeedRequest.startTime).getTime(),
+      new Date(auditFeedRequest.endTime).getTime(),
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(report) }],
+      structuredContent: { auditFeedReport: report },
+    };
+  }
+
+  if (requestType === RequestType.GET_DIAGNOSTIC_FEED) {
+    const { diagnosticFeedRequest } = args;
+    if (!diagnosticFeedRequest) {
+      throw new Error("diagnosticFeedRequest is required");
+    }
+    const report = await getDiagnosticFeed(
+      new Date(diagnosticFeedRequest.startTime).getTime(),
+      new Date(diagnosticFeedRequest.endTime).getTime(),
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(report) }],
+      structuredContent: { diagnosticFeedReport: report },
+    };
+  }
+
+  if (requestType === RequestType.GET_THRESHOLD_CROSSING_EVENTS) {
+    const { thresholdCrossingEventsRequest } = args;
+    if (!thresholdCrossingEventsRequest) {
+      throw new Error("thresholdCrossingEventsRequest is required");
+    }
+    const report = await getThresholdCrossingEvents(
+      thresholdCrossingEventsRequest.deviceUuid,
+      new Date(thresholdCrossingEventsRequest.startTime).getTime(),
+      new Date(thresholdCrossingEventsRequest.endTime).getTime(),
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(report) }],
+      structuredContent: { thresholdCrossingEventsReport: report },
+    };
+  }
+
+  if (requestType === RequestType.GET_CUSTOM_EVENTS_REPORT) {
+    const { customEventsReportRequest } = args;
+    if (!customEventsReportRequest) {
+      throw new Error("customEventsReportRequest is required");
+    }
+    const report = await getCustomEventsReport(
+      customEventsReportRequest.promptUuid,
+      new Date(customEventsReportRequest.startTime).getTime(),
+      new Date(customEventsReportRequest.endTime).getTime(),
+      customEventsReportRequest.interval,
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(report) }],
+      structuredContent: { customEventsReport: report },
+    };
+  }
+
+  if (requestType === RequestType.GET_PEOPLE_COUNT_EVENTS) {
+    const { peopleCountEventsRequest } = args;
+    if (!peopleCountEventsRequest) {
+      throw new Error("peopleCountEventsRequest is required");
+    }
+    const report = await getPeopleCountEvents(
+      peopleCountEventsRequest.deviceUuids,
+      extra._meta?.requestModifiers as RequestModifiers,
+      extra.sessionId
+    );
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(report) }],
+      structuredContent: { peopleCountEventsReport: report },
     };
   }
 

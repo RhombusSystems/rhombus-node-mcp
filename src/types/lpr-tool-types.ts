@@ -6,6 +6,8 @@ export enum LprToolRequestType {
   GET_VEHICLE_EVENTS = "get-vehicle-events",
   GET_SAVED_VEHICLES = "get-saved-vehicles",
   GET_VEHICLE_LABELS = "get-vehicle-labels",
+  SEARCH_LICENSE_PLATES = "search-license-plates",
+  SAVE_VEHICLE = "save-vehicle",
 }
 
 export const VehicleEventsArgs = z.object({
@@ -68,6 +70,10 @@ export const TOOL_ARGS = {
     .describe(
       "The timezone for formatting timestamps which should come from the location of the device for the LPR event, or the user's timezone. This is necessary for the tool to produce accurate formatted timestamps."
     ),
+  licensePlateQuery: z.string().nullable().describe("License plate number to search. Required for 'search-license-plates'."),
+  vehicleName: z.string().nullable().describe("Name for the vehicle. Required for 'save-vehicle'."),
+  vehicleLicensePlate: z.string().nullable().describe("License plate for the vehicle. Required for 'save-vehicle'."),
+  vehicleDescription: z.string().nullable().describe("Description for the vehicle. Optional for 'save-vehicle'."),
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
@@ -129,6 +135,14 @@ export const OUTPUT_SCHEMA = z.object({
     .describe(
       `A list of saved vehicles, as requested by the request type${LprToolRequestType.GET_SAVED_VEHICLES}`
     ),
+  licensePlateSearchResults: z.array(z.object({
+    licensePlate: z.string().optional(),
+    deviceUuid: z.string().optional(),
+    timestampMs: z.number().optional(),
+  })).optional().describe("License plate search results"),
+  saveVehicleResult: z.object({
+    success: z.boolean().optional(),
+  }).optional().describe("Result of saving a vehicle"),
   error: z.string().optional().describe("An error message if the request failed."),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

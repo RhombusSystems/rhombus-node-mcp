@@ -5,6 +5,10 @@ import {
   getClimateEventsForSensor,
   getComponentEventsByLocation,
   getHumanMotionEvents,
+  getButtonPressEvents,
+  getOccupancyEvents,
+  getProximityEvents,
+  getDoorbellEvents,
 } from "../api/events-tool-api.js";
 import {
   EventsToolRequestType,
@@ -118,6 +122,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     tempUnit,
     cameraUuid,
     duration,
+    buttonSensorUuid,
+    occupancySensorUuid,
+    proximityTagUuids,
+    doorbellCameraUuid,
   } = args;
 
   logger.debug(`eventType: ${eventType}`);
@@ -247,6 +255,90 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           cameraEvents: events.uniqueHumanEvents,
         });
       }
+    }
+    case EventsToolRequestType.BUTTON_PRESS: {
+      const bSensorUuid = args.buttonSensorUuid;
+      if (!bSensorUuid) {
+        return createToolStructuredContent({
+          needUserInput: true,
+          commandForUser: "Which button sensor are you asking about?",
+        });
+      }
+      const buttonEvents = await getButtonPressEvents(
+        bSensorUuid,
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      return createToolStructuredContent<OUTPUT_SCHEMA>({
+        eventType: "button-press",
+        buttonPressEvents: buttonEvents,
+      });
+    }
+    case EventsToolRequestType.OCCUPANCY: {
+      const occSensorUuid = args.occupancySensorUuid;
+      if (!occSensorUuid) {
+        return createToolStructuredContent({
+          needUserInput: true,
+          commandForUser: "Which occupancy sensor are you asking about?",
+        });
+      }
+      const occupancyEvts = await getOccupancyEvents(
+        occSensorUuid,
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      return createToolStructuredContent<OUTPUT_SCHEMA>({
+        eventType: "occupancy",
+        occupancyEvents: occupancyEvts,
+      });
+    }
+    case EventsToolRequestType.PROXIMITY: {
+      const tagUuids = args.proximityTagUuids;
+      if (!tagUuids || tagUuids.length === 0) {
+        return createToolStructuredContent({
+          needUserInput: true,
+          commandForUser: "Which proximity tags are you asking about?",
+        });
+      }
+      const proxEvents = await getProximityEvents(
+        tagUuids,
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      return createToolStructuredContent<OUTPUT_SCHEMA>({
+        eventType: "proximity",
+        proximityEvents: proxEvents,
+      });
+    }
+    case EventsToolRequestType.DOORBELL: {
+      const dbCamUuid = args.doorbellCameraUuid;
+      if (!dbCamUuid) {
+        return createToolStructuredContent({
+          needUserInput: true,
+          commandForUser: "Which doorbell camera are you asking about?",
+        });
+      }
+      const doorbellEvts = await getDoorbellEvents(
+        dbCamUuid,
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      return createToolStructuredContent<OUTPUT_SCHEMA>({
+        eventType: "doorbell",
+        doorbellEvents: doorbellEvts,
+      });
     }
   }
 

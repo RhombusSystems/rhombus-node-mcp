@@ -4,7 +4,7 @@ import { createEpochSchema, ISOTimestampFormatDescription } from "../utils/times
 
 export const TOOL_ARGS = {
   queryType: z
-    .enum(["existing", "expiringSoon"])
+    .enum(["existing", "expiringSoon", "details", "dismiss", "unhealthy-devices", "alert-groups"])
     .describe(
       'The type of policy alerts to retrieve. Use "existing" to get current policy alerts, and "expiringSoon" to get policy alerts that are nearing their expiration date.'
     ),
@@ -47,6 +47,10 @@ export const TOOL_ARGS = {
     .describe(
       "The timezone from the location of the camera of the policy alert, for formatting timestamps. This is necessary for the tool to produce accurate formatted timestamps."
     ),
+  alertUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of a specific policy alert. Required for 'details' and 'dismiss'."),
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);

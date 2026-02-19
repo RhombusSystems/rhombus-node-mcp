@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getCameraSettings, getImageForCameraAtTime } from "../api/camera-tool-api.js";
+import { getCameraSettings, getImageForCameraAtTime, getCameraMediaUris, getCameraAIThresholds } from "../api/camera-tool-api.js";
 import { getLogger } from "../logger.js";
 import { BASE_TOOL_ARGS, type ToolArgs } from "../types/camera-tool-types.js";
 import { extractFromToolExtra } from "../util.js";
@@ -7,10 +7,12 @@ import { extractFromToolExtra } from "../util.js";
 const TOOL_NAME = "camera-tool";
 
 const TOOL_DESCRIPTION = `
-This tool can perform some action pertaining to the video stream of a camera. There are two types of requests
+This tool can perform some action pertaining to the video stream of a camera. There are four types of requests
 that can be passed into "requestType":
 - image
 - get-settings
+- get-media-uris
+- get-ai-thresholds
 
 What follows is a description of the behavior of this tool given the requestType "image"
 
@@ -98,6 +100,16 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 
     case "get-settings":
       response = await getCameraSettings(cameraUuid, requestModifiers, sessionId);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(response) }],
+      };
+    case "get-media-uris":
+      response = await getCameraMediaUris(cameraUuid, requestModifiers, sessionId);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(response) }],
+      };
+    case "get-ai-thresholds":
+      response = await getCameraAIThresholds(cameraUuid, requestModifiers, sessionId);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(response) }],
       };

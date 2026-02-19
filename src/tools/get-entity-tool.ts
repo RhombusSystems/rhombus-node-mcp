@@ -22,7 +22,12 @@ const TOOL_DESCRIPTION = `
 Retrieves entities (or devices) of certain types.
 Can request multiple entity types at once.
 The return structure is a JSON string that contains the states of the requested entities.
-This data is exact. Whatever entities exist will be returned here.`;
+This data is exact. Whatever entities exist will be returned here.
+
+This is the primary tool for checking device health and connectivity status. Each device in the response
+includes a "connected" boolean field indicating whether it is currently online (true) or offline (false).
+When asked about device health, offline devices, or connectivity issues, use this tool to fetch all device
+types and check the "connected" field to identify which devices are offline or unreachable.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { entityTypes, timeZone, filterBy, tempUnit } = args;

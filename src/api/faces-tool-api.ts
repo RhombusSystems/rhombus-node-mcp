@@ -1,7 +1,7 @@
 import { postApi } from "../network.js";
 import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-types.js";
 import { logger } from "./../logger.js";
-import { formatTimestamp } from "../util.js";
+import { formatTimestamp, type RequestModifiers } from "../util.js";
 import { removeNulls } from "../utils/remove-nulls.js";
 import schema from "../types/schema.js";
 // https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
@@ -162,4 +162,67 @@ export async function getPersonLabels(
     modifiers: requestModifiers,
     sessionId,
   });
+}
+
+export async function searchSimilarFaces(
+  faceEventUuid: string,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Facerecognition_faceevent_FindSimilarFaceEventsWSResponse"]>({
+    route: "/faceRecognition/faceEvent/findSimilarFaceEvents",
+    body: { faceEventUuid },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return (res.faceEvents || []).map((event: any) => ({
+    uuid: event.uuid ?? undefined,
+    personUuid: event.personUuid ?? undefined,
+    similarity: event.similarity ?? undefined,
+    eventTimestamp: event.eventTimestamp ? formatTimestamp(event.eventTimestamp, timeZone) : undefined,
+  }));
+}
+
+export async function getFaceMatchmakers(
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Facerecognition_matchmaker_FindFaceMatchmakersByOrgWSResponse"]>({
+    route: "/faceRecognition/matchmaker/findFaceMatchmakersByOrg",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return (res.faceMatchmakers || []).map((m: any) => ({
+    uuid: m.uuid ?? undefined,
+    personUuid: m.personUuid ?? undefined,
+    name: m.name ?? undefined,
+  }));
+}
+
+export async function getFaceEventsByPerson(
+  personUuid: string,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]>({
+    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+    body: {
+      pageRequest: { maxPageSize: 75 },
+      searchFilter: { personUuids: [personUuid], deviceUuids: [], faceNames: [], labels: [], locationUuids: [] },
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return (res.faceEvents || []).map(event => ({
+    uuid: event.uuid ?? undefined,
+    personUuid: event.personUuid ?? undefined,
+    eventTimestamp: event.eventTimestamp ? formatTimestamp(event.eventTimestamp, timeZone) : undefined,
+    deviceUuid: event.deviceUuid ?? undefined,
+  }));
 }

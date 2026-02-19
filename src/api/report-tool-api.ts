@@ -102,6 +102,7 @@ export async function getSummaryCountReport(
     startTimeMs,
     types,
     ...(uuid ? { uuid } : {}),
+    ...(timeZone ? { timeZone } : {}),
   };
   const response = await postApi<schema["Report_GetCountReportWSResponse"]>({
     route: "/report/getCountReportV2",
@@ -552,4 +553,136 @@ export async function getCustomLLMReport(
   );
 
   return result;
+}
+
+export async function getAuditFeed(
+  startTimeMs: number,
+  endTimeMs: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = { startTimeMs, endTimeMs };
+  const response = await postApi<schema["Report_GetAuditFeedWSResponse"]>({
+    route: "/report/getAuditFeed",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    auditEvents: (response.auditEvents || []).map((event: any) => ({
+      timestampMs: (event as any).timestamp ?? undefined,
+      action: event.action ?? undefined,
+      principalUuid: event.principalUuid ?? undefined,
+      principalType: event.principalType ?? undefined,
+      targetUuid: event.targetUuid ?? undefined,
+      targetType: (event as any).targetType ?? undefined,
+      description: (event as any).description ?? undefined,
+    })),
+  };
+}
+
+export async function getDiagnosticFeed(
+  startTimeMs: number,
+  endTimeMs: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = { startTimeMs, endTimeMs };
+  const response = await postApi<schema["Report_GetDiagnosticFeedWSResponse"]>({
+    route: "/report/getDiagnosticFeed",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    diagnosticEvents: (response.diagnosticEvents || []).map((event: any) => ({
+      timestampMs: (event as any).timestamp ?? undefined,
+      deviceUuid: event.deviceUuid ?? undefined,
+      eventType: (event as any).activity ?? undefined,
+      description: (event as any).description ?? undefined,
+    })),
+  };
+}
+
+export async function getThresholdCrossingEvents(
+  deviceUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = { deviceUuid, startTimeMs, endTimeMs };
+  const response = await postApi<any>({
+    route: "/report/getThresholdCrossingEvents",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    events: ((response as any).thresholdEvents || (response as any).events || []).map((event: any) => ({
+      timestampMs: event.timestampMs ?? undefined,
+      direction: event.direction ?? undefined,
+      objectType: event.objectType ?? undefined,
+    })),
+  };
+}
+
+export async function getCustomEventsReport(
+  promptUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  interval: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = { promptUuid, startTimeMs, endTimeMs, interval };
+  const response = await postApi<any>({
+    route: "/report/getCustomEventsReport",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    timeSeriesDataPoints: response.timeSeriesDataPoints?.map((dp: any) => ({
+      dateLocal: dp.dateLocal ?? undefined,
+      dateUtc: dp.dateUtc ?? undefined,
+      eventCountMap: dp.eventCountMap ?? undefined,
+    })),
+  };
+}
+
+export async function getPeopleCountEvents(
+  deviceUuids: string[],
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = { deviceUuids };
+  const response = await postApi<any>({
+    route: "/report/getMostRecentPeopleCountEvents",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return {
+    error: response.error ?? undefined,
+    errorMsg: response.errorMsg ?? undefined,
+    events: (response.events || []).map((event: any) => ({
+      deviceUuid: event.deviceUuid ?? undefined,
+      timestampMs: event.timestampMs ?? undefined,
+      count: event.count ?? undefined,
+    })),
+  };
 }

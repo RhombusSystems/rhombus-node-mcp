@@ -5,7 +5,7 @@ import type {
   VehicleEventsArgs,
   VehicleLabels,
 } from "../types/lpr-tool-types.js";
-import type schema from "../types/schema.js";
+import schema from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 export async function getVehicleEvents(
@@ -108,4 +108,41 @@ export async function getVehicleLabels(
   }
 
   return processedVehicleLabels;
+}
+
+export async function searchLicensePlates(
+  query: string,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<any[]> {
+  const res = await postApi<schema["Search_SearchLicensePlatesWSRequest"] & any>({
+    route: "/search/searchLicensePlates",
+    body: { licensePlateQuery: query },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return (res.licensePlateEvents || []).map((event: any) => ({
+    licensePlate: event.vehicleLicensePlate ?? undefined,
+    deviceUuid: event.deviceUuid ?? undefined,
+    timestampMs: event.eventTimestamp ?? undefined,
+  }));
+}
+
+export async function saveVehicle(
+  name: string,
+  licensePlate: string,
+  description?: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Vehicle_SaveVehicleWSResponse"]>({
+    route: "/vehicle/saveVehicle",
+    body: { name, licensePlate, description: description || "" },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  if (res.error) throw new Error(JSON.stringify(res));
+  return { success: true };
 }

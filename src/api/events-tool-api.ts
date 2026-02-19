@@ -520,3 +520,127 @@ export async function getComponentEventsByLocation(
   console.error(`componentEvents: ${JSON.stringify(events)}`);
   return events;
 }
+
+export async function getButtonPressEvents(
+  sensorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body: schema["Button_GetButtonPressEventsForSensorWSRequest"] = {
+    sensorUuid,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+  };
+
+  const response = await postApi<schema["Button_GetButtonPressEventsForSensorWSResponse"]>({
+    route: "/button/getButtonPressEventsForSensor",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return (response.events || []).map(event => ({
+    timestampMs: event?.timestampMs ?? undefined,
+    datetime: event?.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+    sensorUuid: event?.componentUuid ?? undefined,
+    buttonState: event?.buttonPress ?? undefined,
+  }));
+}
+
+export async function getOccupancyEvents(
+  sensorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body = {
+    sensorUuid,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+  };
+
+  const response = await postApi<any>({
+    route: "/occupancy/getOccupancyEventsForSensor",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return ((response.occupancyEvents || response.events || []) as any[]).map(event => ({
+    timestampMs: event.timestampMs ?? undefined,
+    datetime: event.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+    sensorUuid: event.sensorUuid ?? event.componentUuid ?? undefined,
+    count: event.count ?? undefined,
+  }));
+}
+
+export async function getProximityEvents(
+  tagUuids: string[],
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const allEvents: { timestampMs?: number; datetime?: string; tagUuid?: string; rssi?: number }[] = [];
+
+  for (const tagUuid of tagUuids) {
+    const body: schema["Proximity_GetProximityEventsForTagWSRequest"] = {
+      tagUuid,
+      ...(startTime ? { createdAfterMs: startTime } : {}),
+      ...(endTime ? { createdBeforeMs: endTime } : {}),
+    };
+
+    const response = await postApi<schema["Proximity_GetProximityEventsForTagWSResponse"]>({
+      route: "/proximity/getProximityEventsForTag",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    const mapped = (response.proximityEvents || []).map(event => ({
+      timestampMs: event.startTimeMs ?? undefined,
+      datetime: event.startTimeMs ? formatTimestamp(event.startTimeMs, timeZone) : undefined,
+      tagUuid: event.bleDeviceUuid ?? undefined,
+      rssi: event.bleRssi ?? undefined,
+    }));
+    allEvents.push(...mapped);
+  }
+
+  return allEvents;
+}
+
+export async function getDoorbellEvents(
+  doorbellCameraUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body: schema["Doorbellcamera_FindComponentEventsForDoorbellCameraWSRequest"] = {
+    doorbellCameraUuid,
+    limit: 100,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+  };
+
+  const response = await postApi<schema["Doorbellcamera_FindComponentEventsForDoorbellCameraWSResponse"]>({
+    route: "/doorbellcamera/findComponentEventsForDoorbellCamera",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return (response.componentEvents || []).map(event => ({
+    timestampMs: event.timestampMs ?? undefined,
+    datetime: event.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+    doorbellCameraUuid: event.componentUuid ?? undefined,
+    eventType: event.type ?? undefined,
+  }));
+}
