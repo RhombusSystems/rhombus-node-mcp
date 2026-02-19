@@ -55,7 +55,7 @@ function resolveNamesToRegisteredFaces(
 const TOOL_DESCRIPTION = `
 This tool interacts with the Rhombus face recognition system to retrieve information about face sightings and registered faces.
 
-It should only be used if someone is specifically asking about faces. If they are asking about people or humans, you should use the events-tool with eventType "people" instead as this tool is for face sightings only.
+If the user is asking about how many people were seen (head count / occupancy), use the report-tool with GET_OCCUPANCY_ENABLED_CAMERAS and GET_OCCUPANCY_COUNT_REPORT instead. This tool (faces-tool) is best for identifying *who* was seen (unique individuals by name), and its face count data is also automatically included in report-tool people-counting responses via the faceCountEnrichment field.
 
 **Important for person-presence questions:** When asked whether specific people were seen or are present, you should ALSO call events-tool with eventType "access-control" to check badge-in records. Face recognition and access control are complementary — someone may badge in without face recognition triggering, or be seen by a camera without badging in.
 

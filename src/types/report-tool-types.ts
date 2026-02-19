@@ -200,6 +200,17 @@ export const SanitizedTimeSeriesDataPoint = z.object({
 });
 export type SanitizedTimeSeriesDataPoint = z.infer<typeof SanitizedTimeSeriesDataPoint>;
 
+const FaceCountEnrichment = z.object({
+  uniqueFaceCount: z.number().describe("Number of unique people identified by face recognition in the same time range"),
+  totalFaceEvents: z.number().describe("Total face detection events in the same time range"),
+});
+
+const OccupancyEnabledCamera = z.object({
+  uuid: z.optional(z.string()),
+  name: z.optional(z.string()),
+  locationUuid: z.optional(z.string()),
+});
+
 export const OUTPUT_SCHEMA = z.object({
   error: z.optional(z.boolean()),
   errorMsg: z.optional(z.string()),
@@ -209,6 +220,12 @@ export const OUTPUT_SCHEMA = z.object({
         error: z.optional(z.boolean()),
         errorMsg: z.optional(z.string()),
         timeSeriesDataPoints: z.optional(z.array(SanitizedTimeSeriesDataPoint)),
+        faceCountEnrichment: z.optional(FaceCountEnrichment)
+          .describe("Unique face count data for the same device and time range, auto-included when PEOPLE type is queried at DEVICE scope"),
+        hint: z.optional(z.string())
+          .describe("Guidance when primary data source returned empty results"),
+        occupancyEnabledCameras: z.optional(z.array(OccupancyEnabledCamera))
+          .describe("Cameras that support occupancy counting, included when the queried device returned zero people counts"),
       })
       .nullable()
       .describe(
@@ -233,6 +250,12 @@ export const OUTPUT_SCHEMA = z.object({
             })
           )
         ),
+        faceCountEnrichment: z.optional(FaceCountEnrichment)
+          .describe("Unique face count data for the same device and time range, always included for occupancy reports"),
+        hint: z.optional(z.string())
+          .describe("Guidance when the queried device does not support occupancy counting"),
+        occupancyEnabledCameras: z.optional(z.array(OccupancyEnabledCamera))
+          .describe("Cameras that support occupancy counting, included when the queried device does not"),
       })
     )
     .nullable(),
@@ -379,13 +402,14 @@ export const OUTPUT_SCHEMA = z.object({
     error: z.optional(z.boolean()),
     errorMsg: z.optional(z.string()),
     auditEvents: z.optional(z.array(z.object({
-      timestampMs: z.optional(z.number()),
+      timestamp: z.optional(z.string()),
       action: z.optional(z.string()),
+      displayText: z.optional(z.string()),
+      principalName: z.optional(z.string()),
       principalUuid: z.optional(z.string()),
       principalType: z.optional(z.string()),
+      targetName: z.optional(z.string()),
       targetUuid: z.optional(z.string()),
-      targetType: z.optional(z.string()),
-      description: z.optional(z.string()),
     }))),
   })).describe("Audit feed showing user actions"),
   diagnosticFeedReport: z.optional(z.object({

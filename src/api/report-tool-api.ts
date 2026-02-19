@@ -414,14 +414,11 @@ export async function getCustomLLMReport(
     })
   );
 
-  const body = {
-    promptUuid,
-    startTimeMs,
-    endTimeMs,
-    interval,
-  };
+  // PERCENT endpoint uses a different request schema that doesn't accept interval
+  const body = promptType === "PERCENT"
+    ? { promptUuid, startTimeMs, endTimeMs }
+    : { promptUuid, startTimeMs, endTimeMs, interval };
 
-  // Determine the correct endpoint based on promptType
   let route: string;
   switch (promptType) {
     case "COUNT":
@@ -573,13 +570,14 @@ export async function getAuditFeed(
     error: response.error ?? undefined,
     errorMsg: response.errorMsg ?? undefined,
     auditEvents: (response.auditEvents || []).map((event: any) => ({
-      timestampMs: (event as any).timestamp ?? undefined,
+      timestamp: event.timestamp != null ? String(event.timestamp) : undefined,
       action: event.action ?? undefined,
+      displayText: event.displayText ?? undefined,
+      principalName: event.principalName ?? undefined,
       principalUuid: event.principalUuid ?? undefined,
       principalType: event.principalType ?? undefined,
+      targetName: event.targetName ?? undefined,
       targetUuid: event.targetUuid ?? undefined,
-      targetType: (event as any).targetType ?? undefined,
-      description: (event as any).description ?? undefined,
     })),
   };
 }
@@ -685,4 +683,65 @@ export async function getPeopleCountEvents(
       count: event.count ?? undefined,
     })),
   };
+}
+
+const MAX_FACE_COUNT_PAGES = 5;
+const FACE_COUNT_PAGE_SIZE = 200;
+
+export async function getUniqueFaceCount(
+  deviceUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  requestModifiers?: any,
+  sessionId?: string
+): Promise<{ uniqueFaceCount: number; totalFaceEvents: number }> {
+  const uniquePersonUuids = new Set<string>();
+  let totalFaceEvents = 0;
+  let lastEvaluatedKey: string | undefined;
+
+  for (let page = 0; page < MAX_FACE_COUNT_PAGES; page++) {
+    const body: any = {
+      searchFilter: {
+        deviceUuids: [deviceUuid],
+        timestampFilter: {
+          rangeStart: new Date(startTimeMs).toISOString(),
+          rangeEnd: new Date(endTimeMs).toISOString(),
+        },
+      },
+      pageRequest: {
+        maxPageSize: FACE_COUNT_PAGE_SIZE,
+        ...(lastEvaluatedKey ? { lastEvaluatedKey } : {}),
+      },
+    };
+
+    try {
+      const response = await postApi<any>({
+        route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+        body,
+        modifiers: requestModifiers,
+        sessionId,
+      });
+
+      if (response.error || !response.faceEvents) {
+        break;
+      }
+
+      for (const event of response.faceEvents) {
+        totalFaceEvents++;
+        if (event.personUuid) {
+          uniquePersonUuids.add(event.personUuid);
+        }
+      }
+
+      if (response.faceEvents.length < FACE_COUNT_PAGE_SIZE || !response.lastEvaluatedKey) {
+        break;
+      }
+      lastEvaluatedKey = response.lastEvaluatedKey;
+    } catch (err) {
+      logger.error("Error fetching face events for enrichment", err);
+      break;
+    }
+  }
+
+  return { uniqueFaceCount: uniquePersonUuids.size, totalFaceEvents };
 }
