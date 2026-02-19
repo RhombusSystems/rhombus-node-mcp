@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/rhombussystems-rhombus-node-mcp-badge.png)](https://mseep.ai/app/rhombussystems-rhombus-node-mcp)
+
 # 🚀 Rhombus MCP Server - Supercharge Your AI Tools!
 [![smithery badge](https://smithery.ai/badge/@RhombusSystems/rhombus-node-mcp1)](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp1)
 
