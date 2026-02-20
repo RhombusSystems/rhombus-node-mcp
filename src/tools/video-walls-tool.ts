@@ -20,7 +20,7 @@ const TOOL_DESCRIPTION = `
 This tool interacts with Rhombus video walls. Rhombus video walls are a collection of camera feeds combined into a single view,
 allowing users to monitor multiple cameras.
 
-
+The layout of created video walls is automatically determined by the number of cameras in video wall settings "numVisibleDevicesAtOnce".
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {

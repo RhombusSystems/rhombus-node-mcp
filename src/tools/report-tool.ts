@@ -1,29 +1,27 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestModifiers } from "../util.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  TOOL_ARGS,
-  type ToolArgs,
-  OUTPUT_SCHEMA,
-  RequestType,
-} from "../types/report-tool-types.js";
-import {
-  getOccupancyCountReport,
-  getSummaryCountReport,
-  getOccupancyEnabledCameras,
-  getLineCrossingEnabledCameras,
-  getThresholdCrossingCountReport,
   findPromptConfigurations,
-  getCustomLLMReport,
   getAuditFeed,
-  getDiagnosticFeed,
-  getThresholdCrossingEvents,
   getCustomEventsReport,
+  getCustomLLMReport,
+  getDiagnosticFeed,
+  getLineCrossingEnabledCameras,
+  getOccupancyCountReport,
+  getOccupancyEnabledCameras,
   getPeopleCountEvents,
+  getSummaryCountReport,
+  getThresholdCrossingCountReport,
+  getThresholdCrossingEvents,
   getUniqueFaceCount,
 } from "../api/report-tool-api.js";
-import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
-import { DateTime } from "luxon";
 import { logger } from "../logger.js";
+import {
+  OUTPUT_SCHEMA,
+  RequestType,
+  TOOL_ARGS,
+  type ToolArgs,
+} from "../types/report-tool-types.js";
+import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "report-tool";
 
@@ -71,416 +69,462 @@ When asked to count people on a camera or at a location, follow this strategy:
 - **GET_PEOPLE_COUNT_EVENTS:** Most recent people count readings for specified devices.
 `;
 
-const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
-  const { requestType } = args;
+const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
+	const { requestType } = args;
 
-  if (requestType === RequestType.GET_SUMMARY_COUNT_REPORT) {
-    const { summaryCountRequest } = args;
+	const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
-    if (!summaryCountRequest) {
-      throw new Error("summaryCountRequest is required");
-    }
+	if (requestType === RequestType.GET_SUMMARY_COUNT_REPORT) {
+		const { summaryCountRequest } = args;
 
-    const { interval, scope, types, rangeStart, rangeEnd, uuid } = summaryCountRequest;
-    const startTimeMs = new Date(rangeStart).getTime();
-    const endTimeMs = new Date(rangeEnd).getTime();
-    const report = await getSummaryCountReport(
-      interval,
-      scope,
-      types,
-      uuid ?? undefined,
-      endTimeMs,
-      startTimeMs,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId,
-      args.summaryCountRequest.timeZone
-    );
+		if (!summaryCountRequest) {
+			throw new Error("summaryCountRequest is required");
+		}
 
-    const enrichedReport: typeof report & {
-      faceCountEnrichment?: { uniqueFaceCount: number; totalFaceEvents: number };
-      hint?: string;
-      occupancyEnabledCameras?: { uuid?: string; name?: string; locationUuid?: string }[];
-    } = { ...report };
+		const { interval, scope, types, rangeStart, rangeEnd, uuid, timeZone } =
+			summaryCountRequest;
+		const startTimeMs = new Date(rangeStart).getTime();
+		const endTimeMs = new Date(rangeEnd).getTime();
+		const report = await getSummaryCountReport(
+			interval,
+			scope,
+			types,
+			uuid ?? undefined,
+			endTimeMs,
+			startTimeMs,
+			requestModifiers,
+			sessionId,
+			timeZone,
+		);
 
-    const isPeopleQuery = types.includes("PEOPLE") && scope === "DEVICE" && uuid;
-    if (isPeopleQuery) {
-      try {
-        const faceCount = await getUniqueFaceCount(
-          uuid,
-          startTimeMs,
-          endTimeMs,
-          extra._meta?.requestModifiers as RequestModifiers,
-          extra.sessionId
-        );
-        enrichedReport.faceCountEnrichment = faceCount;
-      } catch (err) {
-        logger.error("Failed to fetch face count enrichment for summary report", err);
-      }
+		const enrichedReport: typeof report & {
+			faceCountEnrichment?: {
+				uniqueFaceCount: number;
+				totalFaceEvents: number;
+			};
+			hint?: string;
+			occupancyEnabledCameras?: {
+				uuid?: string;
+				name?: string;
+				locationUuid?: string;
+			}[];
+		} = { ...report };
 
-      const allZero = !report?.timeSeriesDataPoints?.length ||
-        report.timeSeriesDataPoints.every(dp =>
-          !dp.eventCountMap || Object.values(dp.eventCountMap).every(v => v === 0 || v === null || v === undefined)
-        );
+		const isPeopleQuery =
+			types.includes("PEOPLE") && scope === "DEVICE" && uuid;
+		if (isPeopleQuery) {
+			try {
+				const faceCount = await getUniqueFaceCount(
+					uuid,
+					startTimeMs,
+					endTimeMs,
+					requestModifiers,
+					sessionId,
+				);
+				enrichedReport.faceCountEnrichment = faceCount;
+			} catch (err) {
+				logger.error(
+					"Failed to fetch face count enrichment for summary report",
+					err,
+				);
+			}
 
-      if (allZero) {
-        try {
-          const camerasReport = await getOccupancyEnabledCameras(
-            extra._meta?.requestModifiers as RequestModifiers,
-            extra.sessionId
-          );
-          enrichedReport.occupancyEnabledCameras = camerasReport?.cameras?.map(c => ({
-            uuid: c.uuid,
-            name: c.name,
-            locationUuid: c.locationUuid,
-          }));
-          enrichedReport.hint =
-            "People detection returned zero results for this camera. This usually means people counting is not enabled on this device. " +
-            "The occupancyEnabledCameras field lists cameras that support occupancy counting. " +
-            "Face recognition data is available in faceCountEnrichment above.";
-        } catch (err) {
-          logger.error("Failed to fetch occupancy-enabled cameras for hint", err);
-        }
-      }
-    }
+			const allZero =
+				!report?.timeSeriesDataPoints?.length ||
+				report.timeSeriesDataPoints.every(
+					(dp) =>
+						!dp.eventCountMap ||
+						Object.values(dp.eventCountMap).every(
+							(v) => v === 0 || v === null || v === undefined,
+						),
+				);
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(enrichedReport),
-        },
-      ],
-      structuredContent: {
-        summaryCountReport: enrichedReport,
-      },
-    };
-  }
-  if (requestType === RequestType.GET_OCCUPANCY_COUNT_REPORT) {
-    const { occupancyCountRequest } = args;
-    if (!occupancyCountRequest) {
-      throw new Error("occupancyCountRequest is required");
-    }
-    const { deviceUuid, rangeStart, rangeEnd, interval } = occupancyCountRequest;
-    const startTimeMs = new Date(rangeStart).getTime();
-    const endTimeMs = new Date(rangeEnd).getTime();
-    const report = await getOccupancyCountReport(
-      deviceUuid,
-      startTimeMs,
-      endTimeMs,
-      interval,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
+			if (allZero) {
+				try {
+					const camerasReport = await getOccupancyEnabledCameras(
+						requestModifiers,
+						sessionId,
+					);
+					enrichedReport.occupancyEnabledCameras = camerasReport?.cameras?.map(
+						(c) => ({
+							uuid: c.uuid,
+							name: c.name,
+							locationUuid: c.locationUuid,
+						}),
+					);
+					enrichedReport.hint =
+						"People detection returned zero results for this camera. This usually means people counting is not enabled on this device. " +
+						"The occupancyEnabledCameras field lists cameras that support occupancy counting. " +
+						"Face recognition data is available in faceCountEnrichment above.";
+				} catch (err) {
+					logger.error(
+						"Failed to fetch occupancy-enabled cameras for hint",
+						err,
+					);
+				}
+			}
+		}
 
-    const enrichedReport: typeof report & {
-      faceCountEnrichment?: { uniqueFaceCount: number; totalFaceEvents: number };
-      hint?: string;
-      occupancyEnabledCameras?: { uuid?: string; name?: string; locationUuid?: string }[];
-    } = { ...report };
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(enrichedReport),
+				},
+			],
+			structuredContent: {
+				summaryCountReport: enrichedReport,
+			},
+		};
+	}
+	if (requestType === RequestType.GET_OCCUPANCY_COUNT_REPORT) {
+		const { occupancyCountRequest } = args;
+		if (!occupancyCountRequest) {
+			throw new Error("occupancyCountRequest is required");
+		}
+		const { deviceUuid, rangeStart, rangeEnd, interval } =
+			occupancyCountRequest;
+		const startTimeMs = new Date(rangeStart).getTime();
+		const endTimeMs = new Date(rangeEnd).getTime();
+		const report = await getOccupancyCountReport(
+			deviceUuid,
+			startTimeMs,
+			endTimeMs,
+			interval,
+			requestModifiers,
+			sessionId,
+		);
 
-    try {
-      const faceCount = await getUniqueFaceCount(
-        deviceUuid,
-        startTimeMs,
-        endTimeMs,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
-      );
-      enrichedReport.faceCountEnrichment = faceCount;
-    } catch (err) {
-      logger.error("Failed to fetch face count enrichment for occupancy report", err);
-    }
+		const enrichedReport: typeof report & {
+			faceCountEnrichment?: {
+				uniqueFaceCount: number;
+				totalFaceEvents: number;
+			};
+			hint?: string;
+			occupancyEnabledCameras?: {
+				uuid?: string;
+				name?: string;
+				locationUuid?: string;
+			}[];
+		} = { ...report };
 
-    const allZero = !report?.timeSeriesDataPoints?.length ||
-      report.timeSeriesDataPoints.every(dp =>
-        !dp.eventCountMap || Object.values(dp.eventCountMap).every(v => v === 0 || v === null || v === undefined)
-      );
+		try {
+			const faceCount = await getUniqueFaceCount(
+				deviceUuid,
+				startTimeMs,
+				endTimeMs,
+				requestModifiers,
+				sessionId,
+			);
+			enrichedReport.faceCountEnrichment = faceCount;
+		} catch (err) {
+			logger.error(
+				"Failed to fetch face count enrichment for occupancy report",
+				err,
+			);
+		}
 
-    if (allZero) {
-      try {
-        const camerasReport = await getOccupancyEnabledCameras(
-          extra._meta?.requestModifiers as RequestModifiers,
-          extra.sessionId
-        );
-        const enabledUuids = new Set(
-          camerasReport?.cameras?.map(c => c.uuid).filter(Boolean) ?? []
-        );
-        if (!enabledUuids.has(deviceUuid)) {
-          enrichedReport.occupancyEnabledCameras = camerasReport?.cameras?.map(c => ({
-            uuid: c.uuid,
-            name: c.name,
-            locationUuid: c.locationUuid,
-          }));
-          enrichedReport.hint =
-            "This camera does not have occupancy counting enabled (no occupancy polygon defined). " +
-            "The occupancyEnabledCameras field lists cameras that do support occupancy counting. " +
-            "Face recognition data is available in faceCountEnrichment above.";
-        } else {
-          enrichedReport.hint =
-            "This camera has occupancy counting enabled but returned zero counts for the requested time range. " +
-            "Face recognition data is available in faceCountEnrichment above.";
-        }
-      } catch (err) {
-        logger.error("Failed to fetch occupancy-enabled cameras for hint", err);
-      }
-    }
+		const allZero =
+			!report?.timeSeriesDataPoints?.length ||
+			report.timeSeriesDataPoints.every(
+				(dp) =>
+					!dp.eventCountMap ||
+					Object.values(dp.eventCountMap).every(
+						(v) => v === 0 || v === null || v === undefined,
+					),
+			);
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(enrichedReport),
-        },
-      ],
-      structuredContent: {
-        occupancyCountReport: enrichedReport,
-      },
-    };
-  }
+		if (allZero) {
+			try {
+				const camerasReport = await getOccupancyEnabledCameras(
+					requestModifiers,
+					sessionId,
+				);
+				const enabledUuids = new Set(
+					camerasReport?.cameras?.map((c) => c.uuid).filter(Boolean) ?? [],
+				);
+				if (!enabledUuids.has(deviceUuid)) {
+					enrichedReport.occupancyEnabledCameras = camerasReport?.cameras?.map(
+						(c) => ({
+							uuid: c.uuid,
+							name: c.name,
+							locationUuid: c.locationUuid,
+						}),
+					);
+					enrichedReport.hint =
+						"This camera does not have occupancy counting enabled (no occupancy polygon defined). " +
+						"The occupancyEnabledCameras field lists cameras that do support occupancy counting. " +
+						"Face recognition data is available in faceCountEnrichment above.";
+				} else {
+					enrichedReport.hint =
+						"This camera has occupancy counting enabled but returned zero counts for the requested time range. " +
+						"Face recognition data is available in faceCountEnrichment above.";
+				}
+			} catch (err) {
+				logger.error("Failed to fetch occupancy-enabled cameras for hint", err);
+			}
+		}
 
-  if (requestType === RequestType.GET_OCCUPANCY_ENABLED_CAMERAS) {
-    const report = await getOccupancyEnabledCameras(
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(enrichedReport),
+				},
+			],
+			structuredContent: {
+				occupancyCountReport: enrichedReport,
+			},
+		};
+	}
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(report),
-        },
-      ],
-      structuredContent: {
-        occupancyEnabledCamerasReport: report,
-      },
-    };
-  }
+	if (requestType === RequestType.GET_OCCUPANCY_ENABLED_CAMERAS) {
+		const report = await getOccupancyEnabledCameras(
+			requestModifiers,
+			sessionId,
+		);
 
-  if (requestType === RequestType.GET_LINE_CROSSING_ENABLED_CAMERAS) {
-    const { lineCrossingEnabledCamerasRequest } = args;
-    if (!lineCrossingEnabledCamerasRequest) {
-      throw new Error("lineCrossingEnabledCamerasRequest is required");
-    }
-    const { locationUuid } = lineCrossingEnabledCamerasRequest;
-    const report = await getLineCrossingEnabledCameras(
-      locationUuid,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(report),
+				},
+			],
+			structuredContent: {
+				occupancyEnabledCamerasReport: report,
+			},
+		};
+	}
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(report),
-        },
-      ],
-      structuredContent: {
-        lineCrossingEnabledCamerasReport: report,
-      },
-    };
-  }
+	if (requestType === RequestType.GET_LINE_CROSSING_ENABLED_CAMERAS) {
+		const { lineCrossingEnabledCamerasRequest } = args;
+		if (!lineCrossingEnabledCamerasRequest) {
+			throw new Error("lineCrossingEnabledCamerasRequest is required");
+		}
+		const { locationUuid } = lineCrossingEnabledCamerasRequest;
+		const report = await getLineCrossingEnabledCameras(
+			locationUuid,
+			requestModifiers,
+			sessionId,
+		);
 
-  if (requestType === RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT) {
-    const { thresholdCrossingCountRequest } = args;
-    if (!thresholdCrossingCountRequest) {
-      throw new Error("thresholdCrossingCountRequest is required");
-    }
-    const { deviceUuid, rangeStart, rangeEnd, bucketSize, crossingObject, dedupe } =
-      thresholdCrossingCountRequest;
-    const report = await getThresholdCrossingCountReport(
-      deviceUuid,
-      new Date(rangeStart).getTime(),
-      new Date(rangeEnd).getTime(),
-      bucketSize,
-      crossingObject,
-      dedupe,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(report),
+				},
+			],
+			structuredContent: {
+				lineCrossingEnabledCamerasReport: report,
+			},
+		};
+	}
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(report),
-        },
-      ],
-      structuredContent: {
-        thresholdCrossingCountReport: report,
-      },
-    };
-  }
+	if (requestType === RequestType.GET_THRESHOLD_CROSSING_COUNT_REPORT) {
+		const { thresholdCrossingCountRequest } = args;
+		if (!thresholdCrossingCountRequest) {
+			throw new Error("thresholdCrossingCountRequest is required");
+		}
+		const {
+			deviceUuid,
+			rangeStart,
+			rangeEnd,
+			bucketSize,
+			crossingObject,
+			dedupe,
+		} = thresholdCrossingCountRequest;
+		const report = await getThresholdCrossingCountReport(
+			deviceUuid,
+			new Date(rangeStart).getTime(),
+			new Date(rangeEnd).getTime(),
+			bucketSize,
+			crossingObject,
+			dedupe,
+			requestModifiers,
+			sessionId,
+		);
 
-  if (requestType === RequestType.FIND_PROMPT_CONFIGURATIONS) {
-    const report = await findPromptConfigurations(
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(report),
+				},
+			],
+			structuredContent: {
+				thresholdCrossingCountReport: report,
+			},
+		};
+	}
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(report),
-        },
-      ],
-      structuredContent: {
-        promptConfigurationsReport: report,
-      },
-    };
-  }
+	if (requestType === RequestType.FIND_PROMPT_CONFIGURATIONS) {
+		const report = await findPromptConfigurations(requestModifiers, sessionId);
 
-  if (requestType === RequestType.GET_CUSTOM_LLM_REPORT) {
-    const { customLLMReportRequest } = args;
-    if (!customLLMReportRequest) {
-      throw new Error("customLLMReportRequest is required");
-    }
-    const { promptUuid, promptType, rangeStart, rangeEnd, interval } = customLLMReportRequest;
-    const report = await getCustomLLMReport(
-      promptUuid,
-      promptType,
-      new Date(rangeStart).getTime(),
-      new Date(rangeEnd).getTime(),
-      interval,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(report),
+				},
+			],
+			structuredContent: {
+				promptConfigurationsReport: report,
+			},
+		};
+	}
 
-    // Log the report data to help debug
-    logger.log(
-      "📊 Custom LLM Report Tool Response:",
-      JSON.stringify({
-        promptType,
-        hasError: report?.error,
-        dataPointsCount: report?.timeSeriesDataPoints?.length,
-        firstDataPoint: report?.timeSeriesDataPoints?.[0],
-      })
-    );
+	if (requestType === RequestType.GET_CUSTOM_LLM_REPORT) {
+		const { customLLMReportRequest } = args;
+		if (!customLLMReportRequest) {
+			throw new Error("customLLMReportRequest is required");
+		}
+		const { promptUuid, promptType, rangeStart, rangeEnd, interval } =
+			customLLMReportRequest;
+		const report = await getCustomLLMReport(
+			promptUuid,
+			promptType,
+			new Date(rangeStart).getTime(),
+			new Date(rangeEnd).getTime(),
+			interval,
+			requestModifiers,
+			sessionId,
+		);
 
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(report),
-        },
-      ],
-      structuredContent: {
-        customLLMReport: report,
-      },
-    };
-  }
+		// Log the report data to help debug
+		logger.log(
+			"📊 Custom LLM Report Tool Response:",
+			JSON.stringify({
+				promptType,
+				hasError: report?.error,
+				dataPointsCount: report?.timeSeriesDataPoints?.length,
+				firstDataPoint: report?.timeSeriesDataPoints?.[0],
+			}),
+		);
 
-  if (requestType === RequestType.GET_AUDIT_FEED) {
-    const { auditFeedRequest } = args;
-    if (!auditFeedRequest) {
-      throw new Error("auditFeedRequest is required");
-    }
-    const report = await getAuditFeed(
-      new Date(auditFeedRequest.startTime).getTime(),
-      new Date(auditFeedRequest.endTime).getTime(),
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(report) }],
-      structuredContent: { auditFeedReport: report },
-    };
-  }
+		return {
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify(report),
+				},
+			],
+			structuredContent: {
+				customLLMReport: report,
+			},
+		};
+	}
 
-  if (requestType === RequestType.GET_DIAGNOSTIC_FEED) {
-    const { diagnosticFeedRequest } = args;
-    if (!diagnosticFeedRequest) {
-      throw new Error("diagnosticFeedRequest is required");
-    }
-    const report = await getDiagnosticFeed(
-      new Date(diagnosticFeedRequest.startTime).getTime(),
-      new Date(diagnosticFeedRequest.endTime).getTime(),
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(report) }],
-      structuredContent: { diagnosticFeedReport: report },
-    };
-  }
+	if (requestType === RequestType.GET_AUDIT_FEED) {
+		const { auditFeedRequest } = args;
+		if (!auditFeedRequest) {
+			throw new Error("auditFeedRequest is required");
+		}
+		const report = await getAuditFeed(
+			new Date(auditFeedRequest.startTime).getTime(),
+			new Date(auditFeedRequest.endTime).getTime(),
+			requestModifiers,
+			sessionId,
+		);
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify(report) }],
+			structuredContent: { auditFeedReport: report },
+		};
+	}
 
-  if (requestType === RequestType.GET_THRESHOLD_CROSSING_EVENTS) {
-    const { thresholdCrossingEventsRequest } = args;
-    if (!thresholdCrossingEventsRequest) {
-      throw new Error("thresholdCrossingEventsRequest is required");
-    }
-    const report = await getThresholdCrossingEvents(
-      thresholdCrossingEventsRequest.deviceUuid,
-      new Date(thresholdCrossingEventsRequest.startTime).getTime(),
-      new Date(thresholdCrossingEventsRequest.endTime).getTime(),
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(report) }],
-      structuredContent: { thresholdCrossingEventsReport: report },
-    };
-  }
+	if (requestType === RequestType.GET_DIAGNOSTIC_FEED) {
+		const { diagnosticFeedRequest } = args;
+		if (!diagnosticFeedRequest) {
+			throw new Error("diagnosticFeedRequest is required");
+		}
+		const report = await getDiagnosticFeed(
+			new Date(diagnosticFeedRequest.startTime).getTime(),
+			new Date(diagnosticFeedRequest.endTime).getTime(),
+			requestModifiers,
+			sessionId,
+		);
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify(report) }],
+			structuredContent: { diagnosticFeedReport: report },
+		};
+	}
 
-  if (requestType === RequestType.GET_CUSTOM_EVENTS_REPORT) {
-    const { customEventsReportRequest } = args;
-    if (!customEventsReportRequest) {
-      throw new Error("customEventsReportRequest is required");
-    }
-    const report = await getCustomEventsReport(
-      customEventsReportRequest.promptUuid,
-      new Date(customEventsReportRequest.startTime).getTime(),
-      new Date(customEventsReportRequest.endTime).getTime(),
-      customEventsReportRequest.interval,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(report) }],
-      structuredContent: { customEventsReport: report },
-    };
-  }
+	if (requestType === RequestType.GET_THRESHOLD_CROSSING_EVENTS) {
+		const { thresholdCrossingEventsRequest } = args;
+		if (!thresholdCrossingEventsRequest) {
+			throw new Error("thresholdCrossingEventsRequest is required");
+		}
+		const report = await getThresholdCrossingEvents(
+			thresholdCrossingEventsRequest.deviceUuid,
+			new Date(thresholdCrossingEventsRequest.startTime).getTime(),
+			new Date(thresholdCrossingEventsRequest.endTime).getTime(),
+			requestModifiers,
+			sessionId,
+		);
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify(report) }],
+			structuredContent: { thresholdCrossingEventsReport: report },
+		};
+	}
 
-  if (requestType === RequestType.GET_PEOPLE_COUNT_EVENTS) {
-    const { peopleCountEventsRequest } = args;
-    if (!peopleCountEventsRequest) {
-      throw new Error("peopleCountEventsRequest is required");
-    }
-    const report = await getPeopleCountEvents(
-      peopleCountEventsRequest.deviceUuids,
-      extra._meta?.requestModifiers as RequestModifiers,
-      extra.sessionId
-    );
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(report) }],
-      structuredContent: { peopleCountEventsReport: report },
-    };
-  }
+	if (requestType === RequestType.GET_CUSTOM_EVENTS_REPORT) {
+		const { customEventsReportRequest } = args;
+		if (!customEventsReportRequest) {
+			throw new Error("customEventsReportRequest is required");
+		}
+		const report = await getCustomEventsReport(
+			customEventsReportRequest.promptUuid,
+			new Date(customEventsReportRequest.startTime).getTime(),
+			new Date(customEventsReportRequest.endTime).getTime(),
+			customEventsReportRequest.interval,
+			requestModifiers,
+			sessionId,
+		);
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify(report) }],
+			structuredContent: { customEventsReport: report },
+		};
+	}
 
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: "",
-      },
-    ],
-    structuredContent: {
-      error: true,
-      errorMsg: "Error while fetching report information",
-    },
-  };
+	if (requestType === RequestType.GET_PEOPLE_COUNT_EVENTS) {
+		const { peopleCountEventsRequest } = args;
+		if (!peopleCountEventsRequest) {
+			throw new Error("peopleCountEventsRequest is required");
+		}
+		const report = await getPeopleCountEvents(
+			peopleCountEventsRequest.deviceUuids,
+			requestModifiers,
+			sessionId,
+		);
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify(report) }],
+			structuredContent: { peopleCountEventsReport: report },
+		};
+	}
+
+	return {
+		content: [
+			{
+				type: "text" as const,
+				text: "",
+			},
+		],
+		structuredContent: {
+			error: true,
+			errorMsg: "Error while fetching report information",
+		},
+	};
 };
 
 export function createTool(server: McpServer) {
-  server.registerTool(
-    TOOL_NAME,
-    {
-      description: TOOL_DESCRIPTION,
-      inputSchema: TOOL_ARGS.shape,
-      outputSchema: OUTPUT_SCHEMA.shape,
-    },
-    TOOL_HANDLER
-  );
+	server.registerTool(
+		TOOL_NAME,
+		{
+			description: TOOL_DESCRIPTION,
+			inputSchema: TOOL_ARGS.shape,
+			outputSchema: OUTPUT_SCHEMA.shape,
+		},
+		TOOL_HANDLER,
+	);
 }

@@ -1,15 +1,14 @@
+import { DateTime } from "luxon";
 import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
-import { formatTimestamp } from "../util.js";
-import schema from "../types/schema.js";
-import { OutputSchema, SanitizedTimeSeriesDataPoint } from "../types/report-tool-types.js";
+import type { OutputSchema, SanitizedTimeSeriesDataPoint } from "../types/report-tool-types.js";
+import type schema from "../types/schema.js";
 import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
-import { DateTime } from "luxon";
+import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 const REPORT_TYPES_THAT_RETURN_UTC = new Set([
   GetCountReportV2WSRequestTypesEnum.BANDWIDTH,
-  GetCountReportV2WSRequestTypesEnum.VEHICLES,
-  GetCountReportV2WSRequestTypesEnum.MOTION,
+  GetCountReportV2WSRequestTypesEnum.LICENSEPLATES,
   GetCountReportV2WSRequestTypesEnum.DWELL,
 ]);
 
@@ -23,8 +22,8 @@ function getUtcTime(
   if (REPORT_TYPES_THAT_RETURN_UTC.has(reportType)) {
     return datetime;
   } else {
-    logger.info("timeZone", datetime);
-    return DateTime.fromISO(datetime, { zone: timeZone }).toUTC().toISO()!;
+    logger.trace("timeZone", datetime);
+    return DateTime.fromISO(datetime, { zone: timeZone }).toUTC().toISO() ?? datetime;
   }
 }
 
@@ -33,7 +32,7 @@ export async function getOccupancyCountReport(
   startTimeMs: number,
   endTimeMs: number,
   interval: "MINUTELY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = {
@@ -69,9 +68,7 @@ export async function getSummaryCountReport(
     | "CROWD"
     | "PEOPLE"
     | "FACES"
-    | "MOTION"
     | "BANDWIDTH"
-    | "VEHICLES"
     | "LICENSEPLATES"
     | "ALERTS"
     | "AM_VERIFICATION"
@@ -80,7 +77,7 @@ export async function getSummaryCountReport(
   uuid: string | undefined,
   endTimeMs: number,
   startTimeMs: number,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string,
   timeZone?: string
 ): Promise<OutputSchema["summaryCountReport"]> {
@@ -112,8 +109,8 @@ export async function getSummaryCountReport(
   });
 
   // Process response to convert date strings to UTC milliseconds timestamps
-  let newTimeSeriesDataPoints: SanitizedTimeSeriesDataPoint[] | undefined = undefined;
-  if (response && response.timeSeriesDataPoints && Array.isArray(response.timeSeriesDataPoints)) {
+  let newTimeSeriesDataPoints: SanitizedTimeSeriesDataPoint[] | undefined;
+  if (response?.timeSeriesDataPoints && Array.isArray(response.timeSeriesDataPoints)) {
     newTimeSeriesDataPoints = response.timeSeriesDataPoints.map((dataPoint: any) => {
       const sanitizedDataPoint: SanitizedTimeSeriesDataPoint = {
         eventCountMap: dataPoint.eventCountMap,
@@ -132,7 +129,7 @@ export async function getSummaryCountReport(
 }
 
 export async function getOccupancyEnabledCameras(
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<OutputSchema["occupancyEnabledCamerasReport"]> {
   logger.info("📷 Getting occupancy enabled cameras");
@@ -170,7 +167,7 @@ export async function getOccupancyEnabledCameras(
 
 export async function getLineCrossingEnabledCameras(
   locationUuid: string,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<OutputSchema["lineCrossingEnabledCamerasReport"]> {
   logger.info("🚶 Getting line crossing enabled cameras for location", locationUuid);
@@ -202,7 +199,7 @@ export async function getThresholdCrossingCountReport(
   bucketSize: "QUARTER_HOUR" | "HOUR" | "DAY" | "WEEK",
   crossingObject: "HUMAN" | "VEHICLE" | "UNKNOWN",
   dedupe: boolean,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<OutputSchema["thresholdCrossingCountReport"]> {
   logger.info(
@@ -243,7 +240,7 @@ export async function getThresholdCrossingCountReport(
     : undefined;
 
   // Calculate metrics if we have crossing counts and the bucket size is appropriate
-  let metrics: NonNullable<OutputSchema["thresholdCrossingCountReport"]>["metrics"] = undefined;
+  let metrics: NonNullable<OutputSchema["thresholdCrossingCountReport"]>["metrics"];
 
   if (crossingCounts && crossingCounts.length > 0) {
     // Calculate total entries and exits
@@ -329,17 +326,17 @@ export async function getThresholdCrossingCountReport(
       averageExitsPerHour: totalExits / hoursInPeriod,
       mostEntriesInHour: {
         count: maxEntries,
-        timestamp: maxEntriesTimestamp ? DateTime.fromMillis(maxEntriesTimestamp).toISO()! : "",
+        timestamp: maxEntriesTimestamp ? DateTime.fromMillis(maxEntriesTimestamp).toISO() ?? "" : "",
         hourLabel: formatHourLabel(maxEntriesTimestamp),
       },
       mostExitsInHour: {
         count: maxExits,
-        timestamp: maxExitsTimestamp ? DateTime.fromMillis(maxExitsTimestamp).toISO()! : "",
+        timestamp: maxExitsTimestamp ? DateTime.fromMillis(maxExitsTimestamp).toISO() ?? "" : "",
         hourLabel: formatHourLabel(maxExitsTimestamp),
       },
       busiestHour: {
         totalCount: maxTotal,
-        timestamp: maxTotalTimestamp ? DateTime.fromMillis(maxTotalTimestamp).toISO()! : "",
+        timestamp: maxTotalTimestamp ? DateTime.fromMillis(maxTotalTimestamp).toISO() ?? "" : "",
         hourLabel: formatHourLabel(maxTotalTimestamp),
         entries: maxTotalEntries,
         exits: maxTotalExits,
@@ -356,7 +353,7 @@ export async function getThresholdCrossingCountReport(
 }
 
 export async function findPromptConfigurations(
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<OutputSchema["promptConfigurationsReport"]> {
   logger.info("🔍 Finding custom event prompt configurations");
@@ -400,7 +397,7 @@ export async function getCustomLLMReport(
   startTimeMs: number,
   endTimeMs: number,
   interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY",
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<OutputSchema["customLLMReport"]> {
   logger.info(
@@ -452,7 +449,7 @@ export async function getCustomLLMReport(
   );
 
   // Different prompt types return different response structures
-  let timeSeriesDataPoints;
+  let timeSeriesDataPoints: any;
 
   if ((promptType === "BOOLEAN" || promptType === "PERCENT") && response.reports) {
     // BOOLEAN and PERCENT types return a reports object with device UUIDs as keys
@@ -465,7 +462,7 @@ export async function getCustomLLMReport(
     // Aggregate data from all devices
     const aggregatedData: Record<string, any> = {};
 
-    reportEntries.forEach(([deviceId, reportData]) => {
+    reportEntries.forEach(([_, reportData]) => {
       if (Array.isArray(reportData)) {
         reportData.forEach((item: any) => {
           const dateKey = item.localDate || new Date().toISOString();
@@ -555,7 +552,7 @@ export async function getCustomLLMReport(
 export async function getAuditFeed(
   startTimeMs: number,
   endTimeMs: number,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = { startTimeMs, endTimeMs };
@@ -585,7 +582,7 @@ export async function getAuditFeed(
 export async function getDiagnosticFeed(
   startTimeMs: number,
   endTimeMs: number,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = { startTimeMs, endTimeMs };
@@ -612,7 +609,7 @@ export async function getThresholdCrossingEvents(
   deviceUuid: string,
   startTimeMs: number,
   endTimeMs: number,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = { deviceUuid, startTimeMs, endTimeMs };
@@ -639,7 +636,7 @@ export async function getCustomEventsReport(
   startTimeMs: number,
   endTimeMs: number,
   interval: string,
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = { promptUuid, startTimeMs, endTimeMs, interval };
@@ -663,7 +660,7 @@ export async function getCustomEventsReport(
 
 export async function getPeopleCountEvents(
   deviceUuids: string[],
-  requestModifiers?: any,
+  requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
   const body = { deviceUuids };
