@@ -59,6 +59,8 @@ export async function getAccessControlledDoors(requestModifiers?: any, sessionId
           geofenceEnabled: door.geofenceEnabled,
           locationUuid: door.locationUuid,
           policyUuid: door.policyUuid,
+          remoteUnlockEnabled: door.remoteUnlockEnabled,
+          associatedCameras: door.associatedCameras?.filter((c: any): c is string => c !== null) ?? [],
           name: door.name,
           uuid: door.uuid,
         };

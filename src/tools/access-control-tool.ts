@@ -8,6 +8,7 @@ import {
   deactivateLockdown,
   getDoorScheduleExceptions,
   getAccessGrants,
+  getRemoteUnlockUsers,
 } from "../api/access-control-tool-api.js";
 import {
   AccessControlRequestType,
@@ -34,10 +35,11 @@ It has the following modes of operation, determined by the "requestType" paramet
 - ${AccessControlRequestType.ACTIVATE_LOCKDOWN}: Activate a lockdown plan at a location. Requires locationUuid and lockdownPlanUuid.
 - ${AccessControlRequestType.DEACTIVATE_LOCKDOWN}: Deactivate a lockdown plan at a location. Requires locationUuid and lockdownPlanUuid.
 - ${AccessControlRequestType.GET_DOOR_SCHEDULES}: Get door schedule exceptions for a location. Requires locationUuid.
-- ${AccessControlRequestType.GET_ACCESS_GRANTS}: List all location access grants in the organization.
+- ${AccessControlRequestType.GET_ACCESS_GRANTS}: List location access grants (physical badge/card access). Optionally accepts locationUuid to filter by location. Each grant includes userUuids (directly assigned users), groupUuids (assigned access control groups), and doorUuids (the doors this grant provides access to).
+- ${AccessControlRequestType.GET_REMOTE_UNLOCK_USERS}: Get all users who have permission to remotely unlock doors at a location. Requires locationUuid. Returns a list of doors with remote unlock enabled and the users who can unlock each door, based on their permission group roles. This is the correct tool for questions about remote unlock permissions.
 
 Use the get-entity-tool with entityType ACCESS_CONTROL_DOOR to get door UUIDs.
-Use the user-tool to look up user UUIDs.
+Use the user-tool to look up user UUIDs and resolve them to names/emails.
 Use the location-tool to get location UUIDs.
 `;
 
@@ -106,8 +108,19 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         return createToolStructuredContent<OUTPUT_SCHEMA>({ doorScheduleExceptions });
       }
       case AccessControlRequestType.GET_ACCESS_GRANTS: {
-        const accessGrants = await getAccessGrants(requestModifiers, sessionId);
+        const accessGrants = await getAccessGrants(args.locationUuid, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ accessGrants });
+      }
+      case AccessControlRequestType.GET_REMOTE_UNLOCK_USERS: {
+        if (!args.locationUuid) {
+          return createToolTextContent(
+            JSON.stringify({ error: "locationUuid is required for get-remote-unlock-users." })
+          );
+        }
+        const remoteUnlockUsers = await getRemoteUnlockUsers(
+          args.locationUuid, requestModifiers, sessionId
+        );
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ remoteUnlockUsers });
       }
     }
   } catch (error: unknown) {

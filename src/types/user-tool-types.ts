@@ -25,11 +25,6 @@ export const OUTPUT_SCHEMA = z.object({
         email: z.string().optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
-        role: z.string().optional(),
-        orgUuid: z.string().optional(),
-        lastLoginMs: z.number().optional(),
-        enabled: z.boolean().optional(),
-        mfaEnabled: z.boolean().optional(),
       })
     )
     .optional()
