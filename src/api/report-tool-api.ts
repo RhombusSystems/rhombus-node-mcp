@@ -683,6 +683,271 @@ export async function getPeopleCountEvents(
   };
 }
 
+export async function getBatchThresholdCrossingCountReport(
+  deviceUuids: string[],
+  startTimeMs: number,
+  endTimeMs: number,
+  bucketSize: "QUARTER_HOUR" | "HOUR" | "DAY" | "WEEK" | "MONTH",
+  crossingObject: "HUMAN" | "VEHICLE" | "UNKNOWN",
+  dedupe: boolean,
+  timeZone?: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    deviceUuids,
+    startTimeMs,
+    endTimeMs,
+    bucketSize,
+    crossingObject,
+    dedupe,
+    ...(timeZone ? { timeZone } : {}),
+  };
+
+  const response = await postApi<any>({
+    route: "/report/getBatchThresholdCrossingCountReport",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to get batch threshold crossing report");
+  }
+
+  const deviceCrossingCounts: Record<string, { timestampMs?: number; ingressCount?: number; egressCount?: number }[]> =
+    response.deviceCrossingCounts ?? response.crossingCounts ?? {};
+
+  const result: Record<string, { timestampMs?: number; ingressCount?: number; egressCount?: number }[]> = {};
+  for (const [deviceUuid, counts] of Object.entries(deviceCrossingCounts)) {
+    result[deviceUuid] = (counts as any[] || []).map((c: any) => ({
+      timestampMs: c.timestampMs ?? undefined,
+      ingressCount: c.ingressCount ?? undefined,
+      egressCount: c.egressCount ?? undefined,
+    }));
+  }
+
+  return result;
+}
+
+export async function getThresholdCrossingCountReportForOrg(
+  startTimeMs: number,
+  endTimeMs: number,
+  bucketSize: "QUARTER_HOUR" | "HOUR" | "DAY" | "WEEK" | "MONTH",
+  crossingObject: "HUMAN" | "VEHICLE" | "UNKNOWN",
+  dedupe: boolean,
+  timeZone?: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    startTimeMs,
+    endTimeMs,
+    bucketSize,
+    crossingObject,
+    dedupe,
+    ...(timeZone ? { timeZone } : {}),
+  };
+
+  const response = await postApi<schema["Report_GetThresholdCrossingCountReportWSResponse"]>({
+    route: "/report/getThresholdCrossingCountReportForOrg",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to get org threshold crossing report");
+  }
+
+  return (response.crossingCounts ?? []).map(c => ({
+    timestampMs: c.timestampMs ?? undefined,
+    ingressCount: c.ingressCount ?? undefined,
+    egressCount: c.egressCount ?? undefined,
+  }));
+}
+
+export async function getThresholdCrossingCounts(
+  devices: string[],
+  startTimeMs: number,
+  endTimeMs: number,
+  crossingObject: "HUMAN" | "VEHICLE" | "UNKNOWN",
+  dailyResetTimeMinute?: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body: any = {
+    devices,
+    startTimeMs,
+    endTimeMs,
+    crossingObject,
+  };
+  if (dailyResetTimeMinute != null) body.dailyResetTimeMinute = dailyResetTimeMinute;
+
+  const response = await postApi<any>({
+    route: "/report/getThresholdCrossingCounts",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to get threshold crossing counts");
+  }
+
+  return (response.counts ?? []).map((c: any) => ({
+    count: c.count ?? undefined,
+    timestampMs: c.timestampMs ?? undefined,
+  }));
+}
+
+export async function getCountReportsForDevicesAtLocation(
+  locationUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  interval: "MINUTELY" | "QUARTERHOURLY" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY",
+  type: "CROWD" | "PEOPLE" | "FACES" | "MOTION" | "BANDWIDTH" | "VEHICLES" | "LICENSEPLATES" | "ALERTS" | "AM_VERIFICATION" | "DWELL",
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body = {
+    locationUuid,
+    startTimeMs,
+    endTimeMs,
+    interval,
+    type,
+  };
+
+  const response = await postApi<any>({
+    route: "/report/getCountReportsForDevicesAtLocation",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to get count reports for devices at location");
+  }
+
+  const deviceDataMap: Record<string, SanitizedTimeSeriesDataPoint[]> = {};
+  const rawMap = response.timeSeriesDataPointsMap ?? {};
+
+  for (const [deviceUuid, dataPoints] of Object.entries(rawMap)) {
+    deviceDataMap[deviceUuid] = (dataPoints as any[] || []).map((dp: any) => ({
+      dateUtcString: dp.dateLocal ?? dp.dateUtc ?? undefined,
+      eventCountMap: dp.eventCountMap ?? undefined,
+    }));
+  }
+
+  return deviceDataMap;
+}
+
+export async function getRunningAverage(
+  uuid: string | undefined,
+  startTimeMs: number,
+  endTimeMs: number,
+  interval: "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY",
+  scope: "REGION" | "DEVICE" | "LOCATION" | "ORG",
+  timeZone?: string,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body: any = {
+    startTimeMs,
+    endTimeMs,
+    interval,
+    scope,
+  };
+  if (uuid) body.uuid = uuid;
+  if (timeZone) body.timeZone = timeZone;
+
+  const response = await postApi<any>({
+    route: "/report/getRunningAverage",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to get running average");
+  }
+
+  return (response.statsDataPoints ?? []).map((dp: any) => ({
+    date: dp.date ?? undefined,
+    stats: dp.stats ?? undefined,
+  }));
+}
+
+export async function triggerScenePrompt(
+  deviceFacetUuid: string,
+  prompt: string,
+  promptType: "COUNT" | "PERCENT" | "BOOLEAN",
+  timestampMs?: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body: any = {
+    deviceFacetUuid,
+    prompt,
+    promptType,
+  };
+  if (timestampMs != null) body.timestampMs = timestampMs;
+
+  const response = await postApi<any>({
+    route: "/scenequery/triggerPrompt",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to trigger scene prompt");
+  }
+
+  const event = response.event;
+  return {
+    value: event?.value ?? undefined,
+    prompt: event?.prompt ?? undefined,
+    timestampMs: event?.timestampMs ?? undefined,
+    checkCondition: event?.checkCondition ?? undefined,
+    image: event?.image ?? undefined,
+  };
+}
+
+export async function adHocScenePrompt(
+  deviceFacetUuid: string,
+  promptUuid: string,
+  timestampMs?: number,
+  requestModifiers?: any,
+  sessionId?: string
+) {
+  const body: any = {
+    deviceFacetUuid,
+    promptUuid,
+  };
+  if (timestampMs != null) body.timestampMs = timestampMs;
+
+  const response = await postApi<any>({
+    route: "/scenequery/adHocPrompt",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (response.error) {
+    throw new Error(response.errorMsg ?? "Failed to execute ad-hoc scene prompt");
+  }
+
+  const event = response.event;
+  return {
+    value: event?.value ?? undefined,
+    prompt: event?.prompt ?? undefined,
+    timestampMs: event?.timestampMs ?? undefined,
+    checkCondition: event?.checkCondition ?? undefined,
+    image: event?.image ?? undefined,
+  };
+}
+
 const MAX_FACE_COUNT_PAGES = 5;
 const FACE_COUNT_PAGE_SIZE = 200;
 

@@ -23,11 +23,6 @@ export async function listUsers(
       email: user.email ?? undefined,
       firstName: user.firstName ?? undefined,
       lastName: user.lastName ?? undefined,
-      role: (user as any).roleUuid ?? undefined,
-      orgUuid: user.orgUuid ?? undefined,
-      lastLoginMs: (user as any).lastLoginMs ?? undefined,
-      enabled: (user as any).enabled ?? undefined,
-      mfaEnabled: user.mfaEnabled ?? undefined,
     })) ?? []
   );
 }

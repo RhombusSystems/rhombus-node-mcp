@@ -10,6 +10,7 @@ export enum AccessControlRequestType {
   DEACTIVATE_LOCKDOWN = "deactivate-lockdown",
   GET_DOOR_SCHEDULES = "get-door-schedules",
   GET_ACCESS_GRANTS = "get-access-grants",
+  GET_REMOTE_UNLOCK_USERS = "get-remote-unlock-users",
 }
 
 export const TOOL_ARGS = {
@@ -25,7 +26,7 @@ export const TOOL_ARGS = {
   locationUuid: z
     .string()
     .nullable()
-    .describe("The UUID of the location. Required for 'activate-lockdown', 'deactivate-lockdown', and 'get-door-schedules'."),
+    .describe("The UUID of the location. Required for 'activate-lockdown', 'deactivate-lockdown', 'get-door-schedules', and 'get-remote-unlock-users'. Optional for 'get-access-grants' to filter by location."),
   lockdownPlanUuid: z
     .string()
     .nullable()
@@ -102,15 +103,32 @@ export const OUTPUT_SCHEMA = z.object({
     .array(
       z.object({
         uuid: z.string().optional(),
-        userUuid: z.string().optional(),
+        name: z.string().optional(),
         locationUuid: z.string().optional(),
-        doorUuid: z.string().optional(),
-        groupUuid: z.string().optional(),
+        userUuids: z.array(z.string()).optional(),
+        groupUuids: z.array(z.string()).optional(),
+        doorUuids: z.array(z.string()).optional(),
         scheduleUuid: z.string().optional(),
       })
     )
     .optional()
-    .describe("List of location access grants"),
+    .describe("List of location access grants. Each grant contains userUuids and groupUuids that have access to the doorUuids in the grant."),
+  remoteUnlockUsers: z
+    .object({
+      doors: z.array(z.string()).optional().describe("Names of doors with remote unlock enabled at this location."),
+      totalUsers: z.number().optional().describe("Total number of unique users who can remotely unlock doors."),
+      groups: z.array(
+        z.object({
+          permissionGroup: z.string().optional().describe("Name of the permission group/role."),
+          doors: z.union([z.literal("all"), z.array(z.string())]).optional()
+            .describe("Which doors users in this group can unlock. 'all' means every door at the location."),
+          users: z.array(z.string()).optional()
+            .describe("Users in this group, formatted as 'Name (email)'. Always list ALL users completely."),
+        })
+      ).optional(),
+    })
+    .optional()
+    .describe("Users who can remotely unlock doors at a location, grouped by permission group. Always present the COMPLETE list of all users to the end user."),
   error: z.string().optional().describe("An error message if the request failed."),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;
