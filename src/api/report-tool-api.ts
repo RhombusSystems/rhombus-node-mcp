@@ -98,7 +98,8 @@ export async function getSummaryCountReport(
     scope,
     startTimeMs,
     types,
-    ...(uuid ? { uuid } : {}),
+    // omit for org
+    ...(uuid && scope !== "ORG" ? { uuid } : {}),
     ...(timeZone ? { timeZone } : {}),
   };
   const response = await postApi<schema["Report_GetCountReportWSResponse"]>({

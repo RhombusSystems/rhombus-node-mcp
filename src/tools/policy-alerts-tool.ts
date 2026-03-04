@@ -1,12 +1,11 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestModifiers } from "../util.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getExpiringPolicyAlerts,
-  getPolicyAlerts,
-  getPolicyAlertDetails,
   dismissPolicyAlert,
-  getUnhealthyDeviceAlerts,
+  getExpiringPolicyAlerts,
+  getPolicyAlertDetails,
   getPolicyAlertGroups,
+  getPolicyAlerts,
+  getUnhealthyDeviceAlerts,
 } from "../api/policy-alerts-tool-api.js";
 import {
   ApiPayloadSchema,
@@ -14,6 +13,7 @@ import {
   TOOL_ARGS,
   type ToolArgs,
 } from "../types/policy-alerts-tool-types.js";
+import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "policy-alerts-tool";
 const TOOL_DESCRIPTION = `
@@ -37,6 +37,8 @@ by a list of device UUIDs, or by a list of location UUIDs.
 You can also specify the maximum number of results to return.
 The output is provided in JSON format.
 
+**Pagination**: Results are paginated and have a maximum page size. If the response includes a \`lastEvaluatedKey\` (for queryType "expiringSoon") or both \`lastTimestampISO\` and \`lastUuid\` (for queryTypes "existing" and "alert-groups"), more results are available. Pass these values back in the next call using the corresponding input parameters (lastEvaluatedKey, or lastTimestampISO and lastUuid) to retrieve the next page. Repeat until the response no longer includes these fields.
+
 IMPORTANT: The "unhealthy-devices" queryType returns historical alert notifications that were triggered for device health issues.
 It does NOT return live/real-time device connection status. If no device health alert policies are configured, or alerts were
 dismissed, this may return empty even when devices are offline.
@@ -45,23 +47,25 @@ dismissed, this may return empty even when devices are offline.
 current state of all devices including their live connection status (the "connected" field). Request all entity types
 (CAMERA, DOORBELL_CAMERA, BADGE_READER, etc.) and check the "connected" field on each device to determine which are offline.`;
 
-const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
+const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const payload = ApiPayloadSchema.parse(args);
+
+  const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   let ret;
   switch (args.queryType) {
     case "existing":
       ret = await getPolicyAlerts(
         payload,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
+        requestModifiers,
+        sessionId
       );
       break;
     case "expiringSoon":
       ret = await getExpiringPolicyAlerts(
         payload,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
+        requestModifiers,
+        sessionId
       );
       break;
     case "details":
@@ -70,8 +74,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       }
       ret = await getPolicyAlertDetails(
         args.alertUuid,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
+        requestModifiers,
+        sessionId
       );
       break;
     case "dismiss":
@@ -80,21 +84,21 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       }
       ret = await dismissPolicyAlert(
         args.alertUuid,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
+        requestModifiers,
+        sessionId
       );
       break;
     case "unhealthy-devices":
       ret = await getUnhealthyDeviceAlerts(
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
+        requestModifiers,
+        sessionId
       );
       break;
     case "alert-groups":
       ret = await getPolicyAlertGroups(
         payload,
-        extra._meta?.requestModifiers as RequestModifiers,
-        extra.sessionId
+        requestModifiers,
+        sessionId
       );
       break;
     default:

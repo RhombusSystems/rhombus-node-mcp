@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getFaceEvents, getPersonLabels, getRegisteredFaces, searchSimilarFaces, getFaceMatchmakers, getFaceEventsByPerson } from "../api/faces-tool-api.js";
+import { getFaceEvents, getFaceEventsByPerson, getFaceMatchmakers, getPersonLabels, getRegisteredFaces, searchSimilarFaces } from "../api/faces-tool-api.js";
+import { logger } from "../logger.js";
 import {
   type GetFaceEventsArgs,
   type GetRegisteredFacesArgs,
@@ -8,8 +9,7 @@ import {
   TOOL_ARGS,
   type ToolArgs,
 } from "../types/faces-tools-types.js";
-import { extractFromToolExtra } from "../util.js";
-import { logger } from "../logger.js";
+import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "faces-tool";
 
@@ -81,9 +81,6 @@ If the requestType is "get-person-labels":
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
-  let ret: OUTPUT_SCHEMA = {
-    requestType: args.requestType,
-  };
   if (args.requestType === RequestType.GET_FACE_EVENTS) {
     const faceEventArgs = args.faceEventFilter as GetFaceEventsArgs;
     let resolvedNamesOutput: Record<string, string | null> | undefined;
@@ -128,12 +125,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
       }
     }
 
-    let response = await getFaceEvents(faceEventArgs, args.timeZone, requestModifiers, sessionId);
+    let { faceEvents, lastEvaluatedKey } = await getFaceEvents(faceEventArgs, args.timeZone, requestModifiers, sessionId);
 
     const hadLocationFilter =
       faceEventArgs.searchFilter?.locationUuids &&
       faceEventArgs.searchFilter.locationUuids.length > 0;
-    if (response.length === 0 && hadLocationFilter) {
+    if (faceEvents.length === 0 && hadLocationFilter) {
       logger.info(
         `[faces-tool] Empty results with locationUuids filter ${JSON.stringify(faceEventArgs.searchFilter!.locationUuids)}, retrying without location filter`
       );
@@ -141,22 +138,27 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         ...faceEventArgs,
         searchFilter: { ...faceEventArgs.searchFilter!, locationUuids: [] },
       };
-      response = await getFaceEvents(retryArgs as GetFaceEventsArgs, args.timeZone, requestModifiers, sessionId);
+      const retry = await getFaceEvents(retryArgs as GetFaceEventsArgs, args.timeZone, requestModifiers, sessionId);
+      faceEvents = retry.faceEvents;
+      lastEvaluatedKey = retry.lastEvaluatedKey;
     }
 
-    ret = {
+    return createToolStructuredContent({
       requestType: RequestType.GET_FACE_EVENTS,
-      getFaceEventsResponse: response,
-      ...(resolvedNamesOutput ? { resolvedNames: resolvedNamesOutput } : {}),
-    };
-  } else if (args.requestType === RequestType.GET_REGISTERED_FACES) {
+      getFaceEventsResponse: faceEvents,
+      lastEvaluatedKey: lastEvaluatedKey ?? undefined,
+      resolvedNames: resolvedNamesOutput ?? undefined,
+    });
+  }
+
+  if (args.requestType === RequestType.GET_REGISTERED_FACES) {
     const [peopleResponse, labelsResponse] = await Promise.all([
       getRegisteredFaces(args as GetRegisteredFacesArgs, requestModifiers, sessionId),
       getPersonLabels(requestModifiers, sessionId),
     ]);
     const labelsByPerson = labelsResponse.labelsByPerson ?? {};
     if (peopleResponse.people) {
-      ret = {
+      return createToolStructuredContent({
         requestType: RequestType.GET_REGISTERED_FACES,
         getSavedFacesResponse: peopleResponse.people.map(p => ({
           createdOn: p.createdOn ? parseInt(p.createdOn, 10) : undefined,
@@ -168,55 +170,69 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
             ? (labelsByPerson[p.uuid] ?? []).filter((l): l is string => l != null)
             : undefined,
         })),
-      };
-    } else {
-      ret = {
-        requestType: RequestType.GET_REGISTERED_FACES,
-        error: String(peopleResponse.error),
-      };
+      });
     }
-  } else if (args.requestType === RequestType.GET_PERSON_LABELS) {
+    return createToolStructuredContent({
+      requestType: RequestType.GET_REGISTERED_FACES,
+      error: String(peopleResponse.error),
+    });
+  }
+
+  if (args.requestType === RequestType.GET_PERSON_LABELS) {
     const response = await getPersonLabels(requestModifiers, sessionId);
+    const cleaned: Record<string, string[]> = {};
     if (response.labelsByPerson) {
-      const cleaned: Record<string, string[]> = {};
       for (const [personUuid, labels] of Object.entries(response.labelsByPerson)) {
         if (labels) {
           cleaned[personUuid] = labels.filter((l): l is string => l != null);
         }
       }
-      ret = {
-        requestType: RequestType.GET_PERSON_LABELS,
-        getPersonLabelsResponse: cleaned,
-      };
-    } else {
-      ret = {
-        requestType: RequestType.GET_PERSON_LABELS,
-        getPersonLabelsResponse: {},
-      };
     }
-  } else if (args.requestType === RequestType.SEARCH_SIMILAR_FACES) {
-    if (!args.faceEventUuid) {
-      ret = { requestType: RequestType.SEARCH_SIMILAR_FACES, error: "faceEventUuid is required for search-similar-faces" };
-    } else {
-      const similarEvents = await searchSimilarFaces(args.faceEventUuid, args.timeZone, requestModifiers, sessionId);
-      ret = { requestType: RequestType.SEARCH_SIMILAR_FACES, similarFaceEvents: similarEvents };
-    }
-  } else if (args.requestType === RequestType.GET_FACE_MATCHMAKERS) {
-    const matchmakers = await getFaceMatchmakers(requestModifiers, sessionId);
-    ret = { requestType: RequestType.GET_FACE_MATCHMAKERS, faceMatchmakers: matchmakers };
-  } else if (args.requestType === RequestType.GET_FACE_EVENTS_BY_PERSON) {
-    if (!args.personUuid) {
-      ret = { requestType: RequestType.GET_FACE_EVENTS_BY_PERSON, error: "personUuid is required for get-face-events-by-person" };
-    } else {
-      const events = await getFaceEventsByPerson(args.personUuid, args.timeZone, requestModifiers, sessionId);
-      ret = { requestType: RequestType.GET_FACE_EVENTS_BY_PERSON, personFaceEvents: events };
-    }
+    return createToolStructuredContent({
+      requestType: RequestType.GET_PERSON_LABELS,
+      getPersonLabelsResponse: cleaned,
+    });
   }
 
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(ret) }],
-    structuredContent: ret,
-  };
+  if (args.requestType === RequestType.SEARCH_SIMILAR_FACES) {
+    if (!args.faceEventUuid) {
+      return createToolStructuredContent({
+        requestType: RequestType.SEARCH_SIMILAR_FACES,
+        error: "faceEventUuid is required for search-similar-faces",
+      });
+    }
+    const similarEvents = await searchSimilarFaces(args.faceEventUuid, args.timeZone, requestModifiers, sessionId);
+    return createToolStructuredContent({
+      requestType: RequestType.SEARCH_SIMILAR_FACES,
+      similarFaceEvents: similarEvents,
+    });
+  }
+
+  if (args.requestType === RequestType.GET_FACE_MATCHMAKERS) {
+    const matchmakers = await getFaceMatchmakers(requestModifiers, sessionId);
+    return createToolStructuredContent({
+      requestType: RequestType.GET_FACE_MATCHMAKERS,
+      faceMatchmakers: matchmakers,
+    });
+  }
+
+  if (args.requestType === RequestType.GET_FACE_EVENTS_BY_PERSON) {
+    if (!args.personUuid) {
+      return createToolStructuredContent({
+        requestType: RequestType.GET_FACE_EVENTS_BY_PERSON,
+        error: "personUuid is required for get-face-events-by-person",
+      });
+    }
+    const { faceEvents: personEvents } = await getFaceEventsByPerson(args.personUuid, args.timeZone, requestModifiers, sessionId);
+    return createToolStructuredContent({
+      requestType: RequestType.GET_FACE_EVENTS_BY_PERSON,
+      personFaceEvents: personEvents,
+    });
+  }
+
+  return createToolStructuredContent({
+    requestType: args.requestType,
+  });
 };
 
 export function createTool(server: McpServer) {

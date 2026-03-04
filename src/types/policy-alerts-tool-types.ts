@@ -40,7 +40,27 @@ export const TOOL_ARGS = {
     .number()
     .nullable()
     .describe(
-      "The maximum number of policy alerts to return. The system may default to a reasonable number (e.g., 20) if not specified, but there is a hard cap (e.g., 100) on the maximum results the API will return."
+      "The maximum number of policy alerts to return. A good default is 100, but you may increase or decrease this number as needed. A reasonable hard maximum is 1000 alerts."
+    ),
+  lastEvaluatedKey: z
+    .string()
+    .nullable()
+    .describe(
+      "Opaque pagination cursor from a previous response. When the response includes lastEvaluatedKey, pass it here on the next call to retrieve the next page. Used by queryType 'expiringSoon'."
+    ),
+  lastTimestampISO: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 date format.", offset: true })
+    .nullable()
+    .describe(
+      "Pagination cursor (ISO 8601 timestamp). When the response includes lastTimestampISO, pass it here with lastUuid on the next call for the next page. Used by queryTypes 'existing' and 'alert-groups'." +
+        ISOTimestampFormatDescription
+    ),
+  lastUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "Pagination cursor (UUID of last item). Pass together with lastTimestampISO from the previous response to fetch the next page. Used by queryTypes 'existing' and 'alert-groups'."
     ),
   timeZone: z
     .string()
@@ -57,14 +77,24 @@ const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
 export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform(args => {
-  const { queryType, afterTimestampISO, beforeTimestampISO, timeZone, ...rest } = args;
+  const {
+    queryType,
+    afterTimestampISO,
+    beforeTimestampISO,
+    timeZone,
+    lastTimestampISO,
+    ...rest
+  } = args;
   const afterTimestampMs = createEpochSchema().parse(afterTimestampISO);
   const beforeTimestampMs = createEpochSchema().parse(beforeTimestampISO);
+  const lastTimestampMs =
+    lastTimestampISO != null ? createEpochSchema().parse(lastTimestampISO) : null;
 
   return {
     ...rest,
     afterTimestampMs,
     beforeTimestampMs,
+    lastTimestampMs,
     timeZone,
   };
 });
@@ -99,5 +129,26 @@ export const OUTPUT_SCHEMA = z
     error: z.boolean().optional(),
     errorMsg: z.string().optional(),
     policyAlerts: z.array(ExtendedPolicyAlertType).optional().default([]),
+    lastEvaluatedKey: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "If present, more results are available. Pass this value as lastEvaluatedKey on the next call to get the next page (queryType 'expiringSoon')."
+      ),
+    lastTimestampISO: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "If present with lastUuid, more results are available. Pass both as lastTimestampISO and lastUuid on the next call for the next page ('existing' or 'alert-groups'). ISO 8601 format."
+      ),
+    lastUuid: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "If present with lastTimestampISO, more results are available. Pass both on the next call for the next page ('existing' or 'alert-groups')."
+      ),
   })
   .passthrough();

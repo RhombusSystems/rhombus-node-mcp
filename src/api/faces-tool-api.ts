@@ -1,228 +1,212 @@
 import { postApi } from "../network.js";
-import { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-types.js";
-import { logger } from "./../logger.js";
+import type {
+	GetFaceEventsArgs,
+	GetRegisteredFacesArgs,
+} from "../types/faces-tools-types.js";
+import type schema from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 import { removeNulls } from "../utils/remove-nulls.js";
-import schema from "../types/schema.js";
+
 // https://stackoverflow.com/questions/72165227/how-to-make-nullable-properties-optional-in-typescript
 // nice :)
 type PickNullable<T> = {
-  [P in keyof T as null extends T[P] ? P : never]: T[P];
+	[P in keyof T as null extends T[P] ? P : never]: T[P];
 };
 
 type PickNotNullable<T> = {
-  [P in keyof T as null extends T[P] ? never : P]: T[P];
+	[P in keyof T as null extends T[P] ? never : P]: T[P];
 };
 
 type OptionalNullable<T> = T extends object
-  ? {
-      [K in keyof PickNullable<T>]?: OptionalNullable<Exclude<T[K], null>>;
-    } & {
-      [K in keyof PickNotNullable<T>]: OptionalNullable<T[K]>;
-    }
-  : T;
+	? {
+			[K in keyof PickNullable<T>]?: OptionalNullable<Exclude<T[K], null>>;
+		} & {
+			[K in keyof PickNotNullable<T>]: OptionalNullable<T[K]>;
+		}
+	: T;
 
 export async function getFaceEvents(
-  args: GetFaceEventsArgs,
-  timeZone: string,
-  requestModifiers?: any,
-  sessionId?: string
+	args: GetFaceEventsArgs,
+	timeZone: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
 ) {
-  let allFaceEvents: any[] = [];
-  let currentArgs = { ...args };
-  let hasMore = true;
-  let lastResponse: any = null;
+	// OptionalNullable so that we can remove some fields before sending to the API
+	let filteredArgs = { ...args } as OptionalNullable<GetFaceEventsArgs>;
 
-  while (hasMore) {
-    // Filter out empty/undefined fields from currentArgs
-    // OptionalNullable so that we can remove some fields before returning them to the MCP client
-    let filteredArgs = { ...currentArgs } as OptionalNullable<typeof currentArgs>;
+	if (filteredArgs.pageRequest && filteredArgs.pageRequest.lastEvaluatedKey === "") {
+		delete filteredArgs.pageRequest.lastEvaluatedKey;
+	}
 
-    if (filteredArgs.pageRequest) {
-      if (filteredArgs.pageRequest.lastEvaluatedKey === "") {
-        delete filteredArgs.pageRequest.lastEvaluatedKey;
-      }
-    }
+	if (filteredArgs.searchFilter) {
+		if (
+			filteredArgs.searchFilter.faceNames &&
+			filteredArgs.searchFilter.faceNames.length === 0
+		) {
+			// @ts-expect-error - we can break typing
+			delete filteredArgs.searchFilter.faceNames;
+		}
+		if (
+			filteredArgs.searchFilter.labels &&
+			filteredArgs.searchFilter.labels.length === 0
+		) {
+			// @ts-expect-error - we can break typing
+			delete filteredArgs.searchFilter.labels;
+		}
+		if (filteredArgs.searchFilter.hasEmbedding === false) {
+			delete filteredArgs.searchFilter.hasEmbedding;
+		}
+		if (filteredArgs.searchFilter.hasName === false) {
+			delete filteredArgs.searchFilter.hasName;
+		}
+		if (filteredArgs.searchFilter.timestampFilter) {
+			if (filteredArgs.searchFilter.timestampFilter.rangeEnd === null) {
+				delete filteredArgs.searchFilter.timestampFilter.rangeEnd;
+			}
+			if (filteredArgs.searchFilter.timestampFilter.rangeStart === null) {
+				delete filteredArgs.searchFilter.timestampFilter.rangeStart;
+			}
+		}
+	}
 
-    if (filteredArgs.searchFilter) {
-      // Remove empty arrays
-      // if (
-      //   filteredArgs.searchFilter.deviceUuids &&
-      //   filteredArgs.searchFilter.deviceUuids.length === 0
-      // ) {
-      //   // @ts-expect-error - we can break typing
-      //   delete filteredArgs.searchFilter.deviceUuids;
-      // }
-      if (filteredArgs.searchFilter.faceNames && filteredArgs.searchFilter.faceNames.length === 0) {
-        // @ts-expect-error - we can break typing
-        delete filteredArgs.searchFilter.faceNames;
-      }
-      if (filteredArgs.searchFilter.labels && filteredArgs.searchFilter.labels.length === 0) {
-        // @ts-expect-error - we can break typing
-        delete filteredArgs.searchFilter.labels;
-      }
+	filteredArgs = removeNulls(filteredArgs);
 
-      // Remove empty strings
-      // if (filteredArgs.searchFilter.faceNameContains === "") {
-      //   delete filteredArgs.searchFilter.faceNameContains;
-      // }
+	const response = await postApi<
+		schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]
+	>({
+		route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+		body: filteredArgs,
+		modifiers: requestModifiers,
+		sessionId,
+	});
 
-      // Remove false booleans
-      if (filteredArgs.searchFilter.hasEmbedding === false) {
-        delete filteredArgs.searchFilter.hasEmbedding;
-      }
-      if (filteredArgs.searchFilter.hasName === false) {
-        delete filteredArgs.searchFilter.hasName;
-      }
+	const faceEvents = (response?.faceEvents ?? []).map((event: any) => ({
+		deviceUuid: event.deviceUuid,
+		eventTimestampMs: event.eventTimestamp,
+		eventTimestamp: formatTimestamp(event.eventTimestamp, timeZone),
+		faceName: event.faceName,
+		locationUuid: event.locationUuid,
+		personUuid: event.personUuid,
+		thumbnailS3Key: event.thumbnailS3Key,
+		uuid: event.uuid,
+	}));
 
-      // if there is no timestampFilter, we can remove it
-      // rangeEnd and rangeStart are ISO 8601 strings
-      if (filteredArgs.searchFilter.timestampFilter) {
-        if (filteredArgs.searchFilter.timestampFilter.rangeEnd === null) {
-          delete filteredArgs.searchFilter.timestampFilter.rangeEnd;
-        }
-        if (filteredArgs.searchFilter.timestampFilter.rangeStart === null) {
-          delete filteredArgs.searchFilter.timestampFilter.rangeStart;
-        }
-      }
-    }
-
-    // one last sweep of null values
-    filteredArgs = removeNulls(filteredArgs);
-
-    const response = await postApi<
-      schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]
-    >({
-      route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
-      body: filteredArgs,
-      modifiers: requestModifiers,
-      sessionId,
-    });
-
-    lastResponse = response;
-
-    // Filter the faceEvents to only include the specified fields
-    if (response && response.faceEvents) {
-      const filteredEvents = response.faceEvents.map((event: any) => ({
-        deviceUuid: event.deviceUuid,
-        eventTimestampMs: event.eventTimestamp,
-        eventTimestamp: formatTimestamp(event.eventTimestamp, timeZone),
-        faceName: event.faceName,
-        locationUuid: event.locationUuid,
-        personUuid: event.personUuid,
-        // selectedPersonMatch: event.selectedPersonMatch,
-        thumbnailS3Key: event.thumbnailS3Key,
-        // topPersonMatches: event.topPersonMatches,
-        uuid: event.uuid,
-      }));
-
-      allFaceEvents.push(...filteredEvents);
-
-      // Check if we should continue pagination
-      if (response.faceEvents.length === 100 && response.lastEvaluatedKey) {
-        // Update the pageRequest for the next iteration
-        currentArgs = {
-          ...currentArgs,
-          pageRequest: {
-            maxPageSize: currentArgs.pageRequest?.maxPageSize || 100,
-            lastEvaluatedKey: response.lastEvaluatedKey,
-          },
-        };
-      } else {
-        hasMore = false;
-      }
-    } else {
-      hasMore = false;
-    }
-  }
-
-  return allFaceEvents;
+	return {
+		faceEvents,
+		lastEvaluatedKey: response?.lastEvaluatedKey,
+	};
 }
 
 export async function getRegisteredFaces(
-  _args: GetRegisteredFacesArgs,
-  requestModifiers?: any,
-  sessionId?: string
+	_args: GetRegisteredFacesArgs,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
 ) {
-  return await postApi<schema["Facerecognition_person_FindPeopleByOrgWSResponse"]>({
-    route: "/faceRecognition/person/findPeopleByOrg",
-    body: {},
-    modifiers: requestModifiers,
-    sessionId,
-  });
+	return await postApi<
+		schema["Facerecognition_person_FindPeopleByOrgWSResponse"]
+	>({
+		route: "/faceRecognition/person/findPeopleByOrg",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
 }
 
 export async function getPersonLabels(
-  requestModifiers?: any,
-  sessionId?: string
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
 ) {
-  return await postApi<schema["Facerecognition_person_FindPersonLabelsByOrgWSResponse"]>({
-    route: "/faceRecognition/person/findPersonLabelsByOrg",
-    body: {},
-    modifiers: requestModifiers,
-    sessionId,
-  });
+	return await postApi<
+		schema["Facerecognition_person_FindPersonLabelsByOrgWSResponse"]
+	>({
+		route: "/faceRecognition/person/findPersonLabelsByOrg",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
 }
 
 export async function searchSimilarFaces(
-  faceEventUuid: string,
-  timeZone: string,
-  requestModifiers?: RequestModifiers,
-  sessionId?: string
+	faceEventUuid: string,
+	timeZone: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
 ) {
-  const res = await postApi<schema["Facerecognition_faceevent_FindSimilarFaceEventsWSResponse"]>({
-    route: "/faceRecognition/faceEvent/findSimilarFaceEvents",
-    body: { faceEventUuid },
-    modifiers: requestModifiers,
-    sessionId,
-  });
-  if (res.error) throw new Error(JSON.stringify(res));
-  return (res.faceEvents || []).map((event: any) => ({
-    uuid: event.uuid ?? undefined,
-    personUuid: event.personUuid ?? undefined,
-    similarity: event.similarity ?? undefined,
-    eventTimestamp: event.eventTimestamp ? formatTimestamp(event.eventTimestamp, timeZone) : undefined,
-  }));
+	const res = await postApi<
+		schema["Facerecognition_faceevent_FindSimilarFaceEventsWSResponse"]
+	>({
+		route: "/faceRecognition/faceEvent/findSimilarFaceEvents",
+		body: { faceEventUuid },
+		modifiers: requestModifiers,
+		sessionId,
+	});
+	if (res.error) throw new Error(JSON.stringify(res));
+	return (res.faceEvents || []).map((event: any) => ({
+		uuid: event.uuid ?? undefined,
+		personUuid: event.personUuid ?? undefined,
+		similarity: event.similarity ?? undefined,
+		eventTimestamp: event.eventTimestamp
+			? formatTimestamp(event.eventTimestamp, timeZone)
+			: undefined,
+	}));
 }
 
 export async function getFaceMatchmakers(
-  requestModifiers?: RequestModifiers,
-  sessionId?: string
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
 ) {
-  const res = await postApi<schema["Facerecognition_matchmaker_FindFaceMatchmakersByOrgWSResponse"]>({
-    route: "/faceRecognition/matchmaker/findFaceMatchmakersByOrg",
-    body: {},
-    modifiers: requestModifiers,
-    sessionId,
-  });
-  if (res.error) throw new Error(JSON.stringify(res));
-  return (res.faceMatchmakers || []).map((m: any) => ({
-    uuid: m.uuid ?? undefined,
-    personUuid: m.personUuid ?? undefined,
-    name: m.name ?? undefined,
-  }));
+	const res = await postApi<
+		schema["Facerecognition_matchmaker_FindFaceMatchmakersByOrgWSResponse"]
+	>({
+		route: "/faceRecognition/matchmaker/findFaceMatchmakersByOrg",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
+	if (res.error) throw new Error(JSON.stringify(res));
+	return (res.faceMatchmakers || []).map((m: any) => ({
+		uuid: m.uuid ?? undefined,
+		personUuid: m.personUuid ?? undefined,
+		name: m.name ?? undefined,
+	}));
 }
 
 export async function getFaceEventsByPerson(
-  personUuid: string,
-  timeZone: string,
-  requestModifiers?: RequestModifiers,
-  sessionId?: string
+	personUuid: string,
+	timeZone: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
 ) {
-  const res = await postApi<schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]>({
-    route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
-    body: {
-      pageRequest: { maxPageSize: 75 },
-      searchFilter: { personUuids: [personUuid], deviceUuids: [], faceNames: [], labels: [], locationUuids: [] },
-    },
-    modifiers: requestModifiers,
-    sessionId,
-  });
-  if (res.error) throw new Error(JSON.stringify(res));
-  return (res.faceEvents || []).map(event => ({
-    uuid: event.uuid ?? undefined,
-    personUuid: event.personUuid ?? undefined,
-    eventTimestamp: event.eventTimestamp ? formatTimestamp(event.eventTimestamp, timeZone) : undefined,
-    deviceUuid: event.deviceUuid ?? undefined,
-  }));
+	const res = await postApi<
+		schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]
+	>({
+		route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+		body: {
+			pageRequest: { maxPageSize: 75 },
+			searchFilter: {
+				personUuids: [personUuid],
+				deviceUuids: [],
+				faceNames: [],
+				labels: [],
+				locationUuids: [],
+			},
+		},
+		modifiers: requestModifiers,
+		sessionId,
+	});
+	if (res.error) throw new Error(JSON.stringify(res));
+
+	const faceEvents = (res.faceEvents || []).map((event) => ({
+		uuid: event.uuid ?? undefined,
+		personUuid: event.personUuid ?? undefined,
+		eventTimestamp: event.eventTimestamp
+			? formatTimestamp(event.eventTimestamp, timeZone)
+			: undefined,
+		deviceUuid: event.deviceUuid ?? undefined,
+	}));
+
+	return {
+		faceEvents,
+		lastEvaluatedKey: res.lastEvaluatedKey,
+	};
 }

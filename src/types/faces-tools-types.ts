@@ -228,6 +228,7 @@ export const OUTPUT_SCHEMA = z.object({
     eventTimestamp: z.string().optional(),
     deviceUuid: z.string().optional(),
   })).optional().describe("Face events for a specific person"),
+  lastEvaluatedKey: z.string().optional().describe("For paginated requests, this is the returned last evaluated key that can be passed back in on the next request to get the next page of results"),
   error: z.optional(z.string()),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

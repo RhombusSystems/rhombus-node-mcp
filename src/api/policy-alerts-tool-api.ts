@@ -1,8 +1,8 @@
 import { postApi } from "../network.js";
-import { formatTimestamp, RequestModifiers } from "../util.js";
-import { ApiPayload } from "../types/policy-alerts-tool-types.js";
-import { components } from "../types/schema-components.js";
-import schema from "../types/schema.js";
+import type { ApiPayload } from "../types/policy-alerts-tool-types.js";
+import type schema from "../types/schema.js";
+import type { components } from "../types/schema-components.js";
+import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 type PolicyAlert = components["schemas"]["PolicyAlertV2Type"];
 
@@ -111,6 +111,8 @@ export async function getPolicyAlertGroups(
   if (payload.deviceFilter) body.deviceUuids = payload.deviceFilter;
   if (payload.locationFilter) body.locationUuids = payload.locationFilter;
   if (payload.maxResults) body.maxResults = payload.maxResults;
+  if (payload.lastTimestampMs != null) body.lastTimestampMs = payload.lastTimestampMs;
+  if (payload.lastUuid) body.lastUuid = payload.lastUuid;
 
   const response = await postApi<schema["Event_GetPolicyAlertGroupsV2WSResponse"]>({
     route: "/event/getPolicyAlertGroupsV2",
@@ -119,5 +121,8 @@ export async function getPolicyAlertGroups(
     sessionId,
   });
 
-  return { policyAlerts: response.policyAlertGroups || [] };
+  return {
+    ...response,
+    policyAlerts: response.policyAlertGroups || [],
+  };
 }
