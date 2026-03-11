@@ -4,6 +4,7 @@ import {
   getCameraDetails,
   cleanUpdatePayload,
   formatCameraSettings,
+  validateCameraFeatureSupport,
 } from "../api/update-tool-api.js";
 import {
   OUTPUT_SCHEMA,
@@ -129,6 +130,24 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         // Validate the full payload
         const validatedPayload = UpdateCameraConfigPayload.parse(updatePayload);
 
+        const featureValidation = await validateCameraFeatureSupport(
+          validatedPayload,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        if (!featureValidation.canProceed) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  featureValidation.error ||
+                  "This camera does not support one or more requested features.",
+              },
+            ],
+          };
+        }
+
         // Apply the updates
         const result = await updateCameraConfig(
           validatedPayload,
@@ -137,11 +156,15 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         );
 
         if (!result.success) {
+          const hasCapabilitySensitiveChange = hasCapabilitySensitiveSettings(validatedPayload);
+          const normalizedError = hasCapabilitySensitiveChange
+            ? "This camera may not support one or more requested settings."
+            : result.error;
           return {
             content: [
               {
                 type: "text" as const,
-                text: `Failed to update camera settings: ${result.error}`,
+                text: `Failed to update camera settings: ${normalizedError}`,
               },
             ],
           };
@@ -359,6 +382,25 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     ],
   };
 };
+
+function hasCapabilitySensitiveSettings(payload: UpdateCameraConfigPayload): boolean {
+  const requestedVideoSettings = Object.values(payload.configUpdate.videoFacetSettings ?? {});
+  const hasCapabilityDependentVideoChange = requestedVideoSettings.some(
+    settings =>
+      settings.resolution !== undefined ||
+      settings.hdr_enabled !== undefined ||
+      settings.wdr_enabled !== undefined ||
+      settings.wdr_strength !== undefined
+  );
+  const requestedAudioSettings = Object.values(payload.configUpdate.audioFacetSettings ?? {});
+  const hasCapabilityDependentAudioChange = requestedAudioSettings.some(
+    settings =>
+      settings.audio_record !== undefined ||
+      settings.device_mic_enabled !== undefined ||
+      settings.device_speaker_enabled !== undefined
+  );
+  return hasCapabilityDependentVideoChange || hasCapabilityDependentAudioChange;
+}
 
 export function createTool(server: McpServer) {
   server.registerTool(
