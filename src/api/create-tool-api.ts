@@ -1,6 +1,6 @@
 import { logger } from "../logger.js";
 import { postApi } from "../network.js";
-import type schema from "../types/schema.js";
+import type { schema } from "../types/schema.js";
 import type {
 	CreateVideoWallOptions,
 	OutputSchema,

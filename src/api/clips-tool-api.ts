@@ -1,7 +1,6 @@
 import { postApi } from "../network.js";
 import type { ApiPayload, OutputSchema } from "../types/clips-tool-types.js";
-import type { components } from "../types/schema-components.js";
-import type schema from "../types/schema.js";
+import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
 export async function getSavedClips(

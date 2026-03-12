@@ -1,10 +1,9 @@
 import { postApi } from "../network.js";
 import type { ApiPayload } from "../types/policy-alerts-tool-types.js";
-import type schema from "../types/schema.js";
-import type { components } from "../types/schema-components.js";
+import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
-type PolicyAlert = components["schemas"]["PolicyAlertV2Type"];
+type PolicyAlert = schema["PolicyAlertV2Type"];
 
 export async function getPolicyAlerts(
   args: ApiPayload,

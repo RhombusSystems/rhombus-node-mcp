@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
-import { ComponentEventEnumType } from "./schema-components.js";
+import { ComponentEventEnumType } from "./schema.js";
 import { HumanEvent } from "../api/events-tool-api.js";
 import { TempUnit } from "../utils/temp.js";
 

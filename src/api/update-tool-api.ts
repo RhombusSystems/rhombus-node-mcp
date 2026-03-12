@@ -1,7 +1,7 @@
 import { postApi } from "../network.js";
 import type { RequestModifiers } from "../util.js";
 import type { UpdateCameraConfigPayload } from "../types/update-tool-types.js";
-import schema from "../types/schema.js";
+import { schema } from "../types/schema.js";
 
 type CameraConfigOption = {
   wdrRange?: {
