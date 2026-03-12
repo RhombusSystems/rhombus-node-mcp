@@ -2,21 +2,21 @@ import { DateTime } from "luxon";
 import { getLogger } from "../logger.js";
 import { postApi } from "../network.js";
 import type { OutputSchema, SanitizedTimeSeriesDataPoint } from "../types/report-tool-types.js";
-import type schema from "../types/schema.js";
-import { GetCountReportV2WSRequestTypesEnum } from "../types/schema-components.js";
+import type { schema } from "../types/schema.js";
+import { ReportTypeEnum } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 const REPORT_TYPES_THAT_RETURN_UTC = new Set([
-  GetCountReportV2WSRequestTypesEnum.BANDWIDTH,
-  GetCountReportV2WSRequestTypesEnum.LICENSEPLATES,
-  GetCountReportV2WSRequestTypesEnum.DWELL,
+  ReportTypeEnum.BANDWIDTH,
+  ReportTypeEnum.LICENSEPLATES,
+  ReportTypeEnum.DWELL,
 ]);
 
 const logger = getLogger();
 
 function getUtcTime(
   datetime: string,
-  reportType: GetCountReportV2WSRequestTypesEnum,
+  reportType: ReportTypeEnum,
   timeZone?: string
 ): string {
   if (REPORT_TYPES_THAT_RETURN_UTC.has(reportType)) {

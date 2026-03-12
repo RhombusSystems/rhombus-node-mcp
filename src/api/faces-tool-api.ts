@@ -3,7 +3,7 @@ import type {
 	GetFaceEventsArgs,
 	GetRegisteredFacesArgs,
 } from "../types/faces-tools-types.js";
-import type schema from "../types/schema.js";
+import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 import { removeNulls } from "../utils/remove-nulls.js";
 

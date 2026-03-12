@@ -1,7 +1,7 @@
 import z from "zod";
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { postApi } from "../network.js";
-import type schema from "../types/schema.js";
+import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 import { tempFunc, TempUnit } from "../utils/temp.js";
 

@@ -43,7 +43,6 @@ const LocationType: z.ZodObject<any> = z.object({
   name: z.string().optional(),
   policyUuid: z.string().optional(),
   postalCode: z.string().optional(),
-  qualifiedAddress: z.lazy(() => QualifiedAddressType).optional(),
   subLocations: z.array(z.lazy(() => LocationType)).optional(),
   tz: z.string().optional(),
   uuid: z.string().optional()
@@ -67,6 +66,61 @@ const ACUDoorLicenseType: z.ZodObject<any> = z.object({
   state: z.string().optional(),
   trial: z.boolean().optional(),
   updatedOn: z.string().datetime({ offset: true }).optional(),
+  uuid: z.string().optional()
+});
+const DataSource = z.string();
+const AIReportGenerateParams: z.ZodObject<any> = z.object({
+  additionalPrompt: z.string().optional(),
+  dataSources: z.array(DataSource).optional(),
+  deviceUuids: z.array(z.string()).optional(),
+  rangeEndMs: z.number().int().optional(),
+  rangeStartMs: z.number().int().optional()
+});
+const ChatVisibility = z.string();
+const ChatPrivacy: z.ZodObject<any> = z.object({
+  permissionGroupUuid: z.string().optional(),
+  permittedPrincipalUuids: z.array(z.string()).optional(),
+  visibility: ChatVisibility.optional()
+});
+const QueryStatus = z.string();
+const QueryTimelineEvent: z.ZodObject<any> = z.object({
+  status: QueryStatus.optional(),
+  timestampMs: z.number().int().optional()
+});
+const QueryTool: z.ZodObject<any> = z.object({
+  content: z.string().optional(),
+  contentType: z.string().optional(),
+  extra: z.string().optional(),
+  role: z.string().optional(),
+  timestampMs: z.number().int().optional(),
+  tool: z.string().optional()
+});
+const AIReport: z.ZodObject<any> = z.object({
+  completedAtMs: z.number().int().optional(),
+  groupUuid: z.string().optional(),
+  orgUuid: z.string().optional(),
+  params: AIReportGenerateParams.optional(),
+  principalUuid: z.string().optional(),
+  privacy: ChatPrivacy.optional(),
+  scheduleUuid: z.string().optional(),
+  scheduledAiReportUuid: z.string().optional(),
+  startedAtMs: z.number().int().optional(),
+  structureJson: z.string().optional(),
+  timeline: z.array(QueryTimelineEvent).optional(),
+  title: z.string().optional(),
+  toolingTimeline: z.array(QueryTool).optional(),
+  uuid: z.string().optional()
+});
+const AIReportGroup: z.ZodObject<any> = z.object({
+  createdAtMs: z.number().int().optional(),
+  lastModifiedMs: z.number().int().optional(),
+  latestStatus: QueryStatus.optional(),
+  numReports: z.number().int().optional(),
+  orgUuid: z.string().optional(),
+  principalUuid: z.string().optional(),
+  privacy: ChatPrivacy.optional(),
+  scheduledAiReportUuid: z.string().optional(),
+  title: z.string().optional(),
   uuid: z.string().optional()
 });
 const ShippedItemType: z.ZodObject<any> = z.object({
@@ -262,6 +316,24 @@ const Wiegand64BitRawCredentialType: z.ZodObject<any> = z.object({
   value: z.string().optional(),
   workflowStatus: AccessControlCredentialWorkflowStatusEnumType.optional()
 });
+const CustomCredential: z.ZodObject<any> = z.object({
+  createdAtMillis: z.number().int().optional(),
+  endDateEpochSecExclusive: z.number().int().optional(),
+  lastUsedAccessControlledDoorUuid: z.string().optional(),
+  lastUsedAtMillis: z.number().int().optional(),
+  lastUsedLocationUuid: z.string().optional(),
+  lowercaseHexValue: z.string().optional(),
+  managedCredUuid: z.string().optional(),
+  note: z.string().optional(),
+  orgUuid: z.string().optional(),
+  startDateEpochSecInclusive: z.number().int().optional(),
+  type: AccessControlCredentialEnumType.optional(),
+  updatedAtMillis: z.number().int().optional(),
+  userUuid: z.string().optional(),
+  uuid: z.string().optional(),
+  value: z.string().optional(),
+  workflowStatus: AccessControlCredentialWorkflowStatusEnumType.optional()
+});
 const AccessControlCredentialType: z.ZodObject<any> = z.object({
   createdAtMillis: z.number().int().optional(),
   endDateEpochSecExclusive: z.number().int().optional(),
@@ -423,10 +495,10 @@ const FirstInShadow: z.ZodObject<any> = z.object({
   state: FirstInFirmwareStatus.optional(),
   stateUpdateEventTimestampMs: z.number().int().optional()
 });
-const DoorStateSourceEnum = z.string();
+const AccessStateSourceEnum = z.string();
 const AccessControlledDoorStateEnumType = z.string();
-const DoorStateShadow: z.ZodObject<any> = z.object({
-  source: DoorStateSourceEnum.optional(),
+const AccessStateShadow: z.ZodObject<any> = z.object({
+  source: AccessStateSourceEnum.optional(),
   state: AccessControlledDoorStateEnumType.optional(),
   stateUpdateEventTimestampMs: z.number().int().optional()
 });
@@ -438,7 +510,7 @@ const AccessControlledDoorShadow: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional(),
   ownerDeviceUuid: z.string().optional(),
   scheduleFirstIn: FirstInShadow.optional(),
-  state: DoorStateShadow.optional(),
+  state: AccessStateShadow.optional(),
   type: ComponentCompositeShadowEnum.optional(),
   updatedAtMillis: z.number().int().optional()
 });
@@ -452,11 +524,11 @@ const FirstInState: z.ZodObject<any> = z.object({
   requestedAtMillis: z.number().int().optional(),
   state: FirstInStatus.optional()
 });
-const ManualDoorStateChangeEnum = z.string();
-const BaseDoorStateOverride: z.ZodObject<any> = z.object({
+const ManualAccessStateChangeEnum = z.string();
+const BaseAccessStateOverride: z.ZodObject<any> = z.object({
   originator: BaseEventOriginator.optional(),
   requestedAtMillis: z.number().int().optional(),
-  type: ManualDoorStateChangeEnum.optional()
+  type: ManualAccessStateChangeEnum.optional()
 });
 const ProximityUnlockSettingsType: z.ZodObject<any> = z.object({
   credCooldownSec: z.number().int().optional(),
@@ -488,7 +560,7 @@ const AccessControlledDoorType: z.ZodObject<any> = z.object({
   directionRadians: z.number().optional(),
   doorAuthFirstInStateOverride: FirstInState.optional(),
   doorScheduleFirstInStateOverride: FirstInState.optional(),
-  doorStateOverride: BaseDoorStateOverride.optional(),
+  doorStateOverride: BaseAccessStateOverride.optional(),
   doorStateToScheduleUuidMap: z.record(z.unknown()).optional(),
   dpiComponents: z.array(ComponentReferenceType).optional(),
   floorNumber: z.number().int().optional(),
@@ -538,11 +610,11 @@ const FirstInState_Minimal: z.ZodObject<any> = z.object({
   requestedAtMillis: z.number().int().optional(),
   state: FirstInStatus_Minimal.optional()
 });
-const ManualDoorStateChangeEnum_Minimal = z.string();
-const BaseDoorStateOverride_Minimal: z.ZodObject<any> = z.object({
+const ManualAccessStateChangeEnum_Minimal = z.string();
+const BaseAccessStateOverride_Minimal: z.ZodObject<any> = z.object({
   originator: BaseEventOriginator_Minimal.optional(),
   requestedAtMillis: z.number().int().optional(),
-  type: ManualDoorStateChangeEnum_Minimal.optional()
+  type: ManualAccessStateChangeEnum_Minimal.optional()
 });
 const ProximityUnlockSettingsType_Minimal: z.ZodObject<any> = z.object({
   enabled: z.boolean().optional(),
@@ -560,7 +632,7 @@ const AccessControlledDoorType_Minimal: z.ZodObject<any> = z.object({
   directionRadians: z.number().optional(),
   doorAuthFirstInStateOverride: FirstInState_Minimal.optional(),
   doorScheduleFirstInStateOverride: FirstInState_Minimal.optional(),
-  doorStateOverride: BaseDoorStateOverride_Minimal.optional(),
+  doorStateOverride: BaseAccessStateOverride_Minimal.optional(),
   dpiComponents: z.array(ComponentReferenceType_Minimal).optional(),
   floorNumber: z.number().int().optional(),
   geofenceEnabled: z.boolean().optional(),
@@ -584,6 +656,79 @@ const AccessControlledDoorType_Minimal: z.ZodObject<any> = z.object({
   uuid: z.string().optional(),
   waveToUnlockSettings: WaveToUnlockSettingsType_Minimal.optional()
 });
+const AccessControlledElevator: z.ZodObject<any> = z.object({
+  associatedCameras: z.array(z.string()).optional(),
+  associatedFaceDetectionCameras: z.array(z.string()).optional(),
+  createdAtMillis: z.number().int().optional(),
+  directionRadians: z.number().optional(),
+  elevatorLandingReferences: z.record(z.unknown()).optional(),
+  forceAllReadersFirstInAuthRequiredLedFeedbackEnabled: z.boolean().optional(),
+  forceAllReadersFirstInUnlockPendingLedFeedbackEnabled: z.boolean().optional(),
+  forceAllReadersOtherReaderUnlockAudioFeedbackEnabled: z.boolean().optional(),
+  forceAllReadersRemoteUnlockAudioFeedbackEnabled: z.boolean().optional(),
+  geofenceEnabled: z.boolean().optional(),
+  geofenceRadius: z.number().optional(),
+  latitude: z.number().optional(),
+  locationUuid: z.string().optional(),
+  longitude: z.number().optional(),
+  name: z.string().optional(),
+  nfcSecureDowngradeEnabled: z.boolean().optional(),
+  orgUuid: z.string().optional(),
+  ownerDeviceUuid: z.string().optional(),
+  policyUuid: z.string().optional(),
+  proximityUnlockSettings: ProximityUnlockSettingsType.optional(),
+  readerComponents: z.array(ComponentReferenceType).optional(),
+  remoteUnlockEnabled: z.boolean().optional(),
+  sendExpiredIntentEvents: z.boolean().optional(),
+  type: ComponentCompositeEnumType.optional(),
+  unlockTimeSec: z.number().int().optional(),
+  updatedAtMillis: z.number().int().optional(),
+  uuid: z.string().optional(),
+  waveToUnlockSettings: WaveToUnlockSettingsType.optional()
+});
+const AccessControlledElevatorLanding: z.ZodObject<any> = z.object({
+  accessScheduleFirstInStateOverride: FirstInState.optional(),
+  accessStateOverride: BaseAccessStateOverride.optional(),
+  accessStateToScheduleUuidMap: z.record(z.unknown()).optional(),
+  associatedCameras: z.array(z.string()).optional(),
+  associatedFaceDetectionCameras: z.array(z.string()).optional(),
+  authFirstInStateOverride: FirstInState.optional(),
+  createdAtMillis: z.number().int().optional(),
+  defaultAccessState: AccessControlledDoorStateEnumType.optional(),
+  floorNumber: z.number().int().optional(),
+  geofenceEnabled: z.boolean().optional(),
+  geofenceRadius: z.number().optional(),
+  locationUuid: z.string().optional(),
+  name: z.string().optional(),
+  orgUuid: z.string().optional(),
+  ownerDeviceUuid: z.string().optional(),
+  policyUuid: z.string().optional(),
+  remoteUnlockEnabled: z.boolean().optional(),
+  type: ComponentCompositeEnumType.optional(),
+  updatedAtMillis: z.number().int().optional(),
+  uuid: z.string().optional()
+});
+const AccessControlledElevatorLandingShadow: z.ZodObject<any> = z.object({
+  authFirstIn: FirstInShadow.optional(),
+  componentCompositeUuid: z.string().optional(),
+  createdAtMillis: z.number().int().optional(),
+  orgUuid: z.string().optional(),
+  scheduleFirstIn: FirstInShadow.optional(),
+  state: AccessStateShadow.optional(),
+  type: ComponentCompositeShadowEnum.optional(),
+  updatedAtMillis: z.number().int().optional()
+});
+const EarlyExpireModeEnum = z.string();
+const AccessStateOverride: z.ZodObject<any> = z.object({
+  expireEarlyMode: EarlyExpireModeEnum.optional(),
+  expiresAtMillis: z.number().int().optional(),
+  followFirstInRules: z.boolean().optional(),
+  originator: BaseEventOriginator.optional(),
+  requestedAtMillis: z.number().int().optional(),
+  startDelaySeconds: z.number().int().optional(),
+  state: AccessControlledDoorStateEnumType.optional(),
+  type: ManualAccessStateChangeEnum.optional()
+});
 const Accesscontrol_SendUserPresenceForCurrentUserSuccessWsResponse: z.ZodObject<any> = z.object({
   type: z.string().optional()
 });
@@ -592,6 +737,26 @@ const Accesscontrol_SendUserPresenceForCurrentUserErrorWsResponse: z.ZodObject<a
 });
 const Accesscontrol_BaseSendUserPresenceForCurrentUserWsResponse: z.ZodObject<any> = z.object({
   type: z.string().optional()
+});
+const Accesscontrol_Create35BitCorp1000StdCredentialWSRequest: z.ZodObject<any> = z.object({
+  cardNumber: z.number().int().optional(),
+  companyId: z.number().int().optional(),
+  endDateEpochSecExclusive: z.number().int().optional(),
+  startDateEpochSecInclusive: z.number().int().optional(),
+  userUuid: z.string().optional()
+});
+const Accesscontrol_Create35BitCorp1000StdCredentialWSResponse: z.ZodObject<any> = z.object({
+  credential: AccessControlCredentialType.optional()
+});
+const Accesscontrol_Create48BitCorp1000StdCredentialWSRequest: z.ZodObject<any> = z.object({
+  cardNumber: z.number().int().optional(),
+  companyId: z.number().int().optional(),
+  endDateEpochSecExclusive: z.number().int().optional(),
+  startDateEpochSecInclusive: z.number().int().optional(),
+  userUuid: z.string().optional()
+});
+const Accesscontrol_Create48BitCorp1000StdWSResponse: z.ZodObject<any> = z.object({
+  credential: AccessControlCredentialType.optional()
 });
 const Accesscontrol_DeviceUnlockableAccessControlledDoorType: z.ZodObject<any> = z.object({
   name: z.string().optional(),
@@ -686,8 +851,34 @@ const Accesscontrol_UnlockAccessControlledDoorSuccessWSResponse: z.ZodObject<any
 const Accesscontrol_UnlockAccessControlledDoorWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuid: z.string().optional()
 });
+const Accesscontrol_UnlockAccessControlledElevatorErrorWSResponse: z.ZodObject<any> = z.object({
+  type: z.string().optional()
+});
+const Accesscontrol_UnlockAccessControlledElevatorForCurrentUserErrorWSResponse: z.ZodObject<any> = z.object({
+  type: z.string().optional()
+});
+const Accesscontrol_UnlockAccessControlledElevatorForCurrentUserSuccessWSResponse: z.ZodObject<any> = z.object({
+  type: z.string().optional()
+});
+const Accesscontrol_UnlockAccessControlledElevatorForCurrentUserWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuids: z.array(z.string()).optional(),
+  accessControlledElevatorUuid: z.string().optional(),
+  cmdVersion: z.string().optional(),
+  credentialValue: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  requestTimeMillis: z.number().int().optional()
+});
+const Accesscontrol_UnlockAccessControlledElevatorSuccessWSResponse: z.ZodObject<any> = z.object({
+  type: z.string().optional()
+});
+const Accesscontrol_UnlockAccessControlledElevatorWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuids: z.array(z.string()).optional(),
+  accessControlledElevatorUuid: z.string().optional()
+});
 const LocationAccessGrantType: z.ZodObject<any> = z.object({
   accessControlledDoorUuids: z.array(z.string()).optional(),
+  accessControlledElevatorLandingUuids: z.array(z.string()).optional(),
   createdAtMillis: z.number().int().optional(),
   doorLabelIds: z.array(z.string()).optional(),
   groupUuids: z.array(z.string()).optional(),
@@ -715,6 +906,12 @@ const Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWS
   accessControlledDoorUuid: z.string().optional()
 });
 const Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
+  accessGrants: z.array(LocationAccessGrantType).optional()
+});
+const Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string().optional()
+});
+const Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSResponse: z.ZodObject<any> = z.object({
   accessGrants: z.array(LocationAccessGrantType).optional()
 });
 const Accesscontrol_accessgrant_FindLocationAccessGrantsByDoorLabelWSRequest: z.ZodObject<any> = z.object({
@@ -779,14 +976,6 @@ const FloorPlanType: z.ZodObject<any> = z.object({
   rotation: z.number().optional(),
   southEdge: z.number().optional(),
   westEdge: z.number().optional()
-});
-const QualifiedAddressType: z.ZodObject<any> = z.object({
-  addressLine2: z.string().optional(),
-  addressline1: z.string().optional(),
-  administrativeArea: z.string().optional(),
-  locality: z.string().optional(),
-  postalCode: z.string().optional(),
-  regionCode: z.string().optional()
 });
 const LockdownActivationPlanType: z.ZodObject<any> = z.object({
   groupUuids: z.array(z.string()).optional(),
@@ -857,10 +1046,12 @@ const Accesscontrol_accessgrant_UpdateAccessGrantWSResponse: z.ZodObject<any> = 
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   expiredACDLicensesDoorUuids: z.array(z.string()).optional(),
-  unassignedACDLicensesDoorUuids: z.array(z.string()).optional()
+  unassignedACDLicensesDoorUuids: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const LocationAccessRevocationType: z.ZodObject<any> = z.object({
   accessControlledDoorUuids: z.array(z.string()).optional(),
+  accessControlledElevatorLandingUuids: z.array(z.string()).optional(),
   createdAtMillis: z.number().int().optional(),
   doorLabelIds: z.array(z.string()).optional(),
   groupUuids: z.array(z.string()).optional(),
@@ -888,6 +1079,12 @@ const Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessContro
   accessControlledDoorUuid: z.string().optional()
 });
 const Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
+  accessRevocations: z.array(LocationAccessRevocationType).optional()
+});
+const Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string().optional()
+});
+const Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSResponse: z.ZodObject<any> = z.object({
   accessRevocations: z.array(LocationAccessRevocationType).optional()
 });
 const Accesscontrol_accessrevocation_FindLocationAccessRevocationsByDoorLabelWSRequest: z.ZodObject<any> = z.object({
@@ -926,7 +1123,8 @@ const Accesscontrol_accessrevocation_UpdateAccessRevocationWSResponse: z.ZodObje
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   expiredACDLicensesDoorUuids: z.array(z.string()).optional(),
-  unassignedACDLicensesDoorUuids: z.array(z.string()).optional()
+  unassignedACDLicensesDoorUuids: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const BadgeTemplateElementEnum = z.string();
 const CustomTextElement: z.ZodObject<any> = z.object({
@@ -1082,6 +1280,12 @@ const Accesscontrol_credentials_BaseUnlockAccessControlledDoorForCurrentUserWSRe
 const Accesscontrol_credentials_BaseUnlockAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
   type: z.string().optional()
 });
+const Accesscontrol_credentials_BaseUnlockAccessControlledElevatorForCurrentUserWSResponse: z.ZodObject<any> = z.object({
+  type: z.string().optional()
+});
+const Accesscontrol_credentials_BaseUnlockAccessControlledElevatorWSResponse: z.ZodObject<any> = z.object({
+  type: z.string().optional()
+});
 const Accesscontrol_credentials_BulkProvisionPinCredentialsWSRequest: z.ZodObject<any> = z.object({
   endDateEpochSecExclusive: z.number().int().min(0).optional(),
   notifyUsers: z.boolean().optional(),
@@ -1093,7 +1297,8 @@ const Accesscontrol_credentials_BulkProvisionPinCredentialsWSResponse: z.ZodObje
   credentials: z.array(AccessControlCredentialType).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  failedUsers: z.array(z.string()).optional()
+  failedUsers: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_BulkRotatePinCredentialsWSRequest: z.ZodObject<any> = z.object({
   credentialUuids: z.array(z.string()),
@@ -1105,7 +1310,8 @@ const Accesscontrol_credentials_BulkRotatePinCredentialsWSRequest: z.ZodObject<a
 const Accesscontrol_credentials_BulkRotatePinCredentialsWSResponse: z.ZodObject<any> = z.object({
   credentials: z.array(AccessControlCredentialType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_CreateAccessControlCredentialByHexValueAndTypeWSRequest: z.ZodObject<any> = z.object({
   credentialType: AccessControlCredentialEnumType.optional(),
@@ -1134,7 +1340,8 @@ const Accesscontrol_credentials_CreatePinCredentialWSRequest: z.ZodObject<any> =
 const Accesscontrol_credentials_CreatePinCredentialWSResponse: z.ZodObject<any> = z.object({
   credential: AccessControlCredentialType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_CreateRhombusSecureCsnCredentialWSRequest: z.ZodObject<any> = z.object({
   credentialValue: z.string().optional(),
@@ -1216,7 +1423,8 @@ const Accesscontrol_credentials_DeletePinCredentialWSRequest: z.ZodObject<any> =
 });
 const Accesscontrol_credentials_DeletePinCredentialWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_DeleteUnassignedAccessControlCredentialWSRequest: z.ZodObject<any> = z.object({
   credentialHexValue: z.string().optional()
@@ -1284,7 +1492,8 @@ const Accesscontrol_credentials_FindPinCredentialsByOrgWSRequest: z.ZodObject<an
 const Accesscontrol_credentials_FindPinCredentialsByOrgWSResponse: z.ZodObject<any> = z.object({
   credentials: z.array(AccessControlCredentialType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_FindRhombusSecureMobileCredentialsForCurrentUserWSRequest = z.record(z.unknown());
 const Accesscontrol_credentials_FindRhombusSecureMobileCredentialsForCurrentUserWSResponse: z.ZodObject<any> = z.object({
@@ -1296,7 +1505,8 @@ const Accesscontrol_credentials_GetAvailablePinCodeWSRequest: z.ZodObject<any> =
 const Accesscontrol_credentials_GetAvailablePinCodeWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  pinCode: z.string().optional()
+  pinCode: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_GetPinCredentialDetailsWSRequest: z.ZodObject<any> = z.object({
   credentialUuid: z.string()
@@ -1304,7 +1514,8 @@ const Accesscontrol_credentials_GetPinCredentialDetailsWSRequest: z.ZodObject<an
 const Accesscontrol_credentials_GetPinCredentialDetailsWSResponse: z.ZodObject<any> = z.object({
   credential: AccessControlCredentialType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_GetRhombusSecureCsnCredentialDetailsWSRequest: z.ZodObject<any> = z.object({
   credentialUuid: z.string().optional()
@@ -1367,7 +1578,8 @@ const Accesscontrol_credentials_RevokePinCredentialWSRequest: z.ZodObject<any> =
 });
 const Accesscontrol_credentials_RevokePinCredentialWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_RevokeRhombusSecureMobileCredentialForCurrentUserWSRequest: z.ZodObject<any> = z.object({
   credentialUuid: z.string().optional()
@@ -1384,7 +1596,8 @@ const Accesscontrol_credentials_RotatePinCredentialWSRequest: z.ZodObject<any> =
 const Accesscontrol_credentials_RotatePinCredentialWSResponse: z.ZodObject<any> = z.object({
   credential: AccessControlCredentialType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_SuspendAccessControlCredentialWSRequest: z.ZodObject<any> = z.object({
   credentialUuid: z.string().optional()
@@ -1413,7 +1626,8 @@ const Accesscontrol_credentials_UpdatePinCredentialWSRequest: z.ZodObject<any> =
 const Accesscontrol_credentials_UpdatePinCredentialWSResponse: z.ZodObject<any> = z.object({
   credential: AccessControlCredentialType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_credentials_UpdateRhombusKeyMobileAppStateForCurrentUserWSRequest: z.ZodObject<any> = z.object({
   appName: z.string().optional(),
@@ -1503,14 +1717,16 @@ const Accesscontrol_doorexception_CreateDoorScheduleExceptionWSRequest: z.ZodObj
 const Accesscontrol_doorexception_CreateDoorScheduleExceptionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  exception: DoorScheduleExceptionType.optional()
+  exception: DoorScheduleExceptionType.optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_doorexception_DeleteDoorScheduleExceptionWSRequest: z.ZodObject<any> = z.object({
   exceptionUuid: z.string().optional()
 });
 const Accesscontrol_doorexception_DeleteDoorScheduleExceptionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const DateRangeFilter: z.ZodObject<any> = z.object({
   localEndDateRangeEnd: z.string().optional(),
@@ -1525,7 +1741,8 @@ const Accesscontrol_doorexception_FindDoorScheduleExceptionsForDoorWSRequest: z.
 const Accesscontrol_doorexception_FindDoorScheduleExceptionsForDoorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  exceptions: z.array(DoorScheduleExceptionType).optional()
+  exceptions: z.array(DoorScheduleExceptionType).optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_doorexception_FindDoorScheduleExceptionsForLocationWSRequest: z.ZodObject<any> = z.object({
   dateRangeFilter: DateRangeFilter.optional(),
@@ -1534,7 +1751,8 @@ const Accesscontrol_doorexception_FindDoorScheduleExceptionsForLocationWSRequest
 const Accesscontrol_doorexception_FindDoorScheduleExceptionsForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  exceptions: z.array(DoorScheduleExceptionType).optional()
+  exceptions: z.array(DoorScheduleExceptionType).optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_doorexception_FindDoorScheduleExceptionsWSRequest: z.ZodObject<any> = z.object({
   dateRangeFilter: DateRangeFilter.optional()
@@ -1542,7 +1760,8 @@ const Accesscontrol_doorexception_FindDoorScheduleExceptionsWSRequest: z.ZodObje
 const Accesscontrol_doorexception_FindDoorScheduleExceptionsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  exceptions: z.array(DoorScheduleExceptionType).optional()
+  exceptions: z.array(DoorScheduleExceptionType).optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_doorexception_GetDoorScheduleExceptionWSRequest: z.ZodObject<any> = z.object({
   exceptionUuid: z.string().optional()
@@ -1550,7 +1769,8 @@ const Accesscontrol_doorexception_GetDoorScheduleExceptionWSRequest: z.ZodObject
 const Accesscontrol_doorexception_GetDoorScheduleExceptionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  exception: DoorScheduleExceptionType.optional()
+  exception: DoorScheduleExceptionType.optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_doorexception_UpdateDoorScheduleExceptionWSRequest: z.ZodObject<any> = z.object({
   exception: DoorScheduleExceptionType.optional()
@@ -1560,7 +1780,8 @@ const Accesscontrol_doorexception_UpdateDoorScheduleExceptionWSResponse: z.ZodOb
   errorMsg: z.string().optional(),
   exception: DoorScheduleExceptionType.optional(),
   expiredACDLicensesDoorUuids: z.array(z.string()).optional(),
-  unassignedACDLicensesDoorUuids: z.array(z.string()).optional()
+  unassignedACDLicensesDoorUuids: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_firstin_ApplyDoorAuthFirstInGroupStateWSRequest: z.ZodObject<any> = z.object({
   settingsUuid: z.string().optional(),
@@ -1583,6 +1804,7 @@ const LocationFirstInSettings: z.ZodObject<any> = z.object({
   doorScheduleFirstInState: FirstInState.optional(),
   doorScheduleRequirementEnabled: z.boolean().optional(),
   doorUuids: z.array(z.string()).optional(),
+  elevatorLandingUuids: z.array(z.string()).optional(),
   groupUuids: z.array(z.string()).optional(),
   locationUuid: z.string().optional(),
   name: z.string().optional(),
@@ -1615,6 +1837,20 @@ const Accesscontrol_firstin_ApplyDoorScheduleFirstInStateWSRequest: z.ZodObject<
 });
 const Accesscontrol_firstin_ApplyDoorScheduleFirstInStateWSResponse: z.ZodObject<any> = z.object({
   door: AccessControlledDoorType.optional()
+});
+const Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSRequest: z.ZodObject<any> = z.object({
+  elevatorLandingUuid: z.string().optional(),
+  state: FirstInStatus.optional()
+});
+const Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSResponse: z.ZodObject<any> = z.object({
+  elevatorLanding: AccessControlledElevatorLanding.optional()
+});
+const Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSRequest: z.ZodObject<any> = z.object({
+  elevatorLandingUuid: z.string().optional(),
+  state: FirstInStatus.optional()
+});
+const Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSResponse: z.ZodObject<any> = z.object({
+  elevatorLanding: AccessControlledElevatorLanding.optional()
 });
 const Accesscontrol_firstin_CreateLocationFirstInSettingsWSRequest: z.ZodObject<any> = z.object({
   settings: LocationFirstInSettings.optional()
@@ -1663,11 +1899,18 @@ const Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSRequest: z.ZodObj
 const Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSResponse: z.ZodObject<any> = z.object({
   settings: LocationFirstInSettings.optional()
 });
+const Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSRequest: z.ZodObject<any> = z.object({
+  elevatorLandingUuid: z.string().optional()
+});
+const Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSResponse: z.ZodObject<any> = z.object({
+  settings: LocationFirstInSettings.optional()
+});
 const Accesscontrol_firstin_UpdateLocationFirstInSettingsWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
   doorAuthRequirementEnabled: z.boolean().optional(),
   doorScheduleRequirementEnabled: z.boolean().optional(),
   doorUuids: z.array(z.string()).optional(),
+  elevatorLandingUuids: z.array(z.string()).optional(),
   groupUuids: z.array(z.string()).optional(),
   name: z.string().optional(),
   resets: z.array(BaseFirstInReset).optional(),
@@ -1696,6 +1939,18 @@ const Accesscontrol_lockdownplan_ActivateLockdownForLocationWSResponse: z.ZodObj
   result: LockdownActivationResultEnumType.optional(),
   state: LocationLockdownStateType.optional()
 });
+const Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSRequest: z.ZodObject<any> = z.object({
+  lockdownPlansByLocation: z.record(z.unknown()),
+  stateUpdatedAtMillis: z.number().int().optional()
+});
+const Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse: z.ZodObject<any> = z.object({
+  lockdownResults: z.record(z.unknown()).optional()
+});
+const Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownActivationResult: z.ZodObject<any> = z.object({
+  info: z.string().optional(),
+  result: LockdownActivationResultEnumType.optional(),
+  state: LocationLockdownStateType.optional()
+});
 const Accesscontrol_lockdownplan_CreateLocationLockdownPlanWSRequest: z.ZodObject<any> = z.object({
   lockdownPlan: LocationLockdownPlanType.optional()
 });
@@ -1716,16 +1971,24 @@ const CancelLoopingAudioPlaybackActionType: z.ZodObject<any> = z.object({
   _audioDevices: z.array(z.string()).optional(),
   audioDevices: z.array(z.string()).optional()
 });
+const DeviceTypeEnum = z.string();
 const ConnectAudioDeviceToPhoneNumberActionType: z.ZodObject<any> = z.object({
   audioDeviceUuid: z.string().optional(),
+  deviceType: DeviceTypeEnum.optional(),
   doorUuid: z.string().optional(),
+  optionalGreeting: z.string().optional(),
   phoneNumber: z.string().optional()
 });
 const CustomLLMActionType: z.ZodObject<any> = z.object({
+  deviceActivityEvents: z.record(z.unknown()).optional(),
   deviceFacetUuids: z.array(z.string()).optional(),
   orgUuid: z.string().optional(),
   promptUuid: z.string().optional(),
   timestampMs: z.number().int().optional()
+});
+const EnableDisableAudioRecordActionType: z.ZodObject<any> = z.object({
+  audioDeviceUuid: z.string().optional(),
+  enable: z.boolean().optional()
 });
 const IntegrationEnum = z.string();
 const IntegrationCommandActionType: z.ZodObject<any> = z.object({
@@ -1743,6 +2006,15 @@ const RemoteDoorUnlockActionType: z.ZodObject<any> = z.object({
   doorId: z.string().optional(),
   placeId: z.string().optional(),
   system: RemoteDoorUnlockSystemEnum.optional()
+});
+const ThirdPartyAudioPlaybackActionType: z.ZodObject<any> = z.object({
+  audioFileName: z.string().optional(),
+  ipAddress: z.string().optional(),
+  loopDurationSec: z.number().int().optional(),
+  password: z.string().optional(),
+  playCount: z.number().int().optional(),
+  proxyDeviceUuid: z.string().optional(),
+  username: z.string().optional()
 });
 const ComponentRelayOutputType = z.string();
 const GenericRelayStateEnumType = z.string();
@@ -1765,10 +2037,12 @@ const RuleActionType: z.ZodObject<any> = z.object({
   cancelLoopingAudioPlaybackAction: CancelLoopingAudioPlaybackActionType.optional(),
   connectAudioDeviceToPhoneNumberAction: ConnectAudioDeviceToPhoneNumberActionType.optional(),
   customLLMActions: z.array(CustomLLMActionType).optional(),
+  enableDisableAudioRecordActions: z.array(EnableDisableAudioRecordActionType).optional(),
   integrationCommandActions: z.array(IntegrationCommandActionType).optional(),
   integrationNotificationActions: z.array(IntegrationNotificationActionType).optional(),
   liveNotificationAction: z.boolean().optional(),
   remoteDoorUnlockActions: z.array(RemoteDoorUnlockActionType).optional(),
+  thirdPartyAudioPlaybackAction: ThirdPartyAudioPlaybackActionType.optional(),
   triggerComponentRelayActions: z.array(TriggerComponentRelayActionType).optional(),
   webhookActions: z.array(WebhookActionType).optional()
 });
@@ -1790,7 +2064,8 @@ const Accesscontrol_lockdownplan_CreateLockdownRuleForLocationWSRequest: z.ZodOb
 const Accesscontrol_lockdownplan_CreateLockdownRuleForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  ruleUuid: z.string().optional()
+  ruleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_lockdownplan_DeactivateLockdownForLocationViaRhombusKeyWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
@@ -1806,6 +2081,18 @@ const Accesscontrol_lockdownplan_DeactivateLockdownForLocationWSRequest: z.ZodOb
   stateUpdatedAtMillis: z.number().int().optional()
 });
 const Accesscontrol_lockdownplan_DeactivateLockdownForLocationWSResponse: z.ZodObject<any> = z.object({
+  result: LockdownDeactivationResultEnumType.optional(),
+  state: LocationLockdownStateType.optional()
+});
+const Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSRequest: z.ZodObject<any> = z.object({
+  locationUuids: z.array(z.string()),
+  stateUpdatedAtMillis: z.number().int().optional()
+});
+const Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse: z.ZodObject<any> = z.object({
+  lockdownResults: z.record(z.unknown()).optional()
+});
+const Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownDeactivationResult: z.ZodObject<any> = z.object({
+  info: z.string().optional(),
   result: LockdownDeactivationResultEnumType.optional(),
   state: LocationLockdownStateType.optional()
 });
@@ -1826,7 +2113,8 @@ const Accesscontrol_lockdownplan_DeleteLockdownRuleForLocationWSRequest: z.ZodOb
 });
 const Accesscontrol_lockdownplan_DeleteLockdownRuleForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_lockdownplan_DisableLockdownTestModeForLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
@@ -1891,7 +2179,8 @@ const Accesscontrol_lockdownplan_GetLockdownRulesForLocationWSRequest: z.ZodObje
 const Accesscontrol_lockdownplan_GetLockdownRulesForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rules: z.array(Accesscontrol_lockdownplan_ExternalLockdownPlanRuleType).optional()
+  rules: z.array(Accesscontrol_lockdownplan_ExternalLockdownPlanRuleType).optional(),
+  warningMsg: z.string().optional()
 });
 const Accesscontrol_lockdownplan_GetOrCreateLocationLockdownStateWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
@@ -1936,6 +2225,52 @@ const ActivateLocationLockdownActionRecordType: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
   lockdownPlanUuid: z.string().optional(),
   succeeded: z.boolean().optional()
+});
+const SensorValType: z.ZodObject<any> = z.object({
+  sensorBoolean: z.boolean().optional(),
+  sensorDouble: z.number().optional(),
+  sensorLong: z.number().int().optional()
+});
+const ToastCheckInfo: z.ZodObject<any> = z.object({
+  totalAmount: z.number().optional()
+});
+const ToastOrderIdType: z.ZodObject<any> = z.object({
+  employeeName: z.string().optional(),
+  guid: z.string().optional(),
+  locationName: z.string().optional(),
+  restaurantName: z.string().optional(),
+  toastCheckInfo: ToastCheckInfo.optional()
+});
+const ClipBoundingBoxType: z.ZodObject<any> = z.object({
+  activity: ActivityEnum.optional(),
+  alert: z.boolean().optional(),
+  bottom: z.number().int().optional(),
+  confidence: z.number().optional(),
+  croppedImageLocator: z.string().optional(),
+  customActivityColor: z.string().optional(),
+  customActivityDescription: z.string().optional(),
+  customActivityDisplayName: z.string().optional(),
+  faceName: z.string().optional(),
+  inMotion: z.boolean().optional(),
+  keypointsV2: z.record(z.unknown()).optional(),
+  left: z.number().int().optional(),
+  licensePlate: z.string().optional(),
+  loudness: z.number().int().optional(),
+  objectId: z.number().int().optional(),
+  pose: z.string().optional(),
+  relativeSecond: z.number().optional(),
+  right: z.number().int().optional(),
+  sensorValType: SensorValType.optional(),
+  toastOrderIdInfo: ToastOrderIdType.optional(),
+  top: z.number().int().optional(),
+  unidentifiedFaceId: z.string().optional(),
+  vehicleName: z.string().optional()
+});
+const ActivityEventData: z.ZodObject<any> = z.object({
+  activities: z.array(ActivityEnum).optional(),
+  boundingBoxes: z.array(ClipBoundingBoxType).optional(),
+  durationSec: z.number().int().optional(),
+  timestampMs: z.number().int().optional()
 });
 const AddOnLicense = z.string();
 const PerceptionType = z.string();
@@ -2018,6 +2353,7 @@ const AlertMonitoringLicenseType: z.ZodObject<any> = z.object({
   licenseType: License.optional(),
   locationUuid: z.string().optional(),
   maxDeleteDate: z.string().datetime({ offset: true }).optional(),
+  monthlyFallbackVerificationLimit: z.number().int().optional(),
   monthlyVerificationLimit: z.number().int().optional(),
   monthsReset: z.number().int().optional(),
   orgUuid: z.string().optional(),
@@ -2026,6 +2362,7 @@ const AlertMonitoringLicenseType: z.ZodObject<any> = z.object({
   productCode: z.string().optional(),
   productType: z.string().optional(),
   remainingAlarms: z.number().int().optional(),
+  remainingFallbackVerifications: z.number().int().optional(),
   remainingVerifications: z.number().int().optional(),
   state: z.string().optional(),
   trial: z.boolean().optional(),
@@ -2080,6 +2417,7 @@ const VerificationRecord: z.ZodObject<any> = z.object({
   clipVerificationId: z.string().optional(),
   failedAsClip: z.boolean().optional(),
   failedAsStream: z.boolean().optional(),
+  initiatedAsClip: z.boolean().optional(),
   sentAsClip: z.boolean().optional(),
   sentAsClipAtMs: z.number().int().optional(),
   sentAsWindowedStream: z.boolean().optional(),
@@ -2126,7 +2464,8 @@ const Alertmonitoring_AcceptAlertMonitoringTermsOfServiceForLocationRequest: z.Z
 const Alertmonitoring_AcceptAlertMonitoringTermsOfServiceRequest = z.record(z.unknown());
 const Alertmonitoring_AcceptAlertMonitoringTermsOfServiceResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const NoonlightPromptSelection: z.ZodObject<any> = z.object({
   mutable: z.boolean().optional(),
@@ -2139,7 +2478,8 @@ const Alertmonitoring_AddPromptThreatQualificationsWSRequest: z.ZodObject<any> =
 });
 const Alertmonitoring_AddPromptThreatQualificationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_AmModifiedBy: z.ZodObject<any> = z.object({
   armed: z.boolean().optional(),
@@ -2155,7 +2495,8 @@ const Alertmonitoring_CancelThreatCaseWSRequest: z.ZodObject<any> = z.object({
 const Alertmonitoring_CancelThreatCaseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_CountType: z.ZodObject<any> = z.object({
   dayOfMonth: z.number().int().optional(),
@@ -2172,11 +2513,12 @@ const Alertmonitoring_CreateCustomPinForNoonlightWSRequest: z.ZodObject<any> = z
 const Alertmonitoring_CreateCustomPinForNoonlightWSResponse: z.ZodObject<any> = z.object({
   alreadyExists: z.boolean().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const EmergencyContact: z.ZodObject<any> = z.object({
-  name: z.string().optional(),
-  phoneNumber: z.string().optional()
+  name: z.string(),
+  phoneNumber: z.string()
 });
 const EmergencyResponseContactsScheduleType: z.ZodObject<any> = z.object({
   deviceUuids: z.array(z.string()).optional(),
@@ -2232,7 +2574,8 @@ const Alertmonitoring_CreateNoonlightSettingsForLocationRequest: z.ZodObject<any
 });
 const Alertmonitoring_CreateNoonlightSettingsForLocationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_CreatePinForNoonlightWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -2242,7 +2585,8 @@ const Alertmonitoring_CreatePinForNoonlightWSRequest: z.ZodObject<any> = z.objec
 const Alertmonitoring_CreatePinForNoonlightWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  pin: z.string().optional()
+  pin: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_CumulativeChartData: z.ZodObject<any> = z.object({
   cumulativeMonthlyVerifications: z.array(Alertmonitoring_CountType).optional(),
@@ -2253,7 +2597,8 @@ const Alertmonitoring_DeleteNoonlightSettingsForLocationRequest: z.ZodObject<any
 });
 const Alertmonitoring_DeleteNoonlightSettingsForLocationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_DeletePinForNoonlightWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
@@ -2261,14 +2606,16 @@ const Alertmonitoring_DeletePinForNoonlightWSRequest: z.ZodObject<any> = z.objec
 });
 const Alertmonitoring_DeletePinForNoonlightWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_DeletePromptThreatQualificationByTitleWSRequest: z.ZodObject<any> = z.object({
   title: z.string().optional()
 });
 const Alertmonitoring_DeletePromptThreatQualificationByTitleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_DisableLocationRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
@@ -2276,7 +2623,8 @@ const Alertmonitoring_DisableLocationRequest: z.ZodObject<any> = z.object({
 });
 const Alertmonitoring_DisableLocationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_DismissThreatCaseWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional(),
@@ -2286,7 +2634,8 @@ const Alertmonitoring_DismissThreatCaseWSRequest: z.ZodObject<any> = z.object({
 const Alertmonitoring_DismissThreatCaseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_EnableLocationRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
@@ -2294,7 +2643,8 @@ const Alertmonitoring_EnableLocationRequest: z.ZodObject<any> = z.object({
 });
 const Alertmonitoring_EnableLocationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_EscalateThreatCaseToAlarmWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional(),
@@ -2302,7 +2652,8 @@ const Alertmonitoring_EscalateThreatCaseToAlarmWSRequest: z.ZodObject<any> = z.o
 });
 const Alertmonitoring_EscalateThreatCaseToAlarmWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuids: z.array(z.string()).optional()
@@ -2310,14 +2661,14 @@ const Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSRequ
 const Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  verificationsPerMonthPerLocation: z.record(z.unknown()).optional()
+  verificationsPerMonthPerLocation: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GenerateReportDataForLocationWSRequest: z.ZodObject<any> = z.object({
   endTimeMs: z.number().int().optional(),
   locationUuid: z.string().optional(),
   startTimeMs: z.number().int().optional()
 });
-const DeviceTypeEnum = z.string();
 const Alertmonitoring_ThreatCaseReportItem: z.ZodObject<any> = z.object({
   alertNotFound: z.boolean().optional(),
   alertTypes: z.array(ActivityEnum).optional(),
@@ -2356,7 +2707,8 @@ const Alertmonitoring_GenerateReportDataForLocationWSResponse: z.ZodObject<any> 
   modifiedBy: z.array(Alertmonitoring_AmModifiedBy).optional(),
   threatCaseReportItems: z.array(Alertmonitoring_ThreatCaseReportItem).optional(),
   threatCases: z.array(z.string()).optional(),
-  verificationsByDevice: z.array(Alertmonitoring_AMDeviceHistogramItem).optional()
+  verificationsByDevice: z.array(Alertmonitoring_AMDeviceHistogramItem).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional()
@@ -2364,7 +2716,8 @@ const Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest: z.ZodObject
 const Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSResponse: z.ZodObject<any> = z.object({
   count: z.number().int().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GetMonitoredDoorSensorsForLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string()
@@ -2394,7 +2747,8 @@ const Door_MinimalDoorStateType: z.ZodObject<any> = z.object({
 const Alertmonitoring_GetMonitoredDoorSensorsForLocationWSResponse: z.ZodObject<any> = z.object({
   doorStates: z.array(Door_MinimalDoorStateType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GetNoonlightSettingsForLocationWSRequest: z.ZodObject<any> = z.object({
   includePreviousVersions: z.boolean().optional(),
@@ -2443,19 +2797,22 @@ const Alertmonitoring_GetNoonlightSettingsForLocationWSResponse: z.ZodObject<any
   alertMonitoringSettings: Alertmonitoring_NoonlightWSSettings.optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  previousVersions: z.array(NoonlightVersionedSettingsType).optional()
+  previousVersions: z.array(NoonlightVersionedSettingsType).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GetNoonlightSettingsWSRequest = z.record(z.unknown());
 const Alertmonitoring_GetNoonlightSettingsWSResponse: z.ZodObject<any> = z.object({
   alertMonitoringSettings: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_GetPromptThreatQualificationsWSRequest = z.record(z.unknown());
 const Alertmonitoring_GetPromptThreatQualificationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  threatQualifications: z.array(NoonlightPromptSelection).optional()
+  threatQualifications: z.array(NoonlightPromptSelection).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_LocationStatusWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
@@ -2463,7 +2820,8 @@ const Alertmonitoring_LocationStatusWSRequest: z.ZodObject<any> = z.object({
 const Alertmonitoring_LocationStatusWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  status: MonitoringEnableStatus.optional()
+  status: MonitoringEnableStatus.optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_OrgStatusWSRequest: z.ZodObject<any> = z.object({
   includeDeleted: z.boolean().optional()
@@ -2471,7 +2829,8 @@ const Alertmonitoring_OrgStatusWSRequest: z.ZodObject<any> = z.object({
 const Alertmonitoring_OrgStatusWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  locationStatuses: z.record(z.unknown()).optional()
+  locationStatuses: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_ResetAlertMonitoringTripwireGroupCountWSRequest: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional(),
@@ -2479,32 +2838,37 @@ const Alertmonitoring_ResetAlertMonitoringTripwireGroupCountWSRequest: z.ZodObje
 });
 const Alertmonitoring_ResetAlertMonitoringTripwireGroupCountWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_UpdateNoonlightSettingsForLocationRequest: z.ZodObject<any> = z.object({
   noonlightSettings: NoonlightVersionedSettingsType.optional()
 });
 const Alertmonitoring_UpdateNoonlightSettingsForLocationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_UpdatePromptThreatQualificationWSRequest: z.ZodObject<any> = z.object({
   promptSelection: NoonlightPromptSelection.optional()
 });
 const Alertmonitoring_UpdatePromptThreatQualificationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_pin_BasePinWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  pin: AlertMonitoringPIN.optional()
+  pin: AlertMonitoringPIN.optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_pin_BulkPinsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   failedUsers: z.array(z.string()).optional(),
-  pins: z.array(AlertMonitoringPIN).optional()
+  pins: z.array(AlertMonitoringPIN).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_pin_BulkProvisionPinsWSRequest: z.ZodObject<any> = z.object({
   endDateEpochSecExclusive: z.number().int().min(0).optional(),
@@ -2547,7 +2911,8 @@ const Alertmonitoring_pin_FindPinsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  pins: z.array(AlertMonitoringPIN).optional()
+  pins: z.array(AlertMonitoringPIN).optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_pin_GetAvailableALMPinCodeWSRequest: z.ZodObject<any> = z.object({
   pinLength: z.number().int()
@@ -2555,7 +2920,8 @@ const Alertmonitoring_pin_GetAvailableALMPinCodeWSRequest: z.ZodObject<any> = z.
 const Alertmonitoring_pin_GetAvailableALMPinCodeWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  pinCode: z.string().optional()
+  pinCode: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Alertmonitoring_pin_GetPinWSRequest: z.ZodObject<any> = z.object({
   pinUuid: z.string()
@@ -2907,7 +3273,8 @@ const Audiogateway_DeleteAudioGatewayWSRequest: z.ZodObject<any> = z.object({
 const Audiogateway_DeleteAudioGatewayWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_GetAudioGatewayConfigWSRequest: z.ZodObject<any> = z.object({
   audioGatewayUuid: z.string().optional()
@@ -2917,8 +3284,11 @@ const FrontendEqualizerSettings: z.ZodObject<any> = z.object({
   gain: z.number().int().optional(),
   q: z.number().int().optional()
 });
+const LEDModeEnum = z.string();
 const IAudioUserConfig: z.ZodObject<any> = z.object({
+  ai_license_invalid: z.boolean().optional(),
   audio_aec_via_software: z.boolean().optional(),
+  audio_ai_disabled: z.boolean().optional(),
   audio_analysis_enabled: z.boolean().optional(),
   audio_analysis_params: AudioParamConfig.optional(),
   audio_external_mic_boost: z.number().int().optional(),
@@ -2955,8 +3325,8 @@ const IAudioUserConfig: z.ZodObject<any> = z.object({
   frontendNoiseSuppression: z.boolean().optional(),
   lastModified: z.number().int().optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
@@ -2973,33 +3343,20 @@ const IAudioUserConfig: z.ZodObject<any> = z.object({
 const Audiogateway_GetAudioGatewayConfigWSResponse: z.ZodObject<any> = z.object({
   config: IAudioUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_GetAudioGatewayOfflineLanStreamingInfoWSRequest = z.record(z.unknown());
 const Audiogateway_GetAudioGatewayOfflineLanStreamingInfoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  info: z.record(z.unknown()).optional()
+  info: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_GetAudioSeekpointsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
   duration: z.number().int().optional(),
   startTime: z.number().int().optional()
-});
-const SensorValType: z.ZodObject<any> = z.object({
-  sensorBoolean: z.boolean().optional(),
-  sensorDouble: z.number().optional(),
-  sensorLong: z.number().int().optional()
-});
-const ToastCheckInfo: z.ZodObject<any> = z.object({
-  totalAmount: z.number().optional()
-});
-const ToastOrderIdType: z.ZodObject<any> = z.object({
-  employeeName: z.string().optional(),
-  guid: z.string().optional(),
-  locationName: z.string().optional(),
-  restaurantName: z.string().optional(),
-  toastCheckInfo: ToastCheckInfo.optional()
 });
 const FootageSeekPointV2Type: z.ZodObject<any> = z.object({
   a: ActivityEnum,
@@ -3025,7 +3382,8 @@ const FootageSeekPointV2Type: z.ZodObject<any> = z.object({
 const Audiogateway_GetAudioSeekpointsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageSeekPoints: z.array(FootageSeekPointV2Type).optional()
+  footageSeekPoints: z.array(FootageSeekPointV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_GetFullAudioGatewayStateWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -3083,7 +3441,8 @@ const FullDeviceStateType: z.ZodObject<any> = z.object({
 const Audiogateway_GetFullAudioGatewayStateWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  fullAudioGatewayState: FullDeviceStateType.optional()
+  fullAudioGatewayState: FullDeviceStateType.optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_GetMediaUrisWSRequest: z.ZodObject<any> = z.object({
   gatewayUuid: z.string().optional()
@@ -3097,7 +3456,8 @@ const Audiogateway_GetMediaUrisWSResponse: z.ZodObject<any> = z.object({
   lanVodMpdUrisTemplates: z.array(z.string()).optional(),
   wanLiveMpdUri: z.string().optional(),
   wanLiveOpusUri: z.string().optional(),
-  wanVodMpdUriTemplate: z.string().optional()
+  wanVodMpdUriTemplate: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_GetMinimalAudioGatewayStatesWSRequest = z.record(z.unknown());
 const MinimalAudioGatewayStateType: z.ZodObject<any> = z.object({
@@ -3141,12 +3501,14 @@ const MinimalAudioGatewayStateType: z.ZodObject<any> = z.object({
 const Audiogateway_GetMinimalAudioGatewayStatesWSResponse: z.ZodObject<any> = z.object({
   audioGatewayStates: z.array(MinimalAudioGatewayStateType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_RebootAudioGatewayWSRequest: z.ZodObject<any> = z.object({
   audioGatewayUuid: z.string()
 });
 const Audiogateway_UpdateAudioGatewayConfigWSRequest: z.ZodObject<any> = z.object({
+  audioAnalysisParams: AudioParamConfig.optional(),
   audioExternalMicBoost: z.number().int().optional(),
   audioExternalMicVolume: z.number().int().optional(),
   audioExternalSpeakerVolume: z.number().int().optional(),
@@ -3169,7 +3531,8 @@ const Audiogateway_UpdateAudioGatewayConfigWSRequest: z.ZodObject<any> = z.objec
 });
 const Audiogateway_UpdateAudioGatewayConfigWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audiogateway_UpdateAudioGatewayDetailsWSRequest: z.ZodObject<any> = z.object({
   associatedCameras: z.array(z.string()).optional(),
@@ -3196,7 +3559,8 @@ const Audiogateway_UpdateAudioGatewayDetailsWSRequest: z.ZodObject<any> = z.obje
 });
 const Audiogateway_UpdateAudioGatewayDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_CancelLoopingAudioPlaybackWSRequest: z.ZodObject<any> = z.object({
   audioDevices: z.array(z.string()).optional()
@@ -3204,20 +3568,23 @@ const Audioplayback_CancelLoopingAudioPlaybackWSRequest: z.ZodObject<any> = z.ob
 const Audioplayback_CancelLoopingAudioPlaybackWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  successMap: z.record(z.unknown()).optional()
+  successMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_DeleteAudioUploadMetadataWSRequest: z.ZodObject<any> = z.object({
   audioUploadUuid: z.string().optional()
 });
 const Audioplayback_DeleteAudioUploadMetadataWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_GetAudioUploadMetadataForOrgWSRequest = z.record(z.unknown());
 const Audioplayback_GetAudioUploadMetadataForOrgWSResponse: z.ZodObject<any> = z.object({
   audioUploadMetadata: z.array(AudioUploadMetadataType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_PlayAudioUploadWSRequest: z.ZodObject<any> = z.object({
   audioGatewayUuids: z.array(z.string()).optional(),
@@ -3228,7 +3595,8 @@ const Audioplayback_PlayAudioUploadWSRequest: z.ZodObject<any> = z.object({
 const Audioplayback_PlayAudioUploadWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_UpdateAudioUploadMetadataWSRequest: z.ZodObject<any> = z.object({
   audioUploadUuid: z.string().optional(),
@@ -3237,13 +3605,15 @@ const Audioplayback_UpdateAudioUploadMetadataWSRequest: z.ZodObject<any> = z.obj
 });
 const Audioplayback_UpdateAudioUploadMetadataWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_UploadAudioPcmWSResponse: z.ZodObject<any> = z.object({
   encodingFailure: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Audioplayback_UploadAudioTextWSRequest: z.ZodObject<any> = z.object({
   audioPlaintext: z.string().optional(),
@@ -3258,7 +3628,8 @@ const Audioplayback_UploadAudioTextWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   invalidSSML: z.boolean().optional(),
   synthesisFailure: z.boolean().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const SimpleAuditEventType: z.ZodObject<any> = z.object({
   auditEvent: z.string().optional()
@@ -3286,6 +3657,7 @@ const AutomatedPrompt: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional(),
   permissionGroupUuid: z.string().optional(),
   prompt: z.string().optional(),
+  responseTemplate: z.string().optional(),
   scheduleUuid: z.string().optional(),
   tokenUuid: z.string().optional(),
   uuid: z.string().optional()
@@ -3367,9 +3739,10 @@ const Badgereader_DeleteBadgeReaderWSRequest: z.ZodObject<any> = z.object({
 const Badgereader_DeleteBadgeReaderWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
-const Deviceconfig_settings_ExternalReadableButtonSettings: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalReadableButtonSettings: z.ZodObject<any> = z.object({
   button_emergency_onsite_contact: EmergencyContact.optional(),
   button_test_mode_enabled: z.boolean().optional()
 });
@@ -3379,7 +3752,8 @@ const ClimateSettings: z.ZodObject<any> = z.object({
   thc_ai_threshold: z.number().optional(),
   vape_ai_threshold: z.number().optional()
 });
-const Deviceconfig_settings_ExternalReadableDeviceSettings: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalReadableDeviceSettings: z.ZodObject<any> = z.object({
+  ai_license_invalid: z.boolean().optional(),
   bandwidth_reports_disabled: z.boolean().optional(),
   cloud_archive_days: z.number().int().optional(),
   cloud_archive_upload_schedule: z.array(WeeklyMinuteIntervalType).optional(),
@@ -3387,14 +3761,15 @@ const Deviceconfig_settings_ExternalReadableDeviceSettings: z.ZodObject<any> = z
   cloud_archive_upload_schedule_uuid: z.string().optional(),
   firmware_dev_settings: z.record(z.unknown()).optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
   max_event_duration_ms: z.number().int().optional(),
   media_ttl_minutes: z.number().int().optional(),
   on_demand_license_invalid: z.boolean().optional(),
+  scanner_agent_disabled: z.boolean().optional(),
   snapshot_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
   storage_target_free_space_permyriad: z.number().int().optional(),
@@ -3406,7 +3781,7 @@ const BurstyRateLimit: z.ZodObject<any> = z.object({
   burst_token_initial_count: z.number().int().optional(),
   burst_token_max_count: z.number().int().optional()
 });
-const Deviceconfig_settings_ExternalReadableDeviceVideoSettings: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalReadableDeviceVideoSettings: z.ZodObject<any> = z.object({
   alert_rate_limit_human_only: BurstyRateLimit.optional(),
   alert_rate_limit_motion_only: BurstyRateLimit.optional(),
   alert_rate_limit_vehicle_only: BurstyRateLimit.optional(),
@@ -3414,7 +3789,7 @@ const Deviceconfig_settings_ExternalReadableDeviceVideoSettings: z.ZodObject<any
   ir_filter_mode: z.string().optional(),
   ir_leds_mode: z.string().optional()
 });
-const Deviceconfig_settings_ExternalReadableDoorControllerSettings: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalReadableDoorControllerSettings: z.ZodObject<any> = z.object({
   autocomponentize_readers: z.boolean().optional(),
   autoregister_readers: z.boolean().optional(),
   flip_display_orientation: z.boolean().optional(),
@@ -3446,6 +3821,12 @@ const EnvironmentalGatewaySettings: z.ZodObject<any> = z.object({
   vape_confidence_threshold: z.number().optional(),
   vape_thc_confidence_threshold: z.number().optional()
 });
+const RobotSettings: z.ZodObject<any> = z.object({
+  home_latitude: z.number().optional(),
+  home_longitude: z.number().optional(),
+  map_created_at_ms: z.number().int().optional(),
+  map_id: z.string().optional()
+});
 const TamperSettings: z.ZodObject<any> = z.object({
   accelerometer_change_tamper_threshold: z.number().optional(),
   accelerometer_disabled: z.boolean().optional(),
@@ -3464,28 +3845,30 @@ const ThirdPartyCameraSettings: z.ZodObject<any> = z.object({
 const VideoDoorbellSettings: z.ZodObject<any> = z.object({
   standalone_doorbell_mode: z.boolean().optional()
 });
-const Deviceconfig_userconfig_ExternalReadableFacetedUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_ExternalReadableFacetedUserConfig: z.ZodObject<any> = z.object({
   audioFacetSettings: z.record(z.unknown()).optional(),
-  buttonSettings: Deviceconfig_settings_ExternalReadableButtonSettings.optional(),
+  buttonSettings: Device_config_settings_ExternalReadableButtonSettings.optional(),
   climateSettings: ClimateSettings.optional(),
-  deviceSettings: Deviceconfig_settings_ExternalReadableDeviceSettings.optional(),
+  deviceSettings: Device_config_settings_ExternalReadableDeviceSettings.optional(),
   deviceUuid: z.string().optional(),
-  deviceVideoSettings: Deviceconfig_settings_ExternalReadableDeviceVideoSettings.optional(),
-  doorControllerSettings: Deviceconfig_settings_ExternalReadableDoorControllerSettings.optional(),
+  deviceVideoSettings: Device_config_settings_ExternalReadableDeviceVideoSettings.optional(),
+  doorControllerSettings: Device_config_settings_ExternalReadableDoorControllerSettings.optional(),
   doorReaderSettings: DoorReaderSettings.optional(),
   doorSensorSettings: DoorSensorSettings.optional(),
   environmentalGatewaySettings: EnvironmentalGatewaySettings.optional(),
   lastModified: z.number().int().optional(),
   orgUuid: z.string().optional(),
+  robotSettings: RobotSettings.optional(),
   tamperSettings: TamperSettings.optional(),
   thirdPartyCameraSettings: ThirdPartyCameraSettings.optional(),
   videoDoorbellSettings: VideoDoorbellSettings.optional(),
   videoFacetSettings: z.record(z.unknown()).optional()
 });
 const Badgereader_GetBadgeReaderConfigWSResponse: z.ZodObject<any> = z.object({
-  config: Deviceconfig_userconfig_ExternalReadableFacetedUserConfig.optional(),
+  config: Device_config_userconfig_ExternalReadableFacetedUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Badgereader_GetBadgeReaderFullStateWSResponse: z.ZodObject<any> = z.object({
   fullState: FullDeviceStateType.optional()
@@ -3544,17 +3927,19 @@ const ClimateSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   updatedSetMethodMap: z.record(z.unknown()).optional(),
   vape_ai_threshold: z.number().optional()
 });
-const Deviceconfig_settings_ExternalDeviceSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalDeviceSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
+  ai_license_invalid: z.boolean().optional(),
   bandwidth_reports_disabled: z.boolean().optional(),
   firmware_dev_settings: z.record(z.unknown()).optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
   media_ttl_minutes: z.number().int().optional(),
   on_demand_license_invalid: z.boolean().optional(),
+  scanner_agent_disabled: z.boolean().optional(),
   snapshot_upload_target: z.string().optional(),
   storage_target_free_megabytes: z.number().int().optional(),
   storage_target_free_space_permyriad: z.number().int().optional(),
@@ -3570,7 +3955,7 @@ const DeviceVideoSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   ir_leds_mode: z.string().optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional()
 });
-const Deviceconfig_settings_ExternalDoorControllerSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalDoorControllerSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   autocomponentize_readers: z.boolean().optional(),
   autoregister_readers: z.boolean().optional(),
   flip_display_orientation: z.boolean().optional(),
@@ -3606,6 +3991,13 @@ const EnvironmentalGatewaySettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   vape_confidence_threshold: z.number().optional(),
   vape_thc_confidence_threshold: z.number().optional()
 });
+const RobotSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
+  home_latitude: z.number().optional(),
+  home_longitude: z.number().optional(),
+  map_created_at_ms: z.number().int().optional(),
+  map_id: z.string().optional(),
+  updatedSetMethodMap: z.record(z.unknown()).optional()
+});
 const TamperSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   accelerometer_change_tamper_threshold: z.number().optional(),
   accelerometer_disabled: z.boolean().optional(),
@@ -3616,23 +4008,24 @@ const VideoDoorbellSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   standalone_doorbell_mode: z.boolean().optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional()
 });
-const Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_ExternalUpdateableFacetedUserConfig: z.ZodObject<any> = z.object({
   audioFacetSettings: z.record(z.unknown()).optional(),
   buttonSettings: ButtonSettingsSelectiveUpdate.optional(),
   climateSettings: ClimateSettingsSelectiveUpdate.optional(),
-  deviceSettings: Deviceconfig_settings_ExternalDeviceSettingsSelectiveUpdate.optional(),
+  deviceSettings: Device_config_settings_ExternalDeviceSettingsSelectiveUpdate.optional(),
   deviceUuid: z.string().optional(),
   deviceVideoSettings: DeviceVideoSettingsSelectiveUpdate.optional(),
-  doorControllerSettings: Deviceconfig_settings_ExternalDoorControllerSettingsSelectiveUpdate.optional(),
+  doorControllerSettings: Device_config_settings_ExternalDoorControllerSettingsSelectiveUpdate.optional(),
   doorReaderSettings: DoorReaderSettingsSelectiveUpdate.optional(),
   doorSensorSettings: DoorSensorSettingsSelectiveUpdate.optional(),
   environmentalGatewaySettings: EnvironmentalGatewaySettingsSelectiveUpdate.optional(),
+  robotSettings: RobotSettingsSelectiveUpdate.optional(),
   tamperSettings: TamperSettingsSelectiveUpdate.optional(),
   videoDoorbellSettings: VideoDoorbellSettingsSelectiveUpdate.optional(),
   videoFacetSettings: z.record(z.unknown()).optional()
 });
 const Badgereader_UpdateBadgeReaderConfigWSRequest: z.ZodObject<any> = z.object({
-  configUpdate: Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig.optional()
+  configUpdate: Device_config_userconfig_ExternalUpdateableFacetedUserConfig.optional()
 });
 const Badgereader_UpdateBadgeReaderDetailsWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -3646,7 +4039,8 @@ const Badgereader_UpdateBadgeReaderDetailsWSRequest: z.ZodObject<any> = z.object
 });
 const BaseApiResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const BaseCatalogItem: z.ZodObject<any> = z.object({
   durationMonths: z.number().int().optional(),
@@ -4112,6 +4506,300 @@ const BatchRegistrationTokenUsageResult: z.ZodObject<any> = z.object({
   rs: z.string().optional(),
   ts: z.number().int().optional()
 });
+const Billing_CreateCheckoutSessionWSRequest: z.ZodObject<any> = z.object({
+  invoiceId: z.string().optional()
+});
+const Billing_CreateCheckoutSessionWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  sessionId: z.string().optional(),
+  sessionUrl: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_CreateSubscriptionWSRequest: z.ZodObject<any> = z.object({
+  billingCycleTimezone: z.string().optional(),
+  maxSpendPerMonth: z.number().int().optional(),
+  paymentMethodId: z.string().optional(),
+  termsOfServiceAccepted: z.boolean().optional()
+});
+const Billing_CreateSubscriptionWSResponse: z.ZodObject<any> = z.object({
+  customerId: z.string().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  paymentMethodId: z.string().optional(),
+  status: z.string().optional(),
+  subscriptionId: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_CustomEventsMonthlyBreakdownWSRequest: z.ZodObject<any> = z.object({
+  date: z.string().optional()
+});
+const Billing_CustomEventsMonthlyBreakdownWSResponse_BreakdownElement: z.ZodObject<any> = z.object({
+  eventCount: z.number().int().optional(),
+  promptName: z.string().optional(),
+  promptUuid: z.string().optional()
+});
+const Billing_CustomEventsMonthlyBreakdownWSResponse: z.ZodObject<any> = z.object({
+  breakdowns: z.array(Billing_CustomEventsMonthlyBreakdownWSResponse_BreakdownElement).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_DeletePaymentMethodWSRequest: z.ZodObject<any> = z.object({
+  paymentMethodId: z.string().optional()
+});
+const Billing_DeletePaymentMethodWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  removed: z.boolean().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_FreeCreditEligibilityWSResponse_FreeCreditInfo: z.ZodObject<any> = z.object({
+  freeCreditAmountCents: z.number().int().optional(),
+  freeCreditRemainingCents: z.number().int().optional(),
+  hasSubscription: z.boolean().optional(),
+  isEligibleForVoucher: z.boolean().optional(),
+  isOnVoucher: z.boolean().optional(),
+  isVoucherExhausted: z.boolean().optional()
+});
+const Billing_FreeCreditEligibilityWSResponse: z.ZodObject<any> = z.object({
+  customEvents: Billing_FreeCreditEligibilityWSResponse_FreeCreditInfo.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_FreeTrialEligibilityWSResponse: z.ZodObject<any> = z.object({
+  customEvents: z.boolean().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_GetCustomerInformationWSRequest = z.record(z.unknown());
+const Billing_GetCustomerInformationWSResponse: z.ZodObject<any> = z.object({
+  addressCity: z.string().optional(),
+  addressCountry: z.string().optional(),
+  addressLine1: z.string().optional(),
+  addressLine2: z.string().optional(),
+  addressPostalCode: z.string().optional(),
+  addressState: z.string().optional(),
+  businessName: z.string().optional(),
+  email: z.string().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  individualName: z.string().optional(),
+  phone: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_GetInvoicesWSRequest: z.ZodObject<any> = z.object({
+  limit: z.number().int().optional(),
+  startingAfter: z.string().optional(),
+  status: z.string().optional(),
+  subscriptionId: z.string().optional()
+});
+const Billing_GetInvoicesWSResponse_Invoice: z.ZodObject<any> = z.object({
+  amount: z.number().int().optional(),
+  amountDue: z.number().int().optional(),
+  amountPaid: z.number().int().optional(),
+  created: z.number().int().optional(),
+  currency: z.string().optional(),
+  description: z.string().optional(),
+  dueDate: z.number().int().optional(),
+  hostedInvoiceUrl: z.string().optional(),
+  id: z.string().optional(),
+  invoicePdf: z.string().optional(),
+  number: z.string().optional(),
+  periodEnd: z.number().int().optional(),
+  periodStart: z.number().int().optional(),
+  productName: z.string().optional(),
+  quantity: z.number().int().optional(),
+  status: z.string().optional(),
+  subtotal: z.number().int().optional(),
+  tax: z.number().int().optional(),
+  total: z.number().int().optional(),
+  usageDescriptions: z.string().optional()
+});
+const Billing_GetInvoicesWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  hasMore: z.boolean().optional(),
+  invoices: z.array(Billing_GetInvoicesWSResponse_Invoice).optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_GetMetersWSRequest = z.record(z.unknown());
+const Billing_GetMetersWSResponse_Meter: z.ZodObject<any> = z.object({
+  archived: z.boolean().optional(),
+  created: z.number().int().optional(),
+  displayName: z.string().optional(),
+  eventName: z.string().optional(),
+  eventTimeWindow: z.string().optional(),
+  id: z.string().optional()
+});
+const Billing_GetMetersWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  meters: z.array(Billing_GetMetersWSResponse_Meter).optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_GetPaymentMethodsWSRequest = z.record(z.unknown());
+const Billing_GetPaymentMethodsWSResponse_PaymentMethod: z.ZodObject<any> = z.object({
+  brand: z.string().optional(),
+  default: z.boolean().optional(),
+  displayBrand: z.string().optional(),
+  id: z.string().optional(),
+  last4: z.string().optional()
+});
+const Billing_GetPaymentMethodsWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  paymentMethods: z.array(Billing_GetPaymentMethodsWSResponse_PaymentMethod).optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_GetProductsWSRequest = z.record(z.unknown());
+const Billing_GetProductsWSResponse_Price: z.ZodObject<any> = z.object({
+  active: z.boolean().optional(),
+  billingScheme: z.string().optional(),
+  currency: z.string().optional(),
+  id: z.string().optional(),
+  lookupKey: z.string().optional(),
+  nickname: z.string().optional(),
+  productId: z.string().optional(),
+  productNameId: z.string().optional(),
+  recurringInterval: z.string().optional(),
+  recurringIntervalCount: z.number().int().optional(),
+  recurringUsageType: z.string().optional(),
+  taxBehavior: z.string().optional(),
+  transformQuantity: z.string().optional(),
+  type: z.string().optional(),
+  unitAmount: z.number().optional(),
+  unitAmountDecimal: z.string().optional()
+});
+const Billing_GetProductsWSResponse_Product: z.ZodObject<any> = z.object({
+  active: z.boolean().optional(),
+  created: z.number().int().optional(),
+  defaultPriceId: z.string().optional(),
+  description: z.string().optional(),
+  id: z.string().optional(),
+  name: z.string().optional(),
+  nameId: z.string().optional(),
+  prices: z.array(Billing_GetProductsWSResponse_Price).optional(),
+  statementDescriptor: z.string().optional()
+});
+const Billing_GetProductsWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  products: z.array(Billing_GetProductsWSResponse_Product).optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_GetSubscriptionWSRequest = z.record(z.unknown());
+const Billing_GetSubscriptionWSResponse_Subscription: z.ZodObject<any> = z.object({
+  cancelAtPeriodEnd: z.boolean().optional(),
+  canceledAt: z.number().int().optional(),
+  collectionMethod: z.string().optional(),
+  created: z.number().int().optional(),
+  currency: z.string().optional(),
+  currentPeriodEnd: z.number().int().optional(),
+  currentPeriodStart: z.number().int().optional(),
+  defaultPaymentMethod: z.string().optional(),
+  id: z.string().optional(),
+  isApproachingLimit: z.boolean().optional(),
+  maxSpendPerMonth: z.number().int().optional(),
+  pricePerUnit: z.string().optional(),
+  product: z.string().optional(),
+  status: z.string().optional(),
+  trialEnd: z.number().int().optional(),
+  upcomingInvoiceAmount: z.string().optional(),
+  upcomingInvoiceCurrency: z.string().optional(),
+  usageType: z.string().optional()
+});
+const Billing_GetSubscriptionWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  subscriptions: z.array(Billing_GetSubscriptionWSResponse_Subscription).optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_HistoricalUsageWSRequest: z.ZodObject<any> = z.object({
+  products: z.array(z.string()).optional(),
+  range: z.record(z.unknown()).optional()
+});
+const Billing_HistoricalUsageWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  usage: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_HistoricalUsageWSResponse_HistoricalUsageElement: z.ZodObject<any> = z.object({
+  costInCent: z.number().int().optional(),
+  date: z.string().optional(),
+  eventCount: z.number().int().optional()
+});
+const Billing_SetDefaultPaymentMethodForSubscriptionWSRequest: z.ZodObject<any> = z.object({
+  paymentMethodId: z.string().optional(),
+  subscriptionId: z.string().optional()
+});
+const Billing_SetDefaultPaymentMethodForSubscriptionWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_SetDefaultPaymentMethodWSRequest: z.ZodObject<any> = z.object({
+  overrideAllSubscriptionPaymentMethods: z.boolean().optional(),
+  paymentMethodId: z.string().optional()
+});
+const Billing_SetDefaultPaymentMethodWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_SetupSubscriptionWSRequest: z.ZodObject<any> = z.object({
+  termsOfServiceAccepted: z.boolean().optional()
+});
+const Billing_SetupSubscriptionWSResponse: z.ZodObject<any> = z.object({
+  clientSecret: z.string().optional(),
+  customerId: z.string().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_UnsubscribeWSRequest: z.ZodObject<any> = z.object({
+  subscriptionId: z.string().optional()
+});
+const Billing_UnsubscribeWSResponse: z.ZodObject<any> = z.object({
+  cancelAtPeriodEnd: z.boolean().optional(),
+  canceledAt: z.number().int().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  status: z.string().optional(),
+  subscriptionId: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_UpdateCustomerInformationWSRequest: z.ZodObject<any> = z.object({
+  addressCity: z.string().optional(),
+  addressCountry: z.string().optional(),
+  addressLine1: z.string().optional(),
+  addressLine2: z.string().optional(),
+  addressPostalCode: z.string().optional(),
+  addressState: z.string().optional(),
+  businessName: z.string().optional(),
+  email: z.string().optional(),
+  individualName: z.string().optional(),
+  phone: z.string().optional()
+});
+const Billing_UpdateCustomerInformationWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Billing_UpdateSubscriptionMaxSpendWSRequest: z.ZodObject<any> = z.object({
+  maxSpendPerMonth: z.number().int().optional(),
+  subscriptionId: z.string().optional()
+});
+const Billing_UpdateSubscriptionMaxSpendWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  maxSpendPerMonth: z.number().int().optional(),
+  subscriptionId: z.string().optional(),
+  warningMsg: z.string().optional()
+});
 const BinaryAggregationValue: z.ZodObject<any> = z.object({
   eventCount: z.number().int().optional(),
   false: z.number().int().optional(),
@@ -4141,18 +4829,21 @@ const Ble_GetBaseStationsWSRequest = z.record(z.unknown());
 const Ble_GetBaseStationsWSResponse: z.ZodObject<any> = z.object({
   baseStations: z.array(z.string()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Ble_GetSecureSecretForRegisteredWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   hardwareVariationToFirmwareDownloadUrl: z.record(z.unknown()).optional(),
-  keyToRegisteredDevice: z.record(z.unknown()).optional()
+  keyToRegisteredDevice: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Ble_GetSecureSecretForUnregisteredWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  keyToUnregisteredDevice: z.record(z.unknown()).optional()
+  keyToUnregisteredDevice: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Ble_GetSensorHardwareFirmwareUpdateDetailsRequest = z.record(z.unknown());
 const Ble_GetSensorHardwareFirmwareUpdateDetailsResponse: z.ZodObject<any> = z.object({
@@ -4169,7 +4860,8 @@ const Ble_RegisterSensorWSRequest: z.ZodObject<any> = z.object({
 const Ble_RegisterSensorWSResponse: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Ble_UnregisterSensorWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -4178,7 +4870,8 @@ const Ble_UnregisterSensorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const BoardPhysicalPortConfigType: z.ZodObject<any> = z.object({
   boardNum: z.number().int().optional(),
@@ -4322,7 +5015,8 @@ const Button_CreateRuleForButtonWSRequest: z.ZodObject<any> = z.object({
 const Button_CreateRuleForButtonWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  ruleUuid: z.string().optional()
+  ruleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Button_DeleteRuleForButtonWSRequest: z.ZodObject<any> = z.object({
   ruleUuid: z.string().optional(),
@@ -4330,7 +5024,8 @@ const Button_DeleteRuleForButtonWSRequest: z.ZodObject<any> = z.object({
 });
 const Button_DeleteRuleForButtonWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Button_GetButtonPressEventsForSensorWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -4341,13 +5036,15 @@ const Button_GetButtonPressEventsForSensorWSRequest: z.ZodObject<any> = z.object
 const Button_GetButtonPressEventsForSensorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(ButtonEventType).optional()
+  events: z.array(ButtonEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Button_GetButtonRulesForOrgWSRequest = z.record(z.unknown());
 const Button_GetButtonRulesForOrgWSResponse: z.ZodObject<any> = z.object({
   buttonUuidToRulesMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Button_GetMinimalButtonStatesWSRequest = z.record(z.unknown());
 const Button_MinimalButtonStateType: z.ZodObject<any> = z.object({
@@ -4376,7 +5073,8 @@ const Button_MinimalButtonStateType: z.ZodObject<any> = z.object({
 const Button_GetMinimalButtonStatesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  states: z.array(Button_MinimalButtonStateType).optional()
+  states: z.array(Button_MinimalButtonStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Button_GetRulesForButtonWSRequest: z.ZodObject<any> = z.object({
   sensorUuid: z.string().optional()
@@ -4384,9 +5082,10 @@ const Button_GetRulesForButtonWSRequest: z.ZodObject<any> = z.object({
 const Button_GetRulesForButtonWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rules: z.array(Button_ExternalButtonRuleType).optional()
+  rules: z.array(Button_ExternalButtonRuleType).optional(),
+  warningMsg: z.string().optional()
 });
-const Deviceconfig_userconfig_IExternalUpdateableButtonUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_IExternalUpdateableButtonUserConfig: z.ZodObject<any> = z.object({
   button_emergency_onsite_contact: EmergencyContact.optional(),
   button_test_mode_enabled: z.boolean().optional(),
   deviceUuid: z.string().optional(),
@@ -4394,7 +5093,7 @@ const Deviceconfig_userconfig_IExternalUpdateableButtonUserConfig: z.ZodObject<a
   orgUuid: z.string().optional()
 });
 const Button_UpdateButtonConfigWSRequest: z.ZodObject<any> = z.object({
-  configUpdate: Deviceconfig_userconfig_IExternalUpdateableButtonUserConfig.optional()
+  configUpdate: Device_config_userconfig_IExternalUpdateableButtonUserConfig.optional()
 });
 const Button_UpdateButtonDetailsWSRequest: z.ZodObject<any> = z.object({
   associatedCameras: z.array(z.string()).optional(),
@@ -4430,6 +5129,10 @@ const CameraAiDewarpConfigType: z.ZodObject<any> = z.object({
   dewarp_tile_width: z.number().int().optional(),
   orientation: z.number().int().optional()
 });
+const ExampleImage: z.ZodObject<any> = z.object({
+  image: z.string().optional(),
+  label: z.string().optional()
+});
 const RegionCoordinateType: z.ZodObject<any> = z.object({
   x: z.number().optional(),
   y: z.number().optional()
@@ -4447,6 +5150,7 @@ const ScheduledAction: z.ZodObject<any> = z.object({
 const CameraConfiguration: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
   checkConditionOverride: CheckCondition.optional(),
+  exampleImages: z.array(ExampleImage).optional(),
   promptExtension: z.string().optional(),
   promptOverride: z.string().optional(),
   region: RegionPolygonType.optional(),
@@ -4459,6 +5163,7 @@ const CameraCrossCountingSettingsType: z.ZodObject<any> = z.object({
   object_type_id: z.number().int().optional(),
   out_roi: z.array(RegionPolygonType).optional()
 });
+const CameraDewarpModeEnum = z.string();
 const CameraHumanLoiteringSettingsType: z.ZodObject<any> = z.object({
   roi: z.array(RegionPolygonType).optional()
 });
@@ -4677,11 +5382,13 @@ const Camera_CreateFootageBoundingBoxesWSRequest: z.ZodObject<any> = z.object({
 });
 const Camera_CreateFootageBoundingBoxesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_CreateFootageSeekpointsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const StreamTypeEnum = z.string();
 const Camera_CreateSharedLiveVideoStreamWSRequest: z.ZodObject<any> = z.object({
@@ -4702,7 +5409,8 @@ const Camera_CreateSharedLiveVideoStreamWSResponse: z.ZodObject<any> = z.object(
   errorMsg: z.string().optional(),
   sharedLiveM3U8StreamUrl: z.string().optional(),
   sharedLiveVideoStreamUrl: z.string().optional(),
-  sharedLiveVideoStreamUuid: z.string().optional()
+  sharedLiveVideoStreamUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_CreateSharedVideoWallWSRequest: z.ZodObject<any> = z.object({
   expirationTimeSecs: z.number().int().optional(),
@@ -4716,7 +5424,8 @@ const Camera_CreateSharedVideoWallWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   sharedLiveVideoStreamUrl: z.string().optional(),
-  sharedLiveVideoStreamUuid: z.string().optional()
+  sharedLiveVideoStreamUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const VideoWallType: z.ZodObject<any> = z.object({
   deviceList: z.array(z.string()).optional(),
@@ -4734,7 +5443,8 @@ const Camera_CreateVideoWallWSRequest: z.ZodObject<any> = z.object({
 const Camera_CreateVideoWallWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_DeleteCameraWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -4743,7 +5453,8 @@ const Camera_DeleteCameraWSRequest: z.ZodObject<any> = z.object({
 const Camera_DeleteCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_DeleteCustomFootageSeekpointsWSRequest: z.ZodObject<any> = z.object({
   cameraUuids: z.array(z.string()).optional(),
@@ -4754,7 +5465,8 @@ const Camera_DeleteCustomFootageSeekpointsWSRequest: z.ZodObject<any> = z.object
 const Camera_DeleteCustomFootageSeekpointsWSResponse: z.ZodObject<any> = z.object({
   deleteSeekpointResponseMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_DeleteCustomFootageSeekpointsWSResponse_SeekPointDeleteResponse: z.ZodObject<any> = z.object({
   err: z.boolean().optional(),
@@ -4770,21 +5482,24 @@ const Camera_DeleteSharedVideoWallWSRequest: z.ZodObject<any> = z.object({
 });
 const Camera_DeleteSharedVideoWallWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_DeleteVideoWallWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Camera_DeleteVideoWallWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_EraseCameraWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
 });
 const Camera_EraseCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_FindAllSharedLiveVideoStreamsWSRequest = z.record(z.unknown());
 const Camera_SharedLiveVideoStreamWS: z.ZodObject<any> = z.object({
@@ -4814,7 +5529,8 @@ const Camera_SharedLiveVideoStreamWS: z.ZodObject<any> = z.object({
 const Camera_FindAllSharedLiveVideoStreamsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedLiveVideoStreams: z.array(Camera_SharedLiveVideoStreamWS).optional()
+  sharedLiveVideoStreams: z.array(Camera_SharedLiveVideoStreamWS).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_FindSharedLiveVideoStreamsForWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
@@ -4822,7 +5538,8 @@ const Camera_FindSharedLiveVideoStreamsForWSRequest: z.ZodObject<any> = z.object
 const Camera_FindSharedLiveVideoStreamsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedLiveVideoStreams: z.array(Camera_SharedLiveVideoStreamWS).optional()
+  sharedLiveVideoStreams: z.array(Camera_SharedLiveVideoStreamWS).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_FindSharedVideoWallsWSRequest: z.ZodObject<any> = z.object({
   videoWallUuid: z.string().optional()
@@ -4846,7 +5563,8 @@ const Camera_SharedVideoWallWS: z.ZodObject<any> = z.object({
 const Camera_FindSharedVideoWallsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedVideoWalls: z.array(Camera_SharedVideoWallWS).optional()
+  sharedVideoWalls: z.array(Camera_SharedVideoWallWS).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_FootageBoundingBoxSummaryType: z.ZodObject<any> = z.object({
   deviceMap: z.record(z.unknown()).optional()
@@ -4881,7 +5599,8 @@ const Camera_GenerateWifiChangeAuthorizationTokenWSResponse: z.ZodObject<any> = 
   authorizationToken: z.array(z.string()).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  userUuid: z.string().optional()
+  userUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetBatchRegistrationTokenUsageRequest: z.ZodObject<any> = z.object({
   sinceMillis: z.number().int().optional(),
@@ -4903,7 +5622,8 @@ const Camera_GetCameraAIThresholdsWSResponse: z.ZodObject<any> = z.object({
   humanConfidenceThreshold: z.number().optional(),
   lprConfidenceThreshold: z.number().optional(),
   maxEventDurationMs: z.number().int().optional(),
-  vehicleConfidenceThreshold: z.number().optional()
+  vehicleConfidenceThreshold: z.number().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetCameraDetailsWSRequest: z.ZodObject<any> = z.object({
   cameraUuids: z.array(z.string()).optional()
@@ -4911,7 +5631,8 @@ const Camera_GetCameraDetailsWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetCameraDetailsWSResponse: z.ZodObject<any> = z.object({
   cameras: z.array(Camera_CameraExternalType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetCloudArchivedMediaInfoWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
@@ -4919,7 +5640,8 @@ const Camera_GetCloudArchivedMediaInfoWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetCloudArchivedMediaInfoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  oldestArchivedVideoSegmentSecs: z.number().int().optional()
+  oldestArchivedVideoSegmentSecs: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetCloudArchivingConfigWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -4937,7 +5659,8 @@ const ScopedCloudArchivingConfig: z.ZodObject<any> = z.object({
 const Camera_GetCloudArchivingConfigWSResponse: z.ZodObject<any> = z.object({
   archivingConfig: ScopedCloudArchivingConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetConfigWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
@@ -4958,13 +5681,15 @@ const RegionOfInterestGroup: z.ZodObject<any> = z.object({
   regionsOfInterest: z.array(RegionOfInterest).optional(),
   type: z.string().optional()
 });
-const Deviceconfig_settings_ExternalVideoResolution: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalVideoResolution: z.ZodObject<any> = z.object({
   height: z.number().int().optional(),
   width: z.number().int().optional()
 });
-const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject<any> = z.object({
   ai_dewarp_config: CameraAiDewarpConfigType.optional(),
+  ai_license_invalid: z.boolean().optional(),
   audio_aec_via_software: z.boolean().optional(),
+  audio_ai_disabled: z.boolean().optional(),
   audio_analysis_enabled: z.boolean().optional(),
   audio_external_mic_boost: z.number().int().optional(),
   audio_external_mic_volume: z.number().int().optional(),
@@ -4994,11 +5719,12 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject
   con_vehicle_filter: z.number().int().optional(),
   cross_counting: z.boolean().optional(),
   cross_counting_settings: CameraCrossCountingSettingsType.optional(),
+  custom_events: z.boolean().optional(),
   deviceUuid: z.string().optional(),
   device_mic_enabled: z.boolean().optional(),
   device_near_audio_silenced: z.boolean().optional(),
   device_speaker_enabled: z.boolean().optional(),
-  dewarpMode: z.string().optional(),
+  dewarpMode: CameraDewarpModeEnum.optional(),
   disabled_schedule: z.array(WeeklyMinuteIntervalType).optional(),
   disabled_schedule_inverted: z.boolean().optional(),
   disabled_schedule_uuid: z.string().optional(),
@@ -5030,8 +5756,8 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject
   img_sharpness: z.number().int().optional(),
   lastModified: z.number().int().optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   licenseplate_detection: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
@@ -5059,10 +5785,12 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject
   night_shutter_time_min: z.number().int().optional(),
   obj_ai_threshold: z.number().optional(),
   object_search: z.boolean().optional(),
+  occupancy_counting: z.boolean().optional(),
   on_demand_license_invalid: z.boolean().optional(),
   orgUuid: z.string().optional(),
   people_counting: z.boolean().optional(),
   person_ai_threshold: z.number().optional(),
+  person_reidentification: z.boolean().optional(),
   pose_detection: z.boolean().optional(),
   ppe_detection: z.boolean().optional(),
   privacy_window_polygons: z.array(RegionPolygonType).optional(),
@@ -5071,10 +5799,12 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject
   region_for_occupancy: RegionConfigType.optional(),
   region_of_interest: RegionConfigType.optional(),
   region_of_interest_groups: z.array(RegionOfInterestGroup).optional(),
-  resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
+  resolution: Device_config_settings_ExternalVideoResolution.optional(),
   rotation: z.number().int().optional(),
+  rtsp_encoder: z.number().int().optional(),
   segment_max_bytes: z.number().int().optional(),
   sensor_gain_max: z.number().int().optional(),
+  shared_fov: z.array(z.string()).optional(),
   shutter_time_max: z.number().int().optional(),
   shutter_time_min: z.number().int().optional(),
   snapshot_height: z.number().int().optional(),
@@ -5094,6 +5824,7 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject
   vehicle_ai_threshold: z.number().optional(),
   vehicle_counting: z.boolean().optional(),
   vehicle_detection: z.boolean().optional(),
+  video_ai_disabled: z.boolean().optional(),
   video_persist_disabled: z.boolean().optional(),
   visual_tamper_config: CameraVisualTamperConfigType.optional(),
   wdr_enabled: z.boolean().optional(),
@@ -5102,9 +5833,10 @@ const Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig: z.ZodObject
   zero_motion_video_quality: z.number().int().optional()
 });
 const Camera_GetConfigWSResponse: z.ZodObject<any> = z.object({
-  config: Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig.optional(),
+  config: Device_config_userconfig_IExternalReadableAudioVideoUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetCurrentStateWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5113,7 +5845,8 @@ const Camera_GetCurrentStateWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetCurrentStateWSResponse: z.ZodObject<any> = z.object({
   cameraState: Camera_CameraCurrentStateType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetCustomFootageSeekpointsV2WSRequest: z.ZodObject<any> = z.object({
   customDescription: z.string().optional(),
@@ -5140,12 +5873,14 @@ const SeekpointIndexType: z.ZodObject<any> = z.object({
 const Camera_GetCustomFootageSeekpointsV2WSResponse: z.ZodObject<any> = z.object({
   customFootageSeekPoints: z.array(SeekpointIndexType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFacetedCameraDetailsWSResponse: z.ZodObject<any> = z.object({
   cameras: z.array(Camera_CameraExternalFacetedType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFootageBoundingBoxesForMultipleWSRequest: z.ZodObject<any> = z.object({
   cameraUuids: z.array(z.string()).optional(),
@@ -5155,7 +5890,8 @@ const Camera_GetFootageBoundingBoxesForMultipleWSRequest: z.ZodObject<any> = z.o
 const Camera_GetFootageBoundingBoxesForMultipleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageBoundingBoxMap: z.record(z.unknown()).optional()
+  footageBoundingBoxMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFootageBoundingBoxesWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5165,7 +5901,8 @@ const Camera_GetFootageBoundingBoxesWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetFootageBoundingBoxesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageBoundingBoxes: z.array(FootageBoundingBoxType).optional()
+  footageBoundingBoxes: z.array(FootageBoundingBoxType).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFootageSeekpointsForMultipleWSRequest: z.ZodObject<any> = z.object({
   cameraUuids: z.array(z.string()).optional(),
@@ -5176,7 +5913,8 @@ const Camera_GetFootageSeekpointsForMultipleWSRequest: z.ZodObject<any> = z.obje
 const Camera_GetFootageSeekpointsForMultipleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageSeekPointMap: z.record(z.unknown()).optional()
+  footageSeekPointMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFootageSeekpointsV2WSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5187,7 +5925,8 @@ const Camera_GetFootageSeekpointsV2WSRequest: z.ZodObject<any> = z.object({
 const Camera_GetFootageSeekpointsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageSeekPoints: z.array(FootageSeekPointV2Type).optional()
+  footageSeekPoints: z.array(FootageSeekPointV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFootageSeekpointsWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5213,7 +5952,8 @@ const FootageSeekPointType: z.ZodObject<any> = z.object({
 const Camera_GetFootageSeekpointsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageSeekPoints: z.array(FootageSeekPointType).optional()
+  footageSeekPoints: z.array(FootageSeekPointType).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetFullCameraStateWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5222,7 +5962,8 @@ const Camera_GetFullCameraStateWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetFullCameraStateWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  fullCameraState: FullDeviceStateType.optional()
+  fullCameraState: FullDeviceStateType.optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetLineCrossingEnabledCamerasForLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
@@ -5230,7 +5971,8 @@ const Camera_GetLineCrossingEnabledCamerasForLocationWSRequest: z.ZodObject<any>
 const Camera_GetLineCrossingEnabledCamerasForLocationWSResponse: z.ZodObject<any> = z.object({
   camerasToConfigs: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetMediaUrisWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
@@ -5242,20 +5984,24 @@ const Camera_GetMediaUrisWSResponse: z.ZodObject<any> = z.object({
   lanLiveH264Uris: z.array(z.string()).optional(),
   lanLiveM3u8Uris: z.array(z.string()).optional(),
   lanLiveMpdUris: z.array(z.string()).optional(),
+  lanLiveOpusUris: z.array(z.string()).optional(),
   lanVodM3u8UrisTemplates: z.array(z.string()).optional(),
   lanVodMpdUrisTemplates: z.array(z.string()).optional(),
   wanLiveH264Uri: z.string().optional(),
   wanLiveM3u8Uri: z.string().optional(),
   wanLiveMpdUri: z.string().optional(),
+  wanLiveOpusUri: z.string().optional(),
   wanVodH264UriTemplate: z.string().optional(),
   wanVodM3u8UriTemplate: z.string().optional(),
-  wanVodMpdUriTemplate: z.string().optional()
+  wanVodMpdUriTemplate: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetMinimalCameraLocationMapWSRequest = z.record(z.unknown());
 const Camera_GetMinimalCameraLocationMapWSResponse: z.ZodObject<any> = z.object({
   cameraLocationMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetMinimalCameraLocationMapWSResponse_CameraLocationInfo: z.ZodObject<any> = z.object({
   cameraName: z.string().optional(),
@@ -5268,7 +6014,8 @@ const Camera_GetMinimalCameraStateListWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetMinimalCameraStateListWSResponse: z.ZodObject<any> = z.object({
   cameraStates: z.array(MinimalDeviceStateType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetMinimalListWSRequest: z.ZodObject<any> = z.object({
   includeMummified: z.boolean().optional()
@@ -5300,14 +6047,16 @@ const Camera_MinimalCameraType: z.ZodObject<any> = z.object({
 const Camera_GetMinimalListWSResponse: z.ZodObject<any> = z.object({
   cameras: z.array(Camera_MinimalCameraType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetOccupancyEnabledCamerasWSRequest = z.record(z.unknown());
 const Camera_GetOfflineLanStreamingInfoWSRequest = z.record(z.unknown());
 const Camera_GetOfflineLanStreamingInfoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  info: z.record(z.unknown()).optional()
+  info: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5317,7 +6066,8 @@ const Camera_GetPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
 const Camera_GetPresenceWindowsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  presenceWindows: z.record(z.unknown()).optional()
+  presenceWindows: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_SharedCameraCurrentStateType: z.ZodObject<any> = z.object({
   baseVideoOperationUrl: z.string().optional(),
@@ -5330,7 +6080,8 @@ const Camera_SharedCameraCurrentStateType: z.ZodObject<any> = z.object({
 const Camera_GetSharedCameraCurrentStateWSResponse: z.ZodObject<any> = z.object({
   cameraState: Camera_SharedCameraCurrentStateType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetStorageRecoveryFileWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -5350,7 +6101,8 @@ const TimeWindowSeconds: z.ZodObject<any> = z.object({
 const Camera_GetUptimeWindowsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uptimeWindows: z.array(TimeWindowSeconds).optional()
+  uptimeWindows: z.array(TimeWindowSeconds).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_GetVideoWallsWSRequest = z.record(z.unknown());
 const Camera_VideoWallSummaryType: z.ZodObject<any> = z.object({
@@ -5368,7 +6120,8 @@ const Camera_GetVideoWallsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   userNameMap: z.record(z.unknown()).optional(),
-  videoWalls: z.array(Camera_VideoWallSummaryType).optional()
+  videoWalls: z.array(Camera_VideoWallSummaryType).optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_RebootCameraWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
@@ -5376,14 +6129,16 @@ const Camera_RebootCameraWSRequest: z.ZodObject<any> = z.object({
 const Camera_RebootCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  status: z.string().optional()
+  status: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_RevertCameraToDefaultsWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
 });
 const Camera_RevertCameraToDefaultsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCameraAIThresholdsWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5398,7 +6153,8 @@ const Camera_UpdateCameraAIThresholdsWSRequest: z.ZodObject<any> = z.object({
 });
 const Camera_UpdateCameraAIThresholdsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCameraFirmwareWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional()
@@ -5406,7 +6162,8 @@ const Camera_UpdateCameraFirmwareWSRequest: z.ZodObject<any> = z.object({
 const Camera_UpdateCameraFirmwareWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  status: z.string().optional()
+  status: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCameraHumanLoiteringConfigWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5414,7 +6171,8 @@ const Camera_UpdateCameraHumanLoiteringConfigWSRequest: z.ZodObject<any> = z.obj
 });
 const Camera_UpdateCameraHumanLoiteringWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCameraLineCrossingThresholdsWSRequest_Coordinate: z.ZodObject<any> = z.object({
   x: z.number().optional(),
@@ -5430,7 +6188,8 @@ const Camera_UpdateCameraLineCrossingThresholdsWSRequest: z.ZodObject<any> = z.o
 });
 const Camera_UpdateCameraLineCrossingThresholdsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCameraV2WSRequest: z.ZodObject<any> = z.object({
   customData: z.string().optional(),
@@ -5463,20 +6222,24 @@ const Camera_UpdateCameraV2WSRequest: z.ZodObject<any> = z.object({
 });
 const Camera_UpdateCameraV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCameraWSRequest: z.ZodObject<any> = z.object({
   camera: Camera_CameraBackwardsCompatUpdateType.optional()
 });
 const Camera_UpdateCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateCamerasBulkV2WSRequest: z.ZodObject<any> = z.object({
   cameraBulkDetails: z.array(Camera_UpdateCameraV2WSRequest).optional()
 });
-const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig: z.ZodObject<any> = z.object({
+  ai_license_invalid: z.boolean().optional(),
   audio_aec_via_software: z.boolean().optional(),
+  audio_ai_disabled: z.boolean().optional(),
   audio_external_mic_boost: z.number().int().optional(),
   audio_external_mic_volume: z.number().int().optional(),
   audio_external_speaker_volume: z.number().int().optional(),
@@ -5495,11 +6258,12 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: z.ZodObje
   blocked_debounce_time_ms: z.number().int().optional(),
   blocked_threshold: z.number().optional(),
   char_threshold: z.number().optional(),
+  custom_events: z.boolean().optional(),
   deviceUuid: z.string().optional(),
   device_mic_enabled: z.boolean().optional(),
   device_near_audio_silenced: z.boolean().optional(),
   device_speaker_enabled: z.boolean().optional(),
-  dewarpMode: z.string().optional(),
+  dewarpMode: CameraDewarpModeEnum.optional(),
   disabled_schedule: z.array(WeeklyMinuteIntervalType).optional(),
   disabled_schedule_inverted: z.boolean().optional(),
   disabled_schedule_uuid: z.string().optional(),
@@ -5524,8 +6288,8 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: z.ZodObje
   img_sharpness: z.number().int().optional(),
   lastModified: z.number().int().optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
@@ -5544,18 +6308,22 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: z.ZodObje
   night_shutter_time_max: z.number().int().optional(),
   night_shutter_time_min: z.number().int().optional(),
   object_search: z.boolean().optional(),
+  occupancy_counting: z.boolean().optional(),
   on_demand_license_invalid: z.boolean().optional(),
   orgUuid: z.string().optional(),
+  person_reidentification: z.boolean().optional(),
   privacy_window_polygons: z.array(RegionPolygonType).optional(),
   privacy_windows: z.array(PermyriadRect).optional(),
   ptz_config: CameraPTZConfigType.optional(),
   region_for_occupancy: RegionConfigType.optional(),
   region_of_interest: RegionConfigType.optional(),
   region_of_interest_groups: z.array(RegionOfInterestGroup).optional(),
-  resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
+  resolution: Device_config_settings_ExternalVideoResolution.optional(),
   rotation: z.number().int().optional(),
+  rtsp_encoder: z.number().int().optional(),
   segment_max_bytes: z.number().int().optional(),
   sensor_gain_max: z.number().int().optional(),
+  shared_fov: z.array(z.string()).optional(),
   shutter_time_max: z.number().int().optional(),
   shutter_time_min: z.number().int().optional(),
   snapshot_height: z.number().int().optional(),
@@ -5568,20 +6336,22 @@ const Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig: z.ZodObje
   upload_all_detections: z.boolean().optional(),
   use_onboard_lpr: z.boolean().optional(),
   vehicle_detection: z.boolean().optional(),
+  video_ai_disabled: z.boolean().optional(),
   video_persist_disabled: z.boolean().optional(),
   wdr_enabled: z.boolean().optional(),
   wdr_strength: z.number().int().optional(),
   zero_motion_video_bitrate_percent: z.number().int().optional()
 });
 const Camera_UpdateConfigWSRequest: z.ZodObject<any> = z.object({
-  config: Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig.optional()
+  config: Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig.optional()
 });
 const Camera_UpdateVideoWallWSRequest: z.ZodObject<any> = z.object({
   videoWall: VideoWallType.optional()
 });
 const Camera_UpdateVideoWallWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Camera_UpdateWifiWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -5592,34 +6362,18 @@ const Camera_UpdateWifiWSRequest: z.ZodObject<any> = z.object({
 const Camera_UpdateWifiWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  status: z.record(z.unknown()).optional()
+  status: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const CancelLoopingAudioPlaybackActionRecordType: z.ZodObject<any> = z.object({
   statusMap: z.record(z.unknown()).optional()
 });
-const EarlyExpireModeEnum = z.string();
-const DoorStateOverride: z.ZodObject<any> = z.object({
-  expireEarlyMode: EarlyExpireModeEnum.optional(),
-  expiresAtMillis: z.number().int().optional(),
-  followFirstInRules: z.boolean().optional(),
+const CancelledAccessStateOverride: z.ZodObject<any> = z.object({
   originator: BaseEventOriginator.optional(),
   requestedAtMillis: z.number().int().optional(),
-  startDelaySeconds: z.number().int().optional(),
-  state: AccessControlledDoorStateEnumType.optional(),
-  type: ManualDoorStateChangeEnum.optional()
-});
-const CancelledDoorStateOverride: z.ZodObject<any> = z.object({
-  originator: BaseEventOriginator.optional(),
-  requestedAtMillis: z.number().int().optional(),
-  type: ManualDoorStateChangeEnum.optional()
+  type: ManualAccessStateChangeEnum.optional()
 });
 const ChangeType = z.string();
-const ChatVisibility = z.string();
-const ChatPrivacy: z.ZodObject<any> = z.object({
-  permissionGroupUuid: z.string().optional(),
-  permittedPrincipalUuids: z.array(z.string()).optional(),
-  visibility: ChatVisibility.optional()
-});
 const ResponseType = z.string();
 const ChatQueryFilter: z.ZodObject<any> = z.object({
   afterMs: z.number().int().optional(),
@@ -5628,21 +6382,10 @@ const ChatQueryFilter: z.ZodObject<any> = z.object({
   responseTypes: z.array(ResponseType).optional(),
   responseTypesStr: z.array(z.string()).optional()
 });
-const QueryStatus = z.string();
-const QueryTimelineEvent: z.ZodObject<any> = z.object({
-  status: QueryStatus.optional(),
-  timestampMs: z.number().int().optional()
-});
-const QueryTool: z.ZodObject<any> = z.object({
-  content: z.string().optional(),
-  contentType: z.string().optional(),
-  extra: z.string().optional(),
-  role: z.string().optional(),
-  timestampMs: z.number().int().optional(),
-  tool: z.string().optional()
-});
 const ChatRecord: z.ZodObject<any> = z.object({
+  automatedPromptUuid: z.string().optional(),
   contextId: z.string().optional(),
+  extra: z.string().optional(),
   llmInfo: z.string().optional(),
   orgUuid: z.string().optional(),
   principalUuid: z.string().optional(),
@@ -5658,27 +6401,30 @@ const ChatRecord: z.ZodObject<any> = z.object({
 });
 const ChatbotConfig: z.ZodObject<any> = z.object({
   apiKey: z.string().optional(),
+  billingType: z.string(),
   createdAtMs: z.number().int().optional(),
   lastUpdatedByPrincipal: z.string().optional(),
   orgUuid: z.string().optional(),
-  selfManaged: z.boolean().optional(),
   tokenValid: z.boolean().optional(),
   updatedAtMs: z.number().int().optional()
 });
 const Chatbot_BaseAutomatedPromptWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  settings: AutomatedPrompt.optional()
+  settings: AutomatedPrompt.optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_BaseChatWSResponse: z.ZodObject<any> = z.object({
   chat: ChatRecord.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_BaseChatbotConfigWSResponse: z.ZodObject<any> = z.object({
   config: ChatbotConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_CreateAutomatedPromptWSRequest: z.ZodObject<any> = z.object({
   settings: AutomatedPrompt
@@ -5708,7 +6454,8 @@ const Chatbot_GetAutomatedPromptsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  settingsList: z.array(AutomatedPrompt).optional()
+  settingsList: z.array(AutomatedPrompt).optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_GetChatHistoryByContextIdWSRequest: z.ZodObject<any> = z.object({
   contextId: z.string(),
@@ -5722,7 +6469,8 @@ const Chatbot_GetChatHistoryWSResponse: z.ZodObject<any> = z.object({
   chatHistory: z.array(ChatRecord).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  lastEvaluatedKey: z.string().optional()
+  lastEvaluatedKey: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_GetChatRecordWSRequest: z.ZodObject<any> = z.object({
   recordUuid: z.string()
@@ -5744,7 +6492,16 @@ const Chatbot_GetChatbotConversationsWSResponse: z.ZodObject<any> = z.object({
   conversations: z.array(ContextRecord).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  lastEvaluatedKey: z.string().optional()
+  lastEvaluatedKey: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_GetPublicChatRecordWSRequest: z.ZodObject<any> = z.object({
+  chatId: z.string(),
+  orgId: z.string()
+});
+const Chatbot_GetRemainingTrialCreditsWSRequest = z.record(z.unknown());
+const Chatbot_GetRemainingTrialCreditsWSResponse: z.ZodObject<any> = z.object({
+  remainingTrialCredits: z.number().int().optional()
 });
 const Chatbot_GetSharedChatRecordsWSRequest: z.ZodObject<any> = z.object({
   filter: ChatQueryFilter.optional()
@@ -5752,7 +6509,19 @@ const Chatbot_GetSharedChatRecordsWSRequest: z.ZodObject<any> = z.object({
 const Chatbot_GetSharedChatRecordsWSResponse: z.ZodObject<any> = z.object({
   chatRecords: z.array(ChatRecord).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_GetTokenUsageHistoryWSRequest = z.record(z.unknown());
+const Chatbot_GetTokenUsageHistoryWSResponse: z.ZodObject<any> = z.object({
+  usageHistory: z.record(z.unknown()).optional()
+});
+const Chatbot_InterruptChatWSRequest: z.ZodObject<any> = z.object({
+  recordUuid: z.string()
+});
+const Chatbot_ShareAutomatedPromptResponseWSRequest: z.ZodObject<any> = z.object({
+  chatUuid: z.string(),
+  privacy: ChatPrivacy
 });
 const Chatbot_SubmitChatWSRequest: z.ZodObject<any> = z.object({
   contextId: z.string(),
@@ -5762,15 +6531,29 @@ const Chatbot_SubmitChatWSRequest: z.ZodObject<any> = z.object({
 const Chatbot_SubmitChatWSResponse: z.ZodObject<any> = z.object({
   chatRecordUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_SubmitCreateReportWSRequest: z.ZodObject<any> = z.object({
+  contextId: z.string(),
+  conversationName: z.string().optional(),
+  query: z.string()
+});
+const Chatbot_SubmitCreateReportWSResponse: z.ZodObject<any> = z.object({
+  chatRecordUuid: z.string().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_SubmitTestPromptWSRequest: z.ZodObject<any> = z.object({
+  responseTemplate: z.string().optional(),
   testPrompt: z.string()
 });
 const Chatbot_SubmitTestPromptWSResponse: z.ZodObject<any> = z.object({
   chatUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_UpdateAutomatedPromptWSRequest: z.ZodObject<any> = z.object({
   selectiveUpdate: AutomatedPrompt
@@ -5791,7 +6574,8 @@ const Chatbot_UpdateChatbotConversationWSRequest: z.ZodObject<any> = z.object({
 const Chatbot_UpdateChatbotConversationsWSResponse: z.ZodObject<any> = z.object({
   conversation: ContextRecord.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Chatbot_VerifyJobScheduledWSRequest: z.ZodObject<any> = z.object({
   promptUuid: z.string()
@@ -5800,7 +6584,78 @@ const Chatbot_VerifyJobScheduledWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   scheduleExpression: z.string().optional(),
-  scheduleTimezone: z.string().optional()
+  scheduleTimezone: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_AddAIReportTimelineEventWSRequest: z.ZodObject<any> = z.object({
+  reportUuid: z.string().optional(),
+  status: QueryStatus.optional(),
+  timestampMs: z.number().int().optional()
+});
+const Chatbot_report_BaseAIReportGroupWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  group: AIReportGroup.optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_BaseAIReportWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  report: AIReport.optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_CreateReportWSRequest: z.ZodObject<any> = z.object({
+  params: AIReportGenerateParams,
+  privacy: ChatPrivacy
+});
+const Chatbot_report_CreateReportWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  reportUuid: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_DeleteAIReportGroupWSRequest: z.ZodObject<any> = z.object({
+  groupUuid: z.string().optional()
+});
+const Chatbot_report_DeleteAIReportWSRequest: z.ZodObject<any> = z.object({
+  reportUuid: z.string().optional()
+});
+const Chatbot_report_GetAIReportGroupsByOrgWSRequest: z.ZodObject<any> = z.object({
+  pageRequest: DynamoPageRequest.optional()
+});
+const Chatbot_report_GetAIReportGroupsByOrgWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  groups: z.array(AIReportGroup).optional(),
+  lastEvaluatedKey: DynamoPageRequest.optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_GetAIReportWSRequest: z.ZodObject<any> = z.object({
+  reportUuid: z.string().optional()
+});
+const Chatbot_report_GetAIReportsByGroupWSRequest: z.ZodObject<any> = z.object({
+  groupUuid: z.string().optional(),
+  pageRequest: DynamoPageRequest.optional()
+});
+const Chatbot_report_GetAIReportsByGroupWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  lastEvaluatedKey: DynamoPageRequest.optional(),
+  reports: z.array(AIReport).optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_GetAIReportsByOrgWSRequest: z.ZodObject<any> = z.object({
+  pageRequest: DynamoPageRequest.optional()
+});
+const Chatbot_report_GetAIReportsByOrgWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  lastEvaluatedKey: DynamoPageRequest.optional(),
+  reports: z.array(AIReport).optional(),
+  warningMsg: z.string().optional()
+});
+const Chatbot_report_UpdateAIReportWSRequest: z.ZodObject<any> = z.object({
+  report: AIReport.optional()
 });
 const ClaimKeyEntry: z.ZodObject<any> = z.object({
   productQuantities: z.record(z.unknown()).optional()
@@ -5884,7 +6739,8 @@ const Climate_DeleteEnvironmentalGatewayWSRequest: z.ZodObject<any> = z.object({
 const Climate_DeleteEnvironmentalGatewayWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_GetClimateEventsForSensorWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -5895,7 +6751,8 @@ const Climate_GetClimateEventsForSensorWSRequest: z.ZodObject<any> = z.object({
 const Climate_GetClimateEventsForSensorWSResponse: z.ZodObject<any> = z.object({
   climateEvents: z.array(ClimateEventType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_GetClimateSensorConfigWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -5915,7 +6772,8 @@ const IClimateUserConfig: z.ZodObject<any> = z.object({
 const Climate_GetClimateSensorConfigWSResponse: z.ZodObject<any> = z.object({
   config: IClimateUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_GetEnvironmentalGatewayShadowsWSRequest = z.record(z.unknown());
 const Co2SensorType: z.ZodObject<any> = z.object({
@@ -6029,7 +6887,8 @@ const EnvironmentalGatewayShadowType: z.ZodObject<any> = z.object({
 const Climate_GetEnvironmentalGatewayShadowsWSResponse: z.ZodObject<any> = z.object({
   environmentalGatewayShadows: z.array(EnvironmentalGatewayShadowType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_GetEventsForEnvironmentalGatewayWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -6070,31 +6929,6 @@ const ClipSeekPointV2Type: z.ZodObject<any> = z.object({
   sensorValType: SensorValType.optional(),
   toastOrderIdInfo: ToastOrderIdType.optional(),
   tu: z.string().optional(),
-  unidentifiedFaceId: z.string().optional(),
-  vehicleName: z.string().optional()
-});
-const ClipBoundingBoxType: z.ZodObject<any> = z.object({
-  activity: ActivityEnum.optional(),
-  alert: z.boolean().optional(),
-  bottom: z.number().int().optional(),
-  confidence: z.number().optional(),
-  croppedImageLocator: z.string().optional(),
-  customActivityColor: z.string().optional(),
-  customActivityDescription: z.string().optional(),
-  customActivityDisplayName: z.string().optional(),
-  faceName: z.string().optional(),
-  inMotion: z.boolean().optional(),
-  keypointsV2: z.record(z.unknown()).optional(),
-  left: z.number().int().optional(),
-  licensePlate: z.string().optional(),
-  loudness: z.number().int().optional(),
-  objectId: z.number().int().optional(),
-  pose: z.string().optional(),
-  relativeSecond: z.number().optional(),
-  right: z.number().int().optional(),
-  sensorValType: SensorValType.optional(),
-  toastOrderIdInfo: ToastOrderIdType.optional(),
-  top: z.number().int().optional(),
   unidentifiedFaceId: z.string().optional(),
   vehicleName: z.string().optional()
 });
@@ -6176,7 +7010,8 @@ const Climate_MinimalClimateStateType: z.ZodObject<any> = z.object({
 const Climate_GetMinimalClimateStatesWSResponse: z.ZodObject<any> = z.object({
   climateStates: z.array(Climate_MinimalClimateStateType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_GetMinimalEnvironmentalGatewayStatesWSRequest = z.record(z.unknown());
 const Climate_MinimalEnvironmentalGatewayStateType: z.ZodObject<any> = z.object({
@@ -6242,7 +7077,8 @@ const Climate_GetMinimalEnvironmentalGatewayStatesWSResponse: z.ZodObject<any> =
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  minimalEnvironmentalGatewayStates: z.array(Climate_MinimalEnvironmentalGatewayStateType).optional()
+  minimalEnvironmentalGatewayStates: z.array(Climate_MinimalEnvironmentalGatewayStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_RebootEnvironmentalGatewayWSRequest: z.ZodObject<any> = z.object({
   environmentalGatewayUuid: z.string().optional()
@@ -6272,7 +7108,8 @@ const Climate_UpdateClimateSensorDetailsWSRequest: z.ZodObject<any> = z.object({
 });
 const Climate_UpdateClimateSensorDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Climate_UpdateEnvironmentalGatewayDetailsWSRequest: z.ZodObject<any> = z.object({
   associatedCameras: z.array(z.string()).optional(),
@@ -6300,6 +7137,7 @@ const Climate_UpdateEnvironmentalGatewayDetailsWSRequest: z.ZodObject<any> = z.o
 const Climate_UpdateEnvironmentalGatewayDetailsWSResponse = z.record(z.unknown());
 const ClipVisibility = z.string();
 const ClipAccessSettings: z.ZodObject<any> = z.object({
+  allowedRoles: z.array(z.string()).optional(),
   allowedUsers: z.array(z.string()).optional(),
   visibility: ClipVisibility.optional()
 });
@@ -6358,7 +7196,8 @@ const Common_devices_GetBoundingBoxesWSRequest: z.ZodObject<any> = z.object({
 const Common_devices_GetBoundingBoxesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageBoundingBoxes: z.array(FootageBoundingBoxType).optional()
+  footageBoundingBoxes: z.array(FootageBoundingBoxType).optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_GetCameraOrDoorbellCameraSeekpointsWSRequest: z.ZodObject<any> = z.object({
   activitySet: z.array(ActivityEnum).optional(),
@@ -6386,7 +7225,8 @@ const Common_devices_GetPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
 const Common_devices_GetPresenceWindowsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  presenceWindows: z.record(z.unknown()).optional()
+  presenceWindows: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_GetSeekpointsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -6397,7 +7237,8 @@ const Common_devices_GetSeekpointsWSRequest: z.ZodObject<any> = z.object({
 const Common_devices_GetSeekpointsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  footageSeekPoints: z.array(FootageSeekPointV2Type).optional()
+  footageSeekPoints: z.array(FootageSeekPointV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_GetUptimeWindowsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -6407,18 +7248,21 @@ const Common_devices_GetUptimeWindowsWSRequest: z.ZodObject<any> = z.object({
 const Common_devices_GetUptimeWindowsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uptimeWindows: z.array(TimeWindowSeconds).optional()
+  uptimeWindows: z.array(TimeWindowSeconds).optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_RebootDeviceWSResponse: z.ZodObject<any> = z.object({
   result: z.string().optional()
 });
 const Common_devices_UpdateConfigWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_UpdateDeviceDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_rawstream_CreateRawHttpStreamWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -6430,7 +7274,8 @@ const Common_devices_rawstream_CreateRawHttpStreamWSResponse: z.ZodObject<any> =
   errorMsg: z.string().optional(),
   lanAudioUrl: z.string().optional(),
   lanVideoLowResUrl: z.string().optional(),
-  lanVideoUrl: z.string().optional()
+  lanVideoUrl: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_rawstream_DeleteRawHttpStreamWSRequest: z.ZodObject<any> = z.object({
   customPathPart: z.string().optional(),
@@ -6438,7 +7283,8 @@ const Common_devices_rawstream_DeleteRawHttpStreamWSRequest: z.ZodObject<any> = 
 });
 const Common_devices_rawstream_DeleteRawHttpStreamWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_rawstream_FindAllRawHttpStreamsWSRequest = z.record(z.unknown());
 const Common_devices_rawstream_LanSpecificRawStreamType: z.ZodObject<any> = z.object({
@@ -6460,7 +7306,8 @@ const Common_devices_rawstream_LanSpecificRawStreamType: z.ZodObject<any> = z.ob
 const Common_devices_rawstream_FindAllRawHttpStreamsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rawHttpStreams: z.array(Common_devices_rawstream_LanSpecificRawStreamType).optional()
+  rawHttpStreams: z.array(Common_devices_rawstream_LanSpecificRawStreamType).optional(),
+  warningMsg: z.string().optional()
 });
 const Common_devices_rawstream_GetRawHttpStreamsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -6468,7 +7315,8 @@ const Common_devices_rawstream_GetRawHttpStreamsWSRequest: z.ZodObject<any> = z.
 const Common_devices_rawstream_GetRawHttpStreamsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rawHttpStreams: z.array(Common_devices_rawstream_LanSpecificRawStreamType).optional()
+  rawHttpStreams: z.array(Common_devices_rawstream_LanSpecificRawStreamType).optional(),
+  warningMsg: z.string().optional()
 });
 const DoorbellEventType: z.ZodObject<any> = z.object({
   componentUuid: z.string().optional(),
@@ -6740,6 +7588,11 @@ const Component_AddAccessControlledDoorLabelWSRequest: z.ZodObject<any> = z.obje
   label: z.string().optional()
 });
 const Component_AddAccessControlledDoorLabelWSResponse = z.record(z.unknown());
+const Component_AddAccessControlledElevatorLandingLabelWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string().optional(),
+  label: z.string().optional()
+});
+const Component_AddAccessControlledElevatorLandingLabelWSResponse = z.record(z.unknown());
 const Component_AggregatedCredentialReceivedEventInfo: z.ZodObject<any> = z.object({
   firstEvent: CredentialReceivedEventType.optional(),
   lastEvent: CredentialReceivedEventType.optional(),
@@ -6758,11 +7611,30 @@ const Component_ApplyAccessControlledDoorStateOverrideWSRequest: z.ZodObject<any
 const Component_ApplyAccessControlledDoorStateOverrideWSResponse: z.ZodObject<any> = z.object({
   accessControlledDoor: AccessControlledDoorType.optional()
 });
+const Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string(),
+  accessScheduleFirstInState: FirstInStatus.optional(),
+  authFirstInState: FirstInStatus.optional(),
+  expireEarlyMode: EarlyExpireModeEnum.optional(),
+  expiresAtMillis: z.number().int().optional(),
+  followFirstInRules: z.boolean().optional(),
+  startDelaySeconds: z.number().int().optional(),
+  state: AccessControlledDoorStateEnumType
+});
+const Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLanding: AccessControlledElevatorLanding.optional()
+});
 const Component_CancelAccessControlledDoorStateOverrideWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuid: z.string()
 });
 const Component_CancelAccessControlledDoorStateOverrideWSResponse: z.ZodObject<any> = z.object({
   accessControlledDoor: AccessControlledDoorType.optional()
+});
+const Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string()
+});
+const Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLanding: AccessControlledElevatorLanding.optional()
 });
 const Component_CreateAccessControlledDoorSeekpointsWSRequest: z.ZodObject<any> = z.object({
   doorUuid: z.string().optional(),
@@ -6771,7 +7643,8 @@ const Component_CreateAccessControlledDoorSeekpointsWSRequest: z.ZodObject<any> 
 const Component_CreateAccessControlledDoorSeekpointsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  successMsg: z.string().optional()
+  successMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Component_CreateAccessControlledDoorWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoor: AccessControlledDoorType.optional(),
@@ -6780,7 +7653,27 @@ const Component_CreateAccessControlledDoorWSRequest: z.ZodObject<any> = z.object
 const Component_CreateAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
   accessControlledDoor: AccessControlledDoorType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Component_CreateAccessControlledElevatorLandingWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLanding: AccessControlledElevatorLanding.optional(),
+  accessControlledElevatorLandingLabels: z.array(z.string()).optional()
+});
+const Component_CreateAccessControlledElevatorLandingWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLanding: AccessControlledElevatorLanding.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Component_CreateAccessControlledElevatorWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevator: AccessControlledElevator.optional()
+});
+const Component_CreateAccessControlledElevatorWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevator: AccessControlledElevator.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Component_CreateAperioDoorInfo: z.ZodObject<any> = z.object({
   aperioDoorDeviceId: z.string().optional(),
@@ -6795,7 +7688,8 @@ const Component_CreateAperioDoorsWSResponse: z.ZodObject<any> = z.object({
   doors: z.array(AccessControlledDoorType).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  failedDoors: z.array(AccessControlledDoorType).optional()
+  failedDoors: z.array(AccessControlledDoorType).optional(),
+  warningMsg: z.string().optional()
 });
 const Component_CreateAperioGatewayWSRequest: z.ZodObject<any> = z.object({
   aperioGatewayId: z.string(),
@@ -6807,7 +7701,8 @@ const Component_CreateAperioGatewayWSResponse: z.ZodObject<any> = z.object({
   doors: z.array(AccessControlledDoorType).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  failedDoors: z.array(AccessControlledDoorType).optional()
+  failedDoors: z.array(AccessControlledDoorType).optional(),
+  warningMsg: z.string().optional()
 });
 const Component_CreateIntegratedDoorPositionIndicatorWSRequest: z.ZodObject<any> = z.object({
   name: z.string().optional(),
@@ -6913,6 +7808,18 @@ const Component_DeleteAccessControlledDoorWSRequest: z.ZodObject<any> = z.object
 const Component_DeleteAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
   accessControlledDoor: AccessControlledDoorType.optional()
 });
+const Component_DeleteAccessControlledElevatorLandingWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string().optional()
+});
+const Component_DeleteAccessControlledElevatorLandingWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLanding: AccessControlledElevatorLanding.optional()
+});
+const Component_DeleteAccessControlledElevatorWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorUuid: z.string().optional()
+});
+const Component_DeleteAccessControlledElevatorWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevator: AccessControlledElevator.optional()
+});
 const Component_DeleteComponentWSRequest: z.ZodObject<any> = z.object({
   componentUuid: z.string().optional()
 });
@@ -6932,7 +7839,6 @@ const Component_FindAccessControlledDoorShadowsByLocationWSResponse: z.ZodObject
 });
 const Component_FindAccessControlledDoorShadowsWSRequest: z.ZodObject<any> = z.object({
   lastEvaluatedKey: z.string().optional(),
-  locationUuid: z.string().optional(),
   maxPageSize: z.number().int().optional()
 });
 const Component_FindAccessControlledDoorShadowsWSResponse: z.ZodObject<any> = z.object({
@@ -6962,6 +7868,63 @@ const Component_FindAccessControlledDoorsWSResponse: z.ZodObject<any> = z.object
   accessControlledDoors: z.array(AccessControlledDoorType).optional(),
   lastEvaluatedKey: z.string().optional()
 });
+const Component_FindAccessControlledElevatorLandingShadowsByLocationWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  locationUuid: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const Component_FindAccessControlledElevatorLandingShadowsByLocationWSResponse: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  shadows: z.array(AccessControlledElevatorLandingShadow).optional()
+});
+const Component_FindAccessControlledElevatorLandingShadowsWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const Component_FindAccessControlledElevatorLandingShadowsWSResponse: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  shadows: z.array(AccessControlledElevatorLandingShadow).optional()
+});
+const Component_FindAccessControlledElevatorLandingsByLocationWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  locationUuid: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const Component_FindAccessControlledElevatorLandingsByLocationWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandings: z.array(AccessControlledElevatorLanding).optional(),
+  lastEvaluatedKey: z.string().optional()
+});
+const Component_FindAccessControlledElevatorLandingsWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const Component_FindAccessControlledElevatorLandingsWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandings: z.array(AccessControlledElevatorLanding).optional(),
+  lastEvaluatedKey: z.string().optional()
+});
+const Component_FindAccessControlledElevatorsByLocationWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  locationUuid: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const Component_FindAccessControlledElevatorsByLocationWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevators: z.array(AccessControlledElevator).optional(),
+  lastEvaluatedKey: z.string().optional()
+});
+const Component_FindAccessControlledElevatorsByOwnerDeviceWSRequest: z.ZodObject<any> = z.object({
+  ownerDeviceUuid: z.string().optional()
+});
+const Component_FindAccessControlledElevatorsByOwnerDeviceWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevators: z.array(AccessControlledElevator).optional()
+});
+const Component_FindAccessControlledElevatorsWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const Component_FindAccessControlledElevatorsWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevators: z.array(AccessControlledElevator).optional(),
+  lastEvaluatedKey: z.string().optional()
+});
 const Component_FindAllComponentShadowsWSRequest: z.ZodObject<any> = z.object({
   componentUuids: z.array(z.string()).optional()
 });
@@ -6978,7 +7941,21 @@ const Component_FindComponentEventsByAccessControlledDoorWSRequest: z.ZodObject<
 const Component_FindComponentEventsByAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
   componentEvents: z.array(ComponentEventType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Component_FindComponentEventsByAccessControlledElevatorWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorUuid: z.string().optional(),
+  createdAfterMs: z.number().int().optional(),
+  createdBeforeMs: z.number().int().optional(),
+  limit: z.number().int().optional(),
+  typeFilter: z.array(ComponentEventEnumType).optional()
+});
+const Component_FindComponentEventsByAccessControlledElevatorWSResponse: z.ZodObject<any> = z.object({
+  componentEvents: z.array(ComponentEventType).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Component_FindComponentEventsByApiTokenWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -7110,7 +8087,8 @@ const Component_FindComponentEventsForVideoIntercomWSRequest: z.ZodObject<any> =
 const Component_FindComponentEventsForVideoIntercomWSResponse: z.ZodObject<any> = z.object({
   componentEvents: z.array(ComponentEventType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Component_FindComponentSeekPointsByAccessControlledDoorWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuid: z.string().optional(),
@@ -7223,30 +8201,50 @@ const Component_GetAccessControlledDoorLabelsForOrgWSRequest = z.record(z.unknow
 const Component_GetAccessControlledDoorLabelsForOrgWSResponse: z.ZodObject<any> = z.object({
   accessControlledDoorLabels: z.record(z.unknown()).optional()
 });
+const Component_GetAccessControlledElevatorLandingLabelsForOrgWSRequest = z.record(z.unknown());
+const Component_GetAccessControlledElevatorLandingLabelsForOrgWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingLabels: z.record(z.unknown()).optional()
+});
 const Component_GetCurrentExpectedAccessControlledDoorStateWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuid: z.string()
 });
-const Schedule_AccessControlledDoorStateSourceEnum = z.string();
-const Schedule_AccessControlledDoorNextNearestSchedule: z.ZodObject<any> = z.object({
+const Schedule_AccessStatefulComponentCompositeStateSourceEnum = z.string();
+const Schedule_AccessStatefulComponentCompositeNextNearestSchedule: z.ZodObject<any> = z.object({
   currentlyActive: z.boolean().optional(),
   doorState: AccessControlledDoorStateEnumType.optional(),
   scheduleUuid: z.string().optional(),
-  source: Schedule_AccessControlledDoorStateSourceEnum.optional(),
+  source: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
   startsAtMillisInclusive: z.number().int().optional(),
   stopsAtMillisInclusive: z.number().int().optional()
 });
 const Component_GetCurrentExpectedAccessControlledDoorStateWSResponse: z.ZodObject<any> = z.object({
   activeDoorState: AccessControlledDoorStateEnumType.optional(),
-  activeDoorStateSource: Schedule_AccessControlledDoorStateSourceEnum.optional(),
-  defaultDoorStateSource: Schedule_AccessControlledDoorStateSourceEnum.optional(),
+  activeDoorStateSource: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
+  defaultDoorStateSource: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
   defaultState: AccessControlledDoorStateEnumType.optional(),
   doorStateIfFirstInRequired: AccessControlledDoorStateEnumType.optional(),
   doorStateIfFirstInSatisfied: AccessControlledDoorStateEnumType.optional(),
-  doorStateSourceIfFirstInRequired: Schedule_AccessControlledDoorStateSourceEnum.optional(),
-  doorStateSourceIfFirstInSatisfied: Schedule_AccessControlledDoorStateSourceEnum.optional(),
+  doorStateSourceIfFirstInRequired: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
+  doorStateSourceIfFirstInSatisfied: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
   firstInRequirementEnabled: z.boolean().optional(),
   firstInRequirementSatisfied: z.boolean().optional(),
-  nextNearestSchedule: Schedule_AccessControlledDoorNextNearestSchedule.optional()
+  nextNearestSchedule: Schedule_AccessStatefulComponentCompositeNextNearestSchedule.optional()
+});
+const Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string()
+});
+const Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSResponse: z.ZodObject<any> = z.object({
+  accessStateIfFirstInRequired: AccessControlledDoorStateEnumType.optional(),
+  accessStateIfFirstInSatisfied: AccessControlledDoorStateEnumType.optional(),
+  accessStateSourceIfFirstInRequired: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
+  accessStateSourceIfFirstInSatisfied: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
+  activeAccessState: AccessControlledDoorStateEnumType.optional(),
+  activeAccessStateSource: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
+  defaultDoorStateSource: Schedule_AccessStatefulComponentCompositeStateSourceEnum.optional(),
+  defaultState: AccessControlledDoorStateEnumType.optional(),
+  firstInRequirementEnabled: z.boolean().optional(),
+  firstInRequirementSatisfied: z.boolean().optional(),
+  nextNearestSchedule: Schedule_AccessStatefulComponentCompositeNextNearestSchedule.optional()
 });
 const Component_GetFullAccessControlledDoorShadowWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuid: z.string().optional()
@@ -7282,6 +8280,11 @@ const Component_RemoveAccessControlledDoorLabelWSRequest: z.ZodObject<any> = z.o
   label: z.string().optional()
 });
 const Component_RemoveAccessControlledDoorLabelWSResponse = z.record(z.unknown());
+const Component_RemoveAccessControlledElevatorLandingLabelWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string().optional(),
+  label: z.string().optional()
+});
+const Component_RemoveAccessControlledElevatorLandingLabelWSResponse = z.record(z.unknown());
 const Component_UpdateAccessControlledDoorWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuid: z.string().optional(),
   ajarTimeSec: z.number().int().optional(),
@@ -7317,7 +8320,56 @@ const Component_UpdateAccessControlledDoorWSRequest: z.ZodObject<any> = z.object
 const Component_UpdateAccessControlledDoorWSResponse: z.ZodObject<any> = z.object({
   accessControlledDoor: AccessControlledDoorType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Component_UpdateAccessControlledElevatorLandingWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorLandingUuid: z.string().optional(),
+  accessStateToScheduleUuidMap: z.record(z.unknown()).optional(),
+  associatedCameras: z.array(z.string()).optional(),
+  associatedFaceDetectionCameras: z.array(z.string()).optional(),
+  defaultAccessState: AccessControlledDoorStateEnumType.optional(),
+  floorNumber: z.number().int().optional(),
+  geofenceEnabled: z.boolean().optional(),
+  geofenceRadius: z.number().optional(),
+  name: z.string().optional(),
+  policyUuid: z.string().optional(),
+  remoteUnlockEnabled: z.boolean().optional()
+});
+const Component_UpdateAccessControlledElevatorLandingWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevatorLanding: AccessControlledElevatorLanding.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Component_UpdateAccessControlledElevatorWSRequest: z.ZodObject<any> = z.object({
+  accessControlledElevatorUuid: z.string().optional(),
+  associatedCameras: z.array(z.string()).optional(),
+  associatedFaceDetectionCameras: z.array(z.string()).optional(),
+  directionRadians: z.number().optional(),
+  elevatorLandingReferenceUpdates: z.record(z.unknown()).optional(),
+  elevatorLandingReferences: z.record(z.unknown()).optional(),
+  forceAllReadersFirstInAuthRequiredLedFeedbackEnabled: z.boolean().optional(),
+  forceAllReadersFirstInUnlockPendingLedFeedbackEnabled: z.boolean().optional(),
+  forceAllReadersOtherReaderUnlockAudioFeedbackEnabled: z.boolean().optional(),
+  forceAllReadersRemoteUnlockAudioFeedbackEnabled: z.boolean().optional(),
+  geofenceEnabled: z.boolean().optional(),
+  geofenceRadius: z.number().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  name: z.string().optional(),
+  policyUuid: z.string().optional(),
+  proximityUnlockSettings: ProximityUnlockSettingsType.optional(),
+  readerComponents: z.array(ComponentReferenceType).optional(),
+  remoteUnlockEnabled: z.boolean().optional(),
+  unlockTimeSec: z.number().int().optional(),
+  waveToUnlockSettings: WaveToUnlockSettingsType.optional()
+});
+const Component_UpdateAccessControlledElevatorWSResponse: z.ZodObject<any> = z.object({
+  accessControlledElevator: AccessControlledElevator.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Component_UpdateIntegratedDoorPositionIndicatorWSRequest: z.ZodObject<any> = z.object({
   componentUuid: z.string().optional(),
@@ -7487,7 +8539,8 @@ const Customer_DeleteNotificationSnoozeSettingWSRequest: z.ZodObject<any> = z.ob
 });
 const Customer_DeleteNotificationSnoozeSettingWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_GetCurrentPartnerUserWSRequest = z.record(z.unknown());
 const NotificationIntervalV2Type: z.ZodObject<any> = z.object({
@@ -7566,7 +8619,8 @@ const Customer_GetCurrentPartnerUserWSResponse: z.ZodObject<any> = z.object({
   notificationSettings: PartnerNotificationSettingsType.optional(),
   notificationSettingsV2: PartnerNotificationSettingsV2.optional(),
   permissionGroupUuid: z.string().optional(),
-  user: WrappedRhombusOrgUserType.optional()
+  user: WrappedRhombusOrgUserType.optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_GetCurrentRhombusKeyUserWSRequest = z.record(z.unknown());
 const User_RhombusKeyOrgDetailsType: z.ZodObject<any> = z.object({
@@ -7646,7 +8700,8 @@ const SessionInfoWSType: z.ZodObject<any> = z.object({
 const Customer_GetCurrentUserSessionsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sessions: z.array(SessionInfoWSType).optional()
+  sessions: z.array(SessionInfoWSType).optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_GetCurrentUserWSRequest = z.record(z.unknown());
 const DashboardCustomizations: z.ZodObject<any> = z.object({
@@ -7701,7 +8756,8 @@ const Customer_GetCurrentUserWSResponse: z.ZodObject<any> = z.object({
   notificationSettings: UserNotificationSettingsV3Type.optional(),
   notificationSettingsV2: UserNotificationSettingsV4Type.optional(),
   permissionGroupUuid: z.string().optional(),
-  user: WrappedRhombusOrgUserType.optional()
+  user: WrappedRhombusOrgUserType.optional(),
+  warningMsg: z.string().optional()
 });
 const DashboardStatus: z.ZodObject<any> = z.object({
   camerasDown: z.number().int().optional(),
@@ -7719,7 +8775,8 @@ const DashboardStatus: z.ZodObject<any> = z.object({
 const Customer_GetDashboardStatusWSResponse: z.ZodObject<any> = z.object({
   dashboardStatus: DashboardStatus.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_GetDashboardstatusWSRequest = z.record(z.unknown());
 const Customer_GetRhombusKeyConfigForCurrentUserWSRequest = z.record(z.unknown());
@@ -7738,7 +8795,8 @@ const Customer_GetUserSnoozedNotificationSettingsWSResponse: z.ZodObject<any> = 
   snoozedForAllNotificationsIntervals: z.array(ScheduledIntervalType).optional(),
   snoozedForComponentCompositesMap: z.record(z.unknown()).optional(),
   snoozedForDevicesMap: z.record(z.unknown()).optional(),
-  snoozedForLocationsMap: z.record(z.unknown()).optional()
+  snoozedForLocationsMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_LogoutAllOtherCurrentUserSessionsRequest = z.record(z.unknown());
 const Customer_LogoutAllOtherCurrentUserSessionsResponse = z.record(z.unknown());
@@ -7748,7 +8806,8 @@ const Customer_SetFlagWSRequest: z.ZodObject<any> = z.object({
 });
 const Customer_SetFlagWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_SnoozeAllNotificationsWSRequest: z.ZodObject<any> = z.object({
   durationSec: z.number().int().optional(),
@@ -7756,7 +8815,8 @@ const Customer_SnoozeAllNotificationsWSRequest: z.ZodObject<any> = z.object({
 });
 const Customer_SnoozeAllNotificationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_SnoozeNotificationsWSRequest: z.ZodObject<any> = z.object({
   componentCompositeUuids: z.array(z.string()).optional(),
@@ -7767,7 +8827,8 @@ const Customer_SnoozeNotificationsWSRequest: z.ZodObject<any> = z.object({
 });
 const Customer_SnoozeNotificationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_UpdateCurrentPartnerWSRequest: z.ZodObject<any> = z.object({
   bypassSaml: z.boolean().optional(),
@@ -7780,7 +8841,8 @@ const Customer_UpdateCurrentPartnerWSRequest: z.ZodObject<any> = z.object({
 });
 const Customer_UpdateCurrentPartnerWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_UpdateCurrentUserWSRequest: z.ZodObject<any> = z.object({
   dashboardCustomizations: DashboardCustomizations.optional(),
@@ -7792,7 +8854,8 @@ const Customer_UpdateCurrentUserWSRequest: z.ZodObject<any> = z.object({
 });
 const Customer_UpdateCurrentUserWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_UpdateDashboardCustomizationsWSRequest: z.ZodObject<any> = z.object({
   fullCamera: z.string().optional(),
@@ -7810,14 +8873,16 @@ const Customer_UpdateDashboardCustomizationsWSRequest: z.ZodObject<any> = z.obje
 });
 const Customer_UpdateDashboardCustomizationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_UpdateFrontendCustomizationsWSRequest: z.ZodObject<any> = z.object({
   customizations: z.record(z.unknown()).optional()
 });
 const Customer_UpdateFrontendCustomizationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Customer_UpdateRhombusKeyPreferencesForCurrentUserWSRequest: z.ZodObject<any> = z.object({
   favoriteAccessControlledDoorUuids: z.array(z.string()).optional(),
@@ -7844,20 +8909,23 @@ const Developer_CreateEventListenerWSRequest: z.ZodObject<any> = z.object({
 const Developer_CreateEventListenerWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  eventListenerUuid: z.string().optional()
+  eventListenerUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Developer_DeleteEventListenerWSRequest: z.ZodObject<any> = z.object({
   eventListenerUuid: z.string().optional()
 });
 const Developer_DeleteEventListenerWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Developer_GetAllEventListenersWSRequest = z.record(z.unknown());
 const Developer_GetAllEventListenersWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  eventListeners: z.array(EventListenerType).optional()
+  eventListeners: z.array(EventListenerType).optional(),
+  warningMsg: z.string().optional()
 });
 const Developer_GetEventListenersForDeviceWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -7865,7 +8933,8 @@ const Developer_GetEventListenersForDeviceWSRequest: z.ZodObject<any> = z.object
 const Developer_GetEventListenersForDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  eventListeners: z.array(EventListenerType).optional()
+  eventListeners: z.array(EventListenerType).optional(),
+  warningMsg: z.string().optional()
 });
 const DeviceAssignableLicenseGroupStats: z.ZodObject<any> = z.object({
   assignedCount: z.number().int().optional(),
@@ -7880,6 +8949,11 @@ const DeviceCatalogItem: z.ZodObject<any> = z.object({
   durationMonths: z.number().int().optional(),
   productCode: z.string().optional(),
   productType: z.string().optional()
+});
+const ReEnableDeviceHealthTrackingCondition = z.string();
+const DeviceDisabledHealthTrackingInfo: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional(),
+  reEnableCondition: ReEnableDeviceHealthTrackingCondition.optional()
 });
 const DeviceEventRecordType: z.ZodObject<any> = z.object({
   activities: z.array(ActivityEnum).optional(),
@@ -7952,19 +9026,21 @@ const DeviceTypeV2: z.ZodObject<any> = z.object({
   type: DeviceTypeEnum.optional(),
   uuid: z.string().optional()
 });
-const Deviceconfig_GetConfigWSRequest: z.ZodObject<any> = z.object({
+const Device_config_GetConfigWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
 });
-const Deviceconfig_GetFacetedUserConfigWSResponse: z.ZodObject<any> = z.object({
-  config: Deviceconfig_userconfig_ExternalReadableFacetedUserConfig.optional(),
+const Device_config_GetFacetedUserConfigWSResponse: z.ZodObject<any> = z.object({
+  config: Device_config_userconfig_ExternalReadableFacetedUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
-const Deviceconfig_UpdateFacetedUserConfigWSRequest: z.ZodObject<any> = z.object({
-  configUpdate: Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig.optional()
+const Device_config_UpdateFacetedUserConfigWSRequest: z.ZodObject<any> = z.object({
+  configUpdate: Device_config_userconfig_ExternalUpdateableFacetedUserConfig.optional()
 });
-const Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalAudioSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   audio_aec_via_software: z.boolean().optional(),
+  audio_ai_disabled: z.boolean().optional(),
   audio_external_mic_boost: z.number().int().optional(),
   audio_external_mic_volume: z.number().int().optional(),
   audio_external_speaker_volume: z.number().int().optional(),
@@ -7990,8 +9066,9 @@ const Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate: z.ZodObject<an
   frontendNoiseSuppression: z.boolean().optional(),
   updatedSetMethodMap: z.record(z.unknown()).optional()
 });
-const Deviceconfig_settings_ExternalReadableAudioSettings: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalReadableAudioSettings: z.ZodObject<any> = z.object({
   audio_aec_via_software: z.boolean().optional(),
+  audio_ai_disabled: z.boolean().optional(),
   audio_analysis_enabled: z.boolean().optional(),
   audio_external_mic_boost: z.number().int().optional(),
   audio_external_mic_volume: z.number().int().optional(),
@@ -8017,7 +9094,7 @@ const Deviceconfig_settings_ExternalReadableAudioSettings: z.ZodObject<any> = z.
   frontendEqualizerPeaking3: FrontendEqualizerSettings.optional(),
   frontendNoiseSuppression: z.boolean().optional()
 });
-const Deviceconfig_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.object({
   ai_dewarp_config: CameraAiDewarpConfigType.optional(),
   behavior_detection: z.boolean().optional(),
   blocked_debounce_time_ms: z.number().int().optional(),
@@ -8028,7 +9105,8 @@ const Deviceconfig_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.
   con_vehicle_filter: z.number().int().optional(),
   cross_counting: z.boolean().optional(),
   cross_counting_settings: CameraCrossCountingSettingsType.optional(),
-  dewarpMode: z.string().optional(),
+  custom_events: z.boolean().optional(),
+  dewarpMode: CameraDewarpModeEnum.optional(),
   disabled_schedule: z.array(WeeklyMinuteIntervalType).optional(),
   disabled_schedule_inverted: z.boolean().optional(),
   disabled_schedule_uuid: z.string().optional(),
@@ -8073,8 +9151,10 @@ const Deviceconfig_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.
   night_shutter_time_min: z.number().int().optional(),
   obj_ai_threshold: z.number().optional(),
   object_search: z.boolean().optional(),
+  occupancy_counting: z.boolean().optional(),
   people_counting: z.boolean().optional(),
   person_ai_threshold: z.number().optional(),
+  person_reidentification: z.boolean().optional(),
   pose_detection: z.boolean().optional(),
   ppe_detection: z.boolean().optional(),
   privacy_window_polygons: z.array(RegionPolygonType).optional(),
@@ -8083,10 +9163,12 @@ const Deviceconfig_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.
   region_for_occupancy: RegionConfigType.optional(),
   region_of_interest: RegionConfigType.optional(),
   region_of_interest_groups: z.array(RegionOfInterestGroup).optional(),
-  resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
+  resolution: Device_config_settings_ExternalVideoResolution.optional(),
   rotation: z.number().int().optional(),
+  rtsp_encoder: z.number().int().optional(),
   segment_max_bytes: z.number().int().optional(),
   sensor_gain_max: z.number().int().optional(),
+  shared_fov: z.array(z.string()).optional(),
   shutter_time_max: z.number().int().optional(),
   shutter_time_min: z.number().int().optional(),
   snapshot_height: z.number().int().optional(),
@@ -8102,6 +9184,7 @@ const Deviceconfig_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.
   vehicle_ai_threshold: z.number().optional(),
   vehicle_counting: z.boolean().optional(),
   vehicle_detection: z.boolean().optional(),
+  video_ai_disabled: z.boolean().optional(),
   video_persist_disabled: z.boolean().optional(),
   visual_tamper_config: CameraVisualTamperConfigType.optional(),
   wdr_enabled: z.boolean().optional(),
@@ -8109,11 +9192,12 @@ const Deviceconfig_settings_ExternalReadableVideoSettings: z.ZodObject<any> = z.
   zero_motion_video_bitrate_percent: z.number().int().optional(),
   zero_motion_video_quality: z.number().int().optional()
 });
-const Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
+const Device_config_settings_ExternalVideoSettingsSelectiveUpdate: z.ZodObject<any> = z.object({
   blocked_debounce_time_ms: z.number().int().optional(),
   blocked_threshold: z.number().optional(),
   char_threshold: z.number().optional(),
-  dewarpMode: z.string().optional(),
+  custom_events: z.boolean().optional(),
+  dewarpMode: CameraDewarpModeEnum.optional(),
   disabled_schedule: z.array(WeeklyMinuteIntervalType).optional(),
   disabled_schedule_inverted: z.boolean().optional(),
   disabled_schedule_uuid: z.string().optional(),
@@ -8143,16 +9227,20 @@ const Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate: z.ZodObject<an
   night_shutter_time_max: z.number().int().optional(),
   night_shutter_time_min: z.number().int().optional(),
   object_search: z.boolean().optional(),
+  occupancy_counting: z.boolean().optional(),
+  person_reidentification: z.boolean().optional(),
   privacy_window_polygons: z.array(RegionPolygonType).optional(),
   privacy_windows: z.array(PermyriadRect).optional(),
   ptz_config: CameraPTZConfigType.optional(),
   region_for_occupancy: RegionConfigType.optional(),
   region_of_interest: RegionConfigType.optional(),
   region_of_interest_groups: z.array(RegionOfInterestGroup).optional(),
-  resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
+  resolution: Device_config_settings_ExternalVideoResolution.optional(),
   rotation: z.number().int().optional(),
+  rtsp_encoder: z.number().int().optional(),
   segment_max_bytes: z.number().int().optional(),
   sensor_gain_max: z.number().int().optional(),
+  shared_fov: z.array(z.string()).optional(),
   shutter_time_max: z.number().int().optional(),
   shutter_time_min: z.number().int().optional(),
   snapshot_height: z.number().int().optional(),
@@ -8162,30 +9250,32 @@ const Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate: z.ZodObject<an
   upload_all_detections: z.boolean().optional(),
   use_onboard_lpr: z.boolean().optional(),
   vehicle_detection: z.boolean().optional(),
+  video_ai_disabled: z.boolean().optional(),
   video_persist_disabled: z.boolean().optional(),
   wdr_enabled: z.boolean().optional(),
   wdr_strength: z.number().int().optional(),
   zero_motion_video_bitrate_percent: z.number().int().optional()
 });
-const Deviceconfig_settings_IntRange: z.ZodObject<any> = z.object({
+const Device_config_settings_IntRange: z.ZodObject<any> = z.object({
   max: z.number().int().optional(),
   min: z.number().int().optional()
 });
-const Deviceconfig_settings_VideoConfigurationDefault: z.ZodObject<any> = z.object({
+const Device_config_settings_VideoConfigurationDefault: z.ZodObject<any> = z.object({
   humanDetection: z.boolean().optional(),
-  resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
+  resolution: Device_config_settings_ExternalVideoResolution.optional(),
   segmentMaxBytes: z.number().int().optional(),
   sensorGainMax: z.number().int().optional(),
   shutterTimeMin: z.number().int().optional(),
   vehicleDetection: z.boolean().optional()
 });
-const Deviceconfig_settings_VideoConfigurationOption: z.ZodObject<any> = z.object({
-  maxBitrateRange: Deviceconfig_settings_IntRange.optional(),
+const Device_config_settings_VideoConfigurationOption: z.ZodObject<any> = z.object({
+  maxBitrateRange: Device_config_settings_IntRange.optional(),
   maxZoomPercent: z.number().int().optional(),
-  resolution: Deviceconfig_settings_ExternalVideoResolution.optional(),
-  wdrRange: Deviceconfig_settings_IntRange.optional()
+  resolution: Device_config_settings_ExternalVideoResolution.optional(),
+  wdrRange: Device_config_settings_IntRange.optional()
 });
-const Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_IExternalReadableDoorControllerUserConfig: z.ZodObject<any> = z.object({
+  ai_license_invalid: z.boolean().optional(),
   autocomponentize_readers: z.boolean().optional(),
   autoregister_readers: z.boolean().optional(),
   bandwidth_reports_disabled: z.boolean().optional(),
@@ -8198,8 +9288,8 @@ const Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig: z.ZodOb
   flip_display_orientation: z.boolean().optional(),
   lastModified: z.number().int().optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
@@ -8215,7 +9305,8 @@ const Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig: z.ZodOb
   storage_target_free_space_permyriad: z.number().int().optional(),
   thumbstrip_upload_target: z.string().optional()
 });
-const Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig: z.ZodObject<any> = z.object({
+const Device_config_userconfig_IExternalUpdateableDoorControllerUserConfig: z.ZodObject<any> = z.object({
+  ai_license_invalid: z.boolean().optional(),
   autocomponentize_readers: z.boolean().optional(),
   autoregister_readers: z.boolean().optional(),
   bandwidth_reports_disabled: z.boolean().optional(),
@@ -8224,8 +9315,8 @@ const Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig: z.Zod
   flip_display_orientation: z.boolean().optional(),
   lastModified: z.number().int().optional(),
   led_mode_blink_period_ms: z.number().int().optional(),
-  led_mode_when_active: z.string().optional(),
-  led_mode_when_inactive: z.string().optional(),
+  led_mode_when_active: LEDModeEnum.optional(),
+  led_mode_when_inactive: LEDModeEnum.optional(),
   led_stealth_mode: z.boolean().optional(),
   lightweight_detection_disabled: z.boolean().optional(),
   live_license_invalid: z.boolean().optional(),
@@ -8240,6 +9331,40 @@ const Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig: z.Zod
   storage_target_free_space_permyriad: z.number().int().optional(),
   thumbstrip_upload_target: z.string().optional()
 });
+const Device_health_DisableDeviceHealthTrackingWSRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional(),
+  reEnableCondition: ReEnableDeviceHealthTrackingCondition.optional()
+});
+const Device_health_DisableDeviceHealthTrackingWSResponse = z.record(z.unknown());
+const Device_health_EnableDeviceHealthTrackingWSRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional()
+});
+const Device_health_EnableDeviceHealthTrackingWSResponse = z.record(z.unknown());
+const Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSRequest = z.record(z.unknown());
+const Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSResponse: z.ZodObject<any> = z.object({
+  disabledHealthTrackingInfos: z.array(DeviceDisabledHealthTrackingInfo).optional()
+});
+const Device_health_GetDeviceHealthTrackingWSRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional()
+});
+const Device_health_GetDeviceHealthTrackingWSResponse: z.ZodObject<any> = z.object({
+  enabled: z.boolean().optional(),
+  reEnableCondition: ReEnableDeviceHealthTrackingCondition.optional()
+});
+const Device_label_AddDeviceLabelWSRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional(),
+  label: z.string().optional()
+});
+const Device_label_AddDeviceLabelWSResponse = z.record(z.unknown());
+const Device_label_FindDeviceLabelsByOrgWSRequest = z.record(z.unknown());
+const Device_label_FindDeviceLabelsByOrgWSResponse: z.ZodObject<any> = z.object({
+  labelsByDevice: z.record(z.unknown()).optional()
+});
+const Device_label_RemoveDeviceLabelWSRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional(),
+  label: z.string().optional()
+});
+const Device_label_RemoveDeviceLabelWSResponse = z.record(z.unknown());
 const DiagnosticEventType: z.ZodObject<any> = z.object({
   activity: z.string().optional(),
   apMac: z.string().optional(),
@@ -8348,13 +9473,15 @@ const Door_GetDoorEventsForSensorWSRequest: z.ZodObject<any> = z.object({
 const Door_GetDoorEventsForSensorWSResponse: z.ZodObject<any> = z.object({
   doorEvents: z.array(DoorEventType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Door_GetMinimalDoorStatesWSRequest = z.record(z.unknown());
 const Door_GetMinimalDoorStatesWSResponse: z.ZodObject<any> = z.object({
   doorStates: z.array(Door_MinimalDoorStateType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Door_UpdateDoorSensorDetailsWSRequest: z.ZodObject<any> = z.object({
   associatedCameras: z.array(z.string()).optional(),
@@ -8381,7 +9508,8 @@ const Door_UpdateDoorSensorDetailsWSRequest: z.ZodObject<any> = z.object({
 });
 const Door_UpdateDoorSensorDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_ExternalDoorbellCameraComponentRuleType: z.ZodObject<any> = z.object({
   action: RuleActionType.optional(),
@@ -8398,7 +9526,8 @@ const Doorbellcamera_CreateRuleForDoorbellCameraWSRequest: z.ZodObject<any> = z.
 const Doorbellcamera_CreateRuleForDoorbellCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  ruleUuid: z.string().optional()
+  ruleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_CreateSharedLiveVideoStreamWSRequest: z.ZodObject<any> = z.object({
   audioGatewayUuid: z.string().optional(),
@@ -8416,7 +9545,8 @@ const Doorbellcamera_CreateSharedLiveVideoStreamWSResponse: z.ZodObject<any> = z
   errorMsg: z.string().optional(),
   sharedLiveM3U8StreamUrl: z.string().optional(),
   sharedLiveVideoStreamUrl: z.string().optional(),
-  sharedLiveVideoStreamUuid: z.string().optional()
+  sharedLiveVideoStreamUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_DeleteDoorbellCameraWSRequest: z.ZodObject<any> = z.object({
   doorbellCameraUuid: z.string(),
@@ -8425,7 +9555,8 @@ const Doorbellcamera_DeleteDoorbellCameraWSRequest: z.ZodObject<any> = z.object(
 const Doorbellcamera_DeleteDoorbellCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_DeleteRuleForDoorbellCameraWSRequest: z.ZodObject<any> = z.object({
   doorbellCameraUuid: z.string().optional(),
@@ -8433,7 +9564,8 @@ const Doorbellcamera_DeleteRuleForDoorbellCameraWSRequest: z.ZodObject<any> = z.
 });
 const Doorbellcamera_DeleteRuleForDoorbellCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_DoorbellCameraOfflineLanStreamingInfo: z.ZodObject<any> = z.object({
   accessToken: z.string().optional(),
@@ -8449,7 +9581,8 @@ const Doorbellcamera_FindComponentEventsForDoorbellCameraWSRequest: z.ZodObject<
 const Doorbellcamera_FindComponentEventsForDoorbellCameraWSResponse: z.ZodObject<any> = z.object({
   componentEvents: z.array(ComponentEventType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_FindComponentSeekPointsForDoorbellCameraWSRequest: z.ZodObject<any> = z.object({
   doorbellCameraUuid: z.string().optional(),
@@ -8459,7 +9592,8 @@ const Doorbellcamera_FindComponentSeekPointsForDoorbellCameraWSRequest: z.ZodObj
 const Doorbellcamera_FindComponentSeekPointsForDoorbellCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  seekpoints: z.array(ComponentSeekPointType).optional()
+  seekpoints: z.array(ComponentSeekPointType).optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_FindSharedLiveVideoStreamsForWSRequest: z.ZodObject<any> = z.object({
   doorbellCameraUuid: z.string().optional()
@@ -8467,12 +9601,14 @@ const Doorbellcamera_FindSharedLiveVideoStreamsForWSRequest: z.ZodObject<any> = 
 const Doorbellcamera_FindSharedLiveVideoStreamsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedLiveVideoStreams: z.array(Camera_SharedLiveVideoStreamWS).optional()
+  sharedLiveVideoStreams: z.array(Camera_SharedLiveVideoStreamWS).optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_GetDoorbellCameraConfigWSResponse: z.ZodObject<any> = z.object({
-  config: Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig.optional(),
+  config: Device_config_userconfig_IExternalReadableAudioVideoUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_GetDoorbellCameraFullStateWSResponse: z.ZodObject<any> = z.object({
   fullState: FullDeviceStateType.optional()
@@ -8534,13 +9670,15 @@ const Doorbellcamera_GetDoorbellCameraOfflineLanStreamingInfoWSRequest = z.recor
 const Doorbellcamera_GetDoorbellCameraOfflineLanStreamingInfoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  info: z.record(z.unknown()).optional()
+  info: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_GetDoorbellCameraRulesForOrgWSRequest = z.record(z.unknown());
 const Doorbellcamera_GetDoorbellCameraRulesForOrgWSResponse: z.ZodObject<any> = z.object({
   doorbellCameraUuidToRulesMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_GetRulesForDoorbellCameraWSRequest: z.ZodObject<any> = z.object({
   doorbellCameraUuid: z.string().optional()
@@ -8548,13 +9686,14 @@ const Doorbellcamera_GetRulesForDoorbellCameraWSRequest: z.ZodObject<any> = z.ob
 const Doorbellcamera_GetRulesForDoorbellCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rules: z.array(Doorbellcamera_ExternalDoorbellCameraComponentRuleType).optional()
+  rules: z.array(Doorbellcamera_ExternalDoorbellCameraComponentRuleType).optional(),
+  warningMsg: z.string().optional()
 });
 const Doorbellcamera_RebootDoorbellCameraWSRequest: z.ZodObject<any> = z.object({
   doorbellCameraUuid: z.string()
 });
 const Doorbellcamera_UpdateDoorbellCameraConfigWSRequest: z.ZodObject<any> = z.object({
-  configUpdate: Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig.optional()
+  configUpdate: Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig.optional()
 });
 const Doorbellcamera_UpdateDoorbellCameraDetailsWSRequest: z.ZodObject<any> = z.object({
   associatedCameras: z.array(z.string()).optional(),
@@ -8588,7 +9727,8 @@ const Doorcontroller_CreateDoorControllerRuleWSRequest: z.ZodObject<any> = z.obj
 const Doorcontroller_CreateDoorControllerRuleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rule: RuleType.optional()
+  rule: RuleType.optional(),
+  warningMsg: z.string().optional()
 });
 const Doorcontroller_DeleteDoorControllerRuleWSRequest: z.ZodObject<any> = z.object({
   doorControllerUuid: z.string().optional(),
@@ -8602,7 +9742,8 @@ const Doorcontroller_DeleteDoorControllerWSRequest: z.ZodObject<any> = z.object(
 const Doorcontroller_DeleteDoorControllerWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorcontroller_DoorControllerDiscoveredAperioDoor: z.ZodObject<any> = z.object({
   gatewayId: z.string().optional(),
@@ -8666,9 +9807,10 @@ const Doorcontroller_DoorControllerStateType: z.ZodObject<any> = z.object({
   wanAddress: z.string().optional()
 });
 const Doorcontroller_GetDoorControllerConfigWSResponse: z.ZodObject<any> = z.object({
-  config: Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig.optional(),
+  config: Device_config_userconfig_IExternalReadableDoorControllerUserConfig.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorcontroller_GetDoorControllerRuleWSRequest: z.ZodObject<any> = z.object({
   doorControllerUuid: z.string().optional(),
@@ -8683,13 +9825,15 @@ const Doorcontroller_GetDoorControllerRulesWSRequest: z.ZodObject<any> = z.objec
 const Doorcontroller_GetDoorControllerRulesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rules: z.array(RuleType).optional()
+  rules: z.array(RuleType).optional(),
+  warningMsg: z.string().optional()
 });
 const Doorcontroller_GetDoorControllerStateListWSRequest = z.record(z.unknown());
 const Doorcontroller_GetDoorControllerStateListWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  stateList: z.array(Doorcontroller_DoorControllerStateType).optional()
+  stateList: z.array(Doorcontroller_DoorControllerStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Doorcontroller_RegisterDiscoveredRhombusReaderWSRequest: z.ZodObject<any> = z.object({
   boardNum: z.number().int().optional(),
@@ -8699,7 +9843,7 @@ const Doorcontroller_RegisterDiscoveredRhombusReaderWSRequest: z.ZodObject<any> 
 });
 const Doorcontroller_RegisterDiscoveredRhombusReaderWSResponse = z.record(z.unknown());
 const Doorcontroller_UpdateDoorControllerConfigWSRequest: z.ZodObject<any> = z.object({
-  configUpdate: Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig.optional()
+  configUpdate: Device_config_userconfig_IExternalUpdateableDoorControllerUserConfig.optional()
 });
 const Doorcontroller_UpdateDoorControllerDetailsWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -8713,7 +9857,8 @@ const Doorcontroller_UpdateDoorControllerDetailsWSRequest: z.ZodObject<any> = z.
 });
 const Doorcontroller_UpdateDoorControllerDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Doorcontroller_UpdateDoorControllerRuleWSRequest: z.ZodObject<any> = z.object({
   doorControllerUuid: z.string().optional(),
@@ -8730,6 +9875,10 @@ const DropboxSettingsV2: z.ZodObject<any> = z.object({
   enabledTimestampMs: z.number().int().optional(),
   enablingUser: z.string().optional(),
   enablingUserUuid: z.string().optional()
+});
+const ElevatorLandingReference: z.ZodObject<any> = z.object({
+  elevatorLandingUuid: z.string().optional(),
+  relayComponents: z.array(ComponentReferenceType).optional()
 });
 const EmailSettings: z.ZodObject<any> = z.object({
   emailAddresses: z.array(z.string()).optional(),
@@ -8749,6 +9898,11 @@ const EmergencyResponseContactsIntervalType: z.ZodObject<any> = z.object({
   emergencyContactList: z.array(EmergencyContact).optional(),
   minuteOfWeekStart: z.number().int().optional(),
   minuteOfWeekStop: z.number().int().optional()
+});
+const EnableDisableAudioRecordActionRecordType: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional(),
+  enable: z.boolean().optional(),
+  succeeded: z.boolean().optional()
 });
 const Entity = z.string();
 const EntityTag: z.ZodObject<any> = z.object({
@@ -8851,7 +10005,8 @@ const Ethernettester_GetEthernetTesterConfigWSRequest: z.ZodObject<any> = z.obje
 const Ethernettester_GetEthernetTesterConfigWSResponse: z.ZodObject<any> = z.object({
   configJson: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const EventCount: z.ZodObject<any> = z.object({
   count: z.number().optional(),
@@ -8871,61 +10026,70 @@ const Event_CreateSharedClipGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   shareUrl: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DeleteAlertMonitoringThreatCaseByStatusWSRequest: z.ZodObject<any> = z.object({
   status: ThreatCaseStatus.optional()
 });
 const Event_DeleteAlertMonitoringThreatCaseByStatusWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DeleteAlertMonitoringThreatCaseWSRequest: z.ZodObject<any> = z.object({
   threatCaseUuids: z.array(z.string()).optional()
 });
 const Event_DeleteAlertMonitoringThreatCaseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DeleteSavedClipWSRequest: z.ZodObject<any> = z.object({
   savedClipUuid: z.string().optional()
 });
 const Event_DeleteSavedClipWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DeleteSharedClipGroupWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Event_DeleteSharedClipGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DismissAllPolicyAlertsForDeviceWSRequest: z.ZodObject<any> = z.object({
   deviceUuids: z.array(z.string()).optional()
 });
 const Event_DismissAllPolicyAlertsForDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DismissAllPolicyAlertsWSRequest = z.record(z.unknown());
 const Event_DismissAllPolicyAlertsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DismissPolicyAlertWSRequest: z.ZodObject<any> = z.object({
   alertUuid: z.string().optional()
 });
 const Event_DismissPolicyAlertWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_DismissPolicyAlertsWSRequest: z.ZodObject<any> = z.object({
   alertUuids: z.array(z.string()).optional()
 });
 const Event_DismissPolicyAlertsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_FrontendCell: z.ZodObject<any> = z.object({
   col: z.number().int().optional(),
@@ -8937,7 +10101,8 @@ const Event_GetAlertMonitoringThreatCaseWSRequest: z.ZodObject<any> = z.object({
 const Event_GetAlertMonitoringThreatCaseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  threatCase: AlertMonitoringThreatCaseType.optional()
+  threatCase: AlertMonitoringThreatCaseType.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetAlertMonitoringThreatCasesWSRequest: z.ZodObject<any> = z.object({
   afterTimestampMs: z.number().int().optional(),
@@ -8956,7 +10121,8 @@ const Event_GetAlertMonitoringThreatCasesWSResponse: z.ZodObject<any> = z.object
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  threatCases: z.array(AlertMonitoringThreatCaseType).optional()
+  threatCases: z.array(AlertMonitoringThreatCaseType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetClipWithProgressWSRequest: z.ZodObject<any> = z.object({
   clipUuid: z.string()
@@ -8971,6 +10137,7 @@ const Event_SavedClipWithProgressType: z.ZodObject<any> = z.object({
   analyzed: z.boolean().optional(),
   byteCount: z.number().int().optional(),
   clipLocation: MetaDataLocationType.optional(),
+  clipLocationV2: z.string().optional(),
   consoleDelete: z.boolean().optional(),
   createdAtMs: z.number().int().optional(),
   currentOperation: z.string().optional(),
@@ -8993,6 +10160,7 @@ const Event_SavedClipWithProgressType: z.ZodObject<any> = z.object({
   sourceAlertUuid: z.string().optional(),
   status: z.string().optional(),
   thumbnailLocation: MetaDataLocationType.optional(),
+  thumbnailLocationV2: z.string().optional(),
   timestampMs: z.number().int().optional(),
   title: z.string().optional(),
   userUuid: z.string().optional(),
@@ -9002,7 +10170,8 @@ const Event_SavedClipWithProgressType: z.ZodObject<any> = z.object({
 const Event_GetClipWithProgressWSResponse: z.ZodObject<any> = z.object({
   clip: Event_SavedClipWithProgressType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetClipsWithProgressWSRequest: z.ZodObject<any> = z.object({
   deviceUuidFilters: z.array(z.string()).optional(),
@@ -9022,7 +10191,8 @@ const Event_GetClipsWithProgressWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   pageToken: z.string().optional(),
-  savedClips: z.array(Event_SavedClipWithProgressType).optional()
+  savedClips: z.array(Event_SavedClipWithProgressType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetExpiringPolicyAlertsWSRequest: z.ZodObject<any> = z.object({
   expiresBeforeMs: z.number().int(),
@@ -9033,12 +10203,14 @@ const Event_GetExpiringPolicyAlertsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  policyAlerts: z.array(BasePolicyAlertType).optional()
+  policyAlerts: z.array(BasePolicyAlertType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetMotionGridCountsWSResponse: z.ZodObject<any> = z.object({
   countGrid: z.array(z.array(z.number().int())).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetMotionGridWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string(),
@@ -9048,7 +10220,8 @@ const Event_GetMotionGridWSRequest: z.ZodObject<any> = z.object({
 const Event_GetMotionGridWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  motionCells: z.record(z.unknown()).optional()
+  motionCells: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertCountWSRequest: z.ZodObject<any> = z.object({
   maxResultsSize: z.number().int().optional()
@@ -9056,7 +10229,8 @@ const Event_GetPolicyAlertCountWSRequest: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertCountWSResponse: z.ZodObject<any> = z.object({
   count: z.number().int().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertDetailsWSRequest: z.ZodObject<any> = z.object({
   policyAlertUuid: z.string().optional()
@@ -9099,7 +10273,8 @@ const PolicyAlertWithDetailsType: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlert: PolicyAlertWithDetailsType.optional()
+  policyAlert: PolicyAlertWithDetailsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertGroupsForDeviceWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -9115,7 +10290,8 @@ const Event_PolicyAlertGroupV2: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertGroupsForDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlertGroups: z.array(Event_PolicyAlertGroupV2).optional()
+  policyAlertGroups: z.array(Event_PolicyAlertGroupV2).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertGroupsForLocationWSRequest: z.ZodObject<any> = z.object({
   lastTimestampMs: z.number().int().optional(),
@@ -9126,7 +10302,8 @@ const Event_GetPolicyAlertGroupsForLocationWSRequest: z.ZodObject<any> = z.objec
 const Event_GetPolicyAlertGroupsForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlertGroups: z.array(Event_PolicyAlertGroupV2).optional()
+  policyAlertGroups: z.array(Event_PolicyAlertGroupV2).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertGroupsV2WSRequest: z.ZodObject<any> = z.object({
   lastTimestampMs: z.number().int().optional(),
@@ -9136,7 +10313,8 @@ const Event_GetPolicyAlertGroupsV2WSRequest: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertGroupsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlertGroups: z.array(Event_PolicyAlertGroupV2).optional()
+  policyAlertGroups: z.array(Event_PolicyAlertGroupV2).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertV2WSRequest: z.ZodObject<any> = z.object({
   policyAlertUuid: z.string().optional()
@@ -9144,7 +10322,8 @@ const Event_GetPolicyAlertV2WSRequest: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlert: PolicyAlertV2Type.optional()
+  policyAlert: PolicyAlertV2Type.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertWSRequest: z.ZodObject<any> = z.object({
   policyAlertUuid: z.string().optional()
@@ -9152,7 +10331,8 @@ const Event_GetPolicyAlertWSRequest: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlert: BasePolicyAlertType.optional()
+  policyAlert: BasePolicyAlertType.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertsV2WSRequest: z.ZodObject<any> = z.object({
   afterTimestampMs: z.number().int().optional(),
@@ -9167,7 +10347,8 @@ const Event_GetPolicyAlertsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   oldestPolicyAlert: PolicyAlertV2Type.optional(),
-  policyAlerts: z.array(PolicyAlertV2Type).optional()
+  policyAlerts: z.array(PolicyAlertV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetPolicyAlertsWSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorFilter: z.array(z.string()).optional(),
@@ -9182,7 +10363,8 @@ const Event_GetPolicyAlertsWSRequest: z.ZodObject<any> = z.object({
 const Event_GetPolicyAlertsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyAlerts: z.array(BasePolicyAlertType).optional()
+  policyAlerts: z.array(BasePolicyAlertType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSavedClipCountWSRequest: z.ZodObject<any> = z.object({
   deviceFilter: z.array(z.string()).optional(),
@@ -9194,7 +10376,8 @@ const Event_GetSavedClipCountWSResponse: z.ZodObject<any> = z.object({
   count: z.number().int().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  privateCount: z.number().int().optional()
+  privateCount: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSavedClipDetailsWSRequest: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional()
@@ -9206,6 +10389,7 @@ const SavedClipWithDetailsType: z.ZodObject<any> = z.object({
   boundingBoxes: z.array(ClipBoundingBoxType).optional(),
   byteCount: z.number().int().optional(),
   clipLocation: MetaDataLocationType.optional(),
+  clipLocationV2: z.string().optional(),
   consoleDelete: z.boolean().optional(),
   createdAtMs: z.number().int().optional(),
   description: z.string().optional(),
@@ -9226,6 +10410,7 @@ const SavedClipWithDetailsType: z.ZodObject<any> = z.object({
   sourceAlertUuid: z.string().optional(),
   status: z.string().optional(),
   thumbnailLocation: MetaDataLocationType.optional(),
+  thumbnailLocationV2: z.string().optional(),
   timestampMs: z.number().int().optional(),
   title: z.string().optional(),
   userUuid: z.string().optional(),
@@ -9235,7 +10420,8 @@ const SavedClipWithDetailsType: z.ZodObject<any> = z.object({
 const Event_GetSavedClipDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  savedClip: SavedClipWithDetailsType.optional()
+  savedClip: SavedClipWithDetailsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSavedClipsByExternalTransactionIdWSRequest: z.ZodObject<any> = z.object({
   externalTransactionId: z.string().optional()
@@ -9246,6 +10432,7 @@ const SavedClipV2Type: z.ZodObject<any> = z.object({
   analyzed: z.boolean().optional(),
   byteCount: z.number().int().optional(),
   clipLocation: MetaDataLocationType.optional(),
+  clipLocationV2: z.string().optional(),
   consoleDelete: z.boolean().optional(),
   createdAtMs: z.number().int().optional(),
   description: z.string().optional(),
@@ -9265,6 +10452,7 @@ const SavedClipV2Type: z.ZodObject<any> = z.object({
   sourceAlertUuid: z.string().optional(),
   status: z.string().optional(),
   thumbnailLocation: MetaDataLocationType.optional(),
+  thumbnailLocationV2: z.string().optional(),
   timestampMs: z.number().int().optional(),
   title: z.string().optional(),
   userUuid: z.string().optional(),
@@ -9274,7 +10462,8 @@ const SavedClipV2Type: z.ZodObject<any> = z.object({
 const Event_GetSavedClipsByExternalTransactionIdWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  savedClips: z.array(SavedClipV2Type).optional()
+  savedClips: z.array(SavedClipV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSavedClipsV2WSRequest: z.ZodObject<any> = z.object({
   maxPageSize: z.number().int().optional(),
@@ -9283,13 +10472,16 @@ const Event_GetSavedClipsV2WSRequest: z.ZodObject<any> = z.object({
 const Event_GetSavedClipsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  savedClips: z.array(SavedClipV2Type).optional()
+  lastEvaluatedTimestampMs: z.number().int().optional(),
+  savedClips: z.array(SavedClipV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSavedClipsWSRequest = z.record(z.unknown());
 const Event_GetSavedClipsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  savedClips: z.array(SavedClipV2Type).optional()
+  savedClips: z.array(SavedClipV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSharedClipGroupDetailsWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -9306,7 +10498,8 @@ const SharedClipGroupWithDetailsType: z.ZodObject<any> = z.object({
 const Event_GetSharedClipGroupDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedClipGroup: SharedClipGroupWithDetailsType.optional()
+  sharedClipGroup: SharedClipGroupWithDetailsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSharedClipGroupsV2WSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -9325,7 +10518,8 @@ const SharedClipGroupWrapperV2Type: z.ZodObject<any> = z.object({
 const Event_GetSharedClipGroupsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedClipGroups: z.array(SharedClipGroupWrapperV2Type).optional()
+  sharedClipGroups: z.array(SharedClipGroupWrapperV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSharedClipGroupsWSRequest = z.record(z.unknown());
 const SharedClipType: z.ZodObject<any> = z.object({
@@ -9348,7 +10542,8 @@ const SharedClipGroupWrapperType: z.ZodObject<any> = z.object({
 const Event_GetSharedClipGroupsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedClipGroups: z.array(SharedClipGroupWrapperType).optional()
+  sharedClipGroups: z.array(SharedClipGroupWrapperType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetSplicedClipsInProgressWSRequest = z.record(z.unknown());
 const SplicedClipType: z.ZodObject<any> = z.object({
@@ -9376,6 +10571,7 @@ const SplicedClipType: z.ZodObject<any> = z.object({
   sendToSharedStorage: z.boolean().optional(),
   startTime: z.number().int().optional(),
   status: z.string().optional(),
+  statusUpdatedAtMs: z.number().int().optional(),
   thumbnailRelativeSecond: z.number().optional(),
   timestampMs: z.number().int().optional(),
   title: z.string().optional(),
@@ -9386,7 +10582,8 @@ const SplicedClipType: z.ZodObject<any> = z.object({
 const Event_GetSplicedClipsInProgressWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  splicedClips: z.array(SplicedClipType).optional()
+  splicedClips: z.array(SplicedClipType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_GetUnhealthyDeviceAlertsWSRequest = z.record(z.unknown());
 const UnHealthyDeviceAlertType: z.ZodObject<any> = z.object({
@@ -9399,7 +10596,8 @@ const UnHealthyDeviceAlertType: z.ZodObject<any> = z.object({
 const Event_GetUnhealthyDeviceAlertsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  unhealthyDeviceAlerts: z.array(UnHealthyDeviceAlertType).optional()
+  unhealthyDeviceAlerts: z.array(UnHealthyDeviceAlertType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_MuteNotificationsForDevicetWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -9407,14 +10605,16 @@ const Event_MuteNotificationsForDevicetWSRequest: z.ZodObject<any> = z.object({
 });
 const Event_MuteNotificationsForDevicetWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_ReportBadPolicyAlertWSRequest: z.ZodObject<any> = z.object({
   policyAlert: PolicyAlertV2Type.optional()
 });
 const Event_ReportBadPolicyAlertWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_SavePolicyAlertWSRequest: z.ZodObject<any> = z.object({
   alertUuid: z.string().optional(),
@@ -9424,7 +10624,8 @@ const Event_SavePolicyAlertWSRequest: z.ZodObject<any> = z.object({
 });
 const Event_SavePolicyAlertWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_SearchMotionGridWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string(),
@@ -9435,7 +10636,8 @@ const Event_SearchMotionGridWSRequest: z.ZodObject<any> = z.object({
 const Event_SearchMotionGridWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeUtcSecsList: z.array(z.number().int()).optional()
+  timeUtcSecsList: z.array(z.number().int()).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_SearchMotionGridWithActivitiesWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string(),
@@ -9446,7 +10648,8 @@ const Event_SearchMotionGridWithActivitiesWSRequest: z.ZodObject<any> = z.object
 const Event_SearchMotionGridWithActivitiesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeUtcSecsToActivityMap: z.record(z.unknown()).optional()
+  timeUtcSecsToActivityMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_SearchMotionGridWithActivitiesWSResponse_ActivityWithId: z.ZodObject<any> = z.object({
   activity: ActivityEnum.optional(),
@@ -9463,7 +10666,8 @@ const Event_UnSavePolicyAlertWSRequest: z.ZodObject<any> = z.object({
 });
 const Event_UnSavePolicyAlertWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_UpdatePolicyAlertTextDescriptionWSRequest: z.ZodObject<any> = z.object({
   alertUuid: z.string().optional(),
@@ -9471,16 +10675,19 @@ const Event_UpdatePolicyAlertTextDescriptionWSRequest: z.ZodObject<any> = z.obje
 });
 const Event_UpdatePolicyAlertTextDescriptionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_UpdateSavedClipWSRequest: z.ZodObject<any> = z.object({
+  accessSettings: ClipAccessSettings.optional(),
   description: z.string().optional(),
-  savedClipUuid: z.string().optional(),
+  savedClipUuid: z.string(),
   title: z.string().optional()
 });
 const Event_UpdateSavedClipWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_UpdateSharedClipGroupWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -9493,7 +10700,8 @@ const Event_UpdateSharedClipGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   shareUrl: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_groups_CreateClipGroupWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -9503,14 +10711,16 @@ const Event_groups_CreateClipGroupWSRequest: z.ZodObject<any> = z.object({
 const Event_groups_CreateClipGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_groups_DeleteClipGroupWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Event_groups_DeleteClipGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Event_groups_GetClipGroupDetailsWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -9518,7 +10728,8 @@ const Event_groups_GetClipGroupDetailsWSRequest: z.ZodObject<any> = z.object({
 const Event_groups_GetClipGroupDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  group: ClipGroupWithDetailsType.optional()
+  group: ClipGroupWithDetailsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Event_groups_GetClipGroupsForOrgWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -9527,7 +10738,8 @@ const Event_groups_GetClipGroupsForOrgWSRequest: z.ZodObject<any> = z.object({
 const Event_groups_GetClipGroupsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  groups: z.array(ClipGroupType).optional()
+  groups: z.array(ClipGroupType).optional(),
+  warningMsg: z.string().optional()
 });
 const Event_groups_UpdateClipGroupWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -9537,7 +10749,8 @@ const Event_groups_UpdateClipGroupWSRequest: z.ZodObject<any> = z.object({
 });
 const Event_groups_UpdateClipGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Eventsearch_CombinedSeekPointType: z.ZodObject<any> = z.object({
   activity: ActivityEnum.optional(),
@@ -9558,7 +10771,8 @@ const Eventsearch_CombinedSeekPointType: z.ZodObject<any> = z.object({
 const Eventsearch_GetCameraOrDoorbellCameraSeekpointsWSResponse: z.ZodObject<any> = z.object({
   combinedSeekpoints: z.array(Eventsearch_CombinedSeekPointType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Eventsearch_GetEventSeekpointsV2WSRequest: z.ZodObject<any> = z.object({
   accessControlledDoorUuids: z.array(z.string()).optional(),
@@ -9604,7 +10818,8 @@ const Eventsearch_GetEventSeekpointsWSRequest: z.ZodObject<any> = z.object({
 const Eventsearch_GetEventSeekpointsWSResponse: z.ZodObject<any> = z.object({
   combinedSeekpoints: z.array(Eventsearch_CombinedSeekPointType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Export_ExportAuditEventsWSRequest: z.ZodObject<any> = z.object({
   endInterval: z.number().int().optional(),
@@ -9624,6 +10839,7 @@ const Export_ExportCountReportsWSRequest: z.ZodObject<any> = z.object({
   scope: z.string(),
   startDate: z.string().optional(),
   startTimeMs: z.number().int().min(0),
+  timeZone: z.string().optional(),
   type: z.string(),
   uuidList: z.array(z.string()).optional()
 });
@@ -9740,14 +10956,11 @@ const Facerecognition_faceevent_ExternalFaceEvent: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
   orgUuid: z.string().optional(),
   personUuid: z.string().optional(),
-  pitch: z.number().optional(),
-  roll: z.number().optional(),
   selectedPersonMatch: Facerecognition_faceevent_ExternalPersonMatch.optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
   thumbnailS3Key: z.string().optional(),
   topPersonMatches: z.array(Facerecognition_faceevent_ExternalPersonMatch).optional(),
-  uuid: z.string().optional(),
-  yaw: z.number().optional()
+  uuid: z.string().optional()
 });
 const Facerecognition_faceevent_ExternalFaceEventSimilaritySearchFilter: z.ZodObject<any> = z.object({
   deviceUuids: z.array(z.string()).optional(),
@@ -9860,6 +11073,7 @@ const Facerecognition_matchmaker_CreateFaceMatchmakerFromSightingWSResponse: z.Z
 });
 const Person: z.ZodObject<any> = z.object({
   createdOn: z.string().datetime({ offset: true }).optional(),
+  email: z.string().optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
   updatedOn: z.string().datetime({ offset: true }).optional(),
@@ -9959,6 +11173,7 @@ const Facerecognition_person_RemovePersonLabelWSRequest: z.ZodObject<any> = z.ob
 const Facerecognition_person_RemovePersonLabelWSResponse = z.record(z.unknown());
 const PersonSelectiveUpdate: z.ZodObject<any> = z.object({
   createdOn: z.string().datetime({ offset: true }).optional(),
+  email: z.string().optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
   updatedOn: z.string().datetime({ offset: true }).optional(),
@@ -9996,7 +11211,8 @@ const Feature_GetDeviceFeaturesListWSRequest: z.ZodObject<any> = z.object({
 const Feature_GetDeviceFeaturesListWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  featureList: z.array(Feature_DeviceFeaturesType).optional()
+  featureList: z.array(Feature_DeviceFeaturesType).optional(),
+  warningMsg: z.string().optional()
 });
 const Feature_GetDeviceFeaturesWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -10004,13 +11220,15 @@ const Feature_GetDeviceFeaturesWSRequest: z.ZodObject<any> = z.object({
 const Feature_GetDeviceFeaturesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  features: Feature_DeviceFeaturesType.optional()
+  features: Feature_DeviceFeaturesType.optional(),
+  warningMsg: z.string().optional()
 });
 const Feature_GetFeatureCompatabilityMatrixWSRequest = z.record(z.unknown());
 const Feature_GetFeatureCompatabilityMatrixWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  featureCompatabilityMatrix: z.array(FeatureCompatabilityType).optional()
+  featureCompatabilityMatrix: z.array(FeatureCompatabilityType).optional(),
+  warningMsg: z.string().optional()
 });
 const Feature_UpdateDeviceFeaturesWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -10018,7 +11236,37 @@ const Feature_UpdateDeviceFeaturesWSRequest: z.ZodObject<any> = z.object({
 });
 const Feature_UpdateDeviceFeaturesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Fidoauth_FindLoginCredentialsForCurrentUserWSRequest: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  maxPageSize: z.number().int().optional()
+});
+const RhombusUserFidoCredential: z.ZodObject<any> = z.object({
+  createdAtMillis: z.number().int().optional(),
+  credentialId: z.string().optional(),
+  deleted: z.boolean().optional(),
+  displayName: z.string().optional(),
+  lastSeenInfoMap: z.record(z.unknown()).optional(),
+  rhombusUserUuid: z.string().optional(),
+  signatureCounterUnreliable: z.boolean().optional(),
+  updatedAtMillis: z.number().int().optional()
+});
+const Fidoauth_FindLoginCredentialsForCurrentUserWSResponse: z.ZodObject<any> = z.object({
+  lastEvaluatedKey: z.string().optional(),
+  loginCredentials: z.array(RhombusUserFidoCredential).optional()
+});
+const Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSRequest = z.record(z.unknown());
+const JsonNode = z.record(z.unknown());
+const Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSResponse: z.ZodObject<any> = z.object({
+  registrationRequest: JsonNode.optional()
+});
+const Fidoauth_RegisterLoginCredentialForCurrentUserWSRequest: z.ZodObject<any> = z.object({
+  registrationResponse: JsonNode
+});
+const Fidoauth_RegisterLoginCredentialForCurrentUserWSResponse: z.ZodObject<any> = z.object({
+  fidoLoginCredential: RhombusUserFidoCredential.optional()
 });
 const FirmwareUpdateIntervalType: z.ZodObject<any> = z.object({
   minuteOfWeekStart: z.number().int().optional(),
@@ -10139,11 +11387,13 @@ const GenericObjectEmbedding: z.ZodObject<any> = z.object({
   embedding: z.array(z.number()).optional(),
   embeddingId: z.string().optional(),
   l: z.number().int().optional(),
+  locationUuid: z.string().optional(),
   model: ObjectSearchModelEnum.optional(),
   objectId: z.number().int().optional(),
   objectType: z.string().optional(),
   orgUuid: z.string().optional(),
   r: z.number().int().optional(),
+  stableTrackId: z.number().int().optional(),
   t: z.number().int().optional(),
   thumbnailUri: z.string().optional(),
   timestamp: z.number().int().optional()
@@ -10167,6 +11417,7 @@ const GenericVideoEmbedding: z.ZodObject<any> = z.object({
   embedding: z.array(z.number()).optional(),
   embeddingId: z.string().optional(),
   endTimeMs: z.number().int().optional(),
+  locationUuid: z.string().optional(),
   model: VideoSimilarityModelEnum.optional(),
   orgUuid: z.string().optional(),
   startTimeMs: z.number().int().optional()
@@ -10480,7 +11731,8 @@ const Guestmanagement_ActivateKioskWSRequest: z.ZodObject<any> = z.object({
 const Guestmanagement_ActivateKioskWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  redirectUrl: z.string().optional()
+  redirectUrl: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_BaseGuestManagementWSRequest = z.record(z.unknown());
 const Guestmanagement_CreateGuestInviteWSRequest: z.ZodObject<any> = z.object({
@@ -10491,7 +11743,8 @@ const Guestmanagement_CreateGuestManagementSettingsWSRequest: z.ZodObject<any> =
 });
 const Guestmanagement_CreateGuestManagementSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_CreateGuestWSRequest: z.ZodObject<any> = z.object({
   fileName: z.string().optional(),
@@ -10522,12 +11775,14 @@ const Guestmanagement_GetActivityLogsForLocationWSRequest: z.ZodObject<any> = z.
 const Guestmanagement_GetAllGuestInvitesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  guestInvites: z.array(GuestInvite).optional()
+  guestInvites: z.array(GuestInvite).optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetAllGuestsWSResponse: z.ZodObject<any> = z.object({
   allGuests: z.array(Guest).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetGuestActivityLogsWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -10537,27 +11792,32 @@ const Guestmanagement_GetGuestActivityLogsWSRequest: z.ZodObject<any> = z.object
 const Guestmanagement_GetGuestActivityLogsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  guestActivities: z.array(GuestActivityLog).optional()
+  guestActivities: z.array(GuestActivityLog).optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetGuestInviteWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  guestInvite: GuestInvite.optional()
+  guestInvite: GuestInvite.optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetGuestInvitesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  guestInvites: z.array(GuestInvite).optional()
+  guestInvites: z.array(GuestInvite).optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetGuestManagementSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  settings: GuestManagementOrgSettings.optional()
+  settings: GuestManagementOrgSettings.optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetGuestWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  guest: Guest.optional()
+  guest: Guest.optional(),
+  warningMsg: z.string().optional()
 });
 const PaginateRequest: z.ZodObject<any> = z.object({
   lastEvaluatedKey: z.string().optional(),
@@ -10572,6 +11832,7 @@ const Kiosk: z.ZodObject<any> = z.object({
   batteryLevel: z.number().optional(),
   connectionStatus: z.string().optional(),
   deleted: z.boolean().optional(),
+  hostUserUuid: z.string().optional(),
   lastUpdateTimeMs: z.number().int().optional(),
   latitude: z.number().optional(),
   locationUuid: z.string().optional(),
@@ -10584,12 +11845,14 @@ const Kiosk: z.ZodObject<any> = z.object({
 const Guestmanagement_GetKioskInfoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  kiosk: Kiosk.optional()
+  kiosk: Kiosk.optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetKiosksForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  kiosks: z.array(Kiosk).optional()
+  kiosks: z.array(Kiosk).optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GetNametagTemplateForGuestWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional()
@@ -10598,7 +11861,8 @@ const Guestmanagement_GetNametagTemplateForGuestWSResponse: z.ZodObject<any> = z
   badgeTemplate: BadgeTemplate.optional(),
   companyLogoUrl: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_GuestByEmailWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional()
@@ -10624,7 +11888,8 @@ const Guestmanagement_UpdateGuestManagementSettingsWSRequest: z.ZodObject<any> =
 });
 const Guestmanagement_UpdateGuestManagementSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Guestmanagement_UpdateGuestWSRequest: z.ZodObject<any> = z.object({
   fileName: z.string().optional(),
@@ -10664,6 +11929,7 @@ const HardwareType: z.ZodObject<any> = z.object({
   enforcedMinFirmwareVersion: z.string().optional(),
   firmwareUpdateTimeMs: z.number().int().optional(),
   firmwareVersion: z.string().optional(),
+  hwSupportDomain: z.string().optional(),
   hwVariation: HardwareVariationEnum.optional(),
   mac: z.string().optional(),
   manufacturedAtMillis: z.number().int().optional(),
@@ -10690,7 +11956,8 @@ const Help_CreateTicketWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
   success: z.boolean().optional(),
-  ticketId: z.number().int().optional()
+  ticketId: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Help_GetOpenTicketsV2WSRequest: z.ZodObject<any> = z.object({
   endTimeMs: z.number().int().optional(),
@@ -10706,7 +11973,8 @@ const Help_GetOpenTicketsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   tickets: z.array(Help_TicketInformation).optional(),
-  userTickets: z.array(Help_TicketInformation).optional()
+  userTickets: z.array(Help_TicketInformation).optional(),
+  warningMsg: z.string().optional()
 });
 const Help_GetOpenTicketsWSRequest: z.ZodObject<any> = z.object({
   pageNumber: z.number().int().optional()
@@ -10717,7 +11985,8 @@ const Help_GetOpenTicketsWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   hasNexPage: z.boolean().optional(),
   tickets: z.array(Help_TicketInformation).optional(),
-  totalTickets: z.number().int().optional()
+  totalTickets: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Help_ShippingAddress: z.ZodObject<any> = z.object({
   returnAddressCity: z.string().optional(),
@@ -10739,7 +12008,8 @@ const Help_ProcessRMAWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
   success: z.boolean().optional(),
-  ticketId: z.number().int().optional()
+  ticketId: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Help_SendFeedbackWSRequest: z.ZodObject<any> = z.object({
   feedback: z.string().optional()
@@ -10748,7 +12018,8 @@ const Help_SendFeedbackWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Help_TriageDeviceWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -10762,7 +12033,8 @@ const Help_TriageDeviceWSResponse: z.ZodObject<any> = z.object({
   message: z.string().optional(),
   presenceWindows: z.array(TimeWindowSeconds).optional(),
   suggestedArticles: z.array(z.string()).optional(),
-  uptimeWindows: z.array(TimeWindowSeconds).optional()
+  uptimeWindows: z.array(TimeWindowSeconds).optional(),
+  warningMsg: z.string().optional()
 });
 const HttpMethod = z.record(z.unknown());
 const HttpRange = z.record(z.unknown());
@@ -11017,6 +12289,13 @@ const WebhooksType: z.ZodObject<any> = z.object({
   userUuid: z.string().optional()
 });
 const ZapierType: z.ZodObject<any> = z.object({
+  enabled: z.boolean().optional(),
+  integration: IntegrationEnum.optional(),
+  integrationAuditMap: z.record(z.unknown()).optional(),
+  orgUuid: z.string().optional(),
+  userUuid: z.string().optional()
+});
+const ParPOSType: z.ZodObject<any> = z.object({
   enabled: z.boolean().optional(),
   integration: IntegrationEnum.optional(),
   integrationAuditMap: z.record(z.unknown()).optional(),
@@ -11386,6 +12665,46 @@ const ImmixSettings: z.ZodObject<any> = z.object({
   enabled: z.boolean().optional(),
   serverUrl: z.string().optional()
 });
+const Inference_GetPersonReidentificationEmbeddingFromImageWSResponse: z.ZodObject<any> = z.object({
+  embedding: z.array(z.number()).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Inference_SegmentWithBoxesWSResponse: z.ZodObject<any> = z.object({
+  boxesXyxy: z.array(z.array(z.number())).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  imageHeight: z.number().int().optional(),
+  imageWidth: z.number().int().optional(),
+  maskFormat: z.string().optional(),
+  masks: z.array(z.string()).optional(),
+  scores: z.array(z.number()).optional(),
+  warningMsg: z.string().optional()
+});
+const Inference_SegmentWithPointsWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  imageHeight: z.number().int().optional(),
+  imageWidth: z.number().int().optional(),
+  labels: z.string().optional(),
+  maskFormat: z.string().optional(),
+  masks: z.array(z.string()).optional(),
+  points: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Inference_SegmentWithTextWSResponse: z.ZodObject<any> = z.object({
+  boxesXyxy: z.array(z.array(z.number())).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  imageHeight: z.number().int().optional(),
+  imageWidth: z.number().int().optional(),
+  maskFormat: z.string().optional(),
+  masks: z.array(z.string()).optional(),
+  scores: z.array(z.number()).optional(),
+  text: z.string().optional(),
+  warningMsg: z.string().optional()
+});
 const InformacastScenario: z.ZodObject<any> = z.object({
   id: z.string().optional(),
   name: z.string().optional(),
@@ -11441,17 +12760,20 @@ const Integration_GetAccessControlIntegrationsForAlmWSResponse: z.ZodObject<any>
   badDoors: z.array(z.string()).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  integrations: z.array(IntegrationEnum).optional()
+  integrations: z.array(IntegrationEnum).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetAllGuestsWSResponse: z.ZodObject<any> = z.object({
   allGuests: z.array(Guest).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetAllOrgIntegrationsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgIntegrationsV2: z.record(z.unknown()).optional()
+  orgIntegrationsV2: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetAmtReadersWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional(),
@@ -11524,13 +12846,15 @@ const Integration_GetAperioIntegrationWSResponse: z.ZodObject<any> = z.object({
   aperioSettings: IAperioType.optional(),
   doorControllers: z.array(Integration_aperio_AperioRhombusDoorControllerView).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetApiTokenApplicationsWSRequest = z.record(z.unknown());
 const Integration_GetApiTokenApplicationsWSResponse: z.ZodObject<any> = z.object({
   applications: z.array(ApiTokenApplicationType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetApiTokensWSRequest: z.ZodObject<any> = z.object({
   optionalFilter: z.array(ApiClientTypeEnum).optional()
@@ -11538,19 +12862,22 @@ const Integration_GetApiTokensWSRequest: z.ZodObject<any> = z.object({
 const Integration_GetApiTokensWSResponse: z.ZodObject<any> = z.object({
   apiTokens: z.array(ApiTokenType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetBadgeIntegrationDoorsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   doors: z.array(DoorType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetBadgeIntegrationGenericDoorsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   doors: z.array(GenericDoorType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const PlaceType: z.ZodObject<any> = z.object({
   alertUnauthorizedFaces: z.boolean().optional(),
@@ -11564,7 +12891,8 @@ const Integration_GetBadgeIntegrationPlacesWSResponse: z.ZodObject<any> = z.obje
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  places: z.array(PlaceType).optional()
+  places: z.array(PlaceType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetBrivoDoorsWSRequest: z.ZodObject<any> = z.object({
   password: z.string().optional(),
@@ -11574,7 +12902,8 @@ const Integration_GetBrivoDoorsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   doors: z.array(DoorType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetButterflymxPanelsWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional(),
@@ -11584,7 +12913,8 @@ const Integration_GetButterflymxPanelsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   buildings: z.array(ButterflymxBuilding).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetCalendlyEventDetailsWSRequest: z.ZodObject<any> = z.object({
   eventUuid: z.string().optional()
@@ -11595,7 +12925,8 @@ const Integration_GetCalendlyEventDetailsWSResponse: z.ZodObject<any> = z.object
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   name: z.string().optional(),
-  startTimeMs: z.number().int().optional()
+  startTimeMs: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetEnvoyDeliveriesWSRequest: z.ZodObject<any> = z.object({
   endTimestampMs: z.number().int().optional(),
@@ -11606,7 +12937,8 @@ const Integration_GetEnvoyDeliveriesWSResponse: z.ZodObject<any> = z.object({
   collectedDeliveries: z.array(EnvoyDelivery).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  pendingDeliveries: z.array(EnvoyDelivery).optional()
+  pendingDeliveries: z.array(EnvoyDelivery).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetEnvoyEmployeesWSRequest: z.ZodObject<any> = z.object({
   locationIds: z.array(z.string()).optional()
@@ -11614,14 +12946,16 @@ const Integration_GetEnvoyEmployeesWSRequest: z.ZodObject<any> = z.object({
 const Integration_GetEnvoyEmployeesWSResponse: z.ZodObject<any> = z.object({
   employees: z.array(EnvoyPersonInfo).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetEnvoyLocationsWSRequest = z.record(z.unknown());
 const Integration_GetEnvoyLocationsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  locationList: z.array(EnvoyLocation).optional()
+  locationList: z.array(EnvoyLocation).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetEnvoyVisitorsWSRequest: z.ZodObject<any> = z.object({
   endTimestampMs: z.number().int().optional(),
@@ -11633,18 +12967,21 @@ const Integration_GetEnvoyVisitorsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   invites: z.array(EnvoyExpectedGuest).optional(),
-  visitors: z.array(EnvoyGuest).optional()
+  visitors: z.array(EnvoyGuest).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetFlicDevicesWSRequest: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetFlicDevicesWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   flicDevices: z.array(FlicDevice).optional(),
-  flicModule: FlicDevice.optional()
+  flicModule: FlicDevice.optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetGeneaDoorsWSRequest: z.ZodObject<any> = z.object({
   apiToken: z.string().optional()
@@ -11657,29 +12994,34 @@ const Integration_GetGeneaDoorsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  panelList: z.array(PanelType).optional()
+  panelList: z.array(PanelType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetGuestWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  guest: Guest.optional()
+  guest: Guest.optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetInformacastScenariosWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  scenarios: z.array(InformacastScenario).optional()
+  scenarios: z.array(InformacastScenario).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetInnerRangeConsolesWSRequest = z.record(z.unknown());
 const Integration_GetInnerRangeConsolesWSResponse: z.ZodObject<any> = z.object({
   consoles: z.array(InnerRangeConsoleType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetInnerRangeDoorsWSRequest = z.record(z.unknown());
 const Integration_GetInnerRangeDoorsWSResponse: z.ZodObject<any> = z.object({
   doors: z.array(InnerRangeDoorType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetIntegrationDiagnosticEventsWSRequest: z.ZodObject<any> = z.object({
   timestampMsAfter: z.number().int().optional(),
@@ -11688,7 +13030,8 @@ const Integration_GetIntegrationDiagnosticEventsWSRequest: z.ZodObject<any> = z.
 const Integration_GetIntegrationDiagnosticEventsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  integrationDiagnosticEvents: z.array(IntegrationDiagnosticEventType).optional()
+  integrationDiagnosticEvents: z.array(IntegrationDiagnosticEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetKisiDoorsWSRequest: z.ZodObject<any> = z.object({
   apiSecretKey: z.string().optional()
@@ -11697,7 +13040,8 @@ const Integration_GetKisiDoorsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  placeToDoorMap: z.record(z.unknown()).optional()
+  placeToDoorMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const KisiSettings: z.ZodObject<any> = z.object({
   alertUnauthorizedFaces: z.boolean().optional(),
@@ -11725,7 +13069,8 @@ const Integration_GetKisiIntegrationWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   failedGuids: z.array(z.string()).optional(),
   kisiSettings: KisiSettings.optional(),
-  misconfiguredDoors: z.array(z.string()).optional()
+  misconfiguredDoors: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetKisiPlacesWSRequest: z.ZodObject<any> = z.object({
   apiSecretKey: z.string().optional()
@@ -11733,7 +13078,8 @@ const Integration_GetKisiPlacesWSRequest: z.ZodObject<any> = z.object({
 const Integration_GetMicrosoftUsersJoinedTeamsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  teamsMap: z.record(z.unknown()).optional()
+  teamsMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetNineOneOneCSZonesWSRequest = z.record(z.unknown());
 const SecurityZoneInfoType: z.ZodObject<any> = z.object({
@@ -11748,6 +13094,7 @@ const Integration_GetNineOneOneCSZonesWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   zone: SecurityZoneInfoType.optional(),
   zoneMap: z.record(z.unknown()).optional()
 });
@@ -11764,7 +13111,8 @@ const OpenAIModel: z.ZodObject<any> = z.object({
 const Integration_GetOpenAIModelsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  models: z.array(OpenAIModel).optional()
+  models: z.array(OpenAIModel).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetOpenpathDoorsWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional(),
@@ -11779,7 +13127,8 @@ const Integration_GetOpenpathLockdownsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  lockdownPlans: z.array(LockdownType).optional()
+  lockdownPlans: z.array(LockdownType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetOpentechAllianceFacilitiesWSRequest = z.record(z.unknown());
 const OpentechAllianceActionGroupType: z.ZodObject<any> = z.object({
@@ -11797,12 +13146,14 @@ const OpentechAllianceFacilityType: z.ZodObject<any> = z.object({
 const Integration_GetOpentechAllianceFacilitiesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  facilities: z.array(OpentechAllianceFacilityType).optional()
+  facilities: z.array(OpentechAllianceFacilityType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetOrgIntegrationsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgIntegrationV2: IBaseIntegrationType.optional()
+  orgIntegrationV2: IBaseIntegrationType.optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetOrgIntegrationsWSRequest = z.record(z.unknown());
 const IntuifaceSettings: z.ZodObject<any> = z.object({
@@ -12037,7 +13388,8 @@ const OrgIntegrationsType: z.ZodObject<any> = z.object({
 const Integration_GetOrgIntegrationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgIntegrations: OrgIntegrationsType.optional()
+  orgIntegrations: OrgIntegrationsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetPartnerApiTokensWSRequest = z.record(z.unknown());
 const Integration_GetPdkDoorsWSRequest: z.ZodObject<any> = z.object({
@@ -12047,7 +13399,8 @@ const Integration_GetPdkDoorsWSResponse: z.ZodObject<any> = z.object({
   authError: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  panelList: z.array(PanelType).optional()
+  panelList: z.array(PanelType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetPdkSystemIdWSRequest: z.ZodObject<any> = z.object({
   configurationToken: z.string().optional()
@@ -12055,7 +13408,8 @@ const Integration_GetPdkSystemIdWSRequest: z.ZodObject<any> = z.object({
 const Integration_GetPdkSystemIdWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  systemId: z.string().optional()
+  systemId: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetPlaceOsDoorsWSRequest: z.ZodObject<any> = z.object({
   apiUrl: z.string().optional()
@@ -12067,7 +13421,8 @@ const RaptorBuilding: z.ZodObject<any> = z.object({
 const Integration_GetRaptorBuildingsWSResponse: z.ZodObject<any> = z.object({
   buildings: z.array(RaptorBuilding).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const RaptorTemplate: z.ZodObject<any> = z.object({
   name: z.string().optional(),
@@ -12077,7 +13432,8 @@ const RaptorTemplate: z.ZodObject<any> = z.object({
 const Integration_GetRaptorTemplatesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  templates: z.array(RaptorTemplate).optional()
+  templates: z.array(RaptorTemplate).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetToastEventsTableAllLocationsWSRequest: z.ZodObject<any> = z.object({
   businessDate: z.string().optional()
@@ -12100,7 +13456,8 @@ const Integration_GetToastEventsTableAllLocationsWSResponse: z.ZodObject<any> = 
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   eventTable: z.array(Integration_GetToastEventsTableWSResponse_EventTableRow).optional(),
-  failedGuids: z.array(z.string()).optional()
+  failedGuids: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetToastEventsTableWSRequest: z.ZodObject<any> = z.object({
   businessDate: z.string().optional(),
@@ -12109,7 +13466,8 @@ const Integration_GetToastEventsTableWSRequest: z.ZodObject<any> = z.object({
 const Integration_GetToastEventsTableWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  eventTable: z.array(Integration_GetToastEventsTableWSResponse_EventTableRow).optional()
+  eventTable: z.array(Integration_GetToastEventsTableWSResponse_EventTableRow).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GetToastServiceAreasWSRequest: z.ZodObject<any> = z.object({
   restaurantGuid: z.string().optional()
@@ -12117,12 +13475,14 @@ const Integration_GetToastServiceAreasWSRequest: z.ZodObject<any> = z.object({
 const Integration_GetToastServiceAreasWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  serviceAreas: z.array(GenericPosType).optional()
+  serviceAreas: z.array(GenericPosType).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_GuestWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_InitiateBrivoOAuthWSRequest: z.ZodObject<any> = z.object({
   apiKey: z.string().optional(),
@@ -12136,7 +13496,8 @@ const Integration_InitiateCallbackAuthRequest: z.ZodObject<any> = z.object({
 const Integration_InitiateCallbackAuthResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  integratorUrl: z.string().optional()
+  integratorUrl: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_InitiateOAuthWSRequest: z.ZodObject<any> = z.object({
   param: z.string().optional(),
@@ -12146,7 +13507,8 @@ const Integration_InitiateOAuthWSRequest: z.ZodObject<any> = z.object({
 const Integration_InitiateOAuthWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  redirectUrl: z.string().optional()
+  redirectUrl: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_RefreshGoogleAccessTokenWSRequest: z.ZodObject<any> = z.object({
   refreshUserToken: z.boolean().optional()
@@ -12154,14 +13516,16 @@ const Integration_RefreshGoogleAccessTokenWSRequest: z.ZodObject<any> = z.object
 const Integration_RefreshGoogleAccessTokenWSResponse: z.ZodObject<any> = z.object({
   accessToken: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_RevokeApiTokenWSRequest: z.ZodObject<any> = z.object({
   tokenUuid: z.string().optional()
 });
 const Integration_RevokeApiTokenWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_RevokeGoogleDriveAccessWSRequest: z.ZodObject<any> = z.object({
   revokeUserAccount: z.boolean().optional()
@@ -12177,7 +13541,8 @@ const Integration_SubmitApiTokenApplicationWSResponse: z.ZodObject<any> = z.obje
   cert: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  validCSR: z.boolean().optional()
+  validCSR: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const ZapierEnum = z.string();
 const Integration_SubscribeZapierWebhookWSRequest: z.ZodObject<any> = z.object({
@@ -12194,6 +13559,7 @@ const Integration_SubscribeZapierWebhookWSRequest: z.ZodObject<any> = z.object({
 const Integration_SubscribeZapierWebhookWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   webhookId: z.string().optional()
 });
 const Integration_TogglePowerWSRequest: z.ZodObject<any> = z.object({
@@ -12203,11 +13569,13 @@ const Integration_TogglePowerWSRequest: z.ZodObject<any> = z.object({
 const Integration_TogglePowerWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  newState: z.number().int().optional()
+  newState: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_UnlockDoorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_UnlockGeneaDoorWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -12242,7 +13610,8 @@ const Integration_UpdateApiTokenWSRequest: z.ZodObject<any> = z.object({
 });
 const Integration_UpdateApiTokenWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_UpdateAvigilonAltaV2WSRequest: z.ZodObject<any> = z.object({
   avigilonAltaSettings: IAvigilonAltaType.optional()
@@ -12366,6 +13735,7 @@ const Integration_UpdateOmnialertIntegrationWSRequest: z.ZodObject<any> = z.obje
 const Integration_UpdateOmnialertIntegrationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   webhookToken: z.string().optional()
 });
 const Integration_UpdateOpenAIIntegrationRequest: z.ZodObject<any> = z.object({
@@ -12385,7 +13755,8 @@ const Integration_UpdateOrgIntegrationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   failedGuids: z.array(z.string()).optional(),
-  misconfiguredDoors: z.array(z.string()).optional()
+  misconfiguredDoors: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_UpdatePagerDutyIntegrationWSRequest: z.ZodObject<any> = z.object({
   pagerDutySettings: PagerDutySettings.optional()
@@ -12442,6 +13813,7 @@ const Integration_UpdateWebhookIntegrationV2WSRequest: z.ZodObject<any> = z.obje
 const Integration_UpdateWebhookIntegrationV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   webhookSecret: z.string().optional()
 });
 const Integration_UpdateWebhookIntegrationWSRequest: z.ZodObject<any> = z.object({
@@ -12458,7 +13830,8 @@ const Integration_aperio_ClearAperioDtcWSRequest: z.ZodObject<any> = z.object({
 });
 const Integration_aperio_ClearAperioDtcWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Integration_aperio_DownloadCertificateWSRequest: z.ZodObject<any> = z.object({
   ownerDeviceUuid: z.string()
@@ -12469,20 +13842,8 @@ const Integration_aperio_RebootAperioGatewayWSRequest: z.ZodObject<any> = z.obje
 });
 const Integration_aperio_RebootAperioGatewayWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
-});
-const Internal_AccessControlDoorOnlyWSRequest: z.ZodObject<any> = z.object({
-  accountDataMap: z.record(z.unknown()).optional()
-});
-const Internal_AccessControlDoorOnlyWSRequest_AccountData: z.ZodObject<any> = z.object({
-  opportunityIds: z.array(z.string()).optional(),
-  orgUuid: z.string().optional()
-});
-const Internal_AccessControlDoorOnlyWSResponse: z.ZodObject<any> = z.object({
-  error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  failedAccounts: z.record(z.unknown()).optional(),
-  successfulAccounts: z.array(z.string()).optional()
+  warningMsg: z.string().optional()
 });
 const Internal_AddPartnerAsSuperAdminWSRequest: z.ZodObject<any> = z.object({
   loginAccessAllowed: z.boolean().optional(),
@@ -12494,20 +13855,8 @@ const Internal_AddPartnerAsSuperAdminWSRequest: z.ZodObject<any> = z.object({
 const Internal_AddPartnerAsSuperAdminWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  superAdminGroupUuid: z.string().optional()
-});
-const Internal_AlarmMonitoringOnlyWSRequest: z.ZodObject<any> = z.object({
-  accountDataMap: z.record(z.unknown()).optional()
-});
-const Internal_AlarmMonitoringOnlyWSRequest_AccountData: z.ZodObject<any> = z.object({
-  opportunityIds: z.array(z.string()).optional(),
-  orgUuid: z.string().optional()
-});
-const Internal_AlarmMonitoringOnlyWSResponse: z.ZodObject<any> = z.object({
-  error: z.boolean().optional(),
-  errorMsg: z.string().optional(),
-  failedAccounts: z.record(z.unknown()).optional(),
-  successfulAccounts: z.array(z.string()).optional()
+  superAdminGroupUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_CreateCombinedLicensesFromV1WSRequest: z.ZodObject<any> = z.object({
   accountDataMap: z.record(z.unknown()).optional()
@@ -12534,7 +13883,8 @@ const Internal_CreateOrgWSRequest: z.ZodObject<any> = z.object({
 const Internal_CreateOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgUuid: z.string().optional()
+  orgUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_CreatePartnerOrgWSRequest: z.ZodObject<any> = z.object({
   accountOwnerEmail: z.string().optional(),
@@ -12546,7 +13896,8 @@ const Internal_CreatePartnerOrgWSRequest: z.ZodObject<any> = z.object({
 const Internal_CreatePartnerOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgUuid: z.string().optional()
+  orgUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_CreateReturnedInventoryAuditReservationWSRequest: z.ZodObject<any> = z.object({
   clientOrgUuid: z.string().optional(),
@@ -12560,7 +13911,8 @@ const Internal_CreateReturnedInventoryAuditReservationWSResponse: z.ZodObject<an
   auditReservationUuid: z.string().optional(),
   auditReservationUuids: z.array(z.string()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const SupportAuthorityType: z.ZodObject<any> = z.object({
   authorityType: z.string().optional(),
@@ -12583,7 +13935,8 @@ const Internal_CreateSupportAuthorityWSRequest: z.ZodObject<any> = z.object({
 const Internal_CreateSupportAuthorityWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  supportAuthorityUuid: z.string().optional()
+  supportAuthorityUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_DeveloperNewsletterEnrollWSRequest: z.ZodObject<any> = z.object({
   developerNewsletter: z.boolean().optional(),
@@ -12595,20 +13948,8 @@ const Internal_DeveloperNewsletterEnrollWSRequest: z.ZodObject<any> = z.object({
 });
 const Internal_DeveloperNewsletterEnrollWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
-});
-const Internal_EntDevicesOnlyWSRequest: z.ZodObject<any> = z.object({
-  accountDataMap: z.record(z.unknown()).optional()
-});
-const Internal_EntDevicesOnlyWSRequest_AccountData: z.ZodObject<any> = z.object({
-  opportunityIds: z.array(z.string()).optional(),
-  orgUuid: z.string().optional()
-});
-const Internal_EntDevicesOnlyWSResponse: z.ZodObject<any> = z.object({
-  error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  failedAccounts: z.record(z.unknown()).optional(),
-  successfulAccounts: z.array(z.string()).optional()
+  warningMsg: z.string().optional()
 });
 const Internal_GetSuperAdminGroupUUIDWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional()
@@ -12616,12 +13957,14 @@ const Internal_GetSuperAdminGroupUUIDWSRequest: z.ZodObject<any> = z.object({
 const Internal_GetSuperAdminGroupUUIDWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  superAdminGroupUUID: z.string().optional()
+  superAdminGroupUUID: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_GetWarrantyApprovedRMAsWSRequest = z.record(z.unknown());
 const Internal_GetWarrantyApprovedRMAsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   zendeskTickets: z.array(z.number().int()).optional()
 });
 const RhombusShipmentInfoType: z.ZodObject<any> = z.object({
@@ -12751,20 +14094,17 @@ const Internal_ParentLifetimeSpendWSRequest: z.ZodObject<any> = z.object({
 });
 const Internal_ParentLifetimeSpendWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
-const Internal_ProDevicesOnlyWSRequest: z.ZodObject<any> = z.object({
-  accountDataMap: z.record(z.unknown()).optional()
+const Internal_RemediateMissingFirstAssignedDatesWSRequest: z.ZodObject<any> = z.object({
+  orgUuids: z.array(z.string()).optional()
 });
-const Internal_ProDevicesOnlyWSRequest_AccountData: z.ZodObject<any> = z.object({
-  opportunityIds: z.array(z.string()).optional(),
-  orgUuid: z.string().optional()
-});
-const Internal_ProDevicesOnlyWSResponse: z.ZodObject<any> = z.object({
+const Internal_RemediateMissingFirstAssignedDatesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  failedAccounts: z.record(z.unknown()).optional(),
-  successfulAccounts: z.array(z.string()).optional()
+  updateOrgUuidsToUpdatedLicenseUuids: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_RequestHardwareForDevelopmentWSRequest: z.ZodObject<any> = z.object({
   address1: z.string().optional(),
@@ -12782,7 +14122,8 @@ const Internal_RequestHardwareForDevelopmentWSRequest: z.ZodObject<any> = z.obje
 });
 const Internal_RequestHardwareForDevelopmentWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_SendShipmentShippedEmailWSRequest: z.ZodObject<any> = z.object({
   salesforceOppId: z.string().optional()
@@ -12796,19 +14137,22 @@ const Internal_SetOpportunityForPurchaseOrderWSRequest: z.ZodObject<any> = z.obj
 });
 const Internal_SetOpportunityForPurchaseOrderWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_ShipmentEmailWSResponse: z.ZodObject<any> = z.object({
   customerShipmentEmailState: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   legacyMsg: z.string().optional(),
-  trackingIdentifier: z.string().optional()
+  trackingIdentifier: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Internal_VerifyCanMigrateOrgFromV1WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  invalidOrgsToErrorMessages: z.record(z.unknown()).optional()
+  invalidOrgsToErrorMessages: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const LicenseInvoiceSubItem: z.ZodObject<any> = z.object({
   count: z.number().int().optional(),
@@ -12855,6 +14199,10 @@ const InvoiceType: z.ZodObject<any> = z.object({
   tax: z.number().optional(),
   uuid: z.string().optional()
 });
+const Invoice_InvoiceChargeV2WSRequest: z.ZodObject<any> = z.object({
+  invoiceUuid: z.string().optional(),
+  sourceToken: z.string().optional()
+});
 const Invoice_InvoiceChargeWSRequest: z.ZodObject<any> = z.object({
   invoiceUuid: z.string().optional(),
   sourceToken: z.string().optional()
@@ -12864,7 +14212,8 @@ const Invoice_InvoiceChargeWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMessage: z.string().optional(),
   errorMsg: z.string().optional(),
-  previouslyInitialized: z.boolean().optional()
+  previouslyInitialized: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Invoice_InvoiceV1LineItemType: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -12906,7 +14255,8 @@ const Invoice_InvoiceV1Type: z.ZodObject<any> = z.object({
 const Invoice_InvoiceDetailsV1WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  invoice: Invoice_InvoiceV1Type.optional()
+  invoice: Invoice_InvoiceV1Type.optional(),
+  warningMsg: z.string().optional()
 });
 const Invoice_InvoiceDetailsV2WSRequest: z.ZodObject<any> = z.object({
   netsuiteInvoiceUuid: z.string().optional()
@@ -12932,11 +14282,13 @@ const NetsuiteInvoiceDetails: z.ZodObject<any> = z.object({
   invoiceDate: z.string().optional(),
   invoiceUuid: z.string().optional(),
   invoicedate: z.string().optional(),
+  invoiceinternalid: z.string().optional(),
   invoiceuuid: z.string().optional(),
   lineItems: z.array(LineItems).optional(),
   lineitems: z.array(LineItems).optional(),
   partnerOrgName: z.string().optional(),
   partnerorgname: z.string().optional(),
+  paymentid: z.string().optional(),
   status: z.string().optional(),
   totalBalance: z.number().optional(),
   totalbalance: z.number().optional(),
@@ -12948,7 +14300,8 @@ const NetsuiteInvoiceDetails: z.ZodObject<any> = z.object({
 const Invoice_InvoiceDetailsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  invoice: NetsuiteInvoiceDetails.optional()
+  invoice: NetsuiteInvoiceDetails.optional(),
+  warningMsg: z.string().optional()
 });
 const Invoice_InvoiceDetailsWSRequest: z.ZodObject<any> = z.object({
   invoiceUuid: z.string().optional()
@@ -12956,21 +14309,33 @@ const Invoice_InvoiceDetailsWSRequest: z.ZodObject<any> = z.object({
 const Invoice_InvoiceDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  invoice: InvoiceType.optional()
+  invoice: InvoiceType.optional(),
+  warningMsg: z.string().optional()
 });
 const KeypadCommand = z.string();
+const QualifiedAddressType: z.ZodObject<any> = z.object({
+  addressLine2: z.string().optional(),
+  addressline1: z.string().optional(),
+  administrativeArea: z.string().optional(),
+  locality: z.string().optional(),
+  postalCode: z.string().optional(),
+  regionCode: z.string().optional()
+});
 const KeypadConfigType: z.ZodObject<any> = z.object({
   armCountdownSecs: z.number().int().optional(),
   buildingAdminPhoneNumber: z.string().optional(),
   connectionState: z.string().optional(),
   floorNumber: z.number().int().optional(),
+  ipAddress: z.string().optional(),
   lastModified: z.number().int().optional(),
   latitude: z.number().optional(),
   locationName: z.string().optional(),
   locationUuid: z.string().optional(),
+  logoUuid: z.string().optional(),
   longitude: z.number().optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
+  platform: z.string().optional(),
   qualifiedAddress: QualifiedAddressType.optional(),
   showCallBuildingAdmin: z.boolean().optional(),
   signalStrength: z.number().int().optional(),
@@ -12992,13 +14357,15 @@ const Keypad_ClaimKeypadActivationTokenRequest: z.ZodObject<any> = z.object({
 });
 const Keypad_ClaimKeypadActivationTokenResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Keypad_GetCurrentKeypadWSRequest = z.record(z.unknown());
 const Keypad_GetCurrentKeypadWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  keypad: KeypadConfigType.optional()
+  keypad: KeypadConfigType.optional(),
+  warningMsg: z.string().optional()
 });
 const Keypad_GetKeypadsForLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
@@ -13006,15 +14373,19 @@ const Keypad_GetKeypadsForLocationWSRequest: z.ZodObject<any> = z.object({
 const Keypad_GetKeypadsForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  keypads: z.array(KeypadConfigType).optional()
+  keypads: z.array(KeypadConfigType).optional(),
+  warningMsg: z.string().optional()
 });
 const Keypad_GetKeypadsForOrgWSRequest = z.record(z.unknown());
 const Keypad_GetKeypadsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  keypads: z.array(KeypadConfigType).optional()
+  keypads: z.array(KeypadConfigType).optional(),
+  warningMsg: z.string().optional()
 });
 const Keypad_KeypadCheckinWSRequest: z.ZodObject<any> = z.object({
+  ipAddress: z.string().optional(),
+  platform: z.string().optional(),
   signalStrength: z.number().int().optional()
 });
 const Keypad_KeypadCheckinWSResponse = z.record(z.unknown());
@@ -13027,7 +14398,8 @@ const Keypad_UnregisterKeypadRequest: z.ZodObject<any> = z.object({
 });
 const Keypad_UnregisterKeypadResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Keypad_UpdateKeypadRequest: z.ZodObject<any> = z.object({
   armCountdownSecs: z.number().int().optional(),
@@ -13037,6 +14409,7 @@ const Keypad_UpdateKeypadRequest: z.ZodObject<any> = z.object({
   latitude: z.number().optional(),
   locationName: z.string().optional(),
   locationUuid: z.string().optional(),
+  logoUuid: z.string().optional(),
   longitude: z.number().optional(),
   name: z.string().optional(),
   qualifiedAddress: QualifiedAddressType.optional(),
@@ -13047,12 +14420,14 @@ const Keypad_UpdateKeypadRequest: z.ZodObject<any> = z.object({
 });
 const Keypad_UpdateKeypadResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const KioskSelectiveUpdate: z.ZodObject<any> = z.object({
   batteryLevel: z.number().optional(),
   connectionStatus: z.string().optional(),
   deleted: z.boolean().optional(),
+  hostUserUuid: z.string().optional(),
   lastUpdateTimeMs: z.number().int().optional(),
   latitude: z.number().optional(),
   locationUuid: z.string().optional(),
@@ -13065,26 +14440,30 @@ const KioskSelectiveUpdate: z.ZodObject<any> = z.object({
 });
 const Kiosk_ClaimKioskActivationTokenRequest: z.ZodObject<any> = z.object({
   activationToken: z.string().optional(),
+  hostUserUuid: z.string().optional(),
   locationUuid: z.string().optional(),
   name: z.string().optional(),
   permissionGroupUuid: z.string().optional()
 });
 const Kiosk_ClaimKioskActivationTokenResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_DeleteKioskWSRequest: z.ZodObject<any> = z.object({
   kioskUuid: z.string().optional()
 });
 const Kiosk_DeleteKioskWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_GetCurrentKioskWSRequest = z.record(z.unknown());
 const Kiosk_KioskWithInfo: z.ZodObject<any> = z.object({
   batteryLevel: z.number().optional(),
   connectionStatus: z.string().optional(),
   deleted: z.boolean().optional(),
+  hostUserUuid: z.string().optional(),
   lastUpdateTimeMs: z.number().int().optional(),
   latitude: z.number().optional(),
   locationName: z.string().optional(),
@@ -13098,7 +14477,8 @@ const Kiosk_KioskWithInfo: z.ZodObject<any> = z.object({
 const Kiosk_GetCurrentKioskWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  kiosk: Kiosk_KioskWithInfo.optional()
+  kiosk: Kiosk_KioskWithInfo.optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_GetKiosksForLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
@@ -13106,13 +14486,15 @@ const Kiosk_GetKiosksForLocationWSRequest: z.ZodObject<any> = z.object({
 const Kiosk_GetKiosksForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  kiosks: z.array(Kiosk).optional()
+  kiosks: z.array(Kiosk).optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_GetKiosksForOrgWSRequest = z.record(z.unknown());
 const Kiosk_GetKiosksForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  kiosks: z.array(Kiosk).optional()
+  kiosks: z.array(Kiosk).optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_KioskCheckinWSRequest: z.ZodObject<any> = z.object({
   batterLevel: z.number().optional(),
@@ -13124,17 +14506,22 @@ const Kiosk_UnregisterKioskRequest: z.ZodObject<any> = z.object({
 });
 const Kiosk_UnregisterKioskResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_UpdateKioskResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Kiosk_UpdateKioskSelectiveRequest: z.ZodObject<any> = z.object({
   kioskUpdate: KioskSelectiveUpdate.optional()
 });
 const LabelIdentificationActivityEventType: z.ZodObject<any> = z.object({
   activityEvent: ActivityEnum.optional()
+});
+const LastSeenInfo: z.ZodObject<any> = z.object({
+  lastSeenAtMillis: z.number().int().optional()
 });
 const LicenseGroupStats: z.ZodObject<any> = z.object({
   assignedCount: z.number().int().optional(),
@@ -13238,7 +14625,8 @@ const License_CreateACUDoorLicenseWSRequest: z.ZodObject<any> = z.object({
 });
 const License_CreateACUDoorLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_CreateAlertMonitoringLicenseWSRequest: z.ZodObject<any> = z.object({
   allowedDeviceCount: z.number().int().optional(),
@@ -13247,7 +14635,8 @@ const License_CreateAlertMonitoringLicenseWSRequest: z.ZodObject<any> = z.object
 });
 const License_CreateAlertMonitoringLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_CreateDeviceLicenseWSRequest: z.ZodObject<any> = z.object({
   deviceType: DeviceTypeEnum.optional(),
@@ -13258,7 +14647,8 @@ const License_CreateDeviceLicenseWSRequest: z.ZodObject<any> = z.object({
 const License_CreateDeviceLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  licenseUuid: z.string().optional()
+  licenseUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_CreateLicenseWSRequest: z.ZodObject<any> = z.object({
   cloudArchiveDays: z.number().int().optional(),
@@ -13270,7 +14660,8 @@ const License_CreateLicenseWSRequest: z.ZodObject<any> = z.object({
 const License_CreateLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  licenseUuid: z.string().optional()
+  licenseUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_DeleteAlertMonitoringLicenseWSRequest: z.ZodObject<any> = z.object({
   licenseUuid: z.string().optional(),
@@ -13278,7 +14669,8 @@ const License_DeleteAlertMonitoringLicenseWSRequest: z.ZodObject<any> = z.object
 });
 const License_DeleteAlertMonitoringLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_DeleteDeviceLicenseWSRequest: z.ZodObject<any> = z.object({
   licenseUuid: z.string().optional(),
@@ -13286,7 +14678,8 @@ const License_DeleteDeviceLicenseWSRequest: z.ZodObject<any> = z.object({
 });
 const License_DeleteDeviceLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_DeleteLicenseWSRequest: z.ZodObject<any> = z.object({
   licenseUuid: z.string().optional(),
@@ -13294,7 +14687,8 @@ const License_DeleteLicenseWSRequest: z.ZodObject<any> = z.object({
 });
 const License_DeleteLicenseWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_FindLicensesByClaimKeyWSRequest: z.ZodObject<any> = z.object({
   claimKeyUuid: z.string().optional()
@@ -13302,7 +14696,8 @@ const License_FindLicensesByClaimKeyWSRequest: z.ZodObject<any> = z.object({
 const License_FindLicensesByClaimKeyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  licenses: z.array(BaseLicenseType).optional()
+  licenses: z.array(BaseLicenseType).optional(),
+  warningMsg: z.string().optional()
 });
 const License_GetACUDoorLicensesForClientOrgWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional()
@@ -13314,7 +14709,8 @@ const License_GetACUDoorLicensesWSRequest = z.record(z.unknown());
 const License_GetACUDoorLicensesWSResponse: z.ZodObject<any> = z.object({
   acuDoorLicenses: z.array(ACUDoorLicenseType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_GetAlertMonitoringLicensesForClientOrgWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional()
@@ -13326,7 +14722,8 @@ const License_GetAlertMonitoringLicensesWSRequest = z.record(z.unknown());
 const License_GetAlertMonitoringLicensesWSResponse: z.ZodObject<any> = z.object({
   alertMonitoringLicenses: z.array(AlertMonitoringLicenseType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_GetDeviceLicensesForClientOrgWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional()
@@ -13340,7 +14737,8 @@ const License_GetDeviceLicensesWSRequest: z.ZodObject<any> = z.object({
 const License_GetDeviceLicensesWSResponse: z.ZodObject<any> = z.object({
   deviceLicenses: z.array(DeviceLicenseType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_GetLicensesForClientOrgWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional()
@@ -13354,7 +14752,8 @@ const License_GetLicensesWSRequest: z.ZodObject<any> = z.object({
 const License_GetLicensesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  licenses: z.array(LicenseUsageType).optional()
+  licenses: z.array(LicenseUsageType).optional(),
+  warningMsg: z.string().optional()
 });
 const License_catalog_FindCatalogItemsWSRequest: z.ZodObject<any> = z.object({
   productType: z.string().optional()
@@ -13362,7 +14761,8 @@ const License_catalog_FindCatalogItemsWSRequest: z.ZodObject<any> = z.object({
 const License_catalog_FindCatalogItemsWSResponse: z.ZodObject<any> = z.object({
   catalogItems: z.array(BaseCatalogItem).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_catalog_GetCatalogItemByProductCodeWSRequest: z.ZodObject<any> = z.object({
   productCode: z.string().optional()
@@ -13370,7 +14770,8 @@ const License_catalog_GetCatalogItemByProductCodeWSRequest: z.ZodObject<any> = z
 const License_catalog_GetCatalogItemByProductCodeWSResponse: z.ZodObject<any> = z.object({
   catalogItem: BaseCatalogItem.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_claimkey_ClaimLicensesForClientOrgWSRequest: z.ZodObject<any> = z.object({
   claimCode: z.string().optional(),
@@ -13385,7 +14786,8 @@ const License_claimkey_ClaimLicensesWSRequest: z.ZodObject<any> = z.object({
 const License_claimkey_ClaimLicensesWSResponse: z.ZodObject<any> = z.object({
   claimKeyUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_claimkey_CreateClaimKeyWSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().datetime({ offset: true }).optional(),
@@ -13398,7 +14800,8 @@ const License_claimkey_CreateClaimKeyWSResponse: z.ZodObject<any> = z.object({
   claimCode: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_claimkey_CreateRenewalClaimKeyWSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().datetime({ offset: true }).optional(),
@@ -13409,7 +14812,8 @@ const License_claimkey_CreateRenewalClaimKeyWSResponse: z.ZodObject<any> = z.obj
   claimCode: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_claimkey_FindClaimKeysByOrgWSRequest: z.ZodObject<any> = z.object({
   claimKeySearchFilter: ClaimKeySearchFilter.optional()
@@ -13417,7 +14821,8 @@ const License_claimkey_FindClaimKeysByOrgWSRequest: z.ZodObject<any> = z.object(
 const License_claimkey_FindClaimKeysByOrgWSResponse: z.ZodObject<any> = z.object({
   claimKeys: z.array(BaseClaimKey).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_claimkey_GetClaimKeyByCodeForClientOrgWSRequest: z.ZodObject<any> = z.object({
   claimCode: z.string().optional(),
@@ -13438,7 +14843,8 @@ const License_claimkey_GetClaimKeyWSRequest: z.ZodObject<any> = z.object({
 const License_claimkey_GetClaimKeyWSResponse: z.ZodObject<any> = z.object({
   claimKey: BaseClaimKey.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const License_claimkey_ReturnClaimKeyProductQuantitiesWSRequest: z.ZodObject<any> = z.object({
   productQuantities: z.record(z.unknown()).optional(),
@@ -13446,7 +14852,8 @@ const License_claimkey_ReturnClaimKeyProductQuantitiesWSRequest: z.ZodObject<any
 });
 const License_claimkey_ReturnClaimKeyProductQuantitiesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const UriBuilder = z.record(z.unknown());
 const Link: z.ZodObject<any> = z.object({
@@ -13473,7 +14880,8 @@ const Location_AddLocationLabelWSRequest: z.ZodObject<any> = z.object({
 });
 const Location_AddLocationLabelWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Location_CreateLocationWSRequest: z.ZodObject<any> = z.object({
   location: LocationType.optional(),
@@ -13482,14 +14890,16 @@ const Location_CreateLocationWSRequest: z.ZodObject<any> = z.object({
 const Location_CreateLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Location_DeleteLocationWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Location_DeleteLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Location_GeoCodeWSRequest: z.ZodObject<any> = z.object({
   address: z.string().optional()
@@ -13498,13 +14908,15 @@ const Location_GeoCodeWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   latitude: z.number().optional(),
-  longitude: z.number().optional()
+  longitude: z.number().optional(),
+  warningMsg: z.string().optional()
 });
 const Location_GetLocationLabelsForOrgWSRequest = z.record(z.unknown());
 const Location_GetLocationLabelsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  locationLabels: z.record(z.unknown()).optional()
+  locationLabels: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Location_GetLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string(),
@@ -13513,7 +14925,8 @@ const Location_GetLocationWSRequest: z.ZodObject<any> = z.object({
 const Location_GetLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  location: LocationType.optional()
+  location: LocationType.optional(),
+  warningMsg: z.string().optional()
 });
 const Location_GetLocationsByGeoRequest: z.ZodObject<any> = z.object({
   latitude: z.number().optional(),
@@ -13528,7 +14941,8 @@ const Location_GetLocationsBySubLocationsHierarchyKeyWSRequest: z.ZodObject<any>
 const Location_GetLocationsBySubLocationsHierarchyKeyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  location: LocationType.optional()
+  location: LocationType.optional(),
+  warningMsg: z.string().optional()
 });
 const Location_GetLocationsV2WSRequest: z.ZodObject<any> = z.object({
   lastEvaluatedKey: z.string().optional(),
@@ -13539,7 +14953,8 @@ const Location_GetLocationsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  locations: z.array(LocationType).optional()
+  locations: z.array(LocationType).optional(),
+  warningMsg: z.string().optional()
 });
 const Location_GetLocationsWSRequest: z.ZodObject<any> = z.object({
   subLocationsIncluded: z.boolean().optional()
@@ -13547,7 +14962,8 @@ const Location_GetLocationsWSRequest: z.ZodObject<any> = z.object({
 const Location_GetLocationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  locations: z.array(LocationType).optional()
+  locations: z.array(LocationType).optional(),
+  warningMsg: z.string().optional()
 });
 const Location_QualifiedAddressTypeWithValidation: z.ZodObject<any> = z.object({
   addressComplete: z.boolean().optional(),
@@ -13570,7 +14986,8 @@ const Location_RemoveLocationLabelWSRequest: z.ZodObject<any> = z.object({
 });
 const Location_RemoveLocationLabelWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Location_SelectiveUpdateLocationWSRequest: z.ZodObject<any> = z.object({
   address1: z.string().optional(),
@@ -13594,23 +15011,65 @@ const Location_SelectiveUpdateLocationWSRequest: z.ZodObject<any> = z.object({
 });
 const Location_SelectiveUpdateLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Location_UpdateLocationWSRequest: z.ZodObject<any> = z.object({
   location: LocationType.optional()
 });
 const Location_UpdateLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Location_ValidateAndUpdateLocationAddressWSRequest: z.ZodObject<any> = z.object({
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  administrativeArea: z.string().optional(),
+  countryCode: z.string().optional(),
+  locality: z.string().optional(),
+  locationUuid: z.string().optional(),
+  overrideAllValidation: z.boolean().optional(),
+  overrideMissingSubPremise: z.boolean().optional(),
+  postalCode: z.string().optional()
+});
+const Location_ValidateAndUpdateLocationAddressWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  locationUuid: z.string().optional(),
+  qualifiedAddress: Location_QualifiedAddressTypeWithValidation.optional(),
+  warningMsg: z.string().optional()
+});
+const Location_ValidateLocationAddressV2WSRequest: z.ZodObject<any> = z.object({
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  administrativeArea: z.string().optional(),
+  countryCode: z.string().optional(),
+  locality: z.string().optional(),
+  locationUuid: z.string().optional(),
+  postalCode: z.string().optional()
+});
+const Location_ValidateLocationAddressV2WSResponse: z.ZodObject<any> = z.object({
+  acceptable: z.boolean().optional(),
+  acceptableExceptingSubPremise: z.boolean().optional(),
+  acceptableIfOverridden: z.boolean().optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  hasChangedElements: z.boolean().optional(),
+  locationUuid: z.string().optional(),
+  qualifiedAddress: Location_QualifiedAddressTypeWithValidation.optional(),
+  warningMsg: z.string().optional()
 });
 const Location_ValidateLocationWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional()
 });
 const Location_ValidateLocationWSResponse: z.ZodObject<any> = z.object({
+  acceptable: z.boolean().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   locationUuid: z.string().optional(),
-  qualifiedAddress: Location_QualifiedAddressTypeWithValidation.optional()
+  qualifiedAddress: Location_QualifiedAddressTypeWithValidation.optional(),
+  warningMsg: z.string().optional()
 });
 const LockdownActivatedStateEventType: z.ZodObject<any> = z.object({
   createdAtMillis: z.number().int().optional(),
@@ -13668,6 +15127,7 @@ const RMAType: z.ZodObject<any> = z.object({
   prevShippingInfoUsedBy: z.string().optional(),
   prevShippingInfoUsedByAtSec: z.number().int().optional(),
   proactiveReplacement: z.boolean().optional(),
+  rctpPartnerOrgUuid: z.string().optional(),
   recipientName: z.string().optional(),
   recipientPhoneNumber: z.string().optional(),
   replacementCourier: z.string().optional(),
@@ -13702,7 +15162,8 @@ const RMAType: z.ZodObject<any> = z.object({
 const Logistics_GetRMAsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rmaList: z.array(RMAType).optional()
+  rmaList: z.array(RMAType).optional(),
+  warningMsg: z.string().optional()
 });
 const Logistics_GetShipmentsWSRequest: z.ZodObject<any> = z.object({
   endTimeSec: z.number().int().optional(),
@@ -13711,7 +15172,8 @@ const Logistics_GetShipmentsWSRequest: z.ZodObject<any> = z.object({
 const Logistics_GetShipmentsWSResponse: z.ZodObject<any> = z.object({
   customerShipmentList: z.array(CustomerShipmentType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Maps_GenerateMapUrlWSRequest: z.ZodObject<any> = z.object({
   baseUrl: z.string().optional()
@@ -13725,7 +15187,8 @@ const Mediadevice_GetBulkMediaDeviceDetailsWSRequest: z.ZodObject<any> = z.objec
 const Mediadevice_GetBulkMediaDeviceDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  mediaDeviceDetails: z.record(z.unknown()).optional()
+  mediaDeviceDetails: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Mediadevice_MediaDeviceDetailsType: z.ZodObject<any> = z.object({
   audioGateways: z.array(z.string()).optional(),
@@ -13759,14 +15222,16 @@ const Metric_LogEventWSRequest: z.ZodObject<any> = z.object({
 });
 const Metric_LogEventWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Metric_ReportErrorWSRequest: z.ZodObject<any> = z.object({
   errorMap: z.record(z.unknown()).optional()
 });
 const Metric_ReportErrorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const MicrosoftTeamsChannelSettings: z.ZodObject<any> = z.object({
   botInstallationId: z.string().optional(),
@@ -13820,6 +15285,62 @@ const MinimalNVRStateType: z.ZodObject<any> = z.object({
   wifiBars: z.number().int().optional(),
   wifiSignalStrength: z.number().int().optional()
 });
+const Quaternion: z.ZodObject<any> = z.object({
+  w: z.number().optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  z: z.number().optional()
+});
+const Point: z.ZodObject<any> = z.object({
+  x: z.number().optional(),
+  y: z.number().optional(),
+  z: z.number().optional()
+});
+const MinimalRobotStateType: z.ZodObject<any> = z.object({
+  associatedCameras: z.array(z.string()).optional(),
+  batteryPercent: z.number().int().optional(),
+  charging: z.boolean().optional(),
+  connectionStatus: DeviceStatusEnum.optional(),
+  createdAtMillis: z.number().int().optional(),
+  defaultInterface: z.string().optional(),
+  defaultInterfaceMac: z.string().optional(),
+  directionRadians: z.number().optional(),
+  externalIPAddress: z.string().optional(),
+  facetNameMap: z.record(z.unknown()).optional(),
+  firmwareUpdateInProgress: z.boolean().optional(),
+  firmwareVersion: z.string().optional(),
+  floorNumber: z.number().int().optional(),
+  healthStatus: DeviceStatusEnum.optional(),
+  healthStatusDetails: DeviceHealthStatusDetailsEnum.optional(),
+  hwVariation: HardwareVariationEnum.optional(),
+  lanAddresses: z.array(z.string()).optional(),
+  latitude: z.number().optional(),
+  liveStreamShared: z.boolean().optional(),
+  liveStreamsSharedCount: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  longitude: z.number().optional(),
+  mapId: z.string().optional(),
+  mediaRegion: z.string().optional(),
+  mediaStorageDeviceUuid: z.string().optional(),
+  mode: z.string().optional(),
+  mummified: z.boolean().optional(),
+  name: z.string().optional(),
+  orientation: Quaternion.optional(),
+  policyUuid: z.string().optional(),
+  position: Point.optional(),
+  region: z.string().optional(),
+  roamingLatitude: z.number().optional(),
+  roamingLongitude: z.number().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
+  serialNumber: z.string().optional(),
+  ssid: z.string().optional(),
+  subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
+  supportedFacets: z.array(DeviceFacet).optional(),
+  uuid: z.string().optional(),
+  wifiApMac: z.string().optional(),
+  wifiBars: z.number().int().optional(),
+  wifiSignalStrength: z.number().int().optional()
+});
 const MinimalThresholdEventType: z.ZodObject<any> = z.object({
   crossingObject: z.string().optional(),
   direction: z.string().optional(),
@@ -13861,6 +15382,8 @@ const Mobile_RefreshMobileSessionResponse: z.ZodObject<any> = z.object({
   userUuid: z.string().optional()
 });
 const Mobile_UpdateMobileNotificationTokenRequest: z.ZodObject<any> = z.object({
+  androidV2: z.boolean().optional(),
+  forceNewEndpoint: z.boolean().optional(),
   token: z.string().optional()
 });
 const Mobile_UpdateMobileNotificationTokenResponse = z.record(z.unknown());
@@ -13917,7 +15440,8 @@ const Modularai_AddModelToDeviceWSRequest: z.ZodObject<any> = z.object({
 });
 const Modularai_AddModelToDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_CreateModularAIDistributionWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -13926,7 +15450,8 @@ const Modularai_CreateModularAIDistributionWSRequest: z.ZodObject<any> = z.objec
 const Modularai_CreateModularAIDistributionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_CreateModularAIPipelineConfigWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -13937,7 +15462,8 @@ const Modularai_CreateModularAIPipelineConfigWSRequest: z.ZodObject<any> = z.obj
 const Modularai_CreateModularAIPipelineConfigWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_GetDevicesForModelWSRequest: z.ZodObject<any> = z.object({
   modelUuid: z.string().optional()
@@ -13945,7 +15471,8 @@ const Modularai_GetDevicesForModelWSRequest: z.ZodObject<any> = z.object({
 const Modularai_GetDevicesForModelWSResponse: z.ZodObject<any> = z.object({
   devices: z.array(z.string()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_GetModelsAddedToDeviceWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -13953,7 +15480,8 @@ const Modularai_GetModelsAddedToDeviceWSRequest: z.ZodObject<any> = z.object({
 const Modularai_GetModelsAddedToDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  models: z.array(ModularAIConfig).optional()
+  models: z.array(ModularAIConfig).optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_GetModelsForDistributionWSRequest: z.ZodObject<any> = z.object({
   distributionUuid: z.string().optional()
@@ -13961,19 +15489,22 @@ const Modularai_GetModelsForDistributionWSRequest: z.ZodObject<any> = z.object({
 const Modularai_GetModelsForDistributionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  models: z.array(ModularAIConfig).optional()
+  models: z.array(ModularAIConfig).optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_GetModelsWSRequest = z.record(z.unknown());
 const Modularai_GetModelsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  models: z.array(ModularAIConfig).optional()
+  models: z.array(ModularAIConfig).optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_ListModularAIDistributionsWSRequest = z.record(z.unknown());
 const Modularai_ListModularAIDistributionsWSResponse: z.ZodObject<any> = z.object({
   distributions: z.array(ModularAIDistribution).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_RemoveModelFromDeviceWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -13981,7 +15512,8 @@ const Modularai_RemoveModelFromDeviceWSRequest: z.ZodObject<any> = z.object({
 });
 const Modularai_RemoveModelFromDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Modularai_UpdateModelWSRequest: z.ZodObject<any> = z.object({
   update: ModularAIConfigSelectiveUpdate.optional()
@@ -14063,7 +15595,8 @@ const Oauth_GetAllApplicationsForOrgWSRequest = z.record(z.unknown());
 const Oauth_GetAllApplicationsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  oauthApplications: z.array(OAuthApplication).optional()
+  oauthApplications: z.array(OAuthApplication).optional(),
+  warningMsg: z.string().optional()
 });
 const Oauth_GetApplicationByClientIdWSRequest: z.ZodObject<any> = z.object({
   clientId: z.string().optional()
@@ -14071,7 +15604,8 @@ const Oauth_GetApplicationByClientIdWSRequest: z.ZodObject<any> = z.object({
 const Oauth_GetApplicationByClientIdWSResponse: z.ZodObject<any> = z.object({
   application: OAuthApplication.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Oauth_OAuthApplicationWSRequest: z.ZodObject<any> = z.object({
   clientId: z.string().optional(),
@@ -14084,7 +15618,8 @@ const Oauth_OAuthApplicationWSResponse: z.ZodObject<any> = z.object({
   clientId: z.string().optional(),
   clientSecret: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const OccupancyEventType: z.ZodObject<any> = z.object({
   baseStationUuid: z.string().optional(),
@@ -14143,7 +15678,8 @@ const Occupancysensor_MinimalOccupancySensorStateType: z.ZodObject<any> = z.obje
 const Occupancysensor_GetMinimalOccupancySensorStatesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  occupancySensorStates: z.array(Occupancysensor_MinimalOccupancySensorStateType).optional()
+  occupancySensorStates: z.array(Occupancysensor_MinimalOccupancySensorStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Occupancysensor_GetOccupancyEventsForSensorWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -14154,7 +15690,8 @@ const Occupancysensor_GetOccupancyEventsForSensorWSRequest: z.ZodObject<any> = z
 const Occupancysensor_GetOccupancyEventsForSensorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(OccupancyEventType).optional()
+  events: z.array(OccupancyEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Occupancysensor_UpdateOccupancySensorDetailsWSRequest: z.ZodObject<any> = z.object({
   associatedCameras: z.array(z.string()).optional(),
@@ -14181,7 +15718,8 @@ const Occupancysensor_UpdateOccupancySensorDetailsWSRequest: z.ZodObject<any> = 
 });
 const Occupancysensor_UpdateOccupancySensorDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const OccupiedActivityEventType: z.ZodObject<any> = z.object({
   activityEvent: ActivityEnum.optional()
@@ -14226,8 +15764,10 @@ const OrgLockdownPlanType: z.ZodObject<any> = z.object({
   updatedAtMillis: z.number().int().optional(),
   uuid: z.string().optional()
 });
+const RhombusSamlDomainEnum = z.string();
 const OrgSamlSettingsType: z.ZodObject<any> = z.object({
   addUsersOnRoleMismatch: z.boolean().optional(),
+  domain: RhombusSamlDomainEnum.optional(),
   enabled: z.boolean().optional(),
   enabledForRhombusKey: z.boolean().optional(),
   idpMetaDataXml: z.string().optional(),
@@ -14282,7 +15822,8 @@ const Org_ClaimActivationTokenWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_ClaimActivationTokenWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_DeviceRegistrationClaimType: z.ZodObject<any> = z.object({
   deviceName: z.string().optional(),
@@ -14296,7 +15837,8 @@ const Org_ClaimShipmentRegistrationTokenWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_ClaimShipmentRegistrationTokenWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_CreatePendingRegistrationRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
@@ -14307,7 +15849,8 @@ const Org_CreatePendingRegistrationRequest: z.ZodObject<any> = z.object({
 });
 const Org_CreatePendingRegistrationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_DeleteCloudArchivingConfigWSRequest: z.ZodObject<any> = z.object({
   scope: DeviceTargetScope.optional(),
@@ -14315,20 +15858,24 @@ const Org_DeleteCloudArchivingConfigWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_DeleteCloudArchivingConfigWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_DeleteKeypadLogoWSRequest = z.record(z.unknown());
 const Org_DeleteKeypadLogoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_DeleteRhombusKeyLogoWSRequest: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_DeleteRhombusKeyLogoWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_FindAllHardwareWithPendingRegistrationRequest = z.record(z.unknown());
 const Org_PendingRegistrationInfoType: z.ZodObject<any> = z.object({
@@ -14356,11 +15903,14 @@ const Org_FindIfTeamNameAvailableResponse: z.ZodObject<any> = z.object({
   available: z.boolean().optional()
 });
 const Org_FindSCIMSettingsForOrgWSRequest = z.record(z.unknown());
+const SCIMRolesFormatEnum = z.string();
 const SCIMSettingsType: z.ZodObject<any> = z.object({
   addUsersOnRoleMismatch: z.boolean().optional(),
   createdAtMillis: z.number().int().optional(),
+  forceRolesStrictSchemaFormat: z.boolean().optional(),
   orgUuid: z.string().optional(),
   rhombusKeyAppSettings: RhombusKeyAppSettingsType.optional(),
+  rolesFormat: SCIMRolesFormatEnum.optional(),
   sendWelcomeEmailToNewRhombusKeyUsers: z.boolean().optional(),
   sendWelcomeEmailToNewUsers: z.boolean().optional(),
   updatedAtMillis: z.number().int().optional()
@@ -14413,7 +15963,8 @@ const Org_GetCloudArchivingConfigsWSRequest = z.record(z.unknown());
 const Org_GetCloudArchivingConfigsWSResponse: z.ZodObject<any> = z.object({
   archivingConfigs: z.array(ScopedCloudArchivingConfig).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetDeviceFlagsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -14421,7 +15972,8 @@ const Org_GetDeviceFlagsWSRequest: z.ZodObject<any> = z.object({
 const Org_GetDeviceFlagsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  flags: z.record(z.unknown()).optional()
+  flags: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetFeaturesWSRequest = z.record(z.unknown());
 const Org_GetFeaturesWSResponse: z.ZodObject<any> = z.object({
@@ -14437,30 +15989,35 @@ const Org_GetFeaturesWSResponse: z.ZodObject<any> = z.object({
   peopleCounting: z.boolean().optional(),
   ppeDetection: z.boolean().optional(),
   rulesEngine: z.boolean().optional(),
-  vehicleCounting: z.boolean().optional()
+  vehicleCounting: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetLocationFlagsWSRequest = z.record(z.unknown());
 const Org_GetLocationFlagsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  flagsMap: z.record(z.unknown()).optional()
+  flagsMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetOrgIntegrationsWSRequest = z.record(z.unknown());
 const Org_GetOrgIntegrationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgIntegrations: OrgIntegrationsType.optional()
+  orgIntegrations: OrgIntegrationsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetOrgNotificationTemplateV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  notificationSettings: UserNotificationSettingsV4Type.optional()
+  notificationSettings: UserNotificationSettingsV4Type.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetOrgNotificationTemplateWSRequest = z.record(z.unknown());
 const Org_GetOrgNotificationTemplateWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  notificationSettings: UserNotificationSettingsV3Type.optional()
+  notificationSettings: UserNotificationSettingsV3Type.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetOrgV2WSRequest = z.record(z.unknown());
 const Org_GetOrgV2WSResponse: z.ZodObject<any> = z.object({
@@ -14469,26 +16026,30 @@ const Org_GetOrgV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   featureFlags: z.record(z.unknown()).optional(),
-  org: OrgV2Type.optional()
+  org: OrgV2Type.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetOrgWSRequest = z.record(z.unknown());
 const Org_GetOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   featureFlags: z.record(z.unknown()).optional(),
-  org: OrgType.optional()
+  org: OrgType.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetSAMLSettingsV2WSRequest = z.record(z.unknown());
 const Org_GetSAMLSettingsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  samlSettings: z.array(OrgSamlSettingsType).optional()
+  samlSettings: z.array(OrgSamlSettingsType).optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetSAMLSettingsWSRequest = z.record(z.unknown());
 const Org_GetSAMLSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  samlSettings: OrgSamlSettingsType.optional()
+  samlSettings: OrgSamlSettingsType.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_GetScimDisplayInfoResponse: z.ZodObject<any> = z.object({
   azureScimEndpointUrl: z.string().optional(),
@@ -14501,7 +16062,8 @@ const Org_PeekShipmentRegistrationTokenWSRequest: z.ZodObject<any> = z.object({
 const Org_PeekShipmentRegistrationTokenWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  hardwareUuidList: z.array(z.string()).optional()
+  hardwareUuidList: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const Org_RemovePendingRegistrationRequest: z.ZodObject<any> = z.object({
   serialNumber: z.string().optional()
@@ -14515,7 +16077,8 @@ const Org_SetFlagWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_SetFlagWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_SetupSCIMAccessForOrgWSRequest: z.ZodObject<any> = z.object({
   addUsersOnRoleMismatch: z.boolean().optional(),
@@ -14532,14 +16095,16 @@ const Org_UpdateAiTrainingSettingsWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_UpdateAiTrainingSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateCloudArchivingConfigWSRequest: z.ZodObject<any> = z.object({
   archivingConfig: ScopedCloudArchivingConfig.optional()
 });
 const Org_UpdateCloudArchivingConfigWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateFirmwareSettingsWSRequest: z.ZodObject<any> = z.object({
   firmwareSettings: FirmwareUpdateSettingsType.optional(),
@@ -14548,7 +16113,8 @@ const Org_UpdateFirmwareSettingsWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_UpdateFirmwareSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateGeneralSettingsWSRequest: z.ZodObject<any> = z.object({
   accountBillingContactEmail: z.string().optional(),
@@ -14562,7 +16128,8 @@ const Org_UpdateGeneralSettingsWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_UpdateGeneralSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateMFASettingsWSRequest: z.ZodObject<any> = z.object({
   mfaEnabled: z.boolean().optional(),
@@ -14571,35 +16138,40 @@ const Org_UpdateMFASettingsWSRequest: z.ZodObject<any> = z.object({
 const Org_UpdateMFASettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  org: OrgV2Type.optional()
+  org: OrgV2Type.optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateOrgAudioAnalysisPolicyWSRequest: z.ZodObject<any> = z.object({
   audioAnalysisEnabled: z.boolean().optional()
 });
 const Org_UpdateOrgAudioAnalysisPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateOrgAudioRecordingPolicyWSRequest: z.ZodObject<any> = z.object({
   audioRecordingEnabled: z.boolean().optional()
 });
 const Org_UpdateOrgAudioRecordingPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateOrgIntegrationsWSRequest: z.ZodObject<any> = z.object({
   orgIntegrations: OrgIntegrationsType.optional()
 });
 const Org_UpdateOrgIntegrationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateOrgLLMUsagePolicyWSRequest: z.ZodObject<any> = z.object({
   llmUsageEnabled: z.boolean().optional()
 });
 const Org_UpdateOrgLLMUsagePolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const UserNotificationSelectiveUpdateV2: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional(),
@@ -14615,7 +16187,8 @@ const Org_UpdateOrgNotificationTemplateV2WSRequest: z.ZodObject<any> = z.object(
 });
 const Org_UpdateOrgNotificationTemplateV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateOrgNotificationTemplateWSRequest: z.ZodObject<any> = z.object({
   notificationIntervalsV2: z.array(NotificationIntervalV2Type).optional(),
@@ -14623,7 +16196,8 @@ const Org_UpdateOrgNotificationTemplateWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_UpdateOrgNotificationTemplateWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateOrgWSRequest: z.ZodObject<any> = z.object({
   org: OrgType.optional()
@@ -14641,21 +16215,24 @@ const Org_UpdatePendingRegistrationRequest: z.ZodObject<any> = z.object({
 });
 const Org_UpdatePendingRegistrationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateSAMLSettingsV2WSRequest: z.ZodObject<any> = z.object({
   samlSettings: z.array(OrgSamlSettingsType).optional()
 });
 const Org_UpdateSAMLSettingsV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateSAMLSettingsWSRequest: z.ZodObject<any> = z.object({
   samlSettings: OrgSamlSettingsType.optional()
 });
 const Org_UpdateSAMLSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Org_UpdateSCIMSettingsForOrgWSRequest: z.ZodObject<any> = z.object({
   addUsersOnRoleMismatch: z.boolean().optional(),
@@ -14665,7 +16242,8 @@ const Org_UpdateSCIMSettingsForOrgWSRequest: z.ZodObject<any> = z.object({
 });
 const Org_UpdateSCIMSettingsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const ParameterizedHeader: z.ZodObject<any> = z.object({
   parameters: z.record(z.unknown()).optional(),
@@ -14715,18 +16293,20 @@ const Partner_CreatePartnerClientWSResponse: z.ZodObject<any> = z.object({
   clientOrgUuid: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: Partner_PartnerWebResponseStatusEnum.optional()
+  responseStatus: Partner_PartnerWebResponseStatusEnum.optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_CustomizeClientDeviceWSRequest: z.ZodObject<any> = z.object({
   clientDeviceUuid: z.string().optional(),
   clientOrgUuid: z.string().optional(),
-  configUpdate: Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig.optional(),
+  configUpdate: Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig.optional(),
   customizations: Partner_ClientDeviceCustomizationsType.optional()
 });
 const Partner_CustomizeClientDeviceWSResponse: z.ZodObject<any> = z.object({
   customizations: Partner_ClientCustomizationsType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_CustomizeClientWSRequest: z.ZodObject<any> = z.object({
   clientOrgUuid: z.string().optional(),
@@ -14735,7 +16315,8 @@ const Partner_CustomizeClientWSRequest: z.ZodObject<any> = z.object({
 const Partner_CustomizeClientWSResponse: z.ZodObject<any> = z.object({
   customizations: Partner_ClientCustomizationsType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_DeleteClientWebRequest: z.ZodObject<any> = z.object({
   clientOrgUuid: z.string().optional()
@@ -14775,7 +16356,8 @@ const Partner_GetClientSummaryInfoWSResponse: z.ZodObject<any> = z.object({
   licenseV2Enabled: z.boolean().optional(),
   locationCount: z.number().int().optional(),
   manuallySendLicenseExpirationEmailEnabled: z.boolean().optional(),
-  recentPolicyAlertCount: z.number().int().optional()
+  recentPolicyAlertCount: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_GetListOfAllClientDevicesRequest = z.record(z.unknown());
 const Partner_GetListOfAllClientDevicesResponse: z.ZodObject<any> = z.object({
@@ -14802,7 +16384,8 @@ const Partner_GetPartnerClientsStatusMapWSRequest = z.record(z.unknown());
 const Partner_GetPartnerClientsStatusMapWSResponse: z.ZodObject<any> = z.object({
   clientDeviceStatusMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_GetPartnerClientsWSRequest = z.record(z.unknown());
 const Partner_PartnerClientWebType: z.ZodObject<any> = z.object({
@@ -14824,7 +16407,8 @@ const Partner_PartnerClientWebType: z.ZodObject<any> = z.object({
 const Partner_GetPartnerClientsWSResponse: z.ZodObject<any> = z.object({
   clients: z.array(Partner_PartnerClientWebType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_GetPartnerUsersInOrgWSRequest = z.record(z.unknown());
 const Partner_GetPartnerUsersInOrgWSResponse: z.ZodObject<any> = z.object({
@@ -14833,7 +16417,8 @@ const Partner_GetPartnerUsersInOrgWSResponse: z.ZodObject<any> = z.object({
   notificationSettings: z.array(PartnerNotificationSettingsType).optional(),
   notificationSettingsV2: z.array(PartnerNotificationSettingsV2).optional(),
   partnerPermissions: z.array(PartnerPermissionType).optional(),
-  partnerUsers: z.array(WrappedRhombusOrgUserType).optional()
+  partnerUsers: z.array(WrappedRhombusOrgUserType).optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_GetShipmentsWSRequest: z.ZodObject<any> = z.object({
   clientOrgUuid: z.string().optional(),
@@ -14843,7 +16428,8 @@ const Partner_GetShipmentsWSRequest: z.ZodObject<any> = z.object({
 const Partner_GetShipmentsWSResponse: z.ZodObject<any> = z.object({
   customerShipmentList: z.array(CustomerShipmentType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_GrantSupportAccessToClientWSRequest: z.ZodObject<any> = z.object({
   clientOrgUuid: z.string().optional()
@@ -14851,7 +16437,8 @@ const Partner_GrantSupportAccessToClientWSRequest: z.ZodObject<any> = z.object({
 const Partner_GrantSupportAccessToClientWSResponse: z.ZodObject<any> = z.object({
   errMessage: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_ReassignDeviceOrgWSRequest: z.ZodObject<any> = z.object({
   serialNumbers: z.array(z.string()).optional(),
@@ -14867,7 +16454,8 @@ const Partner_RegisterDealWSRequest: z.ZodObject<any> = z.object({
 const Partner_RegisterDealWSResponse: z.ZodObject<any> = z.object({
   clients: z.array(Partner_PartnerClientWebType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Partner_RequestAccessToClientAccountRequest: z.ZodObject<any> = z.object({
   clientEmail: z.string().optional()
@@ -14901,7 +16489,8 @@ const Partner_UpdateManuallySendLicenseExpirationEmailWSRequest: z.ZodObject<any
 });
 const Partner_UpdateManuallySendLicenseExpirationEmailWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Password_ForgotPasswordWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional(),
@@ -14912,7 +16501,8 @@ const Password_ForgotPasswordWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Password_ResetPasswordWSRequest: z.ZodObject<any> = z.object({
   password: z.string().optional(),
@@ -14923,7 +16513,8 @@ const Password_ResetPasswordWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
   failureReasonType: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Password_UserSignupWSRequest: z.ZodObject<any> = z.object({
   eulaAccepted: z.boolean().optional(),
@@ -14934,7 +16525,8 @@ const Password_UserSignupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   failureReason: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const PeopleCountEventType: z.ZodObject<any> = z.object({
   boundingBoxes: z.array(BoundingBoxType).optional(),
@@ -14959,7 +16551,8 @@ const Permission_AssignUserPermissionWSRequest: z.ZodObject<any> = z.object({
 });
 const Permission_AssignUserPermissionWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_CreatePartnerPermissionGroupWSRequest: z.ZodObject<any> = z.object({
   partnerPermissionGroup: PartnerUserPermissionGroupType.optional()
@@ -14967,7 +16560,8 @@ const Permission_CreatePartnerPermissionGroupWSRequest: z.ZodObject<any> = z.obj
 const Permission_CreatePartnerPermissionGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_CreatePermissionGroupWSRequest: z.ZodObject<any> = z.object({
   userPermissionGroup: UserPermissionGroupType.optional()
@@ -14975,21 +16569,24 @@ const Permission_CreatePermissionGroupWSRequest: z.ZodObject<any> = z.object({
 const Permission_CreatePermissionGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_DeletePartnerPermissionGroupWSRequest: z.ZodObject<any> = z.object({
   groupUuid: z.string().optional()
 });
 const Permission_DeletePartnerPermissionGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_DeletePermissionGroupWSRequest: z.ZodObject<any> = z.object({
   groupUuid: z.string().optional()
 });
 const Permission_DeletePermissionGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_GetPartnerPermissionGroupWSResponse: z.ZodObject<any> = z.object({
   clientPermissionGroupMap: z.record(z.unknown()).optional(),
@@ -14997,7 +16594,8 @@ const Permission_GetPartnerPermissionGroupWSResponse: z.ZodObject<any> = z.objec
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   groupMembership: z.record(z.unknown()).optional(),
-  permissionGroups: z.array(PartnerUserPermissionGroupType).optional()
+  permissionGroups: z.array(PartnerUserPermissionGroupType).optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_GetPartnerPermissionGroupsWSRequest = z.record(z.unknown());
 const Permission_GetPermissionGroupsForOrgWSRequest: z.ZodObject<any> = z.object({
@@ -15006,7 +16604,8 @@ const Permission_GetPermissionGroupsForOrgWSRequest: z.ZodObject<any> = z.object
 const Permission_GetPermissionGroupsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  permissionGroups: z.array(UserPermissionGroupType).optional()
+  permissionGroups: z.array(UserPermissionGroupType).optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_GetPermissionGroupsWSRequest = z.record(z.unknown());
 const Permission_GetPermissionGroupsWSResponse: z.ZodObject<any> = z.object({
@@ -15014,7 +16613,8 @@ const Permission_GetPermissionGroupsWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   groupMembership: z.record(z.unknown()).optional(),
   partnerMembership: z.record(z.unknown()).optional(),
-  permissionGroups: z.array(UserPermissionGroupType).optional()
+  permissionGroups: z.array(UserPermissionGroupType).optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_GetPermissionsForCurrentPartnerWSRequest = z.record(z.unknown());
 const Permission_GetPermissionsForCurrentPartnerWSResponse: z.ZodObject<any> = z.object({
@@ -15025,7 +16625,8 @@ const Permission_GetPermissionsForCurrentPartnerWSResponse: z.ZodObject<any> = z
   errorMsg: z.string().optional(),
   functionalityList: z.array(PartnerFunctionality).optional(),
   permissionGroupName: z.string().optional(),
-  superAdmin: z.boolean().optional()
+  superAdmin: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_GetPermissionsForCurrentUserWSRequest = z.record(z.unknown());
 const Permission_GetPermissionsForCurrentUserWSResponse: z.ZodObject<any> = z.object({
@@ -15040,21 +16641,24 @@ const Permission_GetPermissionsForCurrentUserWSResponse: z.ZodObject<any> = z.ob
   locationAccessMap: z.record(z.unknown()).optional(),
   locationGranularAccessMap: z.record(z.unknown()).optional(),
   permissionGroupName: z.string().optional(),
-  superAdmin: z.boolean().optional()
+  superAdmin: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_UpdatePartnerPermissionGroupWSRequest: z.ZodObject<any> = z.object({
   partnerPermissionGroup: PartnerUserPermissionGroupType.optional()
 });
 const Permission_UpdatePartnerPermissionGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Permission_UpdatePermissionGroupWSRequest: z.ZodObject<any> = z.object({
   userPermissionGroup: UserPermissionGroupType.optional()
 });
 const Permission_UpdatePermissionGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const PhysicalPortEnumType = z.string();
 const PhysicalPortType: z.ZodObject<any> = z.object({
@@ -15085,7 +16689,8 @@ const Policy_CreateAccessControlledDoorPolicyWSRequest: z.ZodObject<any> = z.obj
 const Policy_CreateAccessControlledDoorPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_ExternalAudioTriggerType: z.ZodObject<any> = z.object({
   activity: ActivityEnum.optional(),
@@ -15108,7 +16713,8 @@ const Policy_CreateAudioPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateAudioPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_MinimalCameraScheduledTriggerType: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional(),
@@ -15127,7 +16733,8 @@ const Policy_CreateCameraPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateCameraPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_MinimalClimateScheduledTriggerType: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional(),
@@ -15147,7 +16754,8 @@ const Policy_CreateClimatePolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateClimatePolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_MinimalDoorScheduledTriggerType: z.ZodObject<any> = z.object({
   ajarThresholdSec: z.number().int().optional(),
@@ -15167,7 +16775,8 @@ const Policy_CreateDoorPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateDoorPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_MinimalOccupancyScheduledTriggerType: z.ZodObject<any> = z.object({
   occupancyThresholdSec: z.number().int().optional(),
@@ -15188,7 +16797,8 @@ const Policy_CreateOccupancyPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateOccupancyPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_CreatePolicyAddendumForLocationRequest: z.ZodObject<any> = z.object({
   activities: z.array(ActivityEnum).optional(),
@@ -15198,7 +16808,8 @@ const Policy_CreatePolicyAddendumForLocationRequest: z.ZodObject<any> = z.object
 });
 const Policy_CreatePolicyAddendumForLocationResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_CreatePolicyAddendumsForDevicesRequest: z.ZodObject<any> = z.object({
   activities: z.array(ActivityEnum).optional(),
@@ -15208,7 +16819,8 @@ const Policy_CreatePolicyAddendumsForDevicesRequest: z.ZodObject<any> = z.object
 });
 const Policy_CreatePolicyAddendumsForDevicesResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const ProximityTriggerType: z.ZodObject<any> = z.object({
   activity: ActivityEnum.optional(),
@@ -15232,7 +16844,8 @@ const Policy_CreateProximityPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateProximityPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_CreateScheduleWSRequest: z.ZodObject<any> = z.object({
   schedule: WeeklyRepeatingScheduleType.optional()
@@ -15240,7 +16853,8 @@ const Policy_CreateScheduleWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  scheduleUuid: z.string().optional()
+  scheduleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_ExternalVideoIntercomTriggerType: z.ZodObject<any> = z.object({
   activity: ActivityEnum.optional(),
@@ -15270,84 +16884,96 @@ const Policy_CreateVideoIntercomPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_CreateVideoIntercomPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteAccessControlledDoorPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteAccessControlledDoorPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteAudioPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteAudioPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteCameraPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteCameraPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteClimatePolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteClimatePolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteDevicePolicyAddendumsWSRequest: z.ZodObject<any> = z.object({
   uuids: z.array(z.string()).optional()
 });
 const Policy_DeleteDevicePolicyAddendumsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteDoorPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteDoorPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteLocationPolicyAddendumWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Policy_DeleteLocationPolicyAddendumWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteOccupancyPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteOccupancyPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeletePolicyPauseSettingWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Policy_DeletePolicyPauseSettingWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteProximityPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
 });
 const Policy_DeleteProximityPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteScheduleWSRequest: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional()
 });
 const Policy_DeleteScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_DeleteVideoIntercomPolicyWSRequest: z.ZodObject<any> = z.object({
   policyUuid: z.string().optional()
@@ -15355,7 +16981,8 @@ const Policy_DeleteVideoIntercomPolicyWSRequest: z.ZodObject<any> = z.object({
 const Policy_DeleteVideoIntercomPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policyUuid: z.string().optional()
+  policyUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_ExternalAudioScheduledTriggerType: z.ZodObject<any> = z.object({
   schedule: WeeklyRepeatingScheduleType.optional(),
@@ -15384,43 +17011,50 @@ const Policy_FindSchedulesWSRequest = z.record(z.unknown());
 const Policy_FindSchedulesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  schedules: z.array(WeeklyRepeatingScheduleType).optional()
+  schedules: z.array(WeeklyRepeatingScheduleType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetAccessControlledDoorPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetAccessControlledDoorPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(AccessControlledDoorPolicyType).optional()
+  policies: z.array(AccessControlledDoorPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetAudioPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetAudioPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(Policy_ExternalAudioPolicyType).optional()
+  policies: z.array(Policy_ExternalAudioPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetCameraPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetCameraPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(CameraPolicyV2Type).optional()
+  policies: z.array(CameraPolicyV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetClimatePoliciesWSRequest = z.record(z.unknown());
 const Policy_GetClimatePoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(ClimatePolicyType).optional()
+  policies: z.array(ClimatePolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetDoorPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetDoorPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(DoorPolicyType).optional()
+  policies: z.array(DoorPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetOccupancyPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetOccupancyPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(OccupancyPolicyType).optional()
+  policies: z.array(OccupancyPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetPoliciesUsingScheduleWSRequest: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional()
@@ -15475,14 +17109,16 @@ const Policy_GetPoliciesUsingScheduleWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   occupancyPolicyList: z.array(OccupancyPolicyType).optional(),
   proximityPolicyList: z.array(ProximityPolicyType).optional(),
-  videoIntercomPolicyList: z.array(VideoIntercomPolicyType).optional()
+  videoIntercomPolicyList: z.array(VideoIntercomPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetPolicyAddendumsWSRequest = z.record(z.unknown());
 const Policy_GetPolicyAddendumsWSResponse: z.ZodObject<any> = z.object({
   deviceAddendumsMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  locationAddendumsMap: z.record(z.unknown()).optional()
+  locationAddendumsMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetPolicyPauseSettingsWSRequest = z.record(z.unknown());
 const Policy_GetPolicyPauseSettingsWSResponse: z.ZodObject<any> = z.object({
@@ -15490,19 +17126,22 @@ const Policy_GetPolicyPauseSettingsWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   policiesPausedForComponentCompositesMap: z.record(z.unknown()).optional(),
   policiesPausedForDevicesMap: z.record(z.unknown()).optional(),
-  policiesPausedForLocationsMap: z.record(z.unknown()).optional()
+  policiesPausedForLocationsMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetProximityPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetProximityPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(ProximityPolicyType).optional()
+  policies: z.array(ProximityPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_GetVideoIntercomPoliciesWSRequest = z.record(z.unknown());
 const Policy_GetVideoIntercomPoliciesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  policies: z.array(Policy_ExternalVideoIntercomPolicyType).optional()
+  policies: z.array(Policy_ExternalVideoIntercomPolicyType).optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_PauseAlertPolicyWSRequest: z.ZodObject<any> = z.object({
   componentCompositeUuids: z.array(z.string()).optional(),
@@ -15513,70 +17152,80 @@ const Policy_PauseAlertPolicyWSRequest: z.ZodObject<any> = z.object({
 });
 const Policy_PauseAlertPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateAccessControlledDoorPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalAccessControlledDoorPolicyType.optional()
 });
 const Policy_UpdateAccessControlledDoorPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateAudioPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalAudioPolicyType.optional()
 });
 const Policy_UpdateAudioPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateCameraPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalCameraPolicyV2Type.optional()
 });
 const Policy_UpdateCameraPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateClimatePolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalClimatePolicyType.optional()
 });
 const Policy_UpdateClimatePolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateDoorPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalDoorPolicyType.optional()
 });
 const Policy_UpdateDoorPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateOccupancyPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalOccupancyPolicyType.optional()
 });
 const Policy_UpdateOccupancyPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateProximityPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalProximityPolicyType.optional()
 });
 const Policy_UpdateProximityPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateScheduleWSRequest: z.ZodObject<any> = z.object({
   schedule: WeeklyRepeatingScheduleType.optional()
 });
 const Policy_UpdateScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Policy_UpdateVideoIntercomPolicyWSRequest: z.ZodObject<any> = z.object({
   policy: Policy_MinimalVideoIntercomPolicyType.optional()
 });
 const Policy_UpdateVideoIntercomPolicyWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const PosIntegrationInfoType: z.ZodObject<any> = z.object({
   assignedCameraList: z.array(z.string()).optional(),
@@ -15592,6 +17241,7 @@ const PromptConfigurationType: z.ZodObject<any> = z.object({
   checkCondition: CheckCondition.optional(),
   description: z.string().optional(),
   generateAlertForActionNewlyAddedCameras: z.boolean().optional(),
+  multiImageTimeDeltasSeconds: z.array(z.number().int()).optional(),
   name: z.string().optional(),
   orgUuid: z.string().optional(),
   prompt: z.string().optional(),
@@ -15647,7 +17297,8 @@ const Proximity_GetLocomotionEventsForTagWSRequest: z.ZodObject<any> = z.object(
 const Proximity_GetLocomotionEventsForTagWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  locomotionEvents: z.array(ProximityTagLocomotionEventType).optional()
+  locomotionEvents: z.array(ProximityTagLocomotionEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Proximity_GetMinimalProximityStatesWSRequest = z.record(z.unknown());
 const Proximity_ProximityHealthEnum = z.string();
@@ -15674,7 +17325,8 @@ const Proximity_MinimalProximityStateType: z.ZodObject<any> = z.object({
 const Proximity_GetMinimalProximityStatesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  proximityStates: z.array(Proximity_MinimalProximityStateType).optional()
+  proximityStates: z.array(Proximity_MinimalProximityStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Proximity_GetProximityEventsForTagWSRequest: z.ZodObject<any> = z.object({
   createdAfterMs: z.number().int().optional(),
@@ -15686,7 +17338,8 @@ const Proximity_GetProximityEventsForTagWSRequest: z.ZodObject<any> = z.object({
 const Proximity_GetProximityEventsForTagWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  proximityEvents: z.array(ProximityEventType).optional()
+  proximityEvents: z.array(ProximityEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Proximity_UpdateProximitySensorDetailsWSRequest: z.ZodObject<any> = z.object({
   deletedUpdated: z.boolean().optional(),
@@ -15702,7 +17355,8 @@ const Proximity_UpdateProximitySensorDetailsWSRequest: z.ZodObject<any> = z.obje
 });
 const Proximity_UpdateProximitySensorDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Rapidsos_GetNearbyFeedsRequest: z.ZodObject<any> = z.object({
   latitude: z.number().optional(),
@@ -15712,7 +17366,8 @@ const Rapidsos_GetNearbyFeedsRequest: z.ZodObject<any> = z.object({
 const Rapidsos_GetNearbyFeedsResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  streamUrls: z.array(z.string()).optional()
+  streamUrls: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const RegionCrossingActivityEventType: z.ZodObject<any> = z.object({
   activityEvent: ActivityEnum.optional()
@@ -15727,7 +17382,8 @@ const Relay_AssignThirdPartyCameraToNVRWSRequest: z.ZodObject<any> = z.object({
 const Relay_AssignThirdPartyCameraToNVRWSResponse: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_AssignThirdPartyCameraToRelayCameraWSRequest: z.ZodObject<any> = z.object({
   discoveredCameraMacAddress: z.string().optional(),
@@ -15738,7 +17394,8 @@ const Relay_AssignThirdPartyCameraToRelayCameraWSRequest: z.ZodObject<any> = z.o
 const Relay_AssignThirdPartyCameraToRelayCameraWSResponse: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_AuthenticateThirdPartyCameraWSRequest: z.ZodObject<any> = z.object({
   locationUuid: z.string().optional(),
@@ -15752,7 +17409,8 @@ const Relay_AuthenticateThirdPartyCameraWSResponse: z.ZodObject<any> = z.object(
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   result: DiscoveredThirdPartyCameraType.optional(),
-  rtspUrlStatus: z.string().optional()
+  rtspUrlStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_CreateThirdPartyCameraPasswordWSRequest: z.ZodObject<any> = z.object({
   notes: z.string().optional(),
@@ -15762,14 +17420,20 @@ const Relay_CreateThirdPartyCameraPasswordWSRequest: z.ZodObject<any> = z.object
 const Relay_CreateThirdPartyCameraPasswordWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  passwordUuid: z.string().optional()
+  passwordUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
+const Relay_DeleteThirdPartyCameraDiscoveryWSRequest: z.ZodObject<any> = z.object({
+  thirdPartyCameraMacAddress: z.string().optional()
+});
+const Relay_DeleteThirdPartyCameraDiscoveryWSResponse = z.record(z.unknown());
 const Relay_DeleteThirdPartyCameraPasswordWSRequest: z.ZodObject<any> = z.object({
   passwordUuid: z.string().optional()
 });
 const Relay_DeleteThirdPartyCameraPasswordWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_ExternalRtspEndpoint: z.ZodObject<any> = z.object({
   lastRtspUrlStatus: z.string().optional(),
@@ -15794,7 +17458,8 @@ const Relay_ExecuteThirdPartyCameraDiscoveryWSRequest: z.ZodObject<any> = z.obje
 });
 const Relay_ExecuteThirdPartyCameraDiscoveryWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_FindDefaultRtspUrlsByManufacturerWSRequest: z.ZodObject<any> = z.object({
   manufacturer: z.string().optional(),
@@ -15814,7 +17479,8 @@ const Relay_GetAssignedThirdPartyCamerasWSRequest: z.ZodObject<any> = z.object({
 const Relay_GetAssignedThirdPartyCamerasWSResponse: z.ZodObject<any> = z.object({
   assignedCameras: z.array(CameraType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_GetFullNVRStateWSRequest: z.ZodObject<any> = z.object({
   force: z.boolean().optional(),
@@ -15823,7 +17489,8 @@ const Relay_GetFullNVRStateWSRequest: z.ZodObject<any> = z.object({
 const Relay_GetFullNVRStateWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  fullNVRState: FullDeviceStateType.optional()
+  fullNVRState: FullDeviceStateType.optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_GetImportThirdPartyCamerasFormatWSResponse: z.ZodObject<any> = z.object({
   example: z.string().optional(),
@@ -15833,7 +17500,8 @@ const Relay_GetMinimalNVRStateListWSRequest = z.record(z.unknown());
 const Relay_GetMinimalNVRStateListWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  nvrstates: z.array(MinimalNVRStateType).optional()
+  nvrstates: z.array(MinimalNVRStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_GetMinimalThirdPartyCameraStateListWSRequest = z.record(z.unknown());
 const Relay_MinimalThirdPartyCameraStateType: z.ZodObject<any> = z.object({
@@ -15885,7 +17553,8 @@ const Relay_MinimalThirdPartyCameraStateType: z.ZodObject<any> = z.object({
 const Relay_GetMinimalThirdPartyCameraStateListWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  thirdPartyCameraStateList: z.array(Relay_MinimalThirdPartyCameraStateType).optional()
+  thirdPartyCameraStateList: z.array(Relay_MinimalThirdPartyCameraStateType).optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_GetNVRDetailsWSRequest: z.ZodObject<any> = z.object({
   nvruuids: z.array(z.string()).optional()
@@ -15910,15 +17579,19 @@ const Relay_NVRExternalType: z.ZodObject<any> = z.object({
   name: z.string().optional(),
   pending: z.boolean().optional(),
   policyUuid: z.string().optional(),
+  primaryLinkSpeedMbps: z.number().int().optional(),
+  secondaryLinkSpeedMbps: z.number().int().optional(),
   serialNumber: z.string().optional(),
   subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
+  totalStreamingPixels: z.number().int().optional(),
   type: DeviceTypeEnum.optional(),
   uuid: z.string().optional()
 });
 const Relay_GetNVRDetailsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  nvrs: z.array(Relay_NVRExternalType).optional()
+  nvrs: z.array(Relay_NVRExternalType).optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_GetRtspEndpointsWSRequest: z.ZodObject<any> = z.object({
   discoveredCameraMacAddress: z.string().optional()
@@ -15937,7 +17610,8 @@ const ThirdPartyCameraPasswordType: z.ZodObject<any> = z.object({
 const Relay_GetThirdPartyCameraPasswordsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  passwords: z.array(ThirdPartyCameraPasswordType).optional()
+  passwords: z.array(ThirdPartyCameraPasswordType).optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_ThirdPartyCameraImportResult: z.ZodObject<any> = z.object({
   discoveredThirdPartyCamera: DiscoveredThirdPartyCameraType.optional(),
@@ -15960,7 +17634,8 @@ const Relay_ManualDiscoverThirdPartyCameraWSResponse: z.ZodObject<any> = z.objec
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   result: DiscoveredThirdPartyCameraType.optional(),
-  rtspUrlStatus: z.string().optional()
+  rtspUrlStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_PTZMoveWSRequest: z.ZodObject<any> = z.object({
   thirdPartyCameraUuid: z.string().optional(),
@@ -15970,7 +17645,8 @@ const Relay_PTZMoveWSRequest: z.ZodObject<any> = z.object({
 });
 const Relay_PTZMoveWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_PTZStatusWSRequest: z.ZodObject<any> = z.object({
   thirdPartyCameraUuid: z.string().optional()
@@ -15978,6 +17654,7 @@ const Relay_PTZStatusWSRequest: z.ZodObject<any> = z.object({
 const Relay_PTZStatusWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   xpositionPermyriad: z.number().int().optional(),
   ypositionPermyriad: z.number().int().optional(),
   zpositionPermyriad: z.number().int().optional()
@@ -15988,7 +17665,8 @@ const Relay_RebootNVRVWSRequest: z.ZodObject<any> = z.object({
 const Relay_RebootNVRVWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  result: z.string().optional()
+  result: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_UnassignThirdPartyCameraWSRequest: z.ZodObject<any> = z.object({
   nvruuid: z.string().optional(),
@@ -15997,7 +17675,8 @@ const Relay_UnassignThirdPartyCameraWSRequest: z.ZodObject<any> = z.object({
 });
 const Relay_UnassignThirdPartyCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_UnregisterNVRWSRequest: z.ZodObject<any> = z.object({
   nvruuid: z.string().optional()
@@ -16005,7 +17684,8 @@ const Relay_UnregisterNVRWSRequest: z.ZodObject<any> = z.object({
 const Relay_UnregisterNVRWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_UpdateFirmwareWSStatus = z.string();
 const Relay_UpdateNVRFirmwareWSRequest: z.ZodObject<any> = z.object({
@@ -16014,7 +17694,8 @@ const Relay_UpdateNVRFirmwareWSRequest: z.ZodObject<any> = z.object({
 const Relay_UpdateNVRFirmwareWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  status: Relay_UpdateFirmwareWSStatus.optional()
+  status: Relay_UpdateFirmwareWSStatus.optional(),
+  warningMsg: z.string().optional()
 });
 const Relay_UpdateNVRVWSRequest: z.ZodObject<any> = z.object({
   customData: z.string().optional(),
@@ -16047,7 +17728,8 @@ const Relay_UpdateNVRVWSRequest: z.ZodObject<any> = z.object({
 });
 const Relay_UpdateNVRVWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const RenewalClaimKey: z.ZodObject<any> = z.object({
   claimEndDate: z.string().datetime({ offset: true }).optional(),
@@ -16089,6 +17771,16 @@ const Report_AuditEventWeb: z.ZodObject<any> = z.object({
   userAgent: z.string().optional(),
   uuid: z.string().optional()
 });
+const Report_GetAuditFeedForPrincipalWSRequest: z.ZodObject<any> = z.object({
+  maxResults: z.number().int().optional(),
+  principalUuid: z.string()
+});
+const Report_GetAuditFeedForPrincipalWSResponse: z.ZodObject<any> = z.object({
+  auditEvents: z.array(Report_AuditEventWeb).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
 const Report_GetAuditFeedForTargetWSRequest: z.ZodObject<any> = z.object({
   maxResults: z.number().int().optional(),
   targetUuid: z.string()
@@ -16096,7 +17788,8 @@ const Report_GetAuditFeedForTargetWSRequest: z.ZodObject<any> = z.object({
 const Report_GetAuditFeedForTargetWSResponse: z.ZodObject<any> = z.object({
   auditEvents: z.array(Report_AuditEventWeb).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetAuditFeedWSRequest: z.ZodObject<any> = z.object({
   excludeActions: z.array(z.string()).optional(),
@@ -16107,7 +17800,8 @@ const Report_GetAuditFeedWSRequest: z.ZodObject<any> = z.object({
 const Report_GetAuditFeedWSResponse: z.ZodObject<any> = z.object({
   auditEvents: z.array(Report_AuditEventWeb).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetAverageReportWSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().optional(),
@@ -16121,7 +17815,8 @@ const Report_GetAverageReportWSResponse: z.ZodObject<any> = z.object({
   average: z.number().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  groupAverageMap: z.record(z.unknown()).optional()
+  groupAverageMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetAverageReportsWSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().optional(),
@@ -16134,7 +17829,17 @@ const Report_GetAverageReportsWSResponse: z.ZodObject<any> = z.object({
   averageMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  groupAverageMap: z.record(z.unknown()).optional()
+  groupAverageMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
+});
+const Report_GetBatchThresholdCrossingCountReportWSRequest: z.ZodObject<any> = z.object({
+  bucketSize: z.string().optional(),
+  crossingObject: z.string().optional(),
+  dedupe: z.boolean().optional(),
+  deviceUuids: z.array(z.string()).optional(),
+  endTimeMs: z.number().int().optional(),
+  startTimeMs: z.number().int().optional(),
+  timeZone: z.string().optional()
 });
 const Report_GetCountReportV2WSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().optional(),
@@ -16143,6 +17848,7 @@ const Report_GetCountReportV2WSRequest: z.ZodObject<any> = z.object({
   scope: z.string(),
   startDate: z.string().optional(),
   startTimeMs: z.number().int().min(0).optional(),
+  timeZone: z.string().optional(),
   types: z.array(z.string()),
   uuid: z.string().optional()
 });
@@ -16162,7 +17868,8 @@ const TimeSeriesDataPointV2Type: z.ZodObject<any> = z.object({
 const Report_GetCountReportWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeSeriesDataPoints: z.array(TimeSeriesDataPointV2Type).optional()
+  timeSeriesDataPoints: z.array(TimeSeriesDataPointV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetCountReportsForDevicesAtLocationWSRequest: z.ZodObject<any> = z.object({
   endTimeMs: z.number().int().min(0),
@@ -16178,27 +17885,33 @@ const Report_GetCountReportsWSRequest: z.ZodObject<any> = z.object({
   scope: z.string(),
   startDate: z.string().optional(),
   startTimeMs: z.number().int().min(0).optional(),
+  timeZone: z.string().optional(),
   type: z.string()
 });
 const Report_GetCountReportsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeSeriesDataPointsMap: z.record(z.unknown()).optional()
+  timeSeriesDataPointsMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetCustomLLMNumericWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  reports: z.record(z.unknown()).optional()
+  reports: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetCustomLLMReportWSRequest: z.ZodObject<any> = z.object({
   deviceFacetUuids: z.array(z.string()).optional(),
   endTimeMs: z.number().int().optional(),
+  extendedResponse: z.boolean().optional(),
   locationUuid: z.string().optional(),
   promptUuid: z.string().optional(),
   startTimeMs: z.number().int().optional()
 });
 const SceneQueryReportEvent: z.ZodObject<any> = z.object({
   checkCondition: z.boolean().optional(),
+  image: z.string().optional(),
+  prompt: z.string().optional(),
   timestampMs: z.number().int().optional(),
   value: z.string().optional()
 });
@@ -16211,12 +17924,14 @@ const SceneQueryReport: z.ZodObject<any> = z.object({
 const Report_GetCustomLLMReportWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeSeriesDataPoints: z.array(SceneQueryReport).optional()
+  timeSeriesDataPoints: z.array(SceneQueryReport).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetCustomLLMWBinaryWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  reports: z.record(z.unknown()).optional()
+  reports: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetCustomLLMWSRequest: z.ZodObject<any> = z.object({
   endTimeMs: z.number().int().optional(),
@@ -16231,7 +17946,8 @@ const Report_GetDiagnosticFeedWSRequest: z.ZodObject<any> = z.object({
 const Report_GetDiagnosticFeedWSResponse: z.ZodObject<any> = z.object({
   diagnosticEvents: z.array(DiagnosticEventType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetLicensePlatesByDeviceWSRequest: z.ZodObject<any> = z.object({
   dateLocal: z.string().optional(),
@@ -16256,7 +17972,8 @@ const VehicleEventIndexType: z.ZodObject<any> = z.object({
 const Report_GetLicensePlatesByDeviceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  licensePlateEvents: z.array(VehicleEventIndexType).optional()
+  licensePlateEvents: z.array(VehicleEventIndexType).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetMostRecentPeopleCountWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -16265,7 +17982,8 @@ const Report_GetMostRecentPeopleCountWSRequest: z.ZodObject<any> = z.object({
 const Report_GetMostRecentPeopleCountWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(PeopleCountEventType).optional()
+  events: z.array(PeopleCountEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetOccupancyCountWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -16276,7 +17994,8 @@ const Report_GetOccupancyCountWSResponse: z.ZodObject<any> = z.object({
   approximateTimestampMs: z.number().int().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  estimatedCount: z.number().int().optional()
+  estimatedCount: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetOccupancyCountsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -16294,7 +18013,8 @@ const Report_TimeSeriesDataPointV2ExtendedType: z.ZodObject<any> = z.object({
 const Report_GetOccupancyCountsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeSeriesDataPoints: z.array(Report_TimeSeriesDataPointV2ExtendedType).optional()
+  timeSeriesDataPoints: z.array(Report_TimeSeriesDataPointV2ExtendedType).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetProximityTagLocationsByDateWSRequest: z.ZodObject<any> = z.object({
   endDateStr: z.string().optional(),
@@ -16306,7 +18026,8 @@ const Report_GetProximityTagLocationsByDateWSRequest: z.ZodObject<any> = z.objec
 const Report_GetProximityTagLocationsByDateWSResponse: z.ZodObject<any> = z.object({
   dataPoints: z.array(ProximityTagTimeSeriesDataPointType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetRunningAverageWSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().optional(),
@@ -16315,6 +18036,7 @@ const Report_GetRunningAverageWSRequest: z.ZodObject<any> = z.object({
   scope: z.string(),
   startDate: z.string().optional(),
   startTimeMs: z.number().int().min(0).optional(),
+  timeZone: z.string().optional(),
   uuid: z.string().optional()
 });
 const WeeklyStatisticsDataPoint: z.ZodObject<any> = z.object({
@@ -16324,7 +18046,8 @@ const WeeklyStatisticsDataPoint: z.ZodObject<any> = z.object({
 const Report_GetRunningAverageWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  statsDataPoints: z.array(WeeklyStatisticsDataPoint).optional()
+  statsDataPoints: z.array(WeeklyStatisticsDataPoint).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetSummaryCountReportWSRequest: z.ZodObject<any> = z.object({
   endDate: z.string().optional(),
@@ -16333,6 +18056,7 @@ const Report_GetSummaryCountReportWSRequest: z.ZodObject<any> = z.object({
   scope: z.string(),
   startDate: z.string().optional(),
   startTimeMs: z.number().int().min(0).optional(),
+  timeZone: z.string().optional(),
   type: z.string()
 });
 const SummaryCountTimeSeriesDataPointType: z.ZodObject<any> = z.object({
@@ -16345,7 +18069,16 @@ const SummaryCountTimeSeriesDataPointType: z.ZodObject<any> = z.object({
 const Report_GetSummaryCountReportWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timeSeriesDataPoints: z.array(SummaryCountTimeSeriesDataPointType).optional()
+  timeSeriesDataPoints: z.array(SummaryCountTimeSeriesDataPointType).optional(),
+  warningMsg: z.string().optional()
+});
+const Report_GetThresholdCrossingCountReportForOrgWSRequest: z.ZodObject<any> = z.object({
+  bucketSize: z.string().optional(),
+  crossingObject: z.string().optional(),
+  dedupe: z.boolean().optional(),
+  endTimeMs: z.number().int().optional(),
+  startTimeMs: z.number().int().optional(),
+  timeZone: z.string().optional()
 });
 const Report_GetThresholdCrossingCountReportWSRequest: z.ZodObject<any> = z.object({
   bucketSize: z.string().optional(),
@@ -16353,12 +18086,14 @@ const Report_GetThresholdCrossingCountReportWSRequest: z.ZodObject<any> = z.obje
   dedupe: z.boolean().optional(),
   deviceUuid: z.string().optional(),
   endTimeMs: z.number().int().optional(),
-  startTimeMs: z.number().int().optional()
+  startTimeMs: z.number().int().optional(),
+  timeZone: z.string().optional()
 });
 const Report_GetThresholdCrossingCountReportWSResponse: z.ZodObject<any> = z.object({
   crossingCounts: z.array(CrossingCountsType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetThresholdCrossingCountsWSRequest: z.ZodObject<any> = z.object({
   crossingObject: z.string().optional(),
@@ -16374,7 +18109,8 @@ const Report_GetThresholdCrossingCountsWSResponse_ThresholdCrossingCountType: z.
 const Report_GetThresholdCrossingCountsWSResponse: z.ZodObject<any> = z.object({
   counts: z.array(Report_GetThresholdCrossingCountsWSResponse_ThresholdCrossingCountType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetThresholdCrossingEventsForDeviceWSRequest: z.ZodObject<any> = z.object({
   crossingObject: z.string().optional(),
@@ -16388,7 +18124,8 @@ const Report_GetThresholdCrossingEventsForDeviceWSResponse: z.ZodObject<any> = z
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   lastEvaluatedKey: z.string().optional(),
-  thresholdCrossingEvents: z.array(MinimalThresholdEventType).optional()
+  thresholdCrossingEvents: z.array(MinimalThresholdEventType).optional(),
+  warningMsg: z.string().optional()
 });
 const Report_GetThresholdCrossingEventsWSRequest: z.ZodObject<any> = z.object({
   crossingObject: z.string().optional(),
@@ -16399,7 +18136,8 @@ const Report_GetThresholdCrossingEventsWSRequest: z.ZodObject<any> = z.object({
 const Report_GetThresholdCrossingEventsWSResponse: z.ZodObject<any> = z.object({
   deviceToThresholdCrossingEventMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Report_ResetRunningAverageWSRequest: z.ZodObject<any> = z.object({
   scope: z.string().optional(),
@@ -16407,7 +18145,8 @@ const Report_ResetRunningAverageWSRequest: z.ZodObject<any> = z.object({
 });
 const Report_ResetRunningAverageWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const StatusType: z.ZodObject<any> = z.object({
   family: z.string().optional(),
@@ -16674,6 +18413,128 @@ const RhombusOrgUserType: z.ZodObject<any> = z.object({
   updatedAtMillis: z.number().int().optional(),
   uuid: z.string().optional()
 });
+const Robot_DeleteRobotWSRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string(),
+  mummify: z.boolean()
+});
+const Robot_DeleteRobotWSResponse: z.ZodObject<any> = z.object({
+  responseStatus: z.string().optional()
+});
+const Robot_DeployRobotWSRequest: z.ZodObject<any> = z.object({
+  destOrientation: Quaternion.optional(),
+  destination: Point.optional(),
+  deviceUuid: z.string().optional()
+});
+const Robot_DeployRobotWSResponse = z.record(z.unknown());
+const Robot_GetRobotConfigWSResponse: z.ZodObject<any> = z.object({
+  config: Device_config_userconfig_ExternalReadableFacetedUserConfig.optional()
+});
+const Robot_RobotFullDeviceStateType: z.ZodObject<any> = z.object({
+  afSupport: z.boolean().optional(),
+  audioSupported: z.boolean().optional(),
+  baseVideoOperationUri: z.string().optional(),
+  batteryPercent: z.number().int().optional(),
+  charging: z.boolean().optional(),
+  connectionStatus: DeviceStatusEnum.optional(),
+  connectionTimestampMs: z.number().int().optional(),
+  createdAtMillis: z.number().int().optional(),
+  defaultInterface: z.string().optional(),
+  defaultInterfaceMac: z.string().optional(),
+  directionRadians: z.number().optional(),
+  externalIPAddress: z.string().optional(),
+  facetNameMap: z.record(z.unknown()).optional(),
+  firmwareUpdateInProgress: z.boolean().optional(),
+  firmwareVersion: z.string().optional(),
+  floorNumber: z.number().int().optional(),
+  healthStatus: DeviceStatusEnum.optional(),
+  healthStatusDetails: DeviceHealthStatusDetailsEnum.optional(),
+  hwVariation: HardwareVariationEnum.optional(),
+  lanAddresses: z.array(z.string()).optional(),
+  latestFirmwareVersion: z.string().optional(),
+  latitude: z.number().optional(),
+  liveStreamShared: z.boolean().optional(),
+  liveStreamsSharedCount: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  longitude: z.number().optional(),
+  mapId: z.string().optional(),
+  maxZoomPercent: z.number().int().optional(),
+  mediaRegion: z.string().optional(),
+  mediaStorageDeviceUuid: z.string().optional(),
+  mode: z.string().optional(),
+  mummified: z.boolean().optional(),
+  name: z.string().optional(),
+  onCameraState: z.record(z.unknown()).optional(),
+  onCloudState: z.record(z.unknown()).optional(),
+  orientation: Quaternion.optional(),
+  policyUuid: z.string().optional(),
+  position: Point.optional(),
+  region: z.string().optional(),
+  roamingLatitude: z.number().optional(),
+  roamingLongitude: z.number().optional(),
+  secondaryLanAddresses: z.array(z.string()).optional(),
+  serialNumber: z.string().optional(),
+  ssid: z.string().optional(),
+  stateUpdatedTimestampMs: z.number().int().optional(),
+  subLocationsHierarchyKey: SubLocationsHierarchyKey.optional(),
+  supportedFacets: z.array(DeviceFacet).optional(),
+  uuid: z.string().optional(),
+  versionsBehind: z.number().int().optional(),
+  wifiApMac: z.string().optional(),
+  wifiBars: z.number().int().optional(),
+  wifiSignalStrength: z.number().int().optional()
+});
+const Robot_GetRobotFullStateWSResponse: z.ZodObject<any> = z.object({
+  fullState: Robot_RobotFullDeviceStateType.optional()
+});
+const Robot_GetRobotMapImageWSRequest: z.ZodObject<any> = z.object({
+  robotUuid: z.string().optional()
+});
+const Robot_GetRobotMapMetaRequest: z.ZodObject<any> = z.object({
+  deviceUuid: z.string().optional()
+});
+const Robot_GetRobotMapMetaResponse_Origin: z.ZodObject<any> = z.object({
+  x: z.number().optional(),
+  y: z.number().optional(),
+  yaw: z.number().optional()
+});
+const Robot_GetRobotMapMetaResponse: z.ZodObject<any> = z.object({
+  origin: Robot_GetRobotMapMetaResponse_Origin.optional(),
+  resolution: z.number().optional()
+});
+const Robot_GetRobotMediaUrisWSResponse: z.ZodObject<any> = z.object({
+  lanCheckUrls: z.array(z.string()).optional(),
+  lanLiveH264Uris: z.array(z.string()).optional(),
+  lanLiveMpdUris: z.array(z.string()).optional(),
+  lanLiveOpusUris: z.array(z.string()).optional(),
+  lanVodM3u8UrisTemplates: z.array(z.string()).optional(),
+  lanVodMpdUrisTemplates: z.array(z.string()).optional(),
+  wanLiveH264Uri: z.string().optional(),
+  wanLiveMpdUri: z.string().optional(),
+  wanLiveOpusUri: z.string().optional(),
+  wanLiveRobotUri: z.string().optional(),
+  wanVodM3u8UriTemplate: z.string().optional(),
+  wanVodMpdUriTemplate: z.string().optional()
+});
+const Robot_GetRobotMinimalStateListWSResponse: z.ZodObject<any> = z.object({
+  minimalStates: z.array(MinimalRobotStateType).optional()
+});
+const Robot_UpdateRobotConfigWSRequest: z.ZodObject<any> = z.object({
+  configUpdate: Device_config_userconfig_ExternalUpdateableFacetedUserConfig.optional()
+});
+const Robot_UpdateRobotConfigWSResponse: z.ZodObject<any> = z.object({
+  config: Device_config_userconfig_ExternalReadableFacetedUserConfig.optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Robot_UpdateRobotDetailsWSRequest: z.ZodObject<any> = z.object({
+  description: z.string().optional(),
+  deviceUuid: z.string().optional(),
+  latitude: z.number().optional(),
+  locationUuid: z.string().optional(),
+  longitude: z.number().optional(),
+  name: z.string().optional()
+});
 const RuleLockdownEventOriginator: z.ZodObject<any> = z.object({
   type: LockdownEventOriginatorEnumType.optional()
 });
@@ -16709,6 +18570,7 @@ const RulesEventRecordType: z.ZodObject<any> = z.object({
   audioPlaybackActionRecords: z.array(AudioPlaybackActionRecordType).optional(),
   cancelLoopingAudioPlaybackActionRecordType: CancelLoopingAudioPlaybackActionRecordType.optional(),
   deviceEventRecords: z.array(DeviceEventRecordType).optional(),
+  enableDisableAudioRecordActionRecords: z.array(EnableDisableAudioRecordActionRecordType).optional(),
   integrationActionStatuses: z.record(z.unknown()).optional(),
   liveNotificationActionRecord: LiveNotificationActionRecordType.optional(),
   orgUuid: z.string().optional(),
@@ -16727,33 +18589,38 @@ const Rules_CreateRuleWSRequest: z.ZodObject<any> = z.object({
 const Rules_CreateRuleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  ruleUuid: z.string().optional()
+  ruleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_DeleteRulePauseSettingWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Rules_DeleteRulePauseSettingWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_DeleteRuleWSRequest: z.ZodObject<any> = z.object({
   ruleUuid: z.string().optional()
 });
 const Rules_DeleteRuleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_GetRulePauseSettingsResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rulesPausedMap: z.record(z.unknown()).optional()
+  rulesPausedMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_GetRulePauseSettingsWSRequest = z.record(z.unknown());
 const Rules_GetRulesForOrgWSRequest = z.record(z.unknown());
 const Rules_GetRulesForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  rules: z.array(RuleType).optional()
+  rules: z.array(RuleType).optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_PauseRuleWSRequest: z.ZodObject<any> = z.object({
   durationSec: z.number().int().optional(),
@@ -16762,14 +18629,16 @@ const Rules_PauseRuleWSRequest: z.ZodObject<any> = z.object({
 });
 const Rules_PauseRuleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_UpdateRuleWSRequest: z.ZodObject<any> = z.object({
   ruleUpdate: RuleType.optional()
 });
 const Rules_UpdateRuleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Rules_records_DeleteRulesEventRecordWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -16799,26 +18668,40 @@ const SalesforceLicenseStartDateTimeAndEndDateTime: z.ZodObject<any> = z.object(
   contractEndDateTime: z.string().optional(),
   contractStartDateTime: z.string().optional()
 });
+const Scenequery_AdHocPromptWSRequest: z.ZodObject<any> = z.object({
+  deviceFacetUuid: z.string().optional(),
+  promptUuid: z.string().optional(),
+  timestampMs: z.number().int().optional()
+});
+const Scenequery_AdHocPromptWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  event: SceneQueryReportEvent.optional(),
+  warningMsg: z.string().optional()
+});
 const Scenequery_CreatePromptConfigurationWSRequest: z.ZodObject<any> = z.object({
   promptConfiguration: PromptConfigurationType.optional()
 });
 const Scenequery_CreatePromptConfigurationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  promptConfiguration: PromptConfigurationType.optional()
+  promptConfiguration: PromptConfigurationType.optional(),
+  warningMsg: z.string().optional()
 });
 const Scenequery_DeletePromptConfigurationWSRequest: z.ZodObject<any> = z.object({
   promptUuid: z.string().optional()
 });
 const Scenequery_DeletePromptConfigurationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Scenequery_FindAllPromptConfigurationsWSRequest = z.record(z.unknown());
 const Scenequery_FindAllPromptConfigurationsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  promptConfigurations: z.array(PromptConfigurationType).optional()
+  promptConfigurations: z.array(PromptConfigurationType).optional(),
+  warningMsg: z.string().optional()
 });
 const Scenequery_GetPromptConfigurationWSRequest: z.ZodObject<any> = z.object({
   promptUuid: z.string().optional()
@@ -16826,7 +18709,8 @@ const Scenequery_GetPromptConfigurationWSRequest: z.ZodObject<any> = z.object({
 const Scenequery_GetPromptConfigurationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  promptConfiguration: PromptConfigurationType.optional()
+  promptConfiguration: PromptConfigurationType.optional(),
+  warningMsg: z.string().optional()
 });
 const Scenequery_SelectiveUpdatePromptConfigurationWSRequest: z.ZodObject<any> = z.object({
   active: z.boolean().optional(),
@@ -16844,7 +18728,8 @@ const Scenequery_SelectiveUpdatePromptConfigurationWSRequest: z.ZodObject<any> =
 });
 const Scenequery_SelectiveUpdatePromptConfigurationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Scenequery_TriggerPromptWSRequest: z.ZodObject<any> = z.object({
   deviceFacetUuid: z.string().optional(),
@@ -16856,7 +18741,8 @@ const Scenequery_TriggerPromptWSRequest: z.ZodObject<any> = z.object({
 const Scenequery_TriggerPromptWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  event: SceneQueryReportEvent.optional()
+  event: SceneQueryReportEvent.optional(),
+  warningMsg: z.string().optional()
 });
 const Scenequery_UpdatePromptConfigurationWSRequest: z.ZodObject<any> = z.object({
   promptConfiguration: PromptConfigurationType.optional()
@@ -16864,7 +18750,8 @@ const Scenequery_UpdatePromptConfigurationWSRequest: z.ZodObject<any> = z.object
 const Scenequery_UpdatePromptConfigurationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  promptConfiguration: PromptConfigurationType.optional()
+  promptConfiguration: PromptConfigurationType.optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_CreateAbsoluteScheduleWSRequest: z.ZodObject<any> = z.object({
   schedule: AbsoluteSecondsScheduleType.optional()
@@ -16872,7 +18759,8 @@ const Schedule_CreateAbsoluteScheduleWSRequest: z.ZodObject<any> = z.object({
 const Schedule_CreateAbsoluteScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  scheduleUuid: z.string().optional()
+  scheduleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_CreateRelativeDateTimeIntervalsScheduleWSRequest: z.ZodObject<any> = z.object({
   schedule: RelativeDateTimeIntervalsScheduleType.optional()
@@ -16880,7 +18768,8 @@ const Schedule_CreateRelativeDateTimeIntervalsScheduleWSRequest: z.ZodObject<any
 const Schedule_CreateRelativeDateTimeIntervalsScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  scheduleUuid: z.string().optional()
+  scheduleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_CreateRelativeScheduleWSRequest: z.ZodObject<any> = z.object({
   schedule: RealtimeRelativeSecondsScheduleType.optional()
@@ -16888,7 +18777,8 @@ const Schedule_CreateRelativeScheduleWSRequest: z.ZodObject<any> = z.object({
 const Schedule_CreateRelativeScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  scheduleUuid: z.string().optional()
+  scheduleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_CreateWeeklyScheduleWSRequest: z.ZodObject<any> = z.object({
   schedule: WeeklyRepeatingScheduleType.optional()
@@ -16896,7 +18786,8 @@ const Schedule_CreateWeeklyScheduleWSRequest: z.ZodObject<any> = z.object({
 const Schedule_CreateWeeklyScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  scheduleUuid: z.string().optional()
+  scheduleUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_FindAbsoluteScheduleWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -16904,7 +18795,8 @@ const Schedule_FindAbsoluteScheduleWSRequest: z.ZodObject<any> = z.object({
 const Schedule_FindAbsoluteScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  schedule: AbsoluteSecondsScheduleType.optional()
+  schedule: AbsoluteSecondsScheduleType.optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_FindRelativeDateTimeIntervalsScheduleWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -16912,7 +18804,8 @@ const Schedule_FindRelativeDateTimeIntervalsScheduleWSRequest: z.ZodObject<any> 
 const Schedule_FindRelativeDateTimeIntervalsScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  schedule: RelativeDateTimeIntervalsScheduleType.optional()
+  schedule: RelativeDateTimeIntervalsScheduleType.optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_FindRelativeScheduleWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -16920,7 +18813,8 @@ const Schedule_FindRelativeScheduleWSRequest: z.ZodObject<any> = z.object({
 const Schedule_FindRelativeScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  schedule: RealtimeRelativeSecondsScheduleType.optional()
+  schedule: RealtimeRelativeSecondsScheduleType.optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_FindWeeklyScheduleWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -16928,7 +18822,8 @@ const Schedule_FindWeeklyScheduleWSRequest: z.ZodObject<any> = z.object({
 const Schedule_FindWeeklyScheduleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  schedule: WeeklyRepeatingScheduleType.optional()
+  schedule: WeeklyRepeatingScheduleType.optional(),
+  warningMsg: z.string().optional()
 });
 const Schedule_GetScheduleDataV2WSRequest: z.ZodObject<any> = z.object({
   scheduleUuid: z.string().optional()
@@ -16953,11 +18848,13 @@ const Schedule_WeeklyRepeatingScheduleDataType: z.ZodObject<any> = z.object({
 const Schedule_GetScheduleDataV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   weeklyScheduleData: Schedule_WeeklyRepeatingScheduleDataType.optional()
 });
 const Schedule_GetScheduleDataWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional(),
   weeklyScheduleData: z.array(Schedule_WeeklyRepeatingScheduleDataType).optional()
 });
 const Schedule_GetSchedulesWSRequest = z.record(z.unknown());
@@ -16967,6 +18864,7 @@ const Schedule_GetSchedulesWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   relativeDatetimeSchedules: z.array(RelativeDateTimeIntervalsScheduleType).optional(),
   relativeSchedules: z.array(RealtimeRelativeSecondsScheduleType).optional(),
+  warningMsg: z.string().optional(),
   weeklySchedules: z.array(WeeklyRepeatingScheduleType).optional()
 });
 const Search_DeleteVideoEmbeddingWSRequest: z.ZodObject<any> = z.object({
@@ -16974,14 +18872,29 @@ const Search_DeleteVideoEmbeddingWSRequest: z.ZodObject<any> = z.object({
 });
 const Search_DeleteVideoEmbeddingWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Search_IndexVideoEmbeddingWSRequest: z.ZodObject<any> = z.object({
   embedding: GenericVideoEmbedding.optional()
 });
 const Search_IndexVideoEmbeddingWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Search_ListReidentificationEmbeddingsWSRequest: z.ZodObject<any> = z.object({
+  deviceUuids: z.array(z.string()).optional(),
+  endTimestampMs: z.number().int().optional(),
+  limit: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  startTimestampMs: z.number().int().optional()
+});
+const Search_ListReidentificationEmbeddingsWSResponse: z.ZodObject<any> = z.object({
+  embeddings: z.array(GenericObjectEmbedding).optional(),
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Search_SearchLicensePlatesWSRequest: z.ZodObject<any> = z.object({
   deviceUuids: z.array(z.string()).optional(),
@@ -17010,7 +18923,8 @@ const VehicleEventSearchHitType: z.ZodObject<any> = z.object({
 const Search_SearchLicensePlatesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  vehicleEvents: z.array(VehicleEventSearchHitType).optional()
+  vehicleEvents: z.array(VehicleEventSearchHitType).optional(),
+  warningMsg: z.string().optional()
 });
 const Search_SearchObjectsByColorWSRequest: z.ZodObject<any> = z.object({
   colorFilter: z.array(z.string()).optional(),
@@ -17022,7 +18936,22 @@ const Search_SearchObjectsByColorWSRequest: z.ZodObject<any> = z.object({
 const Search_SearchObjectsByColorWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  objects: z.array(FootageBoundingBoxType).optional()
+  objects: z.array(FootageBoundingBoxType).optional(),
+  warningMsg: z.string().optional()
+});
+const Search_SearchReidentificationMatchesByEmbeddingWSRequest: z.ZodObject<any> = z.object({
+  deviceUuids: z.array(z.string()).optional(),
+  endTimestampMs: z.number().int().optional(),
+  limit: z.number().int().optional(),
+  locationUuid: z.string().optional(),
+  searchEmbedding: z.array(z.number()).optional(),
+  startTimestampMs: z.number().int().optional()
+});
+const Search_SearchReidentificationMatchesByEmbeddingWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  matches: z.array(GenericObjectEmbeddingMatch).optional(),
+  warningMsg: z.string().optional()
 });
 const Search_SearchSimilarObjectEmbeddingsByTextWSRequest: z.ZodObject<any> = z.object({
   maxNumResults: z.number().int().optional(),
@@ -17062,7 +18991,8 @@ const Search_SearchSimilarObjectEmbeddingsWSResponse: z.ZodObject<any> = z.objec
   errorMsg: z.string().optional(),
   moderationReason: z.string().optional(),
   queryAllowed: z.boolean().optional(),
-  similarEmbeddings: z.array(GenericObjectEmbeddingMatch).optional()
+  similarEmbeddings: z.array(GenericObjectEmbeddingMatch).optional(),
+  warningMsg: z.string().optional()
 });
 const Search_SearchSimilarVideoEmbeddingsByTimeWindowWSRequest: z.ZodObject<any> = z.object({
   maxNumResults: z.number().int().optional(),
@@ -17079,7 +19009,8 @@ const Search_SearchSimilarVideoEmbeddingsByTimeWindowWSResponse: z.ZodObject<any
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   searchEmbeddings: z.array(GenericVideoEmbedding).optional(),
-  similarEmbeddings: z.array(GenericVideoEmbeddingMatch).optional()
+  similarEmbeddings: z.array(GenericVideoEmbeddingMatch).optional(),
+  warningMsg: z.string().optional()
 });
 const Search_SearchSimilarVideoEmbeddingsWSRequest: z.ZodObject<any> = z.object({
   maxNumResults: z.number().int().optional(),
@@ -17093,7 +19024,8 @@ const Search_SearchSimilarVideoEmbeddingsWSRequest: z.ZodObject<any> = z.object(
 const Search_SearchSimilarVideoEmbeddingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  similarEmbeddings: z.array(GenericVideoEmbeddingMatch).optional()
+  similarEmbeddings: z.array(GenericVideoEmbeddingMatch).optional(),
+  warningMsg: z.string().optional()
 });
 const Sensor_FootageSensorSeekPointDisplayType: z.ZodObject<any> = z.object({
   a: ActivityEnum,
@@ -17128,7 +19060,8 @@ const Sensor_GetFootageSensorSeekpointsForCameraWSRequest: z.ZodObject<any> = z.
 const Sensor_GetFootageSensorSeekpointsForCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional()
+  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional(),
+  warningMsg: z.string().optional()
 });
 const Sensor_GetFootageSensorSeekpointsForLocationWSRequest: z.ZodObject<any> = z.object({
   durationSec: z.number().int().optional(),
@@ -17138,7 +19071,8 @@ const Sensor_GetFootageSensorSeekpointsForLocationWSRequest: z.ZodObject<any> = 
 const Sensor_GetFootageSensorSeekpointsForLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional()
+  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional(),
+  warningMsg: z.string().optional()
 });
 const Sensor_GetFootageSensorSeekpointsForSensorWSRequest: z.ZodObject<any> = z.object({
   durationSec: z.number().int().optional(),
@@ -17149,7 +19083,8 @@ const Sensor_GetFootageSensorSeekpointsForSensorWSResponse: z.ZodObject<any> = z
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   footageSeekPoints: z.array(FootageSeekPointV2Type).optional(),
-  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional()
+  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional(),
+  warningMsg: z.string().optional()
 });
 const Sensor_GetSensorPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -17159,7 +19094,8 @@ const Sensor_GetSensorPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
 const Sensor_GetSensorPresenceWindowsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  presenceWindows: z.array(TimeWindowSeconds).optional()
+  presenceWindows: z.array(TimeWindowSeconds).optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedClipDataWSRequest = z.record(z.unknown());
 const Share_SharedClipPublicType: z.ZodObject<any> = z.object({
@@ -17183,7 +19119,8 @@ const Share_GetSharedClipDataWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   orgName: z.string().optional(),
   sharedWebClips: z.array(Share_SharedClipPublicType).optional(),
-  title: z.string().optional()
+  title: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedFootageBoundingBoxesWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -17193,7 +19130,8 @@ const Share_GetSharedFootageBoundingBoxesWSRequest: z.ZodObject<any> = z.object(
 const Share_GetSharedFootageBoundingBoxesWSResponse: z.ZodObject<any> = z.object({
   boundingBoxes: z.array(FootageBoundingBoxType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedFootageSeekpointsV2WSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string().optional(),
@@ -17204,7 +19142,8 @@ const Share_GetSharedFootageSeekpointsV2WSResponse: z.ZodObject<any> = z.object(
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   footageSeekPoints: z.array(FootageSeekPointV2Type).optional(),
-  seekPoints: z.array(FootageSeekPointV2Type).optional()
+  seekPoints: z.array(FootageSeekPointV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedFootageSeekpointsWSRequest: z.ZodObject<any> = z.object({
   duration: z.number().int().optional(),
@@ -17213,7 +19152,8 @@ const Share_GetSharedFootageSeekpointsWSRequest: z.ZodObject<any> = z.object({
 const Share_GetSharedFootageSeekpointsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  seekPoints: z.array(FootageSeekPointType).optional()
+  seekPoints: z.array(FootageSeekPointType).optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedFootageSensorSeekpointsForCameraWSRequest: z.ZodObject<any> = z.object({
   durationSec: z.number().int().optional(),
@@ -17222,7 +19162,8 @@ const Share_GetSharedFootageSensorSeekpointsForCameraWSRequest: z.ZodObject<any>
 const Share_GetSharedFootageSensorSeekpointsForCameraWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional()
+  seekPoints: z.array(Sensor_FootageSensorSeekPointDisplayType).optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedLiveStreamInfoWSResponse: z.ZodObject<any> = z.object({
   aecEnabled: z.boolean().optional(),
@@ -17245,7 +19186,8 @@ const Share_GetSharedLiveStreamInfoWSResponse: z.ZodObject<any> = z.object({
   id: z.string().optional(),
   rawOffset: z.number().int().optional()
 }).optional(),
-  vodEnabled: z.boolean().optional()
+  vodEnabled: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedMediaUrisWSRequest = z.record(z.unknown());
 const Share_GetSharedMediaUrisWSResponse: z.ZodObject<any> = z.object({
@@ -17258,7 +19200,8 @@ const Share_GetSharedMediaUrisWSResponse: z.ZodObject<any> = z.object({
   wanLiveM3u8Uri: z.string().optional(),
   wanLiveMpdUri: z.string().optional(),
   wanVodM3u8UriTemplate: z.string().optional(),
-  wanVodMpdUriTemplate: z.string().optional()
+  wanVodMpdUriTemplate: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
   durationSec: z.number().int().optional(),
@@ -17267,7 +19210,8 @@ const Share_GetSharedPresenceWindowsWSRequest: z.ZodObject<any> = z.object({
 const Share_GetSharedPresenceWindowsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  presenceWindows: z.record(z.unknown()).optional()
+  presenceWindows: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedTimelapseDataV2WSResponse: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -17275,14 +19219,16 @@ const Share_GetSharedTimelapseDataV2WSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   orgName: z.string().optional(),
   publicTimelapseUuids: z.array(z.string()).optional(),
-  title: z.string().optional()
+  title: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedTimelapseDataWSRequest = z.record(z.unknown());
 const Share_GetSharedTimelapseDataWSResponse: z.ZodObject<any> = z.object({
   description: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  orgName: z.string().optional()
+  orgName: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_SharedVideoWallDeviceType: z.ZodObject<any> = z.object({
   fisheyeDisplayMode: FisheyeDisplayMode.optional(),
@@ -17305,7 +19251,8 @@ const Share_GetSharedVideoWallInfoWSResponse: z.ZodObject<any> = z.object({
   errorMsg: z.string().optional(),
   name: z.string().optional(),
   settings: z.record(z.unknown()).optional(),
-  vodEnabled: z.boolean().optional()
+  vodEnabled: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_GetSharedVideoWallMediaUrisWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
@@ -17317,7 +19264,8 @@ const Share_GetSharedVideoWallMediaUrisWSResponse: z.ZodObject<any> = z.object({
   wanLiveM3u8Uri: z.string().optional(),
   wanLiveMpdUri: z.string().optional(),
   wanVodM3u8UriTemplate: z.string().optional(),
-  wanVodMpdUriTemplate: z.string().optional()
+  wanVodMpdUriTemplate: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Share_ShareLinkWSRequest: z.ZodObject<any> = z.object({
   emailAddresses: z.array(z.string()).optional(),
@@ -17326,7 +19274,8 @@ const Share_ShareLinkWSRequest: z.ZodObject<any> = z.object({
 });
 const Share_ShareLinkWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const TimelapseSource: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional()
@@ -17384,14 +19333,16 @@ const Support_AddSupportAuthorityWSRequest: z.ZodObject<any> = z.object({
 const Support_AddSupportAuthorityWSResponse: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Support_AlllowSupportAuthorityAccessWSRequest: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional()
 });
 const Support_AlllowSupportAuthorityAccessWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Support_FindSupportAuthoritySessionsWSRequest: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional()
@@ -17399,7 +19350,8 @@ const Support_FindSupportAuthoritySessionsWSRequest: z.ZodObject<any> = z.object
 const Support_FindSupportAuthoritySessionsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sessions: z.array(SessionInfoWSType).optional()
+  sessions: z.array(SessionInfoWSType).optional(),
+  warningMsg: z.string().optional()
 });
 const Support_GetSupportAuthoritiesWSRequest = z.record(z.unknown());
 const Support_SupportAuthorityWSType: z.ZodObject<any> = z.object({
@@ -17422,14 +19374,16 @@ const Support_SupportAuthorityWSType: z.ZodObject<any> = z.object({
 const Support_GetSupportAuthoritiesWSResponse: z.ZodObject<any> = z.object({
   authorities: z.array(Support_SupportAuthorityWSType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Support_LogoutAllSupportAuthoritySessionsWSRequest: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional()
 });
 const Support_LogoutAllSupportAuthoritySessionsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Support_LookupSupportPartnerAuthoritiesWSRequest: z.ZodObject<any> = z.object({
   lookupKeyword: z.string().optional()
@@ -17443,21 +19397,24 @@ const Support_SupportPartnerAuthorityWSType: z.ZodObject<any> = z.object({
 const Support_LookupSupportPartnerAuthoritiesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  supportPartnerAuthorities: z.array(Support_SupportPartnerAuthorityWSType).optional()
+  supportPartnerAuthorities: z.array(Support_SupportPartnerAuthorityWSType).optional(),
+  warningMsg: z.string().optional()
 });
 const Support_RemoveSupportAuthorityWSRequest: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional()
 });
 const Support_RemoveSupportAuthorityWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Support_RevokeSupportAuthorityAccessWSRequest: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional()
 });
 const Support_RevokeSupportAuthorityAccessWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Support_SupportAuthoritySelectiveUpdateWSType: z.ZodObject<any> = z.object({
   authorityUuid: z.string().optional(),
@@ -17473,7 +19430,8 @@ const Support_UpdateSupportAuthorityWSRequest: z.ZodObject<any> = z.object({
 });
 const Support_UpdateSupportAuthorityWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const TimelapseStatus: z.ZodObject<any> = z.object({
   percentComplete: z.number().int().optional(),
@@ -17509,6 +19467,10 @@ const ToastRestaurantSettings: z.ZodObject<any> = z.object({
   restaurantName: z.string().optional(),
   serviceAreaSettingsMap: z.record(z.unknown()).optional()
 });
+const TokenUsageStats: z.ZodObject<any> = z.object({
+  inputTokenUsage: z.number().int().optional(),
+  outputTokenUsage: z.number().int().optional()
+});
 const TriggerContent: z.ZodObject<any> = z.object({
   apiKey: z.string().optional(),
   experienceIds: z.array(z.string()).optional(),
@@ -17532,20 +19494,23 @@ const Tvos_GetTvOsConfigWsRequest: z.ZodObject<any> = z.object({
 const Tvos_GetTvOsConfigWsResponse: z.ZodObject<any> = z.object({
   config: TvOsConfigType.optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Tvos_GetTvOsConfigsForOrgWsRequest = z.record(z.unknown());
 const Tvos_GetTvOsConfigsForOrgWsResponse: z.ZodObject<any> = z.object({
   configs: z.array(TvOsConfigType).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Tvos_UpdateTvOsConfigWsRequest: z.ZodObject<any> = z.object({
   config: TvOsConfigType.optional()
 });
 const Tvos_UpdateTvOsConfigWsResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const UserInfo: z.ZodObject<any> = z.object({
   userAccessToken: z.string().optional(),
@@ -17590,7 +19555,8 @@ const User_AssignEmailToUserWSResponse = z.record(z.unknown());
 const User_BulkProvisionCredentialsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  messages: z.array(z.string()).optional()
+  messages: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const User_ChangeUserEmailWSRequest: z.ZodObject<any> = z.object({
   newEmail: z.string().optional(),
@@ -17598,7 +19564,8 @@ const User_ChangeUserEmailWSRequest: z.ZodObject<any> = z.object({
 });
 const User_ChangeUserEmailWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_ChangeUserPasswordWSRequest: z.ZodObject<any> = z.object({
   currentPassword: z.string().optional(),
@@ -17607,7 +19574,8 @@ const User_ChangeUserPasswordWSRequest: z.ZodObject<any> = z.object({
 const User_ChangeUserPasswordWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  responseStatus: z.string().optional()
+  responseStatus: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_CreateUserWSRequest: z.ZodObject<any> = z.object({
   accessibleRhombusApps: z.array(z.string()).optional(),
@@ -17622,19 +19590,22 @@ const User_CreateUserWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   responseStatus: z.string().optional(),
-  userUuid: z.string().optional()
+  userUuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_DeleteUserWSRequest: z.ZodObject<any> = z.object({
   userUuid: z.string().optional()
 });
 const User_DeleteUserWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_DeleteVirtualMfaDeviceForCurrentUserWSRequest = z.record(z.unknown());
 const User_DeleteVirtualMfaDeviceForCurrentUserWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_FindUserByEmailWSRequest: z.ZodObject<any> = z.object({
   email: z.string().optional()
@@ -17648,20 +19619,6 @@ const User_FindUserWSRequest: z.ZodObject<any> = z.object({
 const User_FindUserWSResponse: z.ZodObject<any> = z.object({
   user: WrappedRhombusOrgUserType.optional()
 });
-const User_GetBulkProvisionCredentialsFormatWSResponse: z.ZodObject<any> = z.object({
-  accessControlEnabled: z.boolean().optional(),
-  error: z.boolean().optional(),
-  errorMsg: z.string().optional(),
-  example: z.string().optional(),
-  explanation: z.string().optional()
-});
-const User_GetImportUsersFormatWSResponse: z.ZodObject<any> = z.object({
-  accessControlEnabled: z.boolean().optional(),
-  error: z.boolean().optional(),
-  errorMsg: z.string().optional(),
-  example: z.string().optional(),
-  explanation: z.string().optional()
-});
 const User_GetRhombusKeyConfigForUserWSRequest: z.ZodObject<any> = z.object({
   userUuid: z.string().optional()
 });
@@ -17674,13 +19631,15 @@ const User_GetUserCustomizationFlagsWSRequest: z.ZodObject<any> = z.object({
 const User_GetUserCustomizationFlagsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  userCustomizations: z.record(z.unknown()).optional()
+  userCustomizations: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const User_GetUsersInOrgForReportsWSRequest = z.record(z.unknown());
 const User_GetUsersInOrgForReportsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  users: z.array(RhombusOrgUserType).optional()
+  users: z.array(RhombusOrgUserType).optional(),
+  warningMsg: z.string().optional()
 });
 const User_GetUsersInOrgWSRequest = z.record(z.unknown());
 const User_UserSnoozeNotificationSettingsType: z.ZodObject<any> = z.object({
@@ -17698,25 +19657,29 @@ const User_GetUsersInOrgWSResponse: z.ZodObject<any> = z.object({
   rhombusKeyAppConfigs: z.array(RhombusKeyAppConfigType).optional(),
   snoozeSettings: z.array(User_UserSnoozeNotificationSettingsType).optional(),
   userPermissions: z.array(UserPermissionType).optional(),
-  users: z.array(WrappedRhombusOrgUserType).optional()
+  users: z.array(WrappedRhombusOrgUserType).optional(),
+  warningMsg: z.string().optional()
 });
 const User_GetVirtualMfaDeviceForCurrentUserWSRequest = z.record(z.unknown());
 const User_GetVirtualMfaDeviceForCurrentUserWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  virtualMfaDevice: UserVirtualMfaDeviceType.optional()
+  virtualMfaDevice: UserVirtualMfaDeviceType.optional(),
+  warningMsg: z.string().optional()
 });
 const User_ImportUsersWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  messages: z.array(z.string()).optional()
+  messages: z.array(z.string()).optional(),
+  warningMsg: z.string().optional()
 });
 const User_SendMobileDownloadSMSWSRequest: z.ZodObject<any> = z.object({
   phoneNumber: z.string().optional()
 });
 const User_SendMobileDownloadSMSWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_SendPartnerAccessGrantedEmailWSRequest: z.ZodObject<any> = z.object({
   loginLink: z.string().optional(),
@@ -17726,21 +19689,24 @@ const User_SendPartnerAccessGrantedEmailWSRequest: z.ZodObject<any> = z.object({
 });
 const User_SendPartnerAccessGrantedEmailWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_SendRhombusKeyUserWelcomeEmailWSRequest: z.ZodObject<any> = z.object({
   userUuid: z.string().optional()
 });
 const User_SendRhombusKeyUserWelcomeEmailWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_SendUserWelcomeEmailWSRequest: z.ZodObject<any> = z.object({
   userUuid: z.string().optional()
 });
 const User_SendUserWelcomeEmailWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_SetupVirtualMfaDeviceForCurrentUserWSRequest = z.record(z.unknown());
 const User_SetupVirtualMfaDeviceForCurrentUserWSResponse: z.ZodObject<any> = z.object({
@@ -17748,7 +19714,8 @@ const User_SetupVirtualMfaDeviceForCurrentUserWSResponse: z.ZodObject<any> = z.o
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   qrCodeSetupData: z.string().optional(),
-  success: z.boolean().optional()
+  success: z.boolean().optional(),
+  warningMsg: z.string().optional()
 });
 const User_UpdatePartnerUserNotificationSettingsWSRequest: z.ZodObject<any> = z.object({
   allClientsSelected: z.boolean().optional(),
@@ -17762,7 +19729,8 @@ const User_UpdatePartnerUserNotificationSettingsWSRequest: z.ZodObject<any> = z.
 });
 const User_UpdatePartnerUserNotificationSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_UpdatePartnerWSRequest: z.ZodObject<any> = z.object({
   bypassSaml: z.boolean().optional(),
@@ -17777,7 +19745,8 @@ const User_UpdatePartnerWSRequest: z.ZodObject<any> = z.object({
 });
 const User_UpdatePartnerWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_UpdateRhombusKeySettingsForUserWSRequest: z.ZodObject<any> = z.object({
   bypassSaml: z.boolean().optional(),
@@ -17797,7 +19766,8 @@ const User_UpdateUserCustomizationFlagsWSRequest: z.ZodObject<any> = z.object({
 });
 const User_UpdateUserCustomizationFlagsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_UpdateUserNotificationSettingsWSRequest: z.ZodObject<any> = z.object({
   orgUuid: z.string().optional(),
@@ -17809,7 +19779,8 @@ const User_UpdateUserNotificationSettingsWSRequest: z.ZodObject<any> = z.object(
 });
 const User_UpdateUserNotificationSettingsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_UpdateUserSelectiveWSRequest: z.ZodObject<any> = z.object({
   bypassSaml: z.boolean().optional(),
@@ -17834,7 +19805,8 @@ const User_UpdateUserWSRequest: z.ZodObject<any> = z.object({
 });
 const User_UpdateUserWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const User_metadata_CreateUserMetadataFieldTemplateWSRequest: z.ZodObject<any> = z.object({
   template: UserMetadataFieldTemplate.optional()
@@ -17899,7 +19871,8 @@ const Vehicle_AddVehicleLabelWSRequest: z.ZodObject<any> = z.object({
 });
 const Vehicle_AddVehicleLabelWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_AssociateEventsToVehicleWSRequest: z.ZodObject<any> = z.object({
   eventUuids: z.array(z.string()).optional(),
@@ -17907,14 +19880,16 @@ const Vehicle_AssociateEventsToVehicleWSRequest: z.ZodObject<any> = z.object({
 });
 const Vehicle_AssociateEventsToVehicleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_DeleteVehicleWSRequest: z.ZodObject<any> = z.object({
   vehicleLicensePlate: z.string().optional()
 });
 const Vehicle_DeleteVehicleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_GetRecentVehicleEventsByLocationWSRequest: z.ZodObject<any> = z.object({
   endTimeMs: z.number().int().optional(),
@@ -17924,7 +19899,8 @@ const Vehicle_GetRecentVehicleEventsByLocationWSRequest: z.ZodObject<any> = z.ob
 const Vehicle_GetRecentVehicleEventsByLocationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(VehicleEventIndexType).optional()
+  events: z.array(VehicleEventIndexType).optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_GetRecentVehicleEventsForVehicleWSRequest: z.ZodObject<any> = z.object({
   endTimeMs: z.number().int().optional(),
@@ -17934,7 +19910,8 @@ const Vehicle_GetRecentVehicleEventsForVehicleWSRequest: z.ZodObject<any> = z.ob
 const Vehicle_GetRecentVehicleEventsForVehicleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(VehicleEventIndexType).optional()
+  events: z.array(VehicleEventIndexType).optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_GetRecentVehicleEventsWSRequest: z.ZodObject<any> = z.object({
   deviceUuids: z.array(z.string()).optional(),
@@ -17944,7 +19921,8 @@ const Vehicle_GetRecentVehicleEventsWSRequest: z.ZodObject<any> = z.object({
 const Vehicle_GetRecentVehicleEventsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(VehicleEventIndexType).optional()
+  events: z.array(VehicleEventIndexType).optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_GetVehicleEventsWSRequest: z.ZodObject<any> = z.object({
   deviceUuidFilter: z.array(z.string()).optional(),
@@ -17960,19 +19938,22 @@ const Vehicle_GetVehicleEventsWSRequest: z.ZodObject<any> = z.object({
 const Vehicle_GetVehicleEventsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  events: z.array(VehicleEventIndexType).optional()
+  events: z.array(VehicleEventIndexType).optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_GetVehicleLabelsForOrgWSRequest = z.record(z.unknown());
 const Vehicle_GetVehicleLabelsForOrgWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  vehicleLabels: z.record(z.unknown()).optional()
+  vehicleLabels: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_GetVehiclesWSRequest = z.record(z.unknown());
 const Vehicle_GetVehiclesWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  vehicles: z.array(VehicleV2Type).optional()
+  vehicles: z.array(VehicleV2Type).optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_RemoveVehicleLabelWSRequest: z.ZodObject<any> = z.object({
   label: z.string().optional(),
@@ -17980,7 +19961,8 @@ const Vehicle_RemoveVehicleLabelWSRequest: z.ZodObject<any> = z.object({
 });
 const Vehicle_RemoveVehicleLabelWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_ReportVehicleEventRequest: z.ZodObject<any> = z.object({
   eventUuid: z.string().optional()
@@ -17988,7 +19970,8 @@ const Vehicle_ReportVehicleEventRequest: z.ZodObject<any> = z.object({
 const Vehicle_ReportVehicleEventResponse: z.ZodObject<any> = z.object({
   collectedMediaForTraining: z.boolean().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Vehicle_SaveVehicleWSRequest: z.ZodObject<any> = z.object({
   alert: z.boolean().optional(),
@@ -18001,7 +19984,8 @@ const Vehicle_SaveVehicleWSRequest: z.ZodObject<any> = z.object({
 });
 const Vehicle_SaveVehicleWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_CancelSpliceV2WSRequest: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
@@ -18010,7 +19994,8 @@ const Video_CancelSpliceV2WSRequest: z.ZodObject<any> = z.object({
 });
 const Video_CancelSpliceV2WSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_CancelSpliceWSRequest: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
@@ -18018,7 +20003,8 @@ const Video_CancelSpliceWSRequest: z.ZodObject<any> = z.object({
 });
 const Video_CancelSpliceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_CreateSharedTimelapseGroupWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -18031,21 +20017,24 @@ const Video_CreateSharedTimelapseGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   shareUrl: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_DeleteSharedTimelapseGroupWSRequest: z.ZodObject<any> = z.object({
   uuid: z.string().optional()
 });
 const Video_DeleteSharedTimelapseGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_DeleteTimelapseClipsWSRequest: z.ZodObject<any> = z.object({
   clipUuids: z.array(z.string()).optional()
 });
 const Video_DeleteTimelapseClipsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GenerateTimelapseClipWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -18063,7 +20052,8 @@ const Video_GenerateTimelapseClipWSRequest: z.ZodObject<any> = z.object({
 const Video_GenerateTimelapseClipWSResponse: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GetExactFrameUriWSRequest: z.ZodObject<any> = z.object({
   cameraUuid: z.string(),
@@ -18079,31 +20069,36 @@ const Video_GetExactFrameUriWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   frameUri: z.string().optional(),
-  responseMessage: z.string().optional()
+  responseMessage: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GetMaxSpliceDurationWSRequest = z.record(z.unknown());
 const Video_GetMaxSpliceDurationWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  maxDuration: z.number().int().optional()
+  maxDuration: z.number().int().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GetSharedTimelapseGroupsWSRequest = z.record(z.unknown());
 const Video_GetSharedTimelapseGroupsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  sharedTimelapses: z.array(SharedTimelapseGroupWrapperType).optional()
+  sharedTimelapses: z.array(SharedTimelapseGroupWrapperType).optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GetSplicedClipsInProgressWSRequest = z.record(z.unknown());
 const Video_GetSplicedClipsInProgressWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  splicedClips: z.array(SplicedClipType).optional()
+  splicedClips: z.array(SplicedClipType).optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GetTimelapseClipsWSRequest = z.record(z.unknown());
 const Video_GetTimelapseClipsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  timelapseClips: z.array(TimelapseClipType).optional()
+  timelapseClips: z.array(TimelapseClipType).optional(),
+  warningMsg: z.string().optional()
 });
 const Video_GetTimelapseMetadataWSRequest: z.ZodObject<any> = z.object({
   deviceUuidList: z.array(z.string()).optional()
@@ -18111,17 +20106,16 @@ const Video_GetTimelapseMetadataWSRequest: z.ZodObject<any> = z.object({
 const Video_GetTimelapseMetadataWSResponse: z.ZodObject<any> = z.object({
   earliestTimestampMap: z.record(z.unknown()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_RetrySpliceWSRequest: z.ZodObject<any> = z.object({
-  clipUuid: z.string().optional(),
-  deviceUuid: z.string().optional(),
-  duration: z.number().int().optional(),
-  startTime: z.number().int().optional()
+  clipUuid: z.string().optional()
 });
 const Video_RetrySpliceWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_ShareTimelapseClipsWSRequest: z.ZodObject<any> = z.object({
   clipUuids: z.array(z.string()).optional()
@@ -18129,7 +20123,8 @@ const Video_ShareTimelapseClipsWSRequest: z.ZodObject<any> = z.object({
 const Video_ShareTimelapseClipsWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  shareUrlMap: z.record(z.unknown()).optional()
+  shareUrlMap: z.record(z.unknown()).optional(),
+  warningMsg: z.string().optional()
 });
 const Video_SpliceFrameWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -18139,7 +20134,8 @@ const Video_SpliceFrameWSResponse: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
-  region: z.string().optional()
+  region: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_SpliceV2WSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -18152,9 +20148,11 @@ const Video_SpliceV2WSRequest: z.ZodObject<any> = z.object({
 const Video_SpliceV2WSResponse: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_SpliceV3WSRequest: z.ZodObject<any> = z.object({
+  accessSettings: ClipAccessSettings.optional(),
   alteredViewMap: z.record(z.unknown()).optional(),
   audioIncluded: z.boolean().optional(),
   clipVisibility: ClipVisibility.optional(),
@@ -18172,7 +20170,8 @@ const Video_SpliceV3WSResponse: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
   clipUuidList: z.array(z.string()).optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_SpliceWSRequest: z.ZodObject<any> = z.object({
   deviceUuid: z.string().optional(),
@@ -18182,7 +20181,8 @@ const Video_SpliceWSRequest: z.ZodObject<any> = z.object({
 const Video_SpliceWSResponse: z.ZodObject<any> = z.object({
   clipUuid: z.string().optional(),
   error: z.boolean().optional(),
-  errorMsg: z.string().optional()
+  errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_UpdateSharedTimelapseGroupWSRequest: z.ZodObject<any> = z.object({
   description: z.string().optional(),
@@ -18199,7 +20199,8 @@ const Video_UpdateSharedTimelapseGroupWSResponse: z.ZodObject<any> = z.object({
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
   shareUrl: z.string().optional(),
-  uuid: z.string().optional()
+  uuid: z.string().optional(),
+  warningMsg: z.string().optional()
 });
 const Video_UpdateTimelapseClipMetadataWSRequest: z.ZodObject<any> = z.object({
   clipUuid: z.string(),
@@ -18216,6 +20217,42 @@ const WebhookInfo: z.ZodObject<any> = z.object({
 const WebhookMapEntry: z.ZodObject<any> = z.object({
   orgId: z.number().int().optional(),
   webhookId: z.number().int().optional()
+});
+const Wiegand35BitCorp1000Credential: z.ZodObject<any> = z.object({
+  createdAtMillis: z.number().int().optional(),
+  endDateEpochSecExclusive: z.number().int().optional(),
+  lastUsedAccessControlledDoorUuid: z.string().optional(),
+  lastUsedAtMillis: z.number().int().optional(),
+  lastUsedLocationUuid: z.string().optional(),
+  lowercaseHexValue: z.string().optional(),
+  managedCredUuid: z.string().optional(),
+  note: z.string().optional(),
+  orgUuid: z.string().optional(),
+  startDateEpochSecInclusive: z.number().int().optional(),
+  type: AccessControlCredentialEnumType.optional(),
+  updatedAtMillis: z.number().int().optional(),
+  userUuid: z.string().optional(),
+  uuid: z.string().optional(),
+  value: z.string().optional(),
+  workflowStatus: AccessControlCredentialWorkflowStatusEnumType.optional()
+});
+const Wiegand48BitCorp1000Credential: z.ZodObject<any> = z.object({
+  createdAtMillis: z.number().int().optional(),
+  endDateEpochSecExclusive: z.number().int().optional(),
+  lastUsedAccessControlledDoorUuid: z.string().optional(),
+  lastUsedAtMillis: z.number().int().optional(),
+  lastUsedLocationUuid: z.string().optional(),
+  lowercaseHexValue: z.string().optional(),
+  managedCredUuid: z.string().optional(),
+  note: z.string().optional(),
+  orgUuid: z.string().optional(),
+  startDateEpochSecInclusive: z.number().int().optional(),
+  type: AccessControlCredentialEnumType.optional(),
+  updatedAtMillis: z.number().int().optional(),
+  userUuid: z.string().optional(),
+  uuid: z.string().optional(),
+  value: z.string().optional(),
+  workflowStatus: AccessControlCredentialWorkflowStatusEnumType.optional()
 });
 const ZapierWebhookSettings: z.ZodObject<any> = z.object({
   backoffSec: z.number().int().optional(),
@@ -18239,6 +20276,15 @@ export const schemas = {
   LocationType,
   ACUDoorCatalogItem,
   ACUDoorLicenseType,
+  DataSource,
+  AIReportGenerateParams,
+  ChatVisibility,
+  ChatPrivacy,
+  QueryStatus,
+  QueryTimelineEvent,
+  QueryTool,
+  AIReport,
+  AIReportGroup,
   ShippedItemType,
   AITShipmentInfoType,
   AMSirenSettingsType,
@@ -18263,6 +20309,7 @@ export const schemas = {
   WiegandH10304Credential,
   WiegandD10202Credential,
   Wiegand64BitRawCredentialType,
+  CustomCredential,
   AccessControlCredentialType,
   ComponentEventEnumType,
   AccessControlUnitBatteryStateChangeEventType,
@@ -18292,16 +20339,16 @@ export const schemas = {
   AccessControlledDoorScheduledTriggerType,
   AccessControlledDoorPolicyType,
   FirstInShadow,
-  DoorStateSourceEnum,
+  AccessStateSourceEnum,
   AccessControlledDoorStateEnumType,
-  DoorStateShadow,
+  AccessStateShadow,
   ComponentCompositeShadowEnum,
   AccessControlledDoorShadow,
   ComponentReferenceType,
   FirstInStatus,
   FirstInState,
-  ManualDoorStateChangeEnum,
-  BaseDoorStateOverride,
+  ManualAccessStateChangeEnum,
+  BaseAccessStateOverride,
   ProximityUnlockSettingsType,
   ComponentCompositeEnumType,
   WaveToUnlockSettingsType,
@@ -18311,15 +20358,24 @@ export const schemas = {
   BaseEventOriginator_Minimal,
   FirstInStatus_Minimal,
   FirstInState_Minimal,
-  ManualDoorStateChangeEnum_Minimal,
-  BaseDoorStateOverride_Minimal,
+  ManualAccessStateChangeEnum_Minimal,
+  BaseAccessStateOverride_Minimal,
   ProximityUnlockSettingsType_Minimal,
   ComponentCompositeEnumType_Minimal,
   WaveToUnlockSettingsType_Minimal,
   AccessControlledDoorType_Minimal,
+  AccessControlledElevator,
+  AccessControlledElevatorLanding,
+  AccessControlledElevatorLandingShadow,
+  EarlyExpireModeEnum,
+  AccessStateOverride,
   Accesscontrol_SendUserPresenceForCurrentUserSuccessWsResponse,
   Accesscontrol_SendUserPresenceForCurrentUserErrorWsResponse,
   Accesscontrol_BaseSendUserPresenceForCurrentUserWsResponse,
+  Accesscontrol_Create35BitCorp1000StdCredentialWSRequest,
+  Accesscontrol_Create35BitCorp1000StdCredentialWSResponse,
+  Accesscontrol_Create48BitCorp1000StdCredentialWSRequest,
+  Accesscontrol_Create48BitCorp1000StdWSResponse,
   Accesscontrol_DeviceUnlockableAccessControlledDoorType,
   Accesscontrol_FindUnlockableAccessControlledDoorsByDeviceWSRequest,
   Accesscontrol_FindUnlockableAccessControlledDoorsByDeviceWSResponse,
@@ -18341,6 +20397,12 @@ export const schemas = {
   Accesscontrol_UnlockAccessControlledDoorForCurrentUserWSRequest,
   Accesscontrol_UnlockAccessControlledDoorSuccessWSResponse,
   Accesscontrol_UnlockAccessControlledDoorWSRequest,
+  Accesscontrol_UnlockAccessControlledElevatorErrorWSResponse,
+  Accesscontrol_UnlockAccessControlledElevatorForCurrentUserErrorWSResponse,
+  Accesscontrol_UnlockAccessControlledElevatorForCurrentUserSuccessWSResponse,
+  Accesscontrol_UnlockAccessControlledElevatorForCurrentUserWSRequest,
+  Accesscontrol_UnlockAccessControlledElevatorSuccessWSResponse,
+  Accesscontrol_UnlockAccessControlledElevatorWSRequest,
   LocationAccessGrantType,
   Accesscontrol_accessgrant_CreateAccessGrantWSRequest,
   Accesscontrol_accessgrant_CreateAccessGrantWSResponse,
@@ -18348,6 +20410,8 @@ export const schemas = {
   Accesscontrol_accessgrant_DeleteLocationAccessGrantWSResponse,
   Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWSRequest,
   Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledDoorWSResponse,
+  Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSRequest,
+  Accesscontrol_accessgrant_FindLocationAccessGrantsByAccessControlledElevatorLandingWSResponse,
   Accesscontrol_accessgrant_FindLocationAccessGrantsByDoorLabelWSRequest,
   Accesscontrol_accessgrant_FindLocationAccessGrantsByDoorLabelWSResponse,
   Accesscontrol_accessgrant_FindLocationAccessGrantsByGroupWSRequest,
@@ -18365,7 +20429,6 @@ export const schemas = {
   Accesscontrol_accessgrant_GetLocationsByAccessGrantForCurrentUserWSRequest,
   LocationLockdownStateType,
   FloorPlanType,
-  QualifiedAddressType,
   LockdownActivationPlanType,
   LockdownDeactivationPlanType,
   DoorLockdownStateEnumType,
@@ -18385,6 +20448,8 @@ export const schemas = {
   Accesscontrol_accessrevocation_DeleteLocationAccessRevocationWSResponse,
   Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledDoorWSRequest,
   Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledDoorWSResponse,
+  Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSRequest,
+  Accesscontrol_accessrevocation_FindLocationAccessRevocationsByAccessControlledElevatorLandingWSResponse,
   Accesscontrol_accessrevocation_FindLocationAccessRevocationsByDoorLabelWSRequest,
   Accesscontrol_accessrevocation_FindLocationAccessRevocationsByDoorLabelWSResponse,
   Accesscontrol_accessrevocation_FindLocationAccessRevocationsByGroupWSRequest,
@@ -18434,6 +20499,8 @@ export const schemas = {
   Accesscontrol_credentials_BaseProvisionMobileAccessControlCredentialForCurrentUserWSResponse,
   Accesscontrol_credentials_BaseUnlockAccessControlledDoorForCurrentUserWSResponse,
   Accesscontrol_credentials_BaseUnlockAccessControlledDoorWSResponse,
+  Accesscontrol_credentials_BaseUnlockAccessControlledElevatorForCurrentUserWSResponse,
+  Accesscontrol_credentials_BaseUnlockAccessControlledElevatorWSResponse,
   Accesscontrol_credentials_BulkProvisionPinCredentialsWSRequest,
   Accesscontrol_credentials_BulkProvisionPinCredentialsWSResponse,
   Accesscontrol_credentials_BulkRotatePinCredentialsWSRequest,
@@ -18553,6 +20620,10 @@ export const schemas = {
   Accesscontrol_firstin_ApplyDoorScheduleFirstInGroupStateWSResponse,
   Accesscontrol_firstin_ApplyDoorScheduleFirstInStateWSRequest,
   Accesscontrol_firstin_ApplyDoorScheduleFirstInStateWSResponse,
+  Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSRequest,
+  Accesscontrol_firstin_ApplyElevatorLandingAccessScheduleFirstInStateWSResponse,
+  Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSRequest,
+  Accesscontrol_firstin_ApplyElevatorLandingAuthFirstInStateWSResponse,
   Accesscontrol_firstin_CreateLocationFirstInSettingsWSRequest,
   Accesscontrol_firstin_CreateLocationFirstInSettingsWSResponse,
   Accesscontrol_firstin_DeleteLocationFirstInSettingsWSRequest,
@@ -18567,6 +20638,8 @@ export const schemas = {
   Accesscontrol_firstin_GetLocationFirstInSettingsWSResponse,
   Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSRequest,
   Accesscontrol_firstin_RemoveDoorLocationFirstInSettingsWSResponse,
+  Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSRequest,
+  Accesscontrol_firstin_RemoveElevatorLandingLocationFirstInSettingsWSResponse,
   Accesscontrol_firstin_UpdateLocationFirstInSettingsWSRequest,
   Accesscontrol_firstin_UpdateLocationFirstInSettingsWSResponse,
   Accesscontrol_lockdownplan_ActivateLockdownForLocationViaRhombusKeyWSRequest,
@@ -18574,18 +20647,24 @@ export const schemas = {
   Accesscontrol_lockdownplan_ActivateLockdownForLocationViaRhombusKeyWSResponse,
   Accesscontrol_lockdownplan_ActivateLockdownForLocationWSRequest,
   Accesscontrol_lockdownplan_ActivateLockdownForLocationWSResponse,
+  Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSRequest,
+  Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse,
+  Accesscontrol_lockdownplan_ActivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownActivationResult,
   Accesscontrol_lockdownplan_CreateLocationLockdownPlanWSRequest,
   Accesscontrol_lockdownplan_CreateLocationLockdownPlanWSResponse,
   ActivateLocationLockdownActionType,
   AudioPlaybackActionType,
   CancelLoopingAudioPlaybackActionType,
+  DeviceTypeEnum,
   ConnectAudioDeviceToPhoneNumberActionType,
   CustomLLMActionType,
+  EnableDisableAudioRecordActionType,
   IntegrationEnum,
   IntegrationCommandActionType,
   IntegrationNotificationActionType,
   RemoteDoorUnlockSystemEnum,
   RemoteDoorUnlockActionType,
+  ThirdPartyAudioPlaybackActionType,
   ComponentRelayOutputType,
   GenericRelayStateEnumType,
   TriggerComponentRelayActionType,
@@ -18600,6 +20679,9 @@ export const schemas = {
   Accesscontrol_lockdownplan_DeactivateLockdownForLocationViaRhombusKeyWSResponse,
   Accesscontrol_lockdownplan_DeactivateLockdownForLocationWSRequest,
   Accesscontrol_lockdownplan_DeactivateLockdownForLocationWSResponse,
+  Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSRequest,
+  Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse,
+  Accesscontrol_lockdownplan_DeactivateLockdownForLocationsViaRhombusKeyWSResponse_LocationLockdownDeactivationResult,
   Accesscontrol_lockdownplan_DeleteLocationLockdownStateWSRequest,
   Accesscontrol_lockdownplan_DeleteLocationLockdownStateWSResponse,
   Accesscontrol_lockdownplan_DeleteLockdownPlanWSRequest,
@@ -18637,6 +20719,11 @@ export const schemas = {
   Accesscontrol_qr_GetQRAccessCodesWSResponse,
   Action,
   ActivateLocationLockdownActionRecordType,
+  SensorValType,
+  ToastCheckInfo,
+  ToastOrderIdType,
+  ClipBoundingBoxType,
+  ActivityEventData,
   AddOnLicense,
   PerceptionType,
   AddOnLicenseInvoiceType,
@@ -18705,7 +20792,6 @@ export const schemas = {
   Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSRequest,
   Alertmonitoring_GenerateMonthlyVerificationsForYearReportForLocationWSResponse,
   Alertmonitoring_GenerateReportDataForLocationWSRequest,
-  DeviceTypeEnum,
   Alertmonitoring_ThreatCaseReportItem,
   Alertmonitoring_GenerateReportDataForLocationWSResponse,
   Alertmonitoring_GetAlertMonitoringTripwireGroupCountWSRequest,
@@ -18800,14 +20886,12 @@ export const schemas = {
   Audiogateway_DeleteAudioGatewayWSResponse,
   Audiogateway_GetAudioGatewayConfigWSRequest,
   FrontendEqualizerSettings,
+  LEDModeEnum,
   IAudioUserConfig,
   Audiogateway_GetAudioGatewayConfigWSResponse,
   Audiogateway_GetAudioGatewayOfflineLanStreamingInfoWSRequest,
   Audiogateway_GetAudioGatewayOfflineLanStreamingInfoWSResponse,
   Audiogateway_GetAudioSeekpointsWSRequest,
-  SensorValType,
-  ToastCheckInfo,
-  ToastOrderIdType,
   FootageSeekPointV2Type,
   Audiogateway_GetAudioSeekpointsWSResponse,
   Audiogateway_GetFullAudioGatewayStateWSRequest,
@@ -18863,19 +20947,20 @@ export const schemas = {
   BadgeIntegrationSettings,
   Badgereader_DeleteBadgeReaderWSRequest,
   Badgereader_DeleteBadgeReaderWSResponse,
-  Deviceconfig_settings_ExternalReadableButtonSettings,
+  Device_config_settings_ExternalReadableButtonSettings,
   ClimateSettings,
-  Deviceconfig_settings_ExternalReadableDeviceSettings,
+  Device_config_settings_ExternalReadableDeviceSettings,
   BurstyRateLimit,
-  Deviceconfig_settings_ExternalReadableDeviceVideoSettings,
-  Deviceconfig_settings_ExternalReadableDoorControllerSettings,
+  Device_config_settings_ExternalReadableDeviceVideoSettings,
+  Device_config_settings_ExternalReadableDoorControllerSettings,
   DoorReaderSettings,
   DoorSensorSettings,
   EnvironmentalGatewaySettings,
+  RobotSettings,
   TamperSettings,
   ThirdPartyCameraSettings,
   VideoDoorbellSettings,
-  Deviceconfig_userconfig_ExternalReadableFacetedUserConfig,
+  Device_config_userconfig_ExternalReadableFacetedUserConfig,
   Badgereader_GetBadgeReaderConfigWSResponse,
   Badgereader_GetBadgeReaderFullStateWSResponse,
   MinimalDeviceStateType,
@@ -18883,15 +20968,16 @@ export const schemas = {
   Badgereader_RebootBadgeReaderWSRequest,
   ButtonSettingsSelectiveUpdate,
   ClimateSettingsSelectiveUpdate,
-  Deviceconfig_settings_ExternalDeviceSettingsSelectiveUpdate,
+  Device_config_settings_ExternalDeviceSettingsSelectiveUpdate,
   DeviceVideoSettingsSelectiveUpdate,
-  Deviceconfig_settings_ExternalDoorControllerSettingsSelectiveUpdate,
+  Device_config_settings_ExternalDoorControllerSettingsSelectiveUpdate,
   DoorReaderSettingsSelectiveUpdate,
   DoorSensorSettingsSelectiveUpdate,
   EnvironmentalGatewaySettingsSelectiveUpdate,
+  RobotSettingsSelectiveUpdate,
   TamperSettingsSelectiveUpdate,
   VideoDoorbellSettingsSelectiveUpdate,
-  Deviceconfig_userconfig_ExternalUpdateableFacetedUserConfig,
+  Device_config_userconfig_ExternalUpdateableFacetedUserConfig,
   Badgereader_UpdateBadgeReaderConfigWSRequest,
   Badgereader_UpdateBadgeReaderDetailsWSRequest,
   BaseApiResponse,
@@ -18947,6 +21033,51 @@ export const schemas = {
   BaseRuleTriggerType,
   BaseSavedScheduleType,
   BatchRegistrationTokenUsageResult,
+  Billing_CreateCheckoutSessionWSRequest,
+  Billing_CreateCheckoutSessionWSResponse,
+  Billing_CreateSubscriptionWSRequest,
+  Billing_CreateSubscriptionWSResponse,
+  Billing_CustomEventsMonthlyBreakdownWSRequest,
+  Billing_CustomEventsMonthlyBreakdownWSResponse_BreakdownElement,
+  Billing_CustomEventsMonthlyBreakdownWSResponse,
+  Billing_DeletePaymentMethodWSRequest,
+  Billing_DeletePaymentMethodWSResponse,
+  Billing_FreeCreditEligibilityWSResponse_FreeCreditInfo,
+  Billing_FreeCreditEligibilityWSResponse,
+  Billing_FreeTrialEligibilityWSResponse,
+  Billing_GetCustomerInformationWSRequest,
+  Billing_GetCustomerInformationWSResponse,
+  Billing_GetInvoicesWSRequest,
+  Billing_GetInvoicesWSResponse_Invoice,
+  Billing_GetInvoicesWSResponse,
+  Billing_GetMetersWSRequest,
+  Billing_GetMetersWSResponse_Meter,
+  Billing_GetMetersWSResponse,
+  Billing_GetPaymentMethodsWSRequest,
+  Billing_GetPaymentMethodsWSResponse_PaymentMethod,
+  Billing_GetPaymentMethodsWSResponse,
+  Billing_GetProductsWSRequest,
+  Billing_GetProductsWSResponse_Price,
+  Billing_GetProductsWSResponse_Product,
+  Billing_GetProductsWSResponse,
+  Billing_GetSubscriptionWSRequest,
+  Billing_GetSubscriptionWSResponse_Subscription,
+  Billing_GetSubscriptionWSResponse,
+  Billing_HistoricalUsageWSRequest,
+  Billing_HistoricalUsageWSResponse,
+  Billing_HistoricalUsageWSResponse_HistoricalUsageElement,
+  Billing_SetDefaultPaymentMethodForSubscriptionWSRequest,
+  Billing_SetDefaultPaymentMethodForSubscriptionWSResponse,
+  Billing_SetDefaultPaymentMethodWSRequest,
+  Billing_SetDefaultPaymentMethodWSResponse,
+  Billing_SetupSubscriptionWSRequest,
+  Billing_SetupSubscriptionWSResponse,
+  Billing_UnsubscribeWSRequest,
+  Billing_UnsubscribeWSResponse,
+  Billing_UpdateCustomerInformationWSRequest,
+  Billing_UpdateCustomerInformationWSResponse,
+  Billing_UpdateSubscriptionMaxSpendWSRequest,
+  Billing_UpdateSubscriptionMaxSpendWSResponse,
   BinaryAggregationValue,
   Ble_BleDeviceMap,
   Ble_BleRegisteredDeviceWSType,
@@ -18994,17 +21125,19 @@ export const schemas = {
   Button_GetMinimalButtonStatesWSResponse,
   Button_GetRulesForButtonWSRequest,
   Button_GetRulesForButtonWSResponse,
-  Deviceconfig_userconfig_IExternalUpdateableButtonUserConfig,
+  Device_config_userconfig_IExternalUpdateableButtonUserConfig,
   Button_UpdateButtonConfigWSRequest,
   Button_UpdateButtonDetailsWSRequest,
   Buyer,
   COSensorType,
   CameraAiDewarpConfigType,
+  ExampleImage,
   RegionCoordinateType,
   RegionPolygonType,
   ScheduledAction,
   CameraConfiguration,
   CameraCrossCountingSettingsType,
+  CameraDewarpModeEnum,
   CameraHumanLoiteringSettingsType,
   CameraMeteringConfigType,
   PermyriadRect,
@@ -19078,8 +21211,8 @@ export const schemas = {
   RegionConfigType,
   RegionOfInterest,
   RegionOfInterestGroup,
-  Deviceconfig_settings_ExternalVideoResolution,
-  Deviceconfig_userconfig_IExternalReadableAudioVideoUserConfig,
+  Device_config_settings_ExternalVideoResolution,
+  Device_config_userconfig_IExternalReadableAudioVideoUserConfig,
   Camera_GetConfigWSResponse,
   Camera_GetCurrentStateWSRequest,
   Camera_GetCurrentStateWSResponse,
@@ -19146,24 +21279,17 @@ export const schemas = {
   Camera_UpdateCameraWSRequest,
   Camera_UpdateCameraWSResponse,
   Camera_UpdateCamerasBulkV2WSRequest,
-  Deviceconfig_userconfig_IExternalUpdateableAudioVideoUserConfig,
+  Device_config_userconfig_IExternalUpdateableAudioVideoUserConfig,
   Camera_UpdateConfigWSRequest,
   Camera_UpdateVideoWallWSRequest,
   Camera_UpdateVideoWallWSResponse,
   Camera_UpdateWifiWSRequest,
   Camera_UpdateWifiWSResponse,
   CancelLoopingAudioPlaybackActionRecordType,
-  EarlyExpireModeEnum,
-  DoorStateOverride,
-  CancelledDoorStateOverride,
+  CancelledAccessStateOverride,
   ChangeType,
-  ChatVisibility,
-  ChatPrivacy,
   ResponseType,
   ChatQueryFilter,
-  QueryStatus,
-  QueryTimelineEvent,
-  QueryTool,
   ChatRecord,
   ChatbotConfig,
   Chatbot_BaseAutomatedPromptWSResponse,
@@ -19186,10 +21312,19 @@ export const schemas = {
   Chatbot_GetChatbotConversationsWSRequest,
   ContextRecord,
   Chatbot_GetChatbotConversationsWSResponse,
+  Chatbot_GetPublicChatRecordWSRequest,
+  Chatbot_GetRemainingTrialCreditsWSRequest,
+  Chatbot_GetRemainingTrialCreditsWSResponse,
   Chatbot_GetSharedChatRecordsWSRequest,
   Chatbot_GetSharedChatRecordsWSResponse,
+  Chatbot_GetTokenUsageHistoryWSRequest,
+  Chatbot_GetTokenUsageHistoryWSResponse,
+  Chatbot_InterruptChatWSRequest,
+  Chatbot_ShareAutomatedPromptResponseWSRequest,
   Chatbot_SubmitChatWSRequest,
   Chatbot_SubmitChatWSResponse,
+  Chatbot_SubmitCreateReportWSRequest,
+  Chatbot_SubmitCreateReportWSResponse,
   Chatbot_SubmitTestPromptWSRequest,
   Chatbot_SubmitTestPromptWSResponse,
   Chatbot_UpdateAutomatedPromptWSRequest,
@@ -19200,6 +21335,21 @@ export const schemas = {
   Chatbot_UpdateChatbotConversationsWSResponse,
   Chatbot_VerifyJobScheduledWSRequest,
   Chatbot_VerifyJobScheduledWSResponse,
+  Chatbot_report_AddAIReportTimelineEventWSRequest,
+  Chatbot_report_BaseAIReportGroupWSResponse,
+  Chatbot_report_BaseAIReportWSResponse,
+  Chatbot_report_CreateReportWSRequest,
+  Chatbot_report_CreateReportWSResponse,
+  Chatbot_report_DeleteAIReportGroupWSRequest,
+  Chatbot_report_DeleteAIReportWSRequest,
+  Chatbot_report_GetAIReportGroupsByOrgWSRequest,
+  Chatbot_report_GetAIReportGroupsByOrgWSResponse,
+  Chatbot_report_GetAIReportWSRequest,
+  Chatbot_report_GetAIReportsByGroupWSRequest,
+  Chatbot_report_GetAIReportsByGroupWSResponse,
+  Chatbot_report_GetAIReportsByOrgWSRequest,
+  Chatbot_report_GetAIReportsByOrgWSResponse,
+  Chatbot_report_UpdateAIReportWSRequest,
   ClaimKeyEntry,
   ClaimKey,
   ClaimKeySearchFilter,
@@ -19231,7 +21381,6 @@ export const schemas = {
   Climate_GetEventsForEnvironmentalGatewayWSRequest,
   ClipSeekPointType,
   ClipSeekPointV2Type,
-  ClipBoundingBoxType,
   ClipMetaDataType,
   E50ClimateEventType,
   Climate_GetEventsForEnvironmentalGatewayWSResponse,
@@ -19314,15 +21463,25 @@ export const schemas = {
   ComponentShadowType,
   Component_AddAccessControlledDoorLabelWSRequest,
   Component_AddAccessControlledDoorLabelWSResponse,
+  Component_AddAccessControlledElevatorLandingLabelWSRequest,
+  Component_AddAccessControlledElevatorLandingLabelWSResponse,
   Component_AggregatedCredentialReceivedEventInfo,
   Component_ApplyAccessControlledDoorStateOverrideWSRequest,
   Component_ApplyAccessControlledDoorStateOverrideWSResponse,
+  Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSRequest,
+  Component_ApplyAccessControlledElevatorLandingAccessStateOverrideWSResponse,
   Component_CancelAccessControlledDoorStateOverrideWSRequest,
   Component_CancelAccessControlledDoorStateOverrideWSResponse,
+  Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSRequest,
+  Component_CancelAccessControlledElevatorLandingAccessStateOverrideWSResponse,
   Component_CreateAccessControlledDoorSeekpointsWSRequest,
   Component_CreateAccessControlledDoorSeekpointsWSResponse,
   Component_CreateAccessControlledDoorWSRequest,
   Component_CreateAccessControlledDoorWSResponse,
+  Component_CreateAccessControlledElevatorLandingWSRequest,
+  Component_CreateAccessControlledElevatorLandingWSResponse,
+  Component_CreateAccessControlledElevatorWSRequest,
+  Component_CreateAccessControlledElevatorWSResponse,
   Component_CreateAperioDoorInfo,
   Component_CreateAperioDoorsWSRequest,
   Component_CreateAperioDoorsWSResponse,
@@ -19348,6 +21507,10 @@ export const schemas = {
   Component_CreateWiegandReaderWSResponse,
   Component_DeleteAccessControlledDoorWSRequest,
   Component_DeleteAccessControlledDoorWSResponse,
+  Component_DeleteAccessControlledElevatorLandingWSRequest,
+  Component_DeleteAccessControlledElevatorLandingWSResponse,
+  Component_DeleteAccessControlledElevatorWSRequest,
+  Component_DeleteAccessControlledElevatorWSResponse,
   Component_DeleteComponentWSRequest,
   Component_DeleteComponentWSResponse,
   Component_DeleteComponentsByOwnerDeviceWSRequest,
@@ -19362,10 +21525,26 @@ export const schemas = {
   Component_FindAccessControlledDoorsByOwnerDeviceWSResponse,
   Component_FindAccessControlledDoorsWSRequest,
   Component_FindAccessControlledDoorsWSResponse,
+  Component_FindAccessControlledElevatorLandingShadowsByLocationWSRequest,
+  Component_FindAccessControlledElevatorLandingShadowsByLocationWSResponse,
+  Component_FindAccessControlledElevatorLandingShadowsWSRequest,
+  Component_FindAccessControlledElevatorLandingShadowsWSResponse,
+  Component_FindAccessControlledElevatorLandingsByLocationWSRequest,
+  Component_FindAccessControlledElevatorLandingsByLocationWSResponse,
+  Component_FindAccessControlledElevatorLandingsWSRequest,
+  Component_FindAccessControlledElevatorLandingsWSResponse,
+  Component_FindAccessControlledElevatorsByLocationWSRequest,
+  Component_FindAccessControlledElevatorsByLocationWSResponse,
+  Component_FindAccessControlledElevatorsByOwnerDeviceWSRequest,
+  Component_FindAccessControlledElevatorsByOwnerDeviceWSResponse,
+  Component_FindAccessControlledElevatorsWSRequest,
+  Component_FindAccessControlledElevatorsWSResponse,
   Component_FindAllComponentShadowsWSRequest,
   Component_FindAllComponentShadowsWSResponse,
   Component_FindComponentEventsByAccessControlledDoorWSRequest,
   Component_FindComponentEventsByAccessControlledDoorWSResponse,
+  Component_FindComponentEventsByAccessControlledElevatorWSRequest,
+  Component_FindComponentEventsByAccessControlledElevatorWSResponse,
   Component_FindComponentEventsByApiTokenWSRequest,
   Component_FindComponentEventsByApiTokenWSResponse,
   Component_FindComponentEventsByComponentWSRequest,
@@ -19419,10 +21598,14 @@ export const schemas = {
   Component_FindMinimalStateAccessControlledDoorsWSResponse,
   Component_GetAccessControlledDoorLabelsForOrgWSRequest,
   Component_GetAccessControlledDoorLabelsForOrgWSResponse,
+  Component_GetAccessControlledElevatorLandingLabelsForOrgWSRequest,
+  Component_GetAccessControlledElevatorLandingLabelsForOrgWSResponse,
   Component_GetCurrentExpectedAccessControlledDoorStateWSRequest,
-  Schedule_AccessControlledDoorStateSourceEnum,
-  Schedule_AccessControlledDoorNextNearestSchedule,
+  Schedule_AccessStatefulComponentCompositeStateSourceEnum,
+  Schedule_AccessStatefulComponentCompositeNextNearestSchedule,
   Component_GetCurrentExpectedAccessControlledDoorStateWSResponse,
+  Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSRequest,
+  Component_GetCurrentExpectedAccessControlledElevatorLandingStateWSResponse,
   Component_GetFullAccessControlledDoorShadowWSRequest,
   Component_GetFullAccessControlledDoorShadowWSResponse,
   Component_GetOrCreateDevicePhysicalPortConfigWSRequest,
@@ -19432,8 +21615,14 @@ export const schemas = {
   Component_GetOrCreateDevicePhysicalPortConfigWSResponse,
   Component_RemoveAccessControlledDoorLabelWSRequest,
   Component_RemoveAccessControlledDoorLabelWSResponse,
+  Component_RemoveAccessControlledElevatorLandingLabelWSRequest,
+  Component_RemoveAccessControlledElevatorLandingLabelWSResponse,
   Component_UpdateAccessControlledDoorWSRequest,
   Component_UpdateAccessControlledDoorWSResponse,
+  Component_UpdateAccessControlledElevatorLandingWSRequest,
+  Component_UpdateAccessControlledElevatorLandingWSResponse,
+  Component_UpdateAccessControlledElevatorWSRequest,
+  Component_UpdateAccessControlledElevatorWSResponse,
   Component_UpdateIntegratedDoorPositionIndicatorWSRequest,
   Component_UpdateIntegratedDoorPositionIndicatorWSResponse,
   Component_UpdateIntegratedDoorRelayWSRequest,
@@ -19539,6 +21728,8 @@ export const schemas = {
   Developer_GetEventListenersForDeviceWSResponse,
   DeviceAssignableLicenseGroupStats,
   DeviceCatalogItem,
+  ReEnableDeviceHealthTrackingCondition,
+  DeviceDisabledHealthTrackingInfo,
   DeviceEventRecordType,
   DeviceFeatureEnum,
   DeviceIntegrationSettings,
@@ -19547,18 +21738,32 @@ export const schemas = {
   DeviceLicenseType,
   DeviceSchedule,
   DeviceTypeV2,
-  Deviceconfig_GetConfigWSRequest,
-  Deviceconfig_GetFacetedUserConfigWSResponse,
-  Deviceconfig_UpdateFacetedUserConfigWSRequest,
-  Deviceconfig_settings_ExternalAudioSettingsSelectiveUpdate,
-  Deviceconfig_settings_ExternalReadableAudioSettings,
-  Deviceconfig_settings_ExternalReadableVideoSettings,
-  Deviceconfig_settings_ExternalVideoSettingsSelectiveUpdate,
-  Deviceconfig_settings_IntRange,
-  Deviceconfig_settings_VideoConfigurationDefault,
-  Deviceconfig_settings_VideoConfigurationOption,
-  Deviceconfig_userconfig_IExternalReadableDoorControllerUserConfig,
-  Deviceconfig_userconfig_IExternalUpdateableDoorControllerUserConfig,
+  Device_config_GetConfigWSRequest,
+  Device_config_GetFacetedUserConfigWSResponse,
+  Device_config_UpdateFacetedUserConfigWSRequest,
+  Device_config_settings_ExternalAudioSettingsSelectiveUpdate,
+  Device_config_settings_ExternalReadableAudioSettings,
+  Device_config_settings_ExternalReadableVideoSettings,
+  Device_config_settings_ExternalVideoSettingsSelectiveUpdate,
+  Device_config_settings_IntRange,
+  Device_config_settings_VideoConfigurationDefault,
+  Device_config_settings_VideoConfigurationOption,
+  Device_config_userconfig_IExternalReadableDoorControllerUserConfig,
+  Device_config_userconfig_IExternalUpdateableDoorControllerUserConfig,
+  Device_health_DisableDeviceHealthTrackingWSRequest,
+  Device_health_DisableDeviceHealthTrackingWSResponse,
+  Device_health_EnableDeviceHealthTrackingWSRequest,
+  Device_health_EnableDeviceHealthTrackingWSResponse,
+  Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSRequest,
+  Device_health_FindDevicesWithDisabledHealthTrackingByOrgWSResponse,
+  Device_health_GetDeviceHealthTrackingWSRequest,
+  Device_health_GetDeviceHealthTrackingWSResponse,
+  Device_label_AddDeviceLabelWSRequest,
+  Device_label_AddDeviceLabelWSResponse,
+  Device_label_FindDeviceLabelsByOrgWSRequest,
+  Device_label_FindDeviceLabelsByOrgWSResponse,
+  Device_label_RemoveDeviceLabelWSRequest,
+  Device_label_RemoveDeviceLabelWSResponse,
   DiagnosticEventType,
   DiceSettings,
   DiceType,
@@ -19637,10 +21842,12 @@ export const schemas = {
   Doorcontroller_UpdateDoorControllerRuleWSRequest,
   Doorcontroller_UpdateDoorControllerRuleWSResponse,
   DropboxSettingsV2,
+  ElevatorLandingReference,
   EmailSettings,
   EmbeddingEncodingType,
   Embedding,
   EmergencyResponseContactsIntervalType,
+  EnableDisableAudioRecordActionRecordType,
   Entity,
   EntityTag,
   EnvoyCustomField,
@@ -19875,6 +22082,14 @@ export const schemas = {
   Feature_GetFeatureCompatabilityMatrixWSResponse,
   Feature_UpdateDeviceFeaturesWSRequest,
   Feature_UpdateDeviceFeaturesWSResponse,
+  Fidoauth_FindLoginCredentialsForCurrentUserWSRequest,
+  RhombusUserFidoCredential,
+  Fidoauth_FindLoginCredentialsForCurrentUserWSResponse,
+  Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSRequest,
+  JsonNode,
+  Fidoauth_InitiateLoginCredentialRegistrationForCurrentUserWSResponse,
+  Fidoauth_RegisterLoginCredentialForCurrentUserWSRequest,
+  Fidoauth_RegisterLoginCredentialForCurrentUserWSResponse,
   FirmwareUpdateIntervalType,
   FirmwareUpdateSettingsType,
   FirmwareUpdateSettingsOverrideType,
@@ -20017,6 +22232,7 @@ export const schemas = {
   ToastType,
   WebhooksType,
   ZapierType,
+  ParPOSType,
   IBaseIntegrationType,
   IBrivoType,
   IButterflyMXType,
@@ -20044,6 +22260,10 @@ export const schemas = {
   IToastType,
   IWebhooksType,
   ImmixSettings,
+  Inference_GetPersonReidentificationEmbeddingFromImageWSResponse,
+  Inference_SegmentWithBoxesWSResponse,
+  Inference_SegmentWithPointsWSResponse,
+  Inference_SegmentWithTextWSResponse,
   InformacastScenario,
   InnerRangeConsoleSettings,
   InnerRangeDoorType,
@@ -20254,14 +22474,8 @@ export const schemas = {
   Integration_aperio_DownloadCertificateWSRequest,
   Integration_aperio_RebootAperioGatewayWSRequest,
   Integration_aperio_RebootAperioGatewayWSResponse,
-  Internal_AccessControlDoorOnlyWSRequest,
-  Internal_AccessControlDoorOnlyWSRequest_AccountData,
-  Internal_AccessControlDoorOnlyWSResponse,
   Internal_AddPartnerAsSuperAdminWSRequest,
   Internal_AddPartnerAsSuperAdminWSResponse,
-  Internal_AlarmMonitoringOnlyWSRequest,
-  Internal_AlarmMonitoringOnlyWSRequest_AccountData,
-  Internal_AlarmMonitoringOnlyWSResponse,
   Internal_CreateCombinedLicensesFromV1WSRequest,
   Internal_CreateCombinedLicensesFromV1WSRequest_AccountData,
   Internal_CreateCombinedLicensesFromV1WSResponse,
@@ -20276,9 +22490,6 @@ export const schemas = {
   Internal_CreateSupportAuthorityWSResponse,
   Internal_DeveloperNewsletterEnrollWSRequest,
   Internal_DeveloperNewsletterEnrollWSResponse,
-  Internal_EntDevicesOnlyWSRequest,
-  Internal_EntDevicesOnlyWSRequest_AccountData,
-  Internal_EntDevicesOnlyWSResponse,
   Internal_GetSuperAdminGroupUUIDWSRequest,
   Internal_GetSuperAdminGroupUUIDWSResponse,
   Internal_GetWarrantyApprovedRMAsWSRequest,
@@ -20296,9 +22507,8 @@ export const schemas = {
   Internal_ListOrgsWSResponse,
   Internal_ParentLifetimeSpendWSRequest,
   Internal_ParentLifetimeSpendWSResponse,
-  Internal_ProDevicesOnlyWSRequest,
-  Internal_ProDevicesOnlyWSRequest_AccountData,
-  Internal_ProDevicesOnlyWSResponse,
+  Internal_RemediateMissingFirstAssignedDatesWSRequest,
+  Internal_RemediateMissingFirstAssignedDatesWSResponse,
   Internal_RequestHardwareForDevelopmentWSRequest,
   Internal_RequestHardwareForDevelopmentWSResponse,
   Internal_SendShipmentShippedEmailWSRequest,
@@ -20308,6 +22518,7 @@ export const schemas = {
   Internal_VerifyCanMigrateOrgFromV1WSResponse,
   LicenseInvoiceSubItem,
   InvoiceType,
+  Invoice_InvoiceChargeV2WSRequest,
   Invoice_InvoiceChargeWSRequest,
   Invoice_InvoiceChargeWSResponse,
   Invoice_InvoiceV1LineItemType,
@@ -20320,6 +22531,7 @@ export const schemas = {
   Invoice_InvoiceDetailsWSRequest,
   Invoice_InvoiceDetailsWSResponse,
   KeypadCommand,
+  QualifiedAddressType,
   KeypadConfigType,
   Keypad_AuthenticatePinRequest,
   Keypad_AuthenticatePinResponse,
@@ -20357,6 +22569,7 @@ export const schemas = {
   Kiosk_UpdateKioskResponse,
   Kiosk_UpdateKioskSelectiveRequest,
   LabelIdentificationActivityEventType,
+  LastSeenInfo,
   LicenseGroupStats,
   LicenseUsageCatalogItem,
   LicenseUsageStats,
@@ -20461,6 +22674,10 @@ export const schemas = {
   Location_SelectiveUpdateLocationWSResponse,
   Location_UpdateLocationWSRequest,
   Location_UpdateLocationWSResponse,
+  Location_ValidateAndUpdateLocationAddressWSRequest,
+  Location_ValidateAndUpdateLocationAddressWSResponse,
+  Location_ValidateLocationAddressV2WSRequest,
+  Location_ValidateLocationAddressV2WSResponse,
   Location_ValidateLocationWSRequest,
   Location_ValidateLocationWSResponse,
   LockdownActivatedStateEventType,
@@ -20483,6 +22700,9 @@ export const schemas = {
   MicrosoftTeamsChannelSettings,
   MicrosoftTeamsUserSettings,
   MinimalNVRStateType,
+  Quaternion,
+  Point,
+  MinimalRobotStateType,
   MinimalThresholdEventType,
   Mobile_LoginToOrg2FARequiredResponse,
   Mobile_LoginToOrgSuccessResponse,
@@ -20563,6 +22783,7 @@ export const schemas = {
   OpentechAllianceFacilitySettings,
   OperationStatus,
   OrgLockdownPlanType,
+  RhombusSamlDomainEnum,
   OrgSamlSettingsType,
   RBACSettingsType,
   SAMLSettingsType,
@@ -20589,6 +22810,7 @@ export const schemas = {
   Org_FindIfTeamNameAvailableRequest,
   Org_FindIfTeamNameAvailableResponse,
   Org_FindSCIMSettingsForOrgWSRequest,
+  SCIMRolesFormatEnum,
   SCIMSettingsType,
   Org_FindSCIMSettingsForOrgWSResponse,
   Org_GenerateFederatedSessionTokenRequest,
@@ -20906,6 +23128,8 @@ export const schemas = {
   Relay_AuthenticateThirdPartyCameraWSResponse,
   Relay_CreateThirdPartyCameraPasswordWSRequest,
   Relay_CreateThirdPartyCameraPasswordWSResponse,
+  Relay_DeleteThirdPartyCameraDiscoveryWSRequest,
+  Relay_DeleteThirdPartyCameraDiscoveryWSResponse,
   Relay_DeleteThirdPartyCameraPasswordWSRequest,
   Relay_DeleteThirdPartyCameraPasswordWSResponse,
   Relay_ExternalRtspEndpoint,
@@ -20955,6 +23179,8 @@ export const schemas = {
   Relay_UpdateNVRVWSResponse,
   RenewalClaimKey,
   Report_AuditEventWeb,
+  Report_GetAuditFeedForPrincipalWSRequest,
+  Report_GetAuditFeedForPrincipalWSResponse,
   Report_GetAuditFeedForTargetWSRequest,
   Report_GetAuditFeedForTargetWSResponse,
   Report_GetAuditFeedWSRequest,
@@ -20963,6 +23189,7 @@ export const schemas = {
   Report_GetAverageReportWSResponse,
   Report_GetAverageReportsWSRequest,
   Report_GetAverageReportsWSResponse,
+  Report_GetBatchThresholdCrossingCountReportWSRequest,
   Report_GetCountReportV2WSRequest,
   Report_GetCountReportWSRequest,
   TimeSeriesDataPointV2Type,
@@ -20997,6 +23224,7 @@ export const schemas = {
   Report_GetSummaryCountReportWSRequest,
   SummaryCountTimeSeriesDataPointType,
   Report_GetSummaryCountReportWSResponse,
+  Report_GetThresholdCrossingCountReportForOrgWSRequest,
   Report_GetThresholdCrossingCountReportWSRequest,
   Report_GetThresholdCrossingCountReportWSResponse,
   Report_GetThresholdCrossingCountsWSRequest,
@@ -21013,6 +23241,22 @@ export const schemas = {
   ResponseEntity,
   ResponseEntityString,
   RhombusOrgUserType,
+  Robot_DeleteRobotWSRequest,
+  Robot_DeleteRobotWSResponse,
+  Robot_DeployRobotWSRequest,
+  Robot_DeployRobotWSResponse,
+  Robot_GetRobotConfigWSResponse,
+  Robot_RobotFullDeviceStateType,
+  Robot_GetRobotFullStateWSResponse,
+  Robot_GetRobotMapImageWSRequest,
+  Robot_GetRobotMapMetaRequest,
+  Robot_GetRobotMapMetaResponse_Origin,
+  Robot_GetRobotMapMetaResponse,
+  Robot_GetRobotMediaUrisWSResponse,
+  Robot_GetRobotMinimalStateListWSResponse,
+  Robot_UpdateRobotConfigWSRequest,
+  Robot_UpdateRobotConfigWSResponse,
+  Robot_UpdateRobotDetailsWSRequest,
   RuleLockdownEventOriginator,
   ScheduledEventRecordType,
   TriggerComponentRelayActionRecordType,
@@ -21041,6 +23285,8 @@ export const schemas = {
   Rules_records_GetRulesEventRecordsWSResponse,
   Rules_records_GetRulesFilteredWSRequest,
   SalesforceLicenseStartDateTimeAndEndDateTime,
+  Scenequery_AdHocPromptWSRequest,
+  Scenequery_AdHocPromptWSResponse,
   Scenequery_CreatePromptConfigurationWSRequest,
   Scenequery_CreatePromptConfigurationWSResponse,
   Scenequery_DeletePromptConfigurationWSRequest,
@@ -21081,11 +23327,15 @@ export const schemas = {
   Search_DeleteVideoEmbeddingWSResponse,
   Search_IndexVideoEmbeddingWSRequest,
   Search_IndexVideoEmbeddingWSResponse,
+  Search_ListReidentificationEmbeddingsWSRequest,
+  Search_ListReidentificationEmbeddingsWSResponse,
   Search_SearchLicensePlatesWSRequest,
   VehicleEventSearchHitType,
   Search_SearchLicensePlatesWSResponse,
   Search_SearchObjectsByColorWSRequest,
   Search_SearchObjectsByColorWSResponse,
+  Search_SearchReidentificationMatchesByEmbeddingWSRequest,
+  Search_SearchReidentificationMatchesByEmbeddingWSResponse,
   Search_SearchSimilarObjectEmbeddingsByTextWSRequest,
   Search_SearchSimilarObjectEmbeddingsByVectorWSRequest,
   Search_SearchSimilarObjectEmbeddingsWSRequest,
@@ -21162,6 +23412,7 @@ export const schemas = {
   TimelapseClipType,
   ToastRestaurantInfo,
   ToastRestaurantSettings,
+  TokenUsageStats,
   TriggerContent,
   TvOsConfigType,
   Tvos_GetTvOsConfigWsRequest,
@@ -21193,8 +23444,6 @@ export const schemas = {
   User_FindUserByEmailWSResponse,
   User_FindUserWSRequest,
   User_FindUserWSResponse,
-  User_GetBulkProvisionCredentialsFormatWSResponse,
-  User_GetImportUsersFormatWSResponse,
   User_GetRhombusKeyConfigForUserWSRequest,
   User_GetRhombusKeyConfigForUserWSResponse,
   User_GetUserCustomizationFlagsWSRequest,
@@ -21313,6 +23562,8 @@ export const schemas = {
   Video_UpdateTimelapseClipMetadataWSResponse,
   WebhookInfo,
   WebhookMapEntry,
+  Wiegand35BitCorp1000Credential,
+  Wiegand48BitCorp1000Credential,
   ZapierWebhookSettings
 };
 

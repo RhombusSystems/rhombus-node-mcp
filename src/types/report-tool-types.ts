@@ -532,7 +532,7 @@ export const OUTPUT_SCHEMA = z.object({
 							name: z.optional(z.string()),
 							orgUuid: z.optional(z.string()),
 							prompt: z.optional(z.string()),
-							promptType: z.optional(z.enum(["COUNT", "PERCENT", "BOOLEAN"])),
+							promptType: z.optional(z.enum(["COUNT", "PERCENT", "BOOLEAN", "TEXT"])),
 							scheduleUuid: z.optional(z.string()),
 							shortName: z.optional(z.string()),
 							uuid: z.optional(z.string()),
