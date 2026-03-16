@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createUuidSchema } from "../types.js";
 import { TempUnit } from "../utils/temp.js";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export const TOOL_ARGS = {
   deviceUuids: z.array(createUuidSchema()).describe("The UUIDs of the devices to look up."),

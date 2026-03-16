@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum GuestManagementRequestType {
   GET_ALL_GUESTS = "get-all-guests",
@@ -22,6 +23,8 @@ export const TOOL_ARGS = {
     .number()
     .nullable()
     .describe("End time filter in milliseconds since epoch. Optional for activity queries."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;

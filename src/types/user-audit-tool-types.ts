@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum UserAuditRequestType {
   AUDIT_BY_USER = "audit-by-user",
@@ -21,6 +22,8 @@ export const TOOL_ARGS = {
     .number()
     .nullable()
     .describe("Maximum number of audit events to return. Defaults to 50."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;

@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "./logger.js";
+import { createFilteringProxy } from "./util.js";
 import getResources from "./resources/getResources.js";
 import getTools from "./tools/getTools.js";
 
@@ -48,9 +49,11 @@ export default async function createServer() {
   }
   logger.info(`🛠️ Registered ${resources.length} resources`);
 
+  const filteredServer = createFilteringProxy(server);
+
   for (const tool of tools) {
     try {
-      await tool.create(server);
+      await tool.create(filteredServer);
     } catch (error) {
       logger.error(`Failed to register tool ${tool.name}:`, error);
       // Continue with other tools instead of failing completely

@@ -26,7 +26,7 @@ is recognized by a rhombus security camera, it will attach the label to the even
 
 You should use the location-tool if trying to pair vehicle events to a particular location.  Never use location UUIDs in reports, use names.
 
-As such, if the user is asking anything about a label or labels it would be best practice to first call ${LprToolRequestType.GET_VEHICLE_LABELS} and then ${LprToolRequestType.GET_VEHICLE_EVENTS} 
+As such, if the user is asking anything about a label or labels it would be best practice to first call ${LprToolRequestType.GET_VEHICLE_LABELS} and then ${LprToolRequestType.GET_VEHICLE_EVENTS}
 or ${LprToolRequestType.GET_VEHICLE_EVENTS}.
 
 This tool has 3 modes of operation, determined by the "requestType" parameter:
@@ -63,21 +63,15 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
           sessionId
         );
 
-        return createToolStructuredContent<OUTPUT_SCHEMA>({
-          vehicleEvents,
-        });
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ vehicleEvents });
       }
       case LprToolRequestType.GET_SAVED_VEHICLES: {
         const savedVehicles = await getSavedVehicles(args.timeZone, requestModifiers, sessionId);
-        return createToolStructuredContent<OUTPUT_SCHEMA>({
-          savedVehicles,
-        });
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ savedVehicles });
       }
       case LprToolRequestType.GET_VEHICLE_LABELS: {
         const vehicleLabels = await getVehicleLabels(requestModifiers, sessionId);
-        return createToolStructuredContent<OUTPUT_SCHEMA>({
-          vehicleLabels,
-        });
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ vehicleLabels });
       }
       case LprToolRequestType.SEARCH_LICENSE_PLATES: {
         if (!args.licensePlateQuery) {
@@ -86,9 +80,7 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
           });
         }
         const results = await searchLicensePlates(args.licensePlateQuery, args.timeZone, requestModifiers, sessionId);
-        return createToolStructuredContent<OUTPUT_SCHEMA>({
-          licensePlateSearchResults: results,
-        });
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ licensePlateSearchResults: results });
       }
       case LprToolRequestType.SAVE_VEHICLE: {
         if (!args.vehicleName || !args.vehicleLicensePlate) {
@@ -97,25 +89,17 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
           });
         }
         const result = await saveVehicle(args.vehicleName, args.vehicleLicensePlate, args.vehicleDescription ?? undefined, requestModifiers, sessionId);
-        return createToolStructuredContent<OUTPUT_SCHEMA>({
-          saveVehicleResult: result,
-        });
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ saveVehicleResult: result });
       }
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        error: error.message,
-      });
+      return createToolStructuredContent<OUTPUT_SCHEMA>({ error: error.message });
     }
-    return createToolStructuredContent<OUTPUT_SCHEMA>({
-      error: "Unknown error",
-    });
+    return createToolStructuredContent<OUTPUT_SCHEMA>({ error: "Unknown error" });
   }
 
-  return createToolStructuredContent({
-    error: "Invalid request type",
-  });
+  return createToolStructuredContent({ error: "Invalid request type" });
 };
 
 export function createTool(server: McpServer) {

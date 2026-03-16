@@ -105,6 +105,7 @@ Arguments:
   * **cameraUuid (string):** UUID of the camera.
   * **startTime (string):** Start of range (ISO 8601).
   * **duration (number):** Search window in seconds. Default 3600 (1 hour).
+
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
@@ -133,11 +134,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   switch (eventType) {
     case "access-control": {
       if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
-        const result = {
+        return createToolStructuredContent({
           needUserInput: true,
           commandForUser: "Which door are you asking about?",
-        };
-        return createToolStructuredContent(result);
+        });
       } else {
         const events = await getAccessControlEvents(
           accessControlledDoorUuids,
@@ -147,22 +147,15 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        const result = {
-          eventType: "access-control",
-          accessControlEvents: events,
-        };
-
-        return createToolStructuredContent(result);
+        return createToolStructuredContent({ eventType: "access-control", accessControlEvents: events });
       }
     }
     case "environmental-gateway": {
       if (!deviceUuid) {
-        const result = {
+        return createToolStructuredContent({
           needUserInput: true,
           commandForUser: "Which environmental gateway device are you asking about?",
-        };
-
-        return createToolStructuredContent(result);
+        });
       } else {
         const events = await getEventsForEnvironmentalGateway(
           deviceUuid,
@@ -173,22 +166,17 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        const result = {
-          eventType: "environmental-gateway",
-          environmentalGatewayEvents: events,
-        } as OUTPUT_SCHEMA;
-
-        return createToolStructuredContent<OUTPUT_SCHEMA>(result);
+        return createToolStructuredContent<OUTPUT_SCHEMA>(
+          { eventType: "environmental-gateway", environmentalGatewayEvents: events } as OUTPUT_SCHEMA
+        );
       }
     }
     case "climate-sensor": {
       if (!sensorUuid) {
-        const result = {
+        return createToolStructuredContent({
           needUserInput: true,
           commandForUser: "Which climate sensor are you asking about?",
-        };
-
-        return createToolStructuredContent(result);
+        });
       } else {
         const events = await getClimateEventsForSensor(
           sensorUuid,
@@ -200,22 +188,15 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        const result = {
-          eventType: "climate-sensor",
-          climateSensorEvents: events,
-        };
-
-        return createToolStructuredContent(result);
+        return createToolStructuredContent({ eventType: "climate-sensor", climateSensorEvents: events });
       }
     }
     case "component-events": {
       if (!locationUuid) {
-        const result = {
+        return createToolStructuredContent({
           needUserInput: true,
           commandForUser: "Which location are you asking about?",
-        };
-
-        return createToolStructuredContent(result);
+        });
       } else {
         const events = await getComponentEventsByLocation(
           locationUuid,
@@ -226,34 +207,26 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        const result = {
-          eventType: "component-events",
-          componentEvents: events,
-        };
-        return createToolStructuredContent(result);
+        return createToolStructuredContent({ eventType: "component-events", componentEvents: events });
       }
     }
     case EventsToolRequestType.CAMERA: {
       if (!cameraUuid) {
-        const result = {
+        return createToolStructuredContent({
           needUserInput: true,
           commandForUser: "Which camera are you asking about?",
-        };
-
-        return createToolStructuredContent(result);
+        });
       } else {
         const events = await getHumanMotionEvents(
           cameraUuid,
-          duration ?? 3600, // Default to 1 hour if not provided
-          startTime ? new Date(startTime).getTime() : Date.now() - 3600000, // Default to 1 hour ago if not provided
+          duration ?? 3600,
+          startTime ? new Date(startTime).getTime() : Date.now() - 3600000,
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-
-        return createToolStructuredContent<OUTPUT_SCHEMA>({
-          eventType: "camera",
-          cameraEvents: events.uniqueHumanEvents,
-        });
+        return createToolStructuredContent<OUTPUT_SCHEMA>(
+          { eventType: "camera", cameraEvents: events.uniqueHumanEvents }
+        );
       }
     }
     case EventsToolRequestType.BUTTON_PRESS: {
@@ -272,10 +245,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        eventType: "button-press",
-        buttonPressEvents: buttonEvents,
-      });
+      return createToolStructuredContent<OUTPUT_SCHEMA>({ eventType: "button-press", buttonPressEvents: buttonEvents });
     }
     case EventsToolRequestType.OCCUPANCY: {
       const occSensorUuid = args.occupancySensorUuid;
@@ -293,10 +263,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        eventType: "occupancy",
-        occupancyEvents: occupancyEvts,
-      });
+      return createToolStructuredContent<OUTPUT_SCHEMA>({ eventType: "occupancy", occupancyEvents: occupancyEvts });
     }
     case EventsToolRequestType.PROXIMITY: {
       const tagUuids = args.proximityTagUuids;
@@ -314,10 +281,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        eventType: "proximity",
-        proximityEvents: proxEvents,
-      });
+      return createToolStructuredContent<OUTPUT_SCHEMA>({ eventType: "proximity", proximityEvents: proxEvents });
     }
     case EventsToolRequestType.DOORBELL: {
       const dbCamUuid = args.doorbellCameraUuid;
@@ -335,10 +299,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra._meta?.requestModifiers as RequestModifiers,
         extra.sessionId
       );
-      return createToolStructuredContent<OUTPUT_SCHEMA>({
-        eventType: "doorbell",
-        doorbellEvents: doorbellEvts,
-      });
+      return createToolStructuredContent<OUTPUT_SCHEMA>({ eventType: "doorbell", doorbellEvents: doorbellEvts });
     }
   }
 
