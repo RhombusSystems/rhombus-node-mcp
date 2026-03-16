@@ -5,7 +5,7 @@ import type {
   VehicleEventsArgs,
   VehicleLabels,
 } from "../types/lpr-tool-types.js";
-import schema from "../types/schema.js";
+import { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 export async function getVehicleEvents(

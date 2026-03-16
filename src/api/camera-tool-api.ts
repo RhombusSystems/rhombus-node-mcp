@@ -7,7 +7,7 @@ import type {
   PresenceWindowsResponse,
   TimeWindowSeconds,
 } from "../types/camera-tool-types.js";
-import type schema from "../types/schema.js";
+import type { schema } from "../types/schema.js";
 import { removeNullFields, type RequestModifiers } from "../util.js";
 
 const logger = getLogger("camera-tool");
