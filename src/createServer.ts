@@ -49,7 +49,7 @@ export default async function createServer() {
   }
   logger.info(`🛠️ Registered ${resources.length} resources`);
 
-  const filteredServer = createFilteringProxy(server);
+  const filteredServer = createFilteringProxy(server, new Set(["time-tool", "count-tool", "time-conversion-tool"]));
 
   for (const tool of tools) {
     try {
