@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createUuidSchema } from "../types.js";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum AccessControlRequestType {
   UNLOCK_DOOR = "unlock-door",
@@ -31,6 +32,8 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe("The UUID of the lockdown plan. Required for 'activate-lockdown' and 'deactivate-lockdown'."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;

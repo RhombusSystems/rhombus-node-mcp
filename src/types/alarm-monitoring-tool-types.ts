@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum AlarmMonitoringRequestType {
   ORG_STATUS = "org-status",
@@ -26,6 +27,8 @@ export const TOOL_ARGS = {
     .number()
     .nullable()
     .describe("Maximum number of threat cases to return. Optional for 'get-threat-cases'."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;

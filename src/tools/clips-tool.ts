@@ -55,6 +55,7 @@ The tool returns a JSON object with the following structure and important fields
     * **sourceAlertUuid (string | null):** The UUID of the alert that triggered the creation of this clip, if any.
 * **sharedLiveVideoStreams (array):** When requestType is sharedLiveStreams, list of shared live video stream objects.
 * **timelapseClips (array):** When requestType is timelapseClips, list of timelapse clip objects.
+
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
@@ -62,11 +63,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 
 	const payload = ApiPayloadSchema.parse(args);
 	switch (args.requestType) {
-		case "saved": {
+		case "saved":
 			return createToolStructuredContent<OutputSchema>(
 				await getSavedClips(payload, requestModifiers, sessionId),
 			);
-		}
 		case "expiringSoon":
 			return createToolStructuredContent<OutputSchema>(
 				await getExpiringClips(payload, requestModifiers, sessionId),
@@ -111,9 +111,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 		}
 	}
 
-	return createToolStructuredContent<OutputSchema>({
-		error: "Invalid requestType",
-	});
+	return createToolStructuredContent<OutputSchema>({ error: "Invalid requestType" });
 };
 
 export function createTool(server: McpServer) {

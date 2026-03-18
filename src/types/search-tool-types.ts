@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createUuidSchema } from "../types.js";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum SearchToolRequestType {
   LICENSE_PLATE = "license-plate",
@@ -41,6 +42,8 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe("The timezone for formatting timestamps."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;

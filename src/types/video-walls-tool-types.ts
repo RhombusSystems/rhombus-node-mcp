@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export const VideoWallSettings = z.object({
   numVisibleDevicesAtOnce: z.number().nullable().describe(
@@ -42,6 +43,8 @@ export const TOOL_ARGS = {
 		.enum(["list", "create"])
 		.describe("The type of request to make."),
 	videoWallCreateOptions: CreateVideoWallOptions,
+	includeFields: INCLUDE_FIELDS_ARG,
+	filterBy: FILTER_BY_ARG,
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);

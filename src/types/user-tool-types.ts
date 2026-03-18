@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum UserToolRequestType {
   LIST_USERS = "list-users",
@@ -13,6 +14,8 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe("The email address of the user to find. Required for 'find-by-email'."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;

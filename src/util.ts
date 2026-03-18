@@ -3,6 +3,9 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 import { DateTime } from "luxon";
+import { filterIncludedFields, applyFilterBy, type FilterCondition } from "./filtering-utils.js";
+
+export { INCLUDE_FIELDS_ARG, FILTER_BY_ARG, FilterCondition, filterIncludedFields, applyFilterBy, zodToDotNotationPaths, createFilteringProxy } from "./filtering-utils.js";
 
 export function generateRandomString(length: number): string {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -37,6 +40,11 @@ export function extractFromToolExtra(_extra: unknown) {
   };
 }
 
+
+// ---------------------------------------------------------------------------
+// File utilities
+// ---------------------------------------------------------------------------
+
 /**
  * Get all file paths in a directory in a directory
  *
@@ -67,6 +75,10 @@ export function getFilePathsInDirectory(dirPath: string): string[] {
   return filePaths;
 }
 
+// ---------------------------------------------------------------------------
+// Tool content helpers
+// ---------------------------------------------------------------------------
+
 /**
  * Returns an object in the form expected by `server.tool`
  */
@@ -82,22 +94,44 @@ export function createToolTextContent(content: string): CallToolResult {
 }
 
 /**
- * Returns strucutred content expected by `server.tool`
- * The generic type T allows for type safety. Set T to the output schema of the tool, and your content will be type checked
+ * Returns structured content expected by `server.tool`.
+ * Optionally applies programmatic field projection (includeFields) and
+ * row filtering (filterBy) before serialising.
+ *
+ * The generic type T allows for type safety. Set T to the output schema of the
+ * tool and your content will be type-checked.
+ *
+ * filterBy is applied first (prune rows), then includeFields (prune columns),
+ * which minimises output size optimally.
  */
 export function createToolStructuredContent<
   T extends { [key: string]: unknown } = { [key: string]: unknown },
->(content: T): CallToolResult {
+>(
+  content: T,
+  opts?: { includeFields?: string[] | null; filterBy?: FilterCondition[] | null }
+): CallToolResult {
+  // biome-ignore lint/suspicious/noExplicitAny: intentional runtime manipulation
+  let result: any = content;
+  if (opts?.filterBy?.length) {
+    result = applyFilterBy(result, opts.filterBy) ?? result;
+  }
+  if (opts?.includeFields?.length) {
+    result = filterIncludedFields(result, opts.includeFields) ?? result;
+  }
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(content),
+        text: JSON.stringify(result),
       },
     ],
-    structuredContent: content,
+    structuredContent: result,
   };
 }
+
+// ---------------------------------------------------------------------------
+// removeNullFields
+// ---------------------------------------------------------------------------
 
 /**
  * Recursively removes fields with null values from a JavaScript object.
@@ -149,58 +183,10 @@ export function removeNullFields(obj: unknown): object | unknown[] | undefined {
   return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
 }
 
-export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
-  if (!fieldsToInclude || fieldsToInclude.length === 0) {
-    return obj;
-  }
+// ---------------------------------------------------------------------------
+// formatTimestamp
+// ---------------------------------------------------------------------------
 
-  if (Array.isArray(obj)) {
-    return obj
-      .map(item => filterIncludedFields(item, fieldsToInclude))
-      .filter(item => {
-        if (item === undefined || item === null) {
-          return false;
-        }
-        if (Array.isArray(item)) {
-          return item.length > 0;
-        }
-        if (typeof item === "object") {
-          return Object.keys(item).length > 0;
-        }
-        // Keep primitives
-        return true;
-      });
-  }
-
-  if (typeof obj === "object" && obj !== null) {
-    const newObj: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        if (fieldsToInclude.includes(key)) {
-          newObj[key] = obj[key];
-        } else {
-          const result = filterIncludedFields(obj[key], fieldsToInclude);
-          if (result !== undefined && result !== null) {
-            if (Array.isArray(result)) {
-              if (result.length > 0) {
-                newObj[key] = result;
-              }
-            } else if (typeof result === "object") {
-              if (Object.keys(result).length > 0) {
-                newObj[key] = result;
-              }
-            } else {
-              newObj[key] = result;
-            }
-          }
-        }
-      }
-    }
-    return Object.keys(newObj).length > 0 ? newObj : undefined;
-  }
-
-  return undefined;
-}
 /**
  * Formats a timestamp in milliseconds to a human-readable date string
  * Format: "February 24, 2025 at 3:23 PM"
@@ -216,3 +202,4 @@ export function formatTimestamp(timestampMs: number, timeZone?: string): string 
       locale: "en-US",
     });
 }
+

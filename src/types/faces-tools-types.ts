@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 import { createUuidSchema } from "../types.js";
+import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export enum RequestType {
   GET_FACE_EVENTS = "get-face-events",
@@ -123,6 +124,8 @@ export const TOOL_ARGS = {
     ),
   faceEventUuid: z.string().nullable().describe("UUID of a face event to search similar faces from. Required for 'search-similar-faces'."),
   personUuid: z.string().nullable().describe("UUID of a person to get face events for. Required for 'get-face-events-by-person'."),
+  includeFields: INCLUDE_FIELDS_ARG,
+  filterBy: FILTER_BY_ARG,
 };
 
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
