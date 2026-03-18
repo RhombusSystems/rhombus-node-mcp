@@ -80,6 +80,9 @@ export type FilterCondition = {
   value: string | number | boolean;
 };
 
+/** These keys will always be included in processed output schemas */
+const INCLUDE_WHITELIST = ["requestType"];
+
 // ---------------------------------------------------------------------------
 // File utilities
 // ---------------------------------------------------------------------------
@@ -472,6 +475,11 @@ function applyFilteringToResult(
   filterBy?: FilterCondition[] | null
 ): CallToolResult {
   if (!includeFields?.length && !filterBy?.length) return result;
+
+  // include white-listed fields
+  includeFields = includeFields?.length
+    ? [...INCLUDE_WHITELIST, ...includeFields]
+    : includeFields;
 
   const filteredContent = result.content.map((item) => {
     if (item.type !== "text") return item;

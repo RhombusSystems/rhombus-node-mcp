@@ -32,7 +32,7 @@ export const CameraVideoSettings = z.object({
     .optional()
     .describe("Video resolution (width x height)"),
   wdr_enabled: z.boolean().optional().describe("Enable Wide Dynamic Range"),
-  wdr_strength: z.number().min(0).max(128).optional().describe("WDR strength (0 to 128)"),
+  wdr_strength: z.number().min(0).max(128).optional().describe("WDR strength (0 minimum to 128 maximum)"),
   video_persist_disabled: z.boolean().optional().describe("Disable video persistence"),
   zero_motion_video_bitrate_percent: z
     .number()
