@@ -10,11 +10,11 @@
   ],
   "homepage": "https://modelcontextprotocol.io",
   "bugs": {
-    "url": "https://github.com/modelcontextprotocol/servers/issues"
+    "url": "https://github.com/RhombusSystems/rhombus-node-mcp/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/modelcontextprotocol/servers.git"
+    "url": "git+https://github.com/RhombusSystems/rhombus-node-mcp.git"
   },
   "license": "MIT",
   "author": "Model Context Protocol (https://modelcontextprotocol.io)",
