@@ -315,7 +315,7 @@ export const SanitizedTimeSeriesDataPoint = z.object({
 	dateUtcString: z
 		.optional(z.string())
 		.describe("The UTC date of the data point in ISO 8601 format"),
-	eventCountMap: z.optional(z.record(z.any())),
+	eventCountMap: z.optional(z.record(z.string(), z.any())),
 });
 export type SanitizedTimeSeriesDataPoint = z.infer<
 	typeof SanitizedTimeSeriesDataPoint
@@ -368,12 +368,16 @@ export const OUTPUT_SCHEMA = z.object({
 				timeSeriesDataPoints: z.optional(
 					z.array(
 						z.object({
-							approximateTimestampMsMap: z.optional(z.record(z.unknown())),
+							approximateTimestampMsMap: z.optional(
+								z.record(z.string(), z.unknown()),
+							),
 							dateLocal: z.optional(z.string()),
 							dateUtc: z.optional(z.string()),
 							dateLocalString: z.optional(z.string()),
 							dateUtcString: z.optional(z.string()),
-							eventCountMap: z.optional(z.record(z.unknown())),
+							eventCountMap: z.optional(
+								z.record(z.string(), z.unknown()),
+							),
 							timestampMs: z.optional(z.number()),
 						}),
 					),
@@ -409,7 +413,9 @@ export const OUTPUT_SCHEMA = z.object({
 							name: z.optional(z.string()),
 							serialNumber: z.optional(z.string()),
 							locationUuid: z.optional(z.string()),
-							facetNameMap: z.optional(z.record(z.string().nullable())),
+							facetNameMap: z.optional(
+								z.record(z.string(), z.string().nullable()),
+							),
 							deleted: z.optional(z.boolean()),
 							pending: z.optional(z.boolean()),
 							mummified: z.optional(z.boolean()),
@@ -425,7 +431,7 @@ export const OUTPUT_SCHEMA = z.object({
 			z.object({
 				error: z.optional(z.boolean()),
 				errorMsg: z.optional(z.string()),
-				camerasToConfigs: z.optional(z.record(z.unknown())),
+				camerasToConfigs: z.optional(z.record(z.string(), z.unknown())),
 			}),
 		)
 		.nullable()
@@ -554,7 +560,10 @@ export const OUTPUT_SCHEMA = z.object({
 							dateLocal: z.optional(z.string()),
 							dateUtc: z.optional(z.string()),
 							eventCountMap: z.optional(
-								z.record(z.union([z.number(), z.boolean(), z.string()])),
+								z.record(
+									z.string(),
+									z.union([z.number(), z.boolean(), z.string()]),
+								),
 							),
 						}),
 					),
@@ -635,7 +644,9 @@ export const OUTPUT_SCHEMA = z.object({
 						z.object({
 							dateLocal: z.optional(z.string()),
 							dateUtc: z.optional(z.string()),
-							eventCountMap: z.optional(z.record(z.any())),
+							eventCountMap: z.optional(
+								z.record(z.string(), z.any()),
+							),
 						}),
 					),
 				),

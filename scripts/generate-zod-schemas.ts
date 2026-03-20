@@ -107,7 +107,14 @@ class ZodSchemaGenerator {
 
           return `z.object({\n${properties.join(",\n")}\n})`;
         }
-        return "z.record(z.unknown())";
+        if (schema.additionalProperties) {
+          const additionalType =
+            schema.additionalProperties === true
+              ? "z.unknown()"
+              : this.convertType(schema.additionalProperties, undefined, currentPath);
+          return `z.record(z.string(), ${additionalType})`;
+        }
+        return "z.record(z.string(), z.unknown())";
 
       default:
         // Handle enum
@@ -444,30 +451,14 @@ class ZodSchemaGenerator {
     console.log("Generating Zod schemas...");
 
     const imports = [
-      'import { makeApi, Zodios, type ZodiosOptions } from "@zodios/core";',
       'import { z } from "zod";',
       "",
     ];
 
     const componentSchemas = this.generateComponentSchemas();
-    const endpoints = this.generateEndpoints();
-
     const schemaExports = Array.from(this.generatedSchemas)
       .map(name => `  ${name}`)
       .join(",\n");
-
-    const exports = [
-      "",
-      "export const schemas = {",
-      schemaExports,
-      "};",
-      "",
-      "export const api = new Zodios(endpoints);",
-      "",
-      "export function createApiClient(baseUrl: string, options?: ZodiosOptions) {",
-      "  return new Zodios(baseUrl, endpoints, options);",
-      "}",
-    ];
 
     return [
       ...imports,

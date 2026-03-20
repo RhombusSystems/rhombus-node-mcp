@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { getLogger } from "../logger.js";
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import type { OutputSchema, SanitizedTimeSeriesDataPoint } from "../types/report-tool-types.js";
 import type { schema } from "../types/schema.js";
 import { ReportTypeEnum } from "../types/schema.js";

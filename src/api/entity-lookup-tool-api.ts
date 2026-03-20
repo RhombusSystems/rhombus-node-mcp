@@ -1,4 +1,4 @@
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import type { RequestModifiers } from "../util.js";
 import type { TempUnit } from "../utils/temp.js";
 import {

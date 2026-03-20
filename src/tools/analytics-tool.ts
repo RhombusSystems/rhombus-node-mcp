@@ -14,7 +14,7 @@ import {
   type ToolArgs,
 } from "../types/analytics-tool-types.js";
 import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import { DateTime } from "luxon";
 
 const TOOL_NAME = "analytics-tool";

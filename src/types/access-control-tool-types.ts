@@ -15,7 +15,7 @@ export enum AccessControlRequestType {
 }
 
 export const TOOL_ARGS = {
-  requestType: z.nativeEnum(AccessControlRequestType).describe("The type of access control request to make."),
+  requestType: z.enum(AccessControlRequestType).describe("The type of access control request to make."),
   doorUuid: z
     .string()
     .nullable()

@@ -1,5 +1,5 @@
-import { postApi } from "../network.js";
-import { schema } from "../types/schema.js";
+import { postApi } from "../network/network.js";
+import type { schema } from "../types/schema.js";
 import { RequestModifiers } from "../util.js";
 
 export async function getLocations(requestModifiers?: RequestModifiers, sessionId?: string) {

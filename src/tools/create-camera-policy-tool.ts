@@ -3,8 +3,8 @@ import { z } from "zod";
 import { RequestModifiers } from "../util.js";
 import { createCameraPolicy } from "../api/create-camera-policy-tool-api.js";
 import { ApiPayloadSchema, OUTPUT_SCHEMA } from "../types/create-camera-policy-tool-types.js";
-import { postApi } from "../network.js";
-import { schema } from "../types/schema.js";
+import { postApi } from "../network/network.js";
+import type { schema } from "../types/schema.js";
 
 const TOOL_NAME = "create-camera-policy-tool";
 const TOOL_DESCRIPTION = `

@@ -1,4 +1,4 @@
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import type {
   SavedVehicle,
   VehicleEvent,

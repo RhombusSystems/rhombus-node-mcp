@@ -1,4 +1,4 @@
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import { RequestModifiers } from "../util.js";
 
 export async function rebootCameras(

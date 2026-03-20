@@ -1,5 +1,5 @@
 import { getLogger } from "../logger.js";
-import { constructRequestHeaders, postApi } from "../network.js";
+import { constructRequestHeaders, postApi } from "../network/network.js";
 import type {
   CameraFullStateResponse,
   CameraStorageData,

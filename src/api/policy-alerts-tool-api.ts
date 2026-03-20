@@ -1,4 +1,4 @@
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import type { ApiPayload } from "../types/policy-alerts-tool-types.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";

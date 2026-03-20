@@ -49,7 +49,7 @@ export const OUTPUT_SCHEMA = z.object({
   permissions: z
     .object({
       role: z.string().optional(),
-      functionalityAccessMap: z.record(z.string()).optional(),
+      functionalityAccessMap: z.record(z.string(), z.string()).optional(),
     })
     .optional()
     .describe("Current user permissions"),

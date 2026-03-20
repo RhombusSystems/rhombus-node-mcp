@@ -1,6 +1,6 @@
-import { logger } from "./logger.js";
-import { authStore } from "./transports/streamable-http.js";
-import type { RequestModifiers } from "./util.js";
+import { logger } from "../logger.js";
+import { authStore } from "../transports/streamable-http.js";
+import type { RequestModifiers } from "../util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
@@ -152,9 +152,16 @@ export async function postApi<T>({
     return ret as T & { error?: boolean; status?: string };
   } catch (error) {
     logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {}, null, 4)}`);
+
     return {
       error: true,
-      status: `Request Error: ${error}`,
+      status: `Request Error: ${JSON.stringify(error)}`,
     } as T & { error?: boolean; status?: string };
+  }
+}
+
+export function throwIfApiError(res: { error?: boolean; status?: string }) {
+  if (res.error) {
+    throw new Error(res.status ?? "API request failed.");
   }
 }

@@ -1,4 +1,4 @@
-import { postApi } from "../network.js";
+import { postApi } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
