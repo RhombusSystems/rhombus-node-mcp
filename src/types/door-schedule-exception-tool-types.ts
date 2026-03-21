@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { FILTER_BY_ARG, INCLUDE_FIELDS_ARG } from "../util.js";
-import { AccessControlledDoorStateEnumType } from "./schema-components.js";
+import { AccessControlledDoorStateEnumType } from "./schema.js";
 
 export enum DoorScheduleExceptionRequestType {
 	CREATE_EXCEPTION = "create-exception",

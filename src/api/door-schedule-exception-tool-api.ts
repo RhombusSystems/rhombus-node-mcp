@@ -1,11 +1,10 @@
 import z from "zod";
-import { getLocationsMap } from "../network/locations.js";
 import { postApi, throwIfApiError } from "../network/network.js";
+import createUuidMap from "../network/postApiMap.js";
 import type { DoorScheduleExceptionInput } from "../types/door-schedule-exception-tool-types.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 import { getAccessControlledDoors } from "./get-entity-tool-api.js";
-import createUuidMap from "../network/postApiMap.js";
 
 export type ExceptionSummary = {
 	uuid?: string;
