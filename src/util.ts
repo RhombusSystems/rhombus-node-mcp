@@ -202,4 +202,3 @@ export function formatTimestamp(timestampMs: number, timeZone?: string): string 
       locale: "en-US",
     });
 }
-

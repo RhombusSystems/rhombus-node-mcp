@@ -9,9 +9,11 @@ import {
 	updateDoorScheduleException,
 } from "../api/door-schedule-exception-tool-api.js";
 import {
+	CREATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA,
 	DoorScheduleExceptionRequestType,
 	OUTPUT_SCHEMA,
 	TOOL_ARGS,
+	UPDATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA,
 	type ToolArgs,
 } from "../types/door-schedule-exception-tool-types.js";
 import {
@@ -28,6 +30,10 @@ A door lock/unlock exception is a one-time rule used to change an access control
 If a lock/unlock exception is enabled, it will overwrite the existing lock/unlock schedule. 
 A schedule exception allows you to create a custom schedule that is only active for the specified dates/times. 
 Once the date/time a schedule exception is set for passes, the original schedule will resume.
+
+Door schedule exceptions can be either expired or not expired. If its scheduled date is in the past, then it is expired.
+Users through the web console can toggle whether to see expired door schedule exceptions or not. Please mirror this behavior
+when responding to the user.
 
 It has the following modes of operation, determined by the "requestType" parameter:
 - ${DoorScheduleExceptionRequestType.CREATE_EXCEPTION}: Create a door schedule exception. Requires exception (DoorScheduleExceptionType object). If locationUuid is missing but doorUuids are provided, the tool will resolve the location automatically.
@@ -63,8 +69,17 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
 						}),
 					);
 				}
+				const parsedException =
+					CREATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA.safeParse(args.exception);
+				if (!parsedException.success) {
+					return createToolTextContent(
+						JSON.stringify({
+							error: parsedException.error.issues[0]?.message ?? "Invalid exception payload for create-exception.",
+						}),
+					);
+				}
 				const created = await createDoorScheduleException(
-					args.exception,
+					parsedException.data,
 					requestModifiers,
 					sessionId,
 				);
@@ -149,8 +164,19 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
 						}),
 					);
 				}
+				const parsedException =
+					UPDATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA.safeParse(args.exception);
+				if (!parsedException.success) {
+					return createToolTextContent(
+						JSON.stringify({
+							error:
+								parsedException.error.issues[0]?.message ??
+								"Invalid exception payload for update-exception.",
+						}),
+					);
+				}
 				const updated = await updateDoorScheduleException(
-					args.exception,
+					parsedException.data,
 					requestModifiers,
 					sessionId,
 				);

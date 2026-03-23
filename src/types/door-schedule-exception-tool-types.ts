@@ -12,31 +12,32 @@ export enum DoorScheduleExceptionRequestType {
 	UPDATE_EXCEPTION = "update-exception",
 }
 
-export const DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA = z
+const DOOR_INTERVAL_SCHEMA = z.object({
+	localEndDateTime: z.string().nullable(),
+	localStartDateTime: z.string().nullable(),
+	state: z.enum(AccessControlledDoorStateEnumType),
+});
+
+const DOOR_SCHEDULE_EXCEPTION_BASE_SCHEMA = z
 	.object({
-		createdAtMillis: z.number().nullable(),
-		defaultState: z.enum(AccessControlledDoorStateEnumType).nullable(),
-		description: z.string().nullable(),
+		uuid: z.string().nullable().optional(),
+		createdAtMillis: z.number().nullable().optional(),
+		defaultState: z.enum(AccessControlledDoorStateEnumType).nullable().optional(),
+		description: z.string().nullable().optional(),
 		doorUuids: z.array(z.string().nullable()).nullable().optional(),
-		intervals: z
-			.array(
-				z.object({
-					localEndDateTime: z.string().nullable(),
-					localStartDateTime: z.string().nullable(),
-					state: z.enum(AccessControlledDoorStateEnumType),
-				}),
-			)
-			.nullable(),
-		localEndDate: z.string().nullable(),
-		localStartDate: z.string().nullable(),
+		intervals: z.array(DOOR_INTERVAL_SCHEMA).nullable().optional(),
+		localEndDate: z.string().nullable().optional(),
+		localStartDate: z.string().nullable().optional(),
 		locationToDoorsMap: z
 			.record(z.string(), z.array(z.string().nullable()).nullable())
 			.nullable()
 			.optional(),
-		name: z.string().nullable(),
-		updatedAtMillis: z.number().nullable(),
-	})
-	.superRefine((value, ctx) => {
+		name: z.string().nullable().optional(),
+		updatedAtMillis: z.number().nullable().optional(),
+	});
+
+export const CREATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA =
+	DOOR_SCHEDULE_EXCEPTION_BASE_SCHEMA.superRefine((value, ctx) => {
 		if (!value.name) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
@@ -81,9 +82,52 @@ export const DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA = z
 			});
 		}
 	});
-export type DoorScheduleExceptionInput = z.infer<
-	typeof DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA
+
+export const UPDATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA =
+	DOOR_SCHEDULE_EXCEPTION_BASE_SCHEMA.superRefine((value, ctx) => {
+		if (!value.uuid) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "exception.uuid is required for update-exception.",
+				path: ["uuid"],
+			});
+		}
+
+		const hasMutableField = [
+			value.name,
+			value.description,
+			value.defaultState,
+			value.localStartDate,
+			value.localEndDate,
+			value.intervals,
+			value.doorUuids,
+			value.locationToDoorsMap,
+		].some((field) => field !== undefined);
+
+		if (!hasMutableField) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message:
+					"exception update must provide at least one mutable field (for example name, description, dates, intervals, doorUuids, or locationToDoorsMap).",
+				path: [],
+			});
+		}
+	});
+
+export const DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA = z.union([
+	CREATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA,
+	UPDATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA,
+]);
+
+export type CreateDoorScheduleExceptionInput = z.infer<
+	typeof CREATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA
 >;
+export type UpdateDoorScheduleExceptionInput = z.infer<
+	typeof UPDATE_DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA
+>;
+export type DoorScheduleExceptionInput =
+	| CreateDoorScheduleExceptionInput
+	| UpdateDoorScheduleExceptionInput;
 
 export const TOOL_ARGS = {
 	requestType: z

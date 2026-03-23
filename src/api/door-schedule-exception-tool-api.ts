@@ -1,7 +1,10 @@
 import z from "zod";
 import { postApi, throwIfApiError } from "../network/network.js";
 import createUuidMap from "../network/postApiMap.js";
-import type { DoorScheduleExceptionInput } from "../types/door-schedule-exception-tool-types.js";
+import type {
+	CreateDoorScheduleExceptionInput,
+	UpdateDoorScheduleExceptionInput,
+} from "../types/door-schedule-exception-tool-types.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 import { getAccessControlledDoors } from "./get-entity-tool-api.js";
@@ -81,7 +84,8 @@ function buildDateRangeFilter(
 }
 
 async function verifyExceptionConfig(
-	exception: DoorScheduleExceptionInput,
+	exception: CreateDoorScheduleExceptionInput | UpdateDoorScheduleExceptionInput,
+	options: { isUpdate: boolean },
 	requestModifiers?: RequestModifiers,
 	sessionId?: string,
 ): Promise<schema["DoorScheduleExceptionType"]> {
@@ -89,11 +93,13 @@ async function verifyExceptionConfig(
 		...exception,
 	} as unknown as schema["DoorScheduleExceptionType"];
 
-	const cleanedDoorUuids =
-		(Array.isArray(exception.doorUuids)
-			? exception.doorUuids.filter((doorUuid): doorUuid is string => !!doorUuid)
-			: []) ?? [];
-	if (cleanedDoorUuids.length > 0) {
+	const doorUuidsProvided = Array.isArray(exception.doorUuids);
+	const cleanedDoorUuids = doorUuidsProvided
+		? (exception.doorUuids?.filter(
+				(doorUuid): doorUuid is string => !!doorUuid,
+			) ?? [])
+		: undefined;
+	if (cleanedDoorUuids !== undefined) {
 		verified.doorUuids = cleanedDoorUuids;
 	}
 
@@ -112,40 +118,46 @@ async function verifyExceptionConfig(
 		];
 	}
 
-	// construct locationToDoorsMap
-	const locationToDoorsMap: Record<string, string[]> = {};
-	if (cleanedDoorUuids.length > 0) {
-		const doors = await getAccessControlledDoors(requestModifiers, sessionId);
-		const doorsMap = await createUuidMap(
-			doors.accessControlledDoors ?? [],
-			"uuid",
-		);
+	// construct locationToDoorsMap only when doors are explicitly provided.
+	// For update, omitting doorUuids should preserve the existing map.
+	if (cleanedDoorUuids !== undefined) {
+		const locationToDoorsMap: Record<string, string[]> = {};
+		if (cleanedDoorUuids.length > 0) {
+			const doors = await getAccessControlledDoors(requestModifiers, sessionId);
+			const doorsMap = await createUuidMap(
+				doors.accessControlledDoors ?? [],
+				"uuid",
+			);
 
-		for (const doorUuid of cleanedDoorUuids) {
-			const door = doorsMap.get(doorUuid);
-			const locationUuid = door?.locationUuid;
+			for (const doorUuid of cleanedDoorUuids) {
+				const door = doorsMap.get(doorUuid);
+				const locationUuid = door?.locationUuid;
 
-			if (locationUuid) {
-				if (!locationToDoorsMap[locationUuid]) {
-					locationToDoorsMap[locationUuid] = [];
+				if (locationUuid) {
+					if (!locationToDoorsMap[locationUuid]) {
+						locationToDoorsMap[locationUuid] = [];
+					}
+
+					locationToDoorsMap[locationUuid].push(doorUuid);
 				}
-
-				locationToDoorsMap[locationUuid].push(doorUuid);
 			}
 		}
+		verified.locationToDoorsMap = locationToDoorsMap;
+	} else if (!options.isUpdate) {
+		verified.locationToDoorsMap = {};
 	}
-	verified.locationToDoorsMap = locationToDoorsMap;
 
 	return verified as schema["DoorScheduleExceptionType"];
 }
 
 export async function createDoorScheduleException(
-	exception: DoorScheduleExceptionInput,
+	exception: CreateDoorScheduleExceptionInput,
 	requestModifiers?: RequestModifiers,
 	sessionId?: string,
 ) {
 	const normalizedException = await verifyExceptionConfig(
 		exception,
+		{ isUpdate: false },
 		requestModifiers,
 		sessionId,
 	);
@@ -170,12 +182,13 @@ export async function createDoorScheduleException(
 }
 
 export async function updateDoorScheduleException(
-	exception: DoorScheduleExceptionInput,
+	exception: UpdateDoorScheduleExceptionInput,
 	requestModifiers?: RequestModifiers,
 	sessionId?: string,
 ) {
 	const normalizedException = await verifyExceptionConfig(
 		exception,
+		{ isUpdate: true },
 		requestModifiers,
 		sessionId,
 	);
