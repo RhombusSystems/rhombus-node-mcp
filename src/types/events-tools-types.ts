@@ -6,6 +6,7 @@ import { TempUnit } from "../utils/temp.js";
 
 export enum EventsToolRequestType {
   ACCESS_CONTROL = "access-control",
+  BRIVO_ACCESS_CONTROL = "brivo-access-control",
   ENVIRONMENTAL_GATEWAY = "environmental-gateway",
   CLIMATE_SENSOR = "climate-sensor",
   COMPONENT_EVENTS = "component-events",
@@ -22,6 +23,7 @@ export const TOOL_ARGS = {
     .describe(
       "The type of events to retrieve. " +
         "access-control: Access control events like unlocks, badge ins, credentials, arrivals. " +
+        "brivo-access-control: Badge/credential events from Brivo-integrated doors. Does not require door UUIDs — automatically looks up which doors are configured via the Brivo integration. " +
         "environmental-gateway: Environmental gateway events with sensor readings and derived values. " +
         "climate-sensor: Climate sensor events with temperature, humidity, air quality readings. " +
         "component-events: All types of component events for a location (most flexible option). " +
@@ -173,6 +175,7 @@ export const OUTPUT_SCHEMA = z.object({
   eventType: z
     .enum([
       "access-control",
+      "brivo-access-control",
       "environmental-gateway",
       "climate-sensor",
       "component-events",
@@ -183,6 +186,62 @@ export const OUTPUT_SCHEMA = z.object({
       "doorbell",
     ])
     .optional(),
+  brivoAccessControlEvents: z.optional(
+    z
+      .object({
+        integrationEnabled: z.boolean().describe("Whether the Brivo integration is enabled"),
+        brivoDoorsConfigured: z
+          .number()
+          .describe("Number of Brivo doors configured in the integration"),
+        brivoDoors: z
+          .array(
+            z.object({
+              brivoDoornId: z.string().describe("Brivo's door ID"),
+              doorName: z.string().optional().describe("Brivo door name"),
+              locationUuid: z.string().optional().describe("Rhombus location UUID for this door"),
+            })
+          )
+          .describe("List of Brivo doors configured in the integration"),
+        events: z
+          .array(
+            z.object({
+              authenticationResult: z
+                .string()
+                .optional()
+                .describe("The result of the authentication process"),
+              authorizationResult: z
+                .string()
+                .optional()
+                .describe("The result of the authorization process"),
+              doorUuid: z
+                .string()
+                .optional()
+                .describe("The Rhombus access controlled door UUID"),
+              locationUuid: z
+                .string()
+                .optional()
+                .describe("The Rhombus location UUID where the event occurred"),
+              user: z.string().optional().describe("Username of the person who triggered the event"),
+              credSource: z
+                .string()
+                .optional()
+                .describe("The source of the credential (e.g. WIEGAND, NFC, BLE_WAVE, REMOTE)"),
+              timestampMs: z
+                .number()
+                .optional()
+                .describe("Timestamp in milliseconds when the event occurred"),
+              datetime: z.string().optional().describe("Formatted datetime string of the event"),
+            })
+          )
+          .describe(
+            "Credential received events from locations that have Brivo doors configured, sorted by timestamp (newest first)"
+          ),
+      })
+      .nullable()
+      .describe(
+        "Brivo access control events. Fetches credential events from all locations that have Brivo doors configured in the integration."
+      )
+  ),
   accessControlEvents: z.optional(
     z
       .array(

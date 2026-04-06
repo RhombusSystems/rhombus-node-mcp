@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   getAccessControlEvents,
+  getBrivoAccessControlEvents,
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
   getComponentEventsByLocation,
@@ -28,7 +29,27 @@ const TOOL_NAME = "events-tool";
 const TOOL_DESCRIPTION = `
 **Scope:** This tool returns **raw, event-level data** (individual events with timestamps). Use **report-tool** when you need aggregated counts, time-series summaries, or analytics over intervals.
 
-This tool has 5 modes, set by "eventType": access-control, environmental-gateway, climate-sensor, component-events, camera. Use it when the user asks for specific events (unlocks, badge ins, credentials, arrivals, environmental readings, climate data, camera motion, or other component events). It can return large result sets; keep time ranges narrow. For ranges spanning more than ~24 hours, prefer report-tool for aggregates. For maximum flexibility across event types at a location, use eventType "component-events".
+This tool has multiple modes, set by "eventType": access-control, brivo-access-control, environmental-gateway, climate-sensor, component-events, camera. Use it when the user asks for specific events (unlocks, badge ins, credentials, arrivals, environmental readings, climate data, camera motion, or other component events). It can return large result sets; keep time ranges narrow. For ranges spanning more than ~24 hours, prefer report-tool for aggregates. For maximum flexibility across event types at a location, use eventType "component-events".
+
+---
+
+When eventType is "brivo-access-control":
+
+Retrieves badge/credential events from Brivo-integrated doors. Automatically fetches the Brivo integration configuration to determine which locations have Brivo doors mapped. No door UUIDs are required.
+
+Use this when the user asks specifically about Brivo events, Brivo badge ins, Brivo access control, or events from Brivo doors.
+
+Arguments:
+  * **startTime (string):** Start of the time range (ISO 8601).
+  * **endTime (string):** End of the time range (ISO 8601).
+
+Returns:
+  * **integrationEnabled:** Whether the Brivo integration is currently enabled.
+  * **brivoDoorsConfigured:** Number of Brivo doors configured in the integration.
+  * **brivoDoors:** List of Brivo doors with their IDs, names, and associated Rhombus location UUIDs.
+  * **events:** Credential received events from all locations that have Brivo doors configured, sorted newest first.
+
+Note: Events are fetched at the location level, so results may include events from all access-controlled doors at locations where Brivo is configured.
 
 ---
 
@@ -132,6 +153,19 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   logger.debug(`eventType: ${eventType}`);
 
   switch (eventType) {
+    case EventsToolRequestType.BRIVO_ACCESS_CONTROL: {
+      const result = await getBrivoAccessControlEvents(
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      return createToolStructuredContent<OUTPUT_SCHEMA>({
+        eventType: "brivo-access-control",
+        brivoAccessControlEvents: result,
+      });
+    }
     case "access-control": {
       if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
         return createToolStructuredContent({
