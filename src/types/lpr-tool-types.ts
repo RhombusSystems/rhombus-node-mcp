@@ -61,7 +61,11 @@ export const VehicleEventsArgs = z.object({
 export type VehicleEventsArgs = z.infer<typeof VehicleEventsArgs>;
 
 export const TOOL_ARGS = {
-  requestType: z.nativeEnum(LprToolRequestType).describe("The type of request to make."),
+  requestType: z
+    .nativeEnum(LprToolRequestType)
+    .describe(
+      "Org LPR operation (vehicle events, saved vehicles, labels, plate search, save vehicle). Per-camera VOD timeline seekpoints use events-tool (eventType camera)."
+    ),
   vehicleEventsArgs: VehicleEventsArgs.nullable().describe(
     "Only necessary for requestType 'get-vehicle-events'"
   ),

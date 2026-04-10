@@ -5,7 +5,7 @@ import {
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
   getComponentEventsByLocation,
-  getHumanMotionEvents,
+  getCameraFootageSeekpointEvents,
   getButtonPressEvents,
   getOccupancyEvents,
   getProximityEvents,
@@ -29,7 +29,9 @@ const TOOL_NAME = "events-tool";
 const TOOL_DESCRIPTION = `
 **Scope:** This tool returns **raw, event-level data** (individual events with timestamps). Use **report-tool** when you need aggregated counts, time-series summaries, or analytics over intervals.
 
-This tool has multiple modes, set by "eventType": access-control, brivo-access-control, environmental-gateway, climate-sensor, component-events, camera. Use it when the user asks for specific events (unlocks, badge ins, credentials, arrivals, environmental readings, climate data, camera motion, or other component events). It can return large result sets; keep time ranges narrow. For ranges spanning more than ~24 hours, prefer report-tool for aggregates. For maximum flexibility across event types at a location, use eventType "component-events".
+**Vehicles vs lpr-tool:** **eventType "camera"** returns **footage seekpoints** from that camera's recording timeline—**every activity type** the API returns for the window (human motion, vehicle motion, and others depending on the camera and analytics). Some rows may include plate or vehicle metadata on the seekpoint. **lpr-tool** is still the right choice for **org LPR workflows**: saved vehicles, vehicle labels, fuzzy plate search, and vehicle event APIs—not a replacement for "everything this camera logged on its timeline."
+
+This tool has multiple modes, set by "eventType": access-control, brivo-access-control, environmental-gateway, climate-sensor, component-events, camera. Use it when the user asks for specific events (unlocks, badge ins, credentials, arrivals, environmental readings, climate data, camera timeline activity, or other component events). It can return large result sets; keep time ranges narrow. For ranges spanning more than ~24 hours, prefer report-tool for aggregates. For maximum flexibility across event types at a location, use eventType "component-events".
 
 ---
 
@@ -120,7 +122,7 @@ Valid event types include:
 
 When eventType is "camera":
 
-Retrieves human motion events for a camera in a time range. Timestamps in milliseconds.
+Retrieves **footage seekpoints** for one camera: **all activity types** returned for the search window (not limited to human motion). Each item includes an **activity** string plus **timestamp**; plate/vehicle/face fields appear when the API provides them. Use **lpr-tool** for org LPR saved vehicles, labels, and dedicated plate search.
 
 Arguments:
   * **cameraUuid (string):** UUID of the camera.
@@ -251,7 +253,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           commandForUser: "Which camera are you asking about?",
         });
       } else {
-        const events = await getHumanMotionEvents(
+        const events = await getCameraFootageSeekpointEvents(
           cameraUuid,
           duration ?? 3600,
           startTime ? new Date(startTime).getTime() : Date.now() - 3600000,
@@ -259,7 +261,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra.sessionId
         );
         return createToolStructuredContent<OUTPUT_SCHEMA>(
-          { eventType: "camera", cameraEvents: events.uniqueHumanEvents }
+          { eventType: "camera", cameraEvents: events.cameraFootageEvents }
         );
       }
     }

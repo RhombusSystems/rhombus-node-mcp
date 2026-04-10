@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 import { ComponentEventEnumType } from "./schema.js";
-import { HumanEvent } from "../api/events-tool-api.js";
+import { CameraFootageEvent } from "../api/events-tool-api.js";
 import { TempUnit } from "../utils/temp.js";
 
 export enum EventsToolRequestType {
@@ -27,7 +27,7 @@ export const TOOL_ARGS = {
         "environmental-gateway: Environmental gateway events with sensor readings and derived values. " +
         "climate-sensor: Climate sensor events with temperature, humidity, air quality readings. " +
         "component-events: All types of component events for a location (most flexible option). " +
-        "camera: Human motion events detected by cameras. " +
+        "camera: Footage seekpoints for one camera—all timeline activity types that camera recorded (human motion, vehicle motion, etc., depending on device/analytics). For org LPR saved vehicles, labels, and plate search APIs, use lpr-tool. " +
         "button-press: Button press events from button sensors. " +
         "occupancy: Occupancy sensor events with people count. " +
         "proximity: Proximity tag events with RSSI readings. " +
@@ -108,7 +108,7 @@ export const TOOL_ARGS = {
     .positive()
     .nullable()
     .describe(
-      "Duration in seconds to search for human motion events. Required when eventType is 'camera'. Default is 3600 (1 hour)."
+      "Duration in seconds to search footage seekpoints. Required when eventType is 'camera'. Default is 3600 (1 hour)."
     ),
   buttonSensorUuid: z
     .string()
@@ -394,9 +394,11 @@ export const OUTPUT_SCHEMA = z.object({
       )
   ),
   cameraEvents: z
-    .array(HumanEvent)
+    .array(CameraFootageEvent)
     .optional()
-    .describe(`Camera events data, as requested with requestType ${EventsToolRequestType.CAMERA}`),
+    .describe(
+      `Footage timeline seekpoints for the camera (all activity types returned in the window). Use with eventType "${EventsToolRequestType.CAMERA}".`
+    ),
   buttonPressEvents: z
     .array(z.object({
       timestampMs: z.number().optional(),

@@ -17,6 +17,8 @@ const TOOL_NAME = "lpr-tool";
 const TOOL_DESCRIPTION = `
 This tool interacts with the Rhombus LPR system to retrieve information about license plate recognition events and registered license plates.
 
+**Vs events-tool (camera):** **events-tool** with eventType **camera** returns that camera’s **VOD footage seekpoints** (many activity types on the timeline, including vehicle-related activity when present). **lpr-tool** is for the **LPR product surface**: plate events, **saved vehicles**, **labels**, and plate **search** APIs across the org—use it when the user needs registry, labeling, or org-wide LPR queries, not only “what showed up on this camera’s timeline.”
+
 The system's cameras may have LPR enabled, and when it is enabled, it will detect "license plate recognition" events when it sees a license plate
 come into view. However, it is possible that the recognized license is only a partial match, so keep that in mind when using this tool.
 Users will be able to save license plates into the system, and then additionally label them with a name.

@@ -6,11 +6,26 @@ import { formatTimestamp, type RequestModifiers } from "../util.js";
 import { tempFunc, TempUnit } from "../utils/temp.js";
 
 // Type definitions
-export const HumanEvent = z.object({
-  timestamp: z.number(),
-  id: z.number(),
+/** One entry from the camera VOD footage seekpoint index (many activity types). */
+export const CameraFootageEvent = z.object({
+  activity: z
+    .string()
+    .describe(
+      "Activity type on the recording timeline (e.g. MOTION_HUMAN, MOTION_CAR, LICENSEPLATE_IDENTIFIED—exact set depends on the camera and analytics)."
+    ),
+  timestamp: z.number().describe("Unix timestamp in milliseconds."),
+  id: z.number().optional().describe("Seekpoint id when the API provides one."),
+  licensePlate: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "Plate text on this seekpoint when present. For org LPR saved vehicles, labels, and plate search APIs, use lpr-tool."
+    ),
+  vehicleName: z.string().nullable().optional().describe("Vehicle display name on this seekpoint when present."),
+  faceNames: z.string().nullable().optional().describe("Face names on this seekpoint when present."),
 });
-export type HumanEvent = z.infer<typeof HumanEvent>;
+export type CameraFootageEvent = z.infer<typeof CameraFootageEvent>;
 
 type MappedEnvironmentalEvent = {
   timestampString?: string;
@@ -312,7 +327,7 @@ export async function getAccessControlEvents(
   return accessControlEvents;
 }
 
-export async function getHumanMotionEvents(
+export async function getCameraFootageSeekpointEvents(
   cameraUuid: string,
   duration: number,
   startTime: number,
@@ -329,30 +344,35 @@ export async function getHumanMotionEvents(
     body,
     modifiers: requestModifiers,
     sessionId,
-  }).then(response => {
-    const seekPoints = response.footageSeekPoints || [];
-
-    const uniqueHumanEvents = seekPoints
-      .reduceRight((acc: HumanEvent[], point) => {
-        if (
-          point.a === "MOTION_HUMAN" &&
-          typeof point.ts === "number" &&
-          typeof point.id === "number" &&
-          !acc.some(existing => existing.id === point.id)
-        ) {
-          acc.unshift({ timestamp: point.ts, id: point.id });
-        }
-        return acc;
-      }, [])
-      .map(event => ({
-        timestamp: event.timestamp,
-        id: event.id,
-      }));
-
-    return { cameraUuid, uniqueHumanEvents };
   });
 
-  return response;
+  const seekPoints = response.footageSeekPoints ?? [];
+  const seen = new Set<string>();
+  const cameraFootageEvents: CameraFootageEvent[] = [];
+
+  for (const point of seekPoints) {
+    if (typeof point.ts !== "number" || point.a == null) {
+      continue;
+    }
+    const idPart = point.id != null ? String(point.id) : "noid";
+    const dedupeKey = `${idPart}_${point.ts}_${point.a}`;
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
+    seen.add(dedupeKey);
+    cameraFootageEvents.push({
+      activity: String(point.a),
+      timestamp: point.ts,
+      ...(point.id != null ? { id: point.id } : {}),
+      ...(point.lp !== undefined ? { licensePlate: point.lp } : {}),
+      ...(point.vn !== undefined ? { vehicleName: point.vn } : {}),
+      ...(point.fn !== undefined ? { faceNames: point.fn } : {}),
+    });
+  }
+
+  cameraFootageEvents.sort((a, b) => b.timestamp - a.timestamp);
+
+  return { cameraUuid, cameraFootageEvents };
 }
 
 const EVENT_COUNT_MAX_PER_RESPONSE = 2000;
