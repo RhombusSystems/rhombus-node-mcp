@@ -30,7 +30,9 @@ When asked about device health, offline devices, or connectivity issues, use thi
 types and check the "connected" field to identify which devices are offline or unreachable.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
-  const { entityTypes, timeZone, filterBy, tempUnit } = args;
+  const { entityTypes, timeZone, tempUnit } = args;
+  const filterBy = args.filterBy ?? { locationUuids: null };
+  const locationFilter = filterBy.locationUuids;
   const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   const promises = [];
@@ -80,8 +82,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         // then filter
         response[key] = value.filter((item: any) => {
           let pass = true;
-          if (item.locationUuid && filterBy.locationUuids && filterBy.locationUuids.length > 0) {
-            pass = pass && filterBy.locationUuids.includes(item.locationUuid);
+          if (
+            item.locationUuid &&
+            locationFilter &&
+            locationFilter.length > 0
+          ) {
+            pass = pass && locationFilter.includes(item.locationUuid);
           }
           return pass;
         });

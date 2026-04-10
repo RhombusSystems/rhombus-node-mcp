@@ -3,20 +3,26 @@ import { createUuidSchema } from "../types.js";
 import DeviceType from "./deviceType.js";
 import { TempUnit } from "../utils/temp.js";
 
+const filterByObjectSchema = z.object({
+  locationUuids: z
+    .array(createUuidSchema())
+    .nullish()
+    .describe(
+      "The UUIDs of the locations to filter by. Set to null or an empty array to not filter by location."
+    ),
+});
+
 export const TOOL_ARGS = {
   entityTypes: z
     .array(z.nativeEnum(DeviceType).describe("The entity type to retreive"))
     .describe("What type of entities to retrieve."),
   filterBy: z
-    .object({
-      locationUuids: z
-        .array(createUuidSchema())
-        .nullable()
-        .describe(
-          "The UUIDs of the locations to filter by. Set to null or an enmpty array to not filter by location."
-        ),
-    })
-    .describe("Additional filters that can be applied to the result."),
+    .union([filterByObjectSchema, z.null()])
+    .optional()
+    .transform((v) => v ?? { locationUuids: null })
+    .describe(
+      "Additional filters that can be applied to the result. Omit or pass null for no filtering."
+    ),
   timeZone: z
     .string()
     .describe(

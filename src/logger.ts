@@ -20,7 +20,7 @@ const appenders: log4js.Configuration["appenders"] = {
   // stderr for terminal visibility (always available)
   stderr: { type: "stderr" },
 
-  // only send warn+ to stderr (never stdout)
+  // production stderr: hide trace/debug (e.g. full response snippets); still shows info+ like [POSTAPI] REQUEST
   stderrInfo: {
     type: "logLevelFilter",
     appender: "stderr",
@@ -41,7 +41,8 @@ if (fileLoggingEnabled) {
   };
 }
 
-const stderrAppender = process.env.DEBUG === "true" ? "stderr" : "stderrInfo";
+const isProduction = process.env.NODE_ENV === "production";
+const stderrAppender = isProduction ? "stderrInfo" : "stderr";
 
 // Configure categories based on available appenders
 const categories = {

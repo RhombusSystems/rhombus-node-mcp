@@ -8,15 +8,14 @@ export async function getCameraList(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
+	const body = await postApi<any>({
+		route: "/camera/getMinimalCameraStateList",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
 	return {
-		cameras: (
-			await postApi<any>({
-				route: "/camera/getMinimalCameraStateList",
-				body: {},
-				modifiers: requestModifiers,
-				sessionId,
-			})
-		).cameraStates.filter(
+		cameras: (body.cameraStates ?? []).filter(
 			(camera: { locationUuid?: string }) => !!camera.locationUuid,
 		),
 	};
@@ -26,15 +25,14 @@ export async function getDoorbellCameras(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
+	const body = await postApi<any>({
+		route: "/doorbellcamera/getMinimalStateList",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
 	return {
-		doorbellCameras: (
-			await postApi<any>({
-				route: "/doorbellcamera/getMinimalStateList",
-				body: {},
-				modifiers: requestModifiers,
-				sessionId,
-			})
-		).minimalStates.filter(
+		doorbellCameras: (body.minimalStates ?? []).filter(
 			(doorbellCamera: { locationUuid?: string }) =>
 				!!doorbellCamera.locationUuid,
 		),
@@ -52,7 +50,7 @@ export async function getBadgeReaders(
 		sessionId,
 	}).then((response) => {
 		return {
-			badgeReaders: response.minimalStates.filter(
+			badgeReaders: (response.minimalStates ?? []).filter(
 				(badgeReader: { locationUuid?: string }) => !!badgeReader.locationUuid,
 			),
 		};
@@ -103,7 +101,7 @@ export async function getAudioGateways(
 		sessionId,
 	}).then((response) => {
 		return {
-			audioGateways: response.audioGatewayStates
+			audioGateways: (response.audioGatewayStates ?? [])
 				.filter((camera: { locationUuid?: string }) => !!camera.locationUuid)
 				.map((gateway: any) => ({
 					...gateway,
@@ -126,7 +124,7 @@ export async function getDoorSensors(
 		sessionId,
 	}).then((response) => {
 		return {
-			doorStates: response.doorStates.filter(
+			doorStates: (response.doorStates ?? []).filter(
 				(door: { locationUuid?: string }) => !!door.locationUuid,
 			),
 		};
@@ -147,7 +145,7 @@ export async function getEnvironmentalSensors(
 	}).then((response) => {
 		logger.info("Using tempUnit: ", tempUnit);
 		return {
-			climateStates: response.climateStates
+			climateStates: (response.climateStates ?? [])
 				.filter((sensor: { locationUuid?: string }) => !!sensor.locationUuid)
 				.map((_sensor: any) => {
 					const { temperatureCelcius, ...sensor } = _sensor;
@@ -175,7 +173,7 @@ export async function getMotionSensors(
 		sessionId,
 	}).then((response) => {
 		return {
-			occupancySensorStates: response.occupancySensorStates.filter(
+			occupancySensorStates: (response.occupancySensorStates ?? []).filter(
 				(occupancySensor: { locationUuid?: string }) =>
 					!!occupancySensor.locationUuid,
 			),
@@ -195,7 +193,7 @@ export async function getButtons(
 		sessionId,
 	}).then((response) => {
 		return {
-			buttonStates: response.states
+			buttonStates: (response.states ?? [])
 				.filter((button: { locationUuid?: string }) => !!button.locationUuid)
 				.map((button: any) => ({
 					...button,
@@ -215,7 +213,7 @@ export async function getKeypads(requestModifiers?: any, sessionId?: string) {
 		sessionId,
 	}).then((response) => {
 		return {
-			keypadStates: response.keypads.filter(
+			keypadStates: (response.keypads ?? []).filter(
 				(keypad: { locationUuid?: string }) => !!keypad.locationUuid,
 			),
 		};
@@ -234,8 +232,9 @@ export async function getEnvironmentalGateways(
 		sessionId,
 	}).then((response) => {
 		return {
-			minimalEnvironmentalGatewayStates:
-				response.minimalEnvironmentalGatewayStates
+			minimalEnvironmentalGatewayStates: (
+				response.minimalEnvironmentalGatewayStates ?? []
+			)
 					.filter(
 						(gateway: { locationUuid?: string }) => !!gateway.locationUuid,
 					)
