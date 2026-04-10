@@ -42,7 +42,7 @@ export default async function createServer() {
 		},
 		{
 			capabilities: {
-				resources: {},
+				...(resources.length > 0 ? { resources: {} } : {}),
 				tools: {},
 			},
 		},

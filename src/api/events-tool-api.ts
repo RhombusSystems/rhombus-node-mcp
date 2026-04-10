@@ -152,6 +152,92 @@ async function getAccessControlEventsForDoor(
   return allEvents;
 }
 
+export async function getBrivoAccessControlEvents(
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  // Step 1: fetch Brivo integration config to get configured doors and their location UUIDs
+  const integrationResponse = await postApi<schema["Integration_GetOrgIntegrationsV2WSResponse"]>({
+    route: "/integrations/accessControl/getBrivoIntegrationV2",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const brivoSettings = integrationResponse.orgIntegrationV2 as schema["BrivoType"] | null | undefined;
+  const integrationEnabled = brivoSettings?.enabled ?? false;
+  const doorInfoMap = brivoSettings?.doorInfoMap ?? {};
+
+  const brivoDoors = Object.entries(doorInfoMap)
+    .filter(([, info]) => info != null)
+    .map(([brivoDoornId, info]) => ({
+      brivoDoornId,
+      doorName: info!.doorName ?? undefined,
+      locationUuid: info!.locationUuid ?? undefined,
+    }));
+
+  if (brivoDoors.length === 0) {
+    return {
+      integrationEnabled,
+      brivoDoorsConfigured: 0,
+      brivoDoors: [],
+      events: [],
+    };
+  }
+
+  // Step 2: collect unique location UUIDs from configured Brivo doors
+  const locationUuids = [...new Set(brivoDoors.map(d => d.locationUuid).filter((id): id is string => !!id))];
+
+  // Step 3: query CredentialReceivedEvents for each location
+  const MAX_LIMIT = 1000;
+  const allEvents: MappedAccessControlEvent[] = [];
+
+  await Promise.all(
+    locationUuids.map(async locationUuid => {
+      const body: schema["Component_FindComponentEventsByLocationWSRequest"] = {
+        locationUuid,
+        typeFilter: ["CredentialReceivedEvent"] as any,
+        ...(startTime ? { createdAfterMs: startTime } : {}),
+        ...(endTime ? { createdBeforeMs: endTime } : {}),
+        limit: MAX_LIMIT,
+      };
+
+      const response = await postApi<schema["Component_FindComponentEventsByLocationWSResponse"]>({
+        route: "/component/findComponentEventsByLocation",
+        body,
+        modifiers: requestModifiers,
+        sessionId,
+      });
+
+      const mapped = (response.componentEvents || []).map(event =>
+        mapAccessControlEvent(event as schema["CredentialReceivedEventType"], timeZone)
+      );
+      allEvents.push(...mapped);
+    })
+  );
+
+  allEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+
+  return {
+    integrationEnabled,
+    brivoDoorsConfigured: brivoDoors.length,
+    brivoDoors,
+    events: allEvents.map(e => ({
+      authenticationResult: e.authenticationResult ?? undefined,
+      authorizationResult: e.authorizationResult ?? undefined,
+      doorUuid: e.doorUuid ?? undefined,
+      locationUuid: e.locationUuid ?? undefined,
+      user: e.user ?? undefined,
+      credSource: e.credSource ?? undefined,
+      timestampMs: e.timestampMs ?? undefined,
+      datetime: e.datetime,
+    })),
+  };
+}
+
 export async function getFaceEvents(
   _locationUuid: string | null | undefined,
   timeZone: string,
