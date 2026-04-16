@@ -145,6 +145,38 @@ We've written a script that you can run to get kickstarted on developing a new t
 npm run create:tool
 ```
 
+## 🧪 Running Tests
+
+Tests are written with [Vitest](https://vitest.dev/) and live alongside source files as `*.test.ts`.
+
+### 1. Set Up Your Test Environment
+
+Copy the template and fill in your values:
+
+```bash
+cp .env.test.template .env.test
+```
+
+Then edit `.env.test`:
+
+| Variable | Description |
+|---|---|
+| `RHOMBUS_API_KEY` | Your Rhombus API key — generate one at [API Management](https://console.rhombus.com/settings/api-management) |
+| `API_HOSTNAME` | API base URL — defaults to `https://api.rhombus.com` (override for staging/dev) |
+| `CAMERA_UUID` | UUID of a camera in your org to use for integration tests |
+
+> `.env.test` is gitignored — never commit real credentials.
+
+### 2. Run the Tests
+
+```bash
+# Run all tests once
+npm test
+
+# Watch mode — re-runs on file changes
+npm run test:watch
+```
+
 ## Hitting a Snag? We've Got You! 🛟
 
 Check out Claude's fantastic [troubleshooting guide](https://modelcontextprotocol.io/docs/tools/debugging) for quick fixes! Still stuck? Our team of experts is ready to help!

@@ -30,6 +30,7 @@ export async function getImageForCameraAtTime(
   | {
       success: false;
       status: string;
+      message?: string;
     }
 > {
   const body = {
@@ -73,9 +74,9 @@ export async function getImageForCameraAtTime(
       headers: requestHeaders as HeadersInit,
     }).then(async res => {
       if (!res.ok) {
-        logger.error(`Failed to fetch image: ${await res.text()}`);
+        logger.error(`Failed to fetch image (HTTP ${res.status}): ${await res.text()}`);
         logger.error(res);
-        return null;
+        return res.status === 404 ? 404 : null;
       }
       const arrayBuffer = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -88,6 +89,15 @@ export async function getImageForCameraAtTime(
     return {
       success: false,
       status: "failed to fetch image",
+    };
+  }
+  if (base64Image === 404) {
+    return {
+      success: false,
+      status: "failed to fetch image",
+      message:
+        "Camera snapshot unavailable: this camera has no recorded video (VOD) at the requested time. " +
+        "It may not have any footage stored, or the requested timestamp may be outside its retention window.",
     };
   }
   return {
@@ -200,7 +210,11 @@ export async function getCameraSettings(
   };
 }
 
-export async function getCameraMediaUris(cameraUuid: string, requestModifiers?: RequestModifiers, sessionId?: string) {
+export async function getCameraMediaUris(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
   const res = await postApi<schema["Camera_GetMediaUrisWSResponse"]>({
     route: "/camera/getCameraMediaUris",
     body: { deviceUuid: cameraUuid },
@@ -211,7 +225,11 @@ export async function getCameraMediaUris(cameraUuid: string, requestModifiers?: 
   return res;
 }
 
-export async function getCameraAIThresholds(cameraUuid: string, requestModifiers?: RequestModifiers, sessionId?: string) {
+export async function getCameraAIThresholds(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
   const res = await postApi<schema["Camera_GetCameraAIThresholdsWSResponse"]>({
     route: "/camera/getCameraAIThresholds",
     body: { deviceUuid: cameraUuid },
