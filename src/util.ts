@@ -202,3 +202,26 @@ export function formatTimestamp(timestampMs: number, timeZone?: string): string 
       locale: "en-US",
     });
 }
+
+/**
+ * Formats a timestamp in milliseconds to an ISO 8601 string with timezone offset.
+ * Format: "2025-04-21T10:57:00.000-07:00"
+ *
+ * Use this when returning timestamps in tool output schemas so the offset is preserved
+ * (rather than the bare "Z" produced by Date.prototype.toISOString()).
+ *
+ * @param timestampMs - Timestamp in milliseconds
+ * @param timeZone - Optional IANA timezone string (defaults to "America/Los_Angeles")
+ * @returns ISO 8601 string with offset, or undefined if input is null/undefined
+ */
+export function formatIsoWithOffset(
+  timestampMs: number | null | undefined,
+  timeZone?: string
+): string | undefined {
+  if (timestampMs === null || timestampMs === undefined) return undefined;
+  return (
+    DateTime.fromMillis(timestampMs)
+      .setZone(timeZone || "America/Los_Angeles")
+      .toISO() ?? undefined
+  );
+}
