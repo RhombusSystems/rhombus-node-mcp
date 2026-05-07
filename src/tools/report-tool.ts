@@ -28,6 +28,8 @@ const TOOL_NAME = "report-tool";
 const TOOL_DESCRIPTION = `
 **Scope:** This tool returns **aggregated counts and time-series summaries** over specified intervals and scopes. Use **events-tool** when you need raw, event-level data (individual events with timestamps). Use this tool for high-level reports, analytics, and trends—especially over periods of a day or more.
 
+**Interval guidance:** A shorter interval (HOURLY instead of DAILY) gives a better representation of data over time. Balance interval and range so you don't request too much data. For ranges spanning a week or so, HOURLY is appropriate.
+
 ---
 
 **People / occupancy counting strategy**

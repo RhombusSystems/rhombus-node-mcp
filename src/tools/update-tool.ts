@@ -46,6 +46,21 @@ Future support planned for:
 - Badge readers
 
 The tool uses elicitation forms for rich user interaction and shows current settings before updates.
+
+---
+
+**CAMERA SETTINGS UPDATE FLOW** — Use this tool for ALL camera settings updates (brightness, contrast, WDR, resolution, audio, LED, etc.).
+- For camera image-quality fixes: provide entityType="camera", entityUuid, and the specific settings to change in cameraVideoSettings.
+- Example for dark image: update-tool(entityType="camera", entityUuid="<uuid>", cameraVideoSettings='{"img_brightness": 0, "wdr_strength": 64}').
+- Example for washed out: update-tool(entityType="camera", entityUuid="<uuid>", cameraVideoSettings='{"img_brightness": -50, "img_contrast": 80}').
+- Saturation matters — saturation 0 yields a grayscale image. Most cameras look best with mid-range values; tune from there.
+
+**CONFIRMATION FLOW (MANDATORY)** — When the conversation history shows you analyzed a camera and proposed fixes, and the user replies with any affirmative ("yes", "confirm", "fix it", "apply", "do it", "go ahead", "proceed", "sure", "ok"):
+1. DO NOT generate any text response first.
+2. IMMEDIATELY call update-tool with the camera settings you previously identified.
+3. Only after update-tool returns successfully, say "Done! Check your camera now…".
+
+NEVER respond saying settings were updated without first calling update-tool — without the call, no changes take effect. Avoid multiple rounds of confirmation; get one confirmation for all proposed changes.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {

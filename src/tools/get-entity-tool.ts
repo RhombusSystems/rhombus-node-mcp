@@ -19,15 +19,14 @@ import { createToolTextContent, extractFromToolExtra } from "../util.js";
 const TOOL_NAME = "get-entity-tool";
 
 const TOOL_DESCRIPTION = `
-Retrieves entities (or devices) of certain types.
-Can request multiple entity types at once.
-The return structure is a JSON string that contains the states of the requested entities.
-This data is exact. Whatever entities exist will be returned here.
+Retrieves entities (or devices) of certain types — cameras, doorbell cameras, badge readers, access-controlled doors, audio gateways, door sensors, environmental sensors, motion sensors, buttons, keypads, environmental gateways. Can request multiple entity types at once. The return structure is a JSON string that contains the states (including names, UUIDs, location, model, firmware, connection status) of the requested entities. This data is exact.
 
-This is the primary tool for checking device health and connectivity status. Each device in the response
-includes a "connected" boolean field indicating whether it is currently online (true) or offline (false).
-When asked about device health, offline devices, or connectivity issues, use this tool to fetch all device
-types and check the "connected" field to identify which devices are offline or unreachable.`;
+**Primary use cases:**
+1. **Looking up a device by name.** When the user mentions a specific camera, door, sensor, etc. by name (e.g. "describe camera 1919 Front Door Entrance", "what's the status of HW Lab door"), call this tool with the matching entityType, scan the returned list, and **fuzzy/case-insensitive substring match** the user's reference against the \`name\` field. Don't ask the user to clarify — try this lookup first, and only ask if there are genuinely multiple plausible matches in the results.
+2. **Listing all devices of a type** (cameras, doors, sensors, etc.) for a location or org-wide.
+3. **Checking device health and connectivity.** Each device includes a \`connected\` boolean (true = online, false = offline). For "which devices are offline?" / "is X online?" / health questions, fetch the relevant entityTypes and inspect \`connected\`.
+
+When the user asks to "describe", "look up", "find", "show me", or "tell me about" a named device, this is almost always the right starting tool — call it before asking the user for more specifics.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { entityTypes, timeZone, tempUnit } = args;
