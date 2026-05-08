@@ -1,5 +1,5 @@
 import { logger } from "../logger.js";
-import { authStore } from "../transports/streamable-http.js";
+import { requestAuthContext } from "../auth-context.js";
 import type { RequestModifiers } from "../util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
@@ -40,48 +40,41 @@ export const appendQueryParams = (url: string, params: object | undefined): stri
 export function constructRequestHeaders(
   url: string,
   modifiers?: RequestModifiers,
-  sessionId?: string
+  sessionId?: string  // kept for API compatibility; ignored — always uses AsyncLocalStorage
 ) {
-  // construct auth headers
+  // construct auth headers from async context (stateless: set per-request by the transport handler)
   let authHeaders: Record<string, string> = {};
-  if (!sessionId) {
-    // if no sessionId, we fall back to the api key in our environment variables
-    authHeaders = AUTH_HEADERS;
-  } else {
-    // use sessionId to get auth
-
-    const auth = authStore.get(sessionId);
-    if (!auth) {
-      logger.error(`No auth found for sessionId: ${sessionId}`);
-      throw new Error(`No auth found for sessionId: ${sessionId}`);
-    }
-
-    if ("oauthToken" in auth) {
+  const contextAuth = requestAuthContext.getStore();
+  if (contextAuth) {
+    if ("oauthToken" in contextAuth) {
       authHeaders = {
-        Authorization: `Bearer ${auth.oauthToken}`,
+        "x-auth-access-token": contextAuth.oauthToken,
         "x-auth-scheme": "api-oauth-token",
       };
-    } else if ("apiKey" in auth) {
+    } else if ("apiKey" in contextAuth) {
       authHeaders = {
-        "x-auth-apikey": auth.apiKey,
+        "x-auth-apikey": contextAuth.apiKey,
         "x-auth-scheme": "api-token",
       };
-    } else if ("sessionId" in auth) {
+    } else if ("sessionId" in contextAuth) {
       authHeaders = {
-        "x-auth-session": auth.sessionId,
-        "x-auth-chat": auth.latestRecordUuid,
+        "x-auth-session": contextAuth.sessionId,
+        "x-auth-chat": contextAuth.latestRecordUuid,
         "x-auth-scheme": "chatbot",
       };
-      url = appendQueryParams(url, { _rs: auth.sessionId });
-    } else if ("cookie" in auth) {
+      url = appendQueryParams(url, { _rs: contextAuth.sessionId });
+    } else if ("cookie" in contextAuth) {
       authHeaders = {
         "x-auth-scheme": "web2",
-        cookie: auth.cookie,
+        cookie: contextAuth.cookie,
       };
-      if ("sessionAlias" in auth) {
-        url = appendQueryParams(url, { _rs: auth.sessionAlias });
+      if (contextAuth.sessionAlias) {
+        url = appendQueryParams(url, { _rs: contextAuth.sessionAlias });
       }
     }
+  } else {
+    // no async context — fall back to env API key (local dev / stdio)
+    authHeaders = AUTH_HEADERS;
   }
 
   // merge headers
