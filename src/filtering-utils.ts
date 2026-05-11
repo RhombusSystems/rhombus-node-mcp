@@ -210,6 +210,18 @@ export function applyFilterBy(obj: any, conditions: FilterCondition[]): any {
 		}
 	}
 
+	// If the result has a sibling `count: number` and exactly one top-level
+	// array, sync count to the (now-filtered) array length. This makes `count`
+	// reflect what the model is looking at — pre-filter total when no filterBy
+	// was applied (handler computed it), post-filter total when one was. Any
+	// tool returning {count, items[]} gets this for free.
+	if (typeof result.count === "number") {
+		const arrayKeys = Object.keys(result).filter((k) => Array.isArray(result[k]));
+		if (arrayKeys.length === 1) {
+			result.count = result[arrayKeys[0]].length;
+		}
+	}
+
 	return result;
 }
 
@@ -377,3 +389,4 @@ export function createFilteringProxy(
 		},
 	});
 }
+

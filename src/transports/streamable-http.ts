@@ -1,8 +1,9 @@
+import crypto from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import cors from "cors";
 import express from "express";
-import crypto from "node:crypto";
+import { clearAccessibleAppsCache } from "../api/get-accessible-apps.js";
 import createServer from "../createServer.js";
 import { logger } from "../logger.js";
 
@@ -37,6 +38,69 @@ export const authStore = new Map<
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
+/**
+ * Populate authStore for the given sessionId based on the request headers.
+ * Done up-front (before createServer) so resolveAccessibleApps can read auth
+ * during tool registration. Returns true on success.
+ */
+function populateAuthStore(req: express.Request, sessionId: string): boolean {
+  const oauthToken = req.headers["x-auth-access-token"];
+  const authScheme = req.headers["x-auth-scheme"] ?? AuthScheme.API_TOKEN;
+
+  if (oauthToken && typeof oauthToken === "string") {
+    authStore.set(sessionId, { oauthToken, createdMs: Date.now() });
+    logger.info(`🔒 MCP request authenticated with oauth token (session ${sessionId})`);
+    return true;
+  }
+
+  if (authScheme === AuthScheme.API_TOKEN) {
+    const apiKey =
+      "x-auth-apikey" in req.headers
+        ? (req.headers["x-auth-apikey"] as string)
+        : process.env.RHOMBUS_API_KEY;
+
+    if (!apiKey) {
+      logger.warn("populateAuthStore: API_TOKEN scheme but no api key found");
+      return false;
+    }
+
+    logger.info(`🔒 MCP request authenticated with api key (session ${sessionId})`);
+    authStore.set(sessionId, { apiKey, createdMs: Date.now() });
+    return true;
+  }
+
+  if (
+    authScheme === AuthScheme.CHATBOT &&
+    "x-auth-session" in req.headers &&
+    "x-auth-chat" in req.headers
+  ) {
+    logger.info(
+      `🔒 MCP request authenticated with x-auth-session: ${req.headers["x-auth-session"]} and x-auth-chat: ${req.headers["x-auth-chat"]}`
+    );
+    authStore.set(sessionId, {
+      sessionId: req.headers["x-auth-session"] as string,
+      latestRecordUuid: req.headers["x-auth-chat"] as string,
+      createdMs: Date.now(),
+    });
+    return true;
+  }
+
+  if (authScheme === AuthScheme.WEB2 && "x-auth-cookie" in req.headers) {
+    logger.info(`🔒 MCP request authenticated with x-auth-cookie (session ${sessionId})`);
+    authStore.set(sessionId, {
+      cookie: req.headers["x-auth-cookie"] as string,
+      sessionAlias: req.headers["x-auth-session-alias"] as string | undefined,
+      createdMs: Date.now(),
+    });
+    return true;
+  }
+
+  logger.warn(
+    `populateAuthStore: invalid auth scheme. x-auth-scheme: ${req.headers["x-auth-scheme"]}, x-auth-session: ${req.headers["x-auth-session"]}, x-auth-chat: ${req.headers["x-auth-chat"]}`
+  );
+  return false;
+}
+
 export default function streamableHttpTransport() {
   const app = express();
   app.use(express.json());
@@ -69,88 +133,28 @@ export default function streamableHttpTransport() {
       }
       transport = _transport;
     } else if (!sessionId && isInitializeRequest(req.body)) {
-      // New initialization request
+      // New initialization request — mint our sessionId up front so we can
+      // populate authStore and gate tool registration BEFORE the SDK calls
+      // onsessioninitialized.
+      const newSessionId = crypto.randomUUID();
+      const authOk = populateAuthStore(req, newSessionId);
+      if (!authOk && authRequired.includes(req.body.method)) {
+        logger.error(`Auth required for ${req.body.method} but auth could not be populated`);
+        res
+          .status(401)
+          .setHeader(
+            "WWW-Authenticate",
+            `Bearer realm="${process.env.REALM}", error="invalid_token", error_description="The access token is missing or invalid"`
+          )
+          .send("Unauthorized");
+        return;
+      }
+
       transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: crypto.randomUUID,
+        sessionIdGenerator: () => newSessionId,
         onsessioninitialized: sessionId => {
-          // Store the transport by session ID
           transports.set(sessionId, transport);
-
           logger.info(`🔒 MCP request initialized with sessionId: ${sessionId}`);
-
-          try {
-            const oauthToken = req.headers["x-auth-access-token"];
-            const authScheme = req.headers["x-auth-scheme"] ?? AuthScheme.API_TOKEN; // otherwise, read 'x-auth-scheme'
-
-            // if oauth token is provided
-            if (oauthToken && typeof oauthToken === "string") {
-              authStore.set(sessionId, {
-                oauthToken: oauthToken as string,
-                createdMs: Date.now(),
-              });
-              logger.info(`🔒 MCP request authenticated with oauth token: ${oauthToken}`);
-            } else if (authScheme === AuthScheme.API_TOKEN) {
-              const apiKey =
-                "x-auth-apikey" in req.headers
-                  ? (req.headers["x-auth-apikey"] as string)
-                  : process.env.RHOMBUS_API_KEY;
-
-              if (!apiKey) {
-                throw new Error(
-                  "Invalid API Key provided! Please check the headers or environment variables"
-                );
-              }
-
-              logger.info(`🔒 MCP request authenticated with api key: ${apiKey}`);
-
-              authStore.set(sessionId, {
-                apiKey: apiKey,
-                createdMs: Date.now(),
-              });
-            } else if (
-              authScheme === AuthScheme.CHATBOT &&
-              "x-auth-session" in req.headers &&
-              "x-auth-chat" in req.headers
-            ) {
-              logger.info(
-                `🔒 MCP request authenticated with x-auth-session: ${req.headers["x-auth-session"]} and x-auth-chat: ${req.headers["x-auth-chat"]}`
-              );
-              // otherwise, store the sessionId and latestRecordUuid in authStore
-              authStore.set(sessionId, {
-                sessionId: req.headers["x-auth-session"] as string,
-                latestRecordUuid: req.headers["x-auth-chat"] as string,
-                createdMs: Date.now(),
-              });
-            } else if (authScheme === AuthScheme.WEB2 && "x-auth-cookie" in req.headers) {
-              authStore.set(sessionId, {
-                cookie: req.headers["x-auth-cookie"] as string,
-                sessionAlias: req.headers["x-auth-session-alias"] as string | undefined,
-                createdMs: Date.now(),
-              });
-            } else {
-              throw new Error(
-                `Invalid auth scheme provided! x-auth-scheme: ${req.headers["x-auth-scheme"]}, x-auth-session: ${req.headers["x-auth-session"]}, x-auth-chat: ${req.headers["x-auth-chat"]}`
-              );
-            }
-          } catch (e) {
-            // only throw if this is an auth required call
-            if (authRequired.includes(req.body.method)) {
-              if (e instanceof Error) {
-                logger.error(e.message);
-                res
-                  .status(401)
-                  .setHeader(
-                    "WWW-Authenticate",
-                    `Bearer realm="${process.env.REALM}", error="invalid_token", error_description="The access token is missing or invalid"`
-                  )
-                  .send(e.message);
-                return;
-              } else {
-                logger.error(e);
-                throw e;
-              }
-            }
-          }
         },
         // DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
         // locally, make sure to set:
@@ -163,13 +167,16 @@ export default function streamableHttpTransport() {
         if (transport.sessionId) {
           transports.delete(transport.sessionId);
           authStore.delete(transport.sessionId);
+          clearAccessibleAppsCache(transport.sessionId);
         }
       };
 
-      const server = await createServer();
+      // newSessionId is already in authStore; createServer can resolve
+      // accessibleRhombusApps and pick the right tool set.
+      const server = await createServer({ sessionId: newSessionId });
       // Connect to the MCP server
       await server.connect(transport);
-      logger.info(`🔗 Transport connected with sessionId: ${sessionId}`);
+      logger.info(`🔗 Transport connected with sessionId: ${newSessionId}`);
     } else {
       // Invalid request
       res.status(400).json({
