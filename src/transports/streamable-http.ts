@@ -117,7 +117,6 @@ export default function streamableHttpTransport() {
   /**
    * STATEFUL ENDPOINT
    */
-  const authRequired = ["tools/call"];
   app.post("/mcp", async (req, res) => {
     logger.info(`Received MCP request`, JSON.stringify(req.body, null, 2));
 
@@ -138,8 +137,13 @@ export default function streamableHttpTransport() {
       // onsessioninitialized.
       const newSessionId = crypto.randomUUID();
       const authOk = populateAuthStore(req, newSessionId);
-      if (!authOk && authRequired.includes(req.body.method)) {
-        logger.error(`Auth required for ${req.body.method} but auth could not be populated`);
+      // Reject the initialize itself when auth couldn't be populated. Letting
+      // the session through without an authStore entry only defers the failure:
+      // any later /customer/getCurrentUser (during tool registration) or tool
+      // call will throw "No auth found for sessionId" from network.ts, which
+      // is harder to diagnose than an upfront 401 here.
+      if (!authOk) {
+        logger.error(`Auth could not be populated for ${req.body.method}; rejecting`);
         res
           .status(401)
           .setHeader(

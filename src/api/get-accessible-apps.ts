@@ -6,15 +6,18 @@ export type AccessibleApp = RhombusAppEnum;
 
 /**
  * Fetches `user.accessibleRhombusApps` from getCurrentUser for the given session.
- * Result is cached in-memory for the lifetime of the session. Returns null on
- * error or missing session; callers should fall back to a permissive default.
+ * Successful results are cached in-memory for the lifetime of the session;
+ * failures are NOT cached so transient errors don't poison the session.
+ * Returns null on error or missing session; callers should fall back to a
+ * permissive default.
  */
-const cache = new Map<string, AccessibleApp[] | null>();
+const cache = new Map<string, AccessibleApp[]>();
 
 export async function resolveAccessibleApps(sessionId?: string): Promise<AccessibleApp[] | null> {
   if (!sessionId) return null;
 
-  if (cache.has(sessionId)) return cache.get(sessionId) ?? null;
+  const cached = cache.get(sessionId);
+  if (cached !== undefined) return cached;
 
   try {
     const res = await postApi<Customer_GetCurrentUserWSResponse>({
@@ -25,7 +28,6 @@ export async function resolveAccessibleApps(sessionId?: string): Promise<Accessi
 
     if (res.error) {
       logger.warn(`resolveAccessibleApps: getCurrentUser failed for session ${sessionId}`);
-      cache.set(sessionId, null);
       return null;
     }
 
@@ -38,7 +40,6 @@ export async function resolveAccessibleApps(sessionId?: string): Promise<Accessi
     return apps;
   } catch (e) {
     logger.warn(`resolveAccessibleApps: error for session ${sessionId}: ${String(e)}`);
-    cache.set(sessionId, null);
     return null;
   }
 }
