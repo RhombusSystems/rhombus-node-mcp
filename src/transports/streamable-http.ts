@@ -60,6 +60,18 @@ function populateAuthStore(req: express.Request, sessionId: string): boolean {
         : process.env.RHOMBUS_API_KEY;
 
     if (!apiKey) {
+      const hasAnyAuthHeaders =
+        "x-auth-scheme" in req.headers ||
+        "x-auth-apikey" in req.headers ||
+        "x-auth-access-token" in req.headers ||
+        "x-auth-session" in req.headers ||
+        "x-auth-cookie" in req.headers;
+
+      if (!hasAnyAuthHeaders) {
+        logger.info(`🔒 MCP request initialized with NO auth (unauthenticated session ${sessionId})`);
+        return true;
+      }
+
       logger.warn("populateAuthStore: API_TOKEN scheme but no api key found");
       return false;
     }
