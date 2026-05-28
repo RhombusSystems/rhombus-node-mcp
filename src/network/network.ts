@@ -46,9 +46,11 @@ export function constructRequestHeaders(
   let authHeaders: Record<string, string> = {};
   const contextAuth = requestAuthContext.getStore();
   if (contextAuth) {
-    if ("oauthToken" in contextAuth) {
+    if ("oauthBearer" in contextAuth) {
+      // The Bearer is an opaque Rhombus access token issued by the Rhombus
+      // OAuth 2.1 authorization server. api2 validates it directly.
       authHeaders = {
-        "x-auth-access-token": contextAuth.oauthToken,
+        "x-auth-access-token": contextAuth.oauthBearer,
         "x-auth-scheme": "api-oauth-token",
       };
     } else if ("apiKey" in contextAuth) {

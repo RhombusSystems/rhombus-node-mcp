@@ -1,14 +1,13 @@
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import cors from "cors";
 import express from "express";
+
 import { type AuthPayload, requestAuthContext } from "../auth-context.js";
 import createServer from "../createServer.js";
 import { logger } from "../logger.js";
-import { RhombusOAuthProvider } from "./oauth-provider.js";
 
 // ---------------------------------------------------------------------------
-// x-auth-* header extraction (internal chatbot / API key clients)
+// x-auth-* header extraction (internal chatbot / API key clients) — UNCHANGED
 // ---------------------------------------------------------------------------
 
 enum AuthScheme {
@@ -44,24 +43,32 @@ function extractAuth(req: express.Request): AuthPayload | null {
 
 // ---------------------------------------------------------------------------
 // Transport
+//
+// Pure RFC 9728 OAuth 2.1 Resource Server. The Rhombus authorization server
+// (RFC 8414 issuer) is configured via OAUTH_AS_ISSUER_URL — e.g. set it to
+// the Rhombus auth host whose /.well-known/oauth-authorization-server
+// document advertises /authorize, /token, /register, /revoke per
+// RFC 6749 + 7636 + 7591 + 7009.
+//
+// The AS issues opaque Rhombus access tokens, so the MCP server does no
+// local validation — it just forwards the Bearer to api2 as
+// x-auth-access-token, which api2 already knows how to validate.
+//
+// The legacy x-auth-* dispatch for internal callers (chatbot, API-key, web2)
+// is unchanged.
 // ---------------------------------------------------------------------------
 
 export default function streamableHttpTransport() {
   const app = express();
   app.use(express.json());
 
+  const oauthAsIssuerUrl = process.env.OAUTH_AS_ISSUER_URL;
   const mcpServerUrl = process.env.MCP_SERVER_URL;
-  const authServerUrl =
-    process.env.RHOMBUS_AUTH_SERVER_URL ?? "https://auth.rhombussystems.com";
   const allowedHost = process.env.ALLOWED_HOST;
   const allowedHosts = allowedHost
     ? allowedHost.split(",").map((h) => h.trim()).filter(Boolean)
     : [];
-  const rhombusClientId = process.env.RHOMBUS_OAUTH_CLIENT_ID;
-  const rhombusClientSecret = process.env.RHOMBUS_OAUTH_CLIENT_SECRET;
-  const jwtSecret = process.env.MCP_JWT_SECRET;
 
-  // CORS — include Authorization so external OAuth clients can send Bearer tokens
   app.use(
     cors({
       origin: ["*"],
@@ -80,72 +87,33 @@ export default function streamableHttpTransport() {
     })
   );
 
-  // Health check — required for load balancers / Kubernetes liveness probes
   app.get("/health", (_, res) => {
     res.status(200).json({ status: "ok" });
   });
 
-  // ---------------------------------------------------------------------------
-  // OAuth 2.1 authorization server — mounted when all three OAuth env vars are set
-  // ---------------------------------------------------------------------------
-
-  let oauthProvider: RhombusOAuthProvider | undefined;
-
-  if (mcpServerUrl && rhombusClientId && rhombusClientSecret && jwtSecret) {
-    const callbackUrl = `${new URL(mcpServerUrl).origin}/oauth/callback`;
-
-    oauthProvider = new RhombusOAuthProvider(
-      rhombusClientId,
-      rhombusClientSecret,
-      callbackUrl,
-      jwtSecret,
-      authServerUrl
-    );
-
-    // Rhombus callback — must be registered before mcpAuthRouter takes over routing
-    app.get("/oauth/callback", async (req, res) => {
-      const code = req.query["code"] as string | undefined;
-      const state = req.query["state"] as string | undefined;
-
-      if (!code || !state) {
-        res.status(400).send("Missing code or state parameter");
-        return;
-      }
-
-      try {
-        const redirectTo = await oauthProvider!.handleRhombusCallback(code, state);
-        res.redirect(redirectTo);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        logger.error(`OAuth callback error: ${msg}`);
-        res.status(500).send(`OAuth callback failed: ${msg}`);
-      }
-    });
-
-    // Standard MCP OAuth authorization server endpoints
-    app.use(
-      mcpAuthRouter({
-        provider: oauthProvider,
-        issuerUrl: new URL(mcpServerUrl),
-        resourceServerUrl: new URL(mcpServerUrl),
-        resourceName: "Rhombus MCP Server",
-      })
-    );
-
-    logger.info(`OAuth authorization server mounted (issuer: ${mcpServerUrl})`);
+  if (oauthAsIssuerUrl) {
+    logger.info(`OAuth Resource Server — AS at ${oauthAsIssuerUrl}`);
   } else {
     logger.info(
-      "OAuth not configured — set MCP_SERVER_URL, RHOMBUS_OAUTH_CLIENT_ID, RHOMBUS_OAUTH_CLIENT_SECRET, MCP_JWT_SECRET to enable"
+      "OAUTH_AS_ISSUER_URL not set — Bearer tokens will be rejected. Set this to the Rhombus authorization server issuer URL (e.g. https://auth-web.<env>.rhombussystems.com/)."
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Stateless MCP endpoint
-  //
-  // Accepts either:
-  //   - OAuth 2.1 Bearer token (Authorization: Bearer <jwt>) — for public MCP clients
-  //   - x-auth-* headers — for the internal Rhombus chatbot
-  // ---------------------------------------------------------------------------
+  // RFC 9728 — Protected Resource Metadata. Points clients at the Rhombus AS.
+  // Preserves the issuer URL verbatim so the value matches the `issuer` field
+  // strict OAuth clients (Claude Desktop, etc.) read from the AS metadata.
+  app.get("/.well-known/oauth-protected-resource", (req, res) => {
+    if (!oauthAsIssuerUrl) {
+      res.status(404).json({ error: "oauth_not_configured" });
+      return;
+    }
+    res.json({
+      resource: mcpServerUrl ?? `${getSelfOrigin(req, mcpServerUrl)}/mcp`,
+      authorization_servers: [oauthAsIssuerUrl],
+      scopes_supported: ["rhombus:access"],
+      bearer_methods_supported: ["header"],
+    });
+  });
 
   const handleMcpRequest = async (req: express.Request, res: express.Response) => {
     logger.info("Received MCP request");
@@ -154,56 +122,19 @@ export default function streamableHttpTransport() {
 
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      try {
-        if (!oauthProvider) throw new Error("OAuth not configured on this server");
-        // verifyAccessToken decodes our JWT and returns the Rhombus token as authInfo.token
-        const authInfo = await oauthProvider.verifyAccessToken(token);
-        auth = { oauthToken: authInfo.token };
-        logger.info("MCP request authenticated via Bearer token");
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        logger.warn(`Bearer token validation failed: ${msg}`);
-        const resourceMetadataUrl = mcpServerUrl
-          ? `${new URL(mcpServerUrl).origin}/.well-known/oauth-protected-resource`
-          : undefined;
-        const wwwAuth = resourceMetadataUrl
-          ? `Bearer error="invalid_token", error_description="${msg}", resource_metadata="${resourceMetadataUrl}"`
-          : `Bearer error="invalid_token", error_description="${msg}"`;
-        res
-          .status(401)
-          .set("WWW-Authenticate", wwwAuth)
-          .json({
-            jsonrpc: "2.0",
-            error: { code: -32000, message: `Unauthorized: ${msg}` },
-            id: null,
-          });
-        return;
+      if (!oauthAsIssuerUrl) {
+        return reject401(req, res, mcpServerUrl, "OAuth not configured: set OAUTH_AS_ISSUER_URL");
       }
+      const token = authHeader.slice(7).trim();
+      if (!token) {
+        return reject401(req, res, mcpServerUrl, "empty Bearer token");
+      }
+      auth = { oauthBearer: token };
+      logger.info("MCP request authenticated via Bearer (opaque, forwarded to api2)");
     } else {
-      // x-auth-* path (internal chatbot)
       auth = extractAuth(req);
       if (!auth) {
-        const authServerOrigin = new URL(authServerUrl).origin;
-        const resourceMetadataUrl = mcpServerUrl
-          ? `${new URL(mcpServerUrl).origin}/.well-known/oauth-protected-resource`
-          : undefined;
-        const wwwAuth = resourceMetadataUrl
-          ? `Bearer realm="${authServerOrigin}", resource_metadata="${resourceMetadataUrl}"`
-          : `Bearer realm="${authServerOrigin}"`;
-        res
-          .status(401)
-          .set("WWW-Authenticate", wwwAuth)
-          .json({
-            jsonrpc: "2.0",
-            error: {
-              code: -32000,
-              message:
-                "Unauthorized: provide Authorization: Bearer <token> or x-auth-* headers",
-            },
-            id: null,
-          });
-        return;
+        return reject401(req, res, mcpServerUrl, "no credentials presented");
       }
       logger.info("MCP request authenticated via x-auth-* headers");
     }
@@ -250,4 +181,45 @@ export default function streamableHttpTransport() {
   app.listen(PORT, () => {
     logger.info(`rhombus-node-mcp listening on port ${PORT}`);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function reject401(
+  req: express.Request,
+  res: express.Response,
+  mcpServerUrl: string | undefined,
+  msg: string
+) {
+  const resourceMetadataUrl = `${getSelfOrigin(req, mcpServerUrl)}/.well-known/oauth-protected-resource`;
+  res
+    .status(401)
+    .set(
+      "WWW-Authenticate",
+      `Bearer error="invalid_token", error_description="${escapeWwwAuth(msg)}", resource_metadata="${resourceMetadataUrl}"`
+    )
+    .json({
+      jsonrpc: "2.0",
+      error: { code: -32000, message: `Unauthorized: ${msg}` },
+      id: null,
+    });
+}
+
+function getSelfOrigin(req: express.Request, mcpServerUrl?: string): string {
+  if (mcpServerUrl) {
+    try {
+      return new URL(mcpServerUrl).origin;
+    } catch {
+      // fall through
+    }
+  }
+  const proto = (req.headers["x-forwarded-proto"] as string | undefined) ?? req.protocol;
+  const host = req.headers.host ?? "localhost";
+  return `${proto}://${host}`;
+}
+
+function escapeWwwAuth(s: string): string {
+  return s.replace(/["\r\n]/g, "");
 }
