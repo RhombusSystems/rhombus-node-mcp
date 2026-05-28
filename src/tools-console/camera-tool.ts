@@ -32,6 +32,29 @@ What follows is a description of the behavior of this tool given the requestType
 This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations (e.g. storage settings).
 
 NOTE: To update camera settings, use the update-tool instead.
+
+---
+
+**AUTOMATIC SNAPSHOT FOR IMAGE QUALITY ISSUES** — When a user mentions camera image quality (darkness, brightness, blur, washed out, "doesn't look great", "fix the image", etc.), you MUST IMMEDIATELY:
+1. Call camera-tool with requestType "image" to capture a snapshot WITHOUT asking first.
+2. Analyze the image to identify quality issues.
+3. Call camera-tool with requestType "get-settings" to check current camera settings.
+4. Propose specific setting changes based on your analysis (store the exact values you plan to change, e.g. img_brightness, wdr_strength).
+5. When the user confirms ("yes", "confirm", "fix it", "apply", "go ahead", "ok", etc.), call update-tool with those stored settings — see update-tool's description for the confirmation flow. NEVER skip the update-tool call.
+
+Examples that REQUIRE the automatic snapshot flow:
+- "This camera's image doesn't look great"
+- "The image quality is poor"
+- "Can you fix the image"
+- "Adjust settings to be optimal"
+- "The camera looks blurry/dark/washed out"
+- Any mention of image appearance problems.
+
+**VISUAL-FEATURE CAMERA FILTERING** — When the user asks for cameras filtered by what they can see (indoors/outdoors, "facing the street", "with a view of X", parking lot, entrance), you MUST:
+1. First get the camera list via get-entity-tool or location-tool.
+2. Then call camera-tool with requestType "image" for EACH candidate camera (in PARALLEL).
+3. Analyze each image to determine if it meets the user's criteria.
+4. Return only the cameras that match.
 `;
 
 const logger = getLogger("camera-tool");

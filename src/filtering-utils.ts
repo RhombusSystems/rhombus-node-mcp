@@ -210,6 +210,18 @@ export function applyFilterBy(obj: any, conditions: FilterCondition[]): any {
 		}
 	}
 
+	// If the result has a sibling `count: number` and exactly one top-level
+	// array, sync count to the (now-filtered) array length. This makes `count`
+	// reflect what the model is looking at — pre-filter total when no filterBy
+	// was applied (handler computed it), post-filter total when one was. Any
+	// tool returning {count, items[]} gets this for free.
+	if (typeof result.count === "number") {
+		const arrayKeys = Object.keys(result).filter((k) => Array.isArray(result[k]));
+		if (arrayKeys.length === 1) {
+			result.count = result[arrayKeys[0]].length;
+		}
+	}
+
 	return result;
 }
 
@@ -350,10 +362,36 @@ export function createFilteringProxy(
 					return (target as any).registerTool(name, config, handler);
 				}
 
+				let descriptionSuffix = FILTERING_DESCRIPTION_SUFFIX;
+				if (config.outputSchema) {
+					try {
+						let schema: z.ZodTypeAny;
+						if (config.outputSchema instanceof z.ZodType) {
+							schema = config.outputSchema;
+						} else if (typeof config.outputSchema === "object") {
+							schema = z.object(config.outputSchema);
+						} else {
+							schema = config.outputSchema;
+						}
+						const paths = zodToDotNotationPaths(schema);
+						if (paths.length > 0) {
+							const filteredPaths = [...new Set(paths.filter(
+								(p) => p !== "requestType" && p !== "error" && p.trim() !== ""
+							))].sort();
+							if (filteredPaths.length > 0) {
+								descriptionSuffix += `\n\n**Available output field paths for this tool's \`includeFields\` / \`filterBy\`:**\n` +
+									filteredPaths.map((p) => `- \`"${p}"\``).join("\n");
+							}
+						}
+					} catch (error) {
+						// Fall back to the default description suffix on parsing failure
+					}
+				}
+
 				const augmentedConfig = {
 					...config,
 					description:
-						(config.description ?? "") + FILTERING_DESCRIPTION_SUFFIX,
+						(config.description ?? "") + descriptionSuffix,
 					inputSchema: {
 						...config.inputSchema,
 						includeFields: INCLUDE_FIELDS_ARG,

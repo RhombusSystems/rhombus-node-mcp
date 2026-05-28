@@ -45,6 +45,20 @@ It has the following modes of operation, determined by the "requestType" paramet
 - ${DoorScheduleExceptionRequestType.UPDATE_EXCEPTION}: Update a door schedule exception. Requires exception (DoorScheduleExceptionType object). If intervals are omitted but defaultState and date range are provided, the tool will generate a full-day interval.
 
 Use get-entity-tool to look up location and door UUIDs when needed.
+
+---
+
+**Mutating doorUuids on an existing exception (add/remove/replace doors):**
+\`update-exception\` REPLACES \`doorUuids\` with whatever you pass — it is not a delta operation. To safely remove or add doors while preserving the others:
+
+1. Call \`find-exceptions\` (or \`get-exception\`) to fetch the exception. The response includes the **full \`doorUuids\` array** for that exception — that IS the current door list.
+2. Compute the new array yourself:
+   - **Remove doors:** filter the existing \`doorUuids\` array, dropping the ones to remove.
+   - **Add doors:** append the new UUIDs to the existing array (deduped).
+   - **Replace wholesale:** just use the new set.
+3. Call \`update-exception\` with \`exception.uuid\` and \`exception.doorUuids\` set to your computed array. Other fields (name, dates, intervals, defaultState) are optional — omit them to leave them unchanged.
+
+**You already have the current door list in the find-exceptions response.** Do not ask the user for it, do not claim you need additional lookups, and do not refuse the mutation citing missing context. The doorUuids array you got back IS the context.
 `;
 
 function buildDateRangeFilter(args: ToolArgs) {
