@@ -1,295 +1,225 @@
-import crypto from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import cors from "cors";
 import express from "express";
-import { clearAccessibleAppsCache } from "../api/get-accessible-apps.js";
+
+import { type AuthPayload, requestAuthContext } from "../auth-context.js";
 import createServer from "../createServer.js";
 import { logger } from "../logger.js";
 
+// ---------------------------------------------------------------------------
+// x-auth-* header extraction (internal chatbot / API key clients) — UNCHANGED
+// ---------------------------------------------------------------------------
+
 enum AuthScheme {
-  OAUTH = "oauth",
   API_TOKEN = "api-token",
   CHATBOT = "chatbot",
   WEB2 = "web2",
 }
 
-export const authStore = new Map<
-  string,
-  | {
-      sessionId: string;
-      latestRecordUuid: string;
-      createdMs: number;
-    }
-  | {
-      apiKey: string;
-      createdMs: number;
-    }
-  | {
-      cookie: string;
-      sessionAlias?: string;
-      createdMs: number;
-    }
-  | {
-      oauthToken: string;
-      createdMs: number;
-    }
->();
+function extractAuth(req: express.Request): AuthPayload | null {
+  const scheme = (req.headers["x-auth-scheme"] as string | undefined) ?? AuthScheme.API_TOKEN;
 
-const transports = new Map<string, StreamableHTTPServerTransport>();
-
-/**
- * Populate authStore for the given sessionId based on the request headers.
- * Done up-front (before createServer) so resolveAccessibleApps can read auth
- * during tool registration. Returns true on success.
- */
-function populateAuthStore(req: express.Request, sessionId: string): boolean {
-  const oauthToken = req.headers["x-auth-access-token"];
-  const authScheme = req.headers["x-auth-scheme"] ?? AuthScheme.API_TOKEN;
-
-  if (oauthToken && typeof oauthToken === "string") {
-    authStore.set(sessionId, { oauthToken, createdMs: Date.now() });
-    logger.info(`🔒 MCP request authenticated with oauth token (session ${sessionId})`);
-    return true;
+  if (scheme === AuthScheme.API_TOKEN) {
+    const apiKey = req.headers["x-auth-apikey"] as string | undefined;
+    if (!apiKey) return null;
+    return { apiKey };
   }
 
-  if (authScheme === AuthScheme.API_TOKEN) {
-    const apiKey =
-      "x-auth-apikey" in req.headers
-        ? (req.headers["x-auth-apikey"] as string)
-        : process.env.RHOMBUS_API_KEY;
-
-    if (!apiKey) {
-      const hasAnyAuthHeaders =
-        "x-auth-scheme" in req.headers ||
-        "x-auth-apikey" in req.headers ||
-        "x-auth-access-token" in req.headers ||
-        "x-auth-session" in req.headers ||
-        "x-auth-cookie" in req.headers;
-
-      if (!hasAnyAuthHeaders) {
-        logger.info(`🔒 MCP request initialized with NO auth (unauthenticated session ${sessionId})`);
-        return true;
-      }
-
-      logger.warn("populateAuthStore: API_TOKEN scheme but no api key found");
-      return false;
-    }
-
-    logger.info(`🔒 MCP request authenticated with api key (session ${sessionId})`);
-    authStore.set(sessionId, { apiKey, createdMs: Date.now() });
-    return true;
+  if (scheme === AuthScheme.CHATBOT) {
+    const sessionId = req.headers["x-auth-session"] as string | undefined;
+    const latestRecordUuid = req.headers["x-auth-chat"] as string | undefined;
+    if (!sessionId || !latestRecordUuid) return null;
+    return { sessionId, latestRecordUuid };
   }
 
-  if (
-    authScheme === AuthScheme.CHATBOT &&
-    "x-auth-session" in req.headers &&
-    "x-auth-chat" in req.headers
-  ) {
-    logger.info(
-      `🔒 MCP request authenticated with x-auth-session: ${req.headers["x-auth-session"]} and x-auth-chat: ${req.headers["x-auth-chat"]}`
-    );
-    authStore.set(sessionId, {
-      sessionId: req.headers["x-auth-session"] as string,
-      latestRecordUuid: req.headers["x-auth-chat"] as string,
-      createdMs: Date.now(),
-    });
-    return true;
+  if (scheme === AuthScheme.WEB2) {
+    const cookie = req.headers["x-auth-cookie"] as string | undefined;
+    if (!cookie) return null;
+    return { cookie, sessionAlias: req.headers["x-auth-session-alias"] as string | undefined };
   }
 
-  if (authScheme === AuthScheme.WEB2 && "x-auth-cookie" in req.headers) {
-    logger.info(`🔒 MCP request authenticated with x-auth-cookie (session ${sessionId})`);
-    authStore.set(sessionId, {
-      cookie: req.headers["x-auth-cookie"] as string,
-      sessionAlias: req.headers["x-auth-session-alias"] as string | undefined,
-      createdMs: Date.now(),
-    });
-    return true;
-  }
-
-  logger.warn(
-    `populateAuthStore: invalid auth scheme. x-auth-scheme: ${req.headers["x-auth-scheme"]}, x-auth-session: ${req.headers["x-auth-session"]}, x-auth-chat: ${req.headers["x-auth-chat"]}`
-  );
-  return false;
+  return null;
 }
+
+// ---------------------------------------------------------------------------
+// Transport
+//
+// Pure RFC 9728 OAuth 2.1 Resource Server. The Rhombus authorization server
+// (RFC 8414 issuer) is configured via OAUTH_AS_ISSUER_URL — e.g. set it to
+// the Rhombus auth host whose /.well-known/oauth-authorization-server
+// document advertises /authorize, /token, /register, /revoke per
+// RFC 6749 + 7636 + 7591 + 7009.
+//
+// The AS issues opaque Rhombus access tokens, so the MCP server does no
+// local validation — it just forwards the Bearer to api2 as
+// x-auth-access-token, which api2 already knows how to validate.
+//
+// The legacy x-auth-* dispatch for internal callers (chatbot, API-key, web2)
+// is unchanged.
+// ---------------------------------------------------------------------------
 
 export default function streamableHttpTransport() {
   const app = express();
   app.use(express.json());
 
+  const oauthAsIssuerUrl = process.env.OAUTH_AS_ISSUER_URL;
+  const mcpServerUrl = process.env.MCP_SERVER_URL;
+  const allowedHost = process.env.ALLOWED_HOST;
+  const allowedHosts = allowedHost
+    ? allowedHost.split(",").map((h) => h.trim()).filter(Boolean)
+    : [];
+
   app.use(
     cors({
-      // TODO: domain
       origin: ["*"],
       exposedHeaders: ["mcp-session-id"],
-      allowedHeaders: ["Content-Type", "mcp-session-id"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "mcp-session-id",
+        "x-auth-scheme",
+        "x-auth-apikey",
+        "x-auth-session",
+        "x-auth-chat",
+        "x-auth-cookie",
+        "x-auth-session-alias",
+      ],
     })
   );
 
-  /**
-   * STATEFUL ENDPOINT
-   */
-  app.post("/mcp", async (req, res) => {
-    logger.info(`Received MCP request`, JSON.stringify(req.body, null, 2));
+  app.get("/health", (_, res) => {
+    res.status(200).json({ status: "ok" });
+  });
 
-    // Check for existing session ID
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    let transport: StreamableHTTPServerTransport;
+  if (oauthAsIssuerUrl) {
+    logger.info(`OAuth Resource Server — AS at ${oauthAsIssuerUrl}`);
+  } else {
+    logger.info(
+      "OAUTH_AS_ISSUER_URL not set — Bearer tokens will be rejected. Set this to the Rhombus authorization server issuer URL (e.g. https://auth-web.<env>.rhombussystems.com/)."
+    );
+  }
 
-    if (sessionId && transports.has(sessionId)) {
-      // Reuse existing transport
-      const _transport = transports.get(sessionId);
-      if (!_transport) {
-        throw new Error(`Transport not found for sessionId: ${sessionId}`);
-      }
-      transport = _transport;
-    } else if (!sessionId && isInitializeRequest(req.body)) {
-      // New initialization request — mint our sessionId up front so we can
-      // populate authStore and gate tool registration BEFORE the SDK calls
-      // onsessioninitialized.
-      const newSessionId = crypto.randomUUID();
-      const authOk = populateAuthStore(req, newSessionId);
-      // Reject the initialize itself when auth couldn't be populated. Letting
-      // the session through without an authStore entry only defers the failure:
-      // any later /customer/getCurrentUser (during tool registration) or tool
-      // call will throw "No auth found for sessionId" from network.ts, which
-      // is harder to diagnose than an upfront 401 here.
-      if (!authOk) {
-        logger.error(`Auth could not be populated for ${req.body.method}; rejecting`);
-        res
-          .status(401)
-          .setHeader(
-            "WWW-Authenticate",
-            `Bearer realm="${process.env.REALM}", error="invalid_token", error_description="The access token is missing or invalid"`
-          )
-          .send("Unauthorized");
-        return;
-      }
-
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => newSessionId,
-        onsessioninitialized: sessionId => {
-          transports.set(sessionId, transport);
-          logger.info(`🔒 MCP request initialized with sessionId: ${sessionId}`);
-        },
-        // DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
-        // locally, make sure to set:
-        // enableDnsRebindingProtection: true,
-        // allowedHosts: ['127.0.0.1'],
-      });
-
-      // Clean up transport when closed
-      transport.onclose = () => {
-        if (transport.sessionId) {
-          transports.delete(transport.sessionId);
-          authStore.delete(transport.sessionId);
-          clearAccessibleAppsCache(transport.sessionId);
-        }
-      };
-
-      // newSessionId is already in authStore; createServer can resolve
-      // accessibleRhombusApps and pick the right tool set.
-      const server = await createServer({ sessionId: newSessionId });
-      // Connect to the MCP server
-      await server.connect(transport);
-      logger.info(`🔗 Transport connected with sessionId: ${newSessionId}`);
-    } else {
-      // Invalid request
-      res.status(400).json({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Bad Request: No valid session ID provided",
-        },
-        id: null,
-      });
+  // RFC 9728 — Protected Resource Metadata. Points clients at the Rhombus AS.
+  // Preserves the issuer URL verbatim so the value matches the `issuer` field
+  // strict OAuth clients (Claude Desktop, etc.) read from the AS metadata.
+  app.get("/.well-known/oauth-protected-resource", (req, res) => {
+    if (!oauthAsIssuerUrl) {
+      res.status(404).json({ error: "oauth_not_configured" });
       return;
     }
-
-    await transport.handleRequest(req, res, req.body);
-  });
-
-  app.get("/mcp", async (_, res) => {
-    logger.warn("Received Not Allowed GET MCP request");
-    res.writeHead(405).end(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed.",
-        },
-        id: null,
-      })
-    );
-  });
-
-  app.delete("/mcp", async (req, res) => {
-    logger.warn("Received Not Allowed DELETE MCP request");
-    res.writeHead(405).end(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed.",
-        },
-        id: null,
-      })
-    );
-  });
-
-  /**
-   * STATELESS ENDPOINT
-   */
-
-  app.post("/mcp-stateless", async (req, res) => {
-    logger.info(`Received stateless MCP request`, req.body);
-
-    let transport: StreamableHTTPServerTransport;
-
-    transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
+    res.json({
+      resource: mcpServerUrl ?? `${getSelfOrigin(req, mcpServerUrl)}/mcp`,
+      authorization_servers: [oauthAsIssuerUrl],
+      scopes_supported: ["rhombus:access"],
+      bearer_methods_supported: ["header"],
     });
-
-    const server = await createServer();
-    // Connect to the MCP server
-    await server.connect(transport);
-    logger.info(`🔗 Stateless Transport connected`);
-
-    // Handle the request
-    await transport.handleRequest(req, res, req.body);
   });
 
-  app.get("/mcp-stateless", async (req, res) => {
-    logger.warn("Received Not Allowed GET MCP request");
+  const handleMcpRequest = async (req: express.Request, res: express.Response) => {
+    logger.info("Received MCP request");
+
+    let auth: AuthPayload | null = null;
+
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      if (!oauthAsIssuerUrl) {
+        return reject401(req, res, mcpServerUrl, "OAuth not configured: set OAUTH_AS_ISSUER_URL");
+      }
+      const token = authHeader.slice(7).trim();
+      if (!token) {
+        return reject401(req, res, mcpServerUrl, "empty Bearer token");
+      }
+      auth = { oauthBearer: token };
+      logger.info("MCP request authenticated via Bearer (opaque, forwarded to api2)");
+    } else {
+      auth = extractAuth(req);
+      if (!auth) {
+        return reject401(req, res, mcpServerUrl, "no credentials presented");
+      }
+      logger.info("MCP request authenticated via x-auth-* headers");
+    }
+
+    await requestAuthContext.run(auth, async () => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        ...(allowedHosts.length > 0
+          ? { enableDnsRebindingProtection: true, allowedHosts }
+          : {}),
+      });
+
+      const server = await createServer();
+      await server.connect(transport);
+      logger.info("🔗 Stateless MCP Transport connected");
+
+      await transport.handleRequest(req, res, req.body);
+    });
+  };
+
+  app.post("/mcp", handleMcpRequest);
+
+  app.get("/mcp", (_, res) => {
     res.writeHead(405).end(
       JSON.stringify({
         jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed.",
-        },
+        error: { code: -32000, message: "Method not allowed." },
         id: null,
       })
     );
   });
 
-  app.delete("/mcp-stateless", async (req, res) => {
-    logger.warn("Received Not Allowed DELETE MCP request");
+  app.delete("/mcp", (_, res) => {
     res.writeHead(405).end(
       JSON.stringify({
         jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed.",
-        },
+        error: { code: -32000, message: "Method not allowed." },
         id: null,
       })
     );
   });
 
-  // Start the server
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT ?? 3000;
   app.listen(PORT, () => {
     logger.info(`rhombus-node-mcp listening on port ${PORT}`);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function reject401(
+  req: express.Request,
+  res: express.Response,
+  mcpServerUrl: string | undefined,
+  msg: string
+) {
+  const resourceMetadataUrl = `${getSelfOrigin(req, mcpServerUrl)}/.well-known/oauth-protected-resource`;
+  res
+    .status(401)
+    .set(
+      "WWW-Authenticate",
+      `Bearer error="invalid_token", error_description="${escapeWwwAuth(msg)}", resource_metadata="${resourceMetadataUrl}"`
+    )
+    .json({
+      jsonrpc: "2.0",
+      error: { code: -32000, message: `Unauthorized: ${msg}` },
+      id: null,
+    });
+}
+
+function getSelfOrigin(req: express.Request, mcpServerUrl?: string): string {
+  if (mcpServerUrl) {
+    try {
+      return new URL(mcpServerUrl).origin;
+    } catch {
+      // fall through
+    }
+  }
+  const proto = (req.headers["x-forwarded-proto"] as string | undefined) ?? req.protocol;
+  const host = req.headers.host ?? "localhost";
+  return `${proto}://${host}`;
+}
+
+function escapeWwwAuth(s: string): string {
+  return s.replace(/["\r\n]/g, "");
 }
