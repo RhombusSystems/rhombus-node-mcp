@@ -20,7 +20,8 @@ function extractAuth(req: express.Request): AuthPayload | null {
   const scheme = (req.headers["x-auth-scheme"] as string | undefined) ?? AuthScheme.API_TOKEN;
 
   if (scheme === AuthScheme.API_TOKEN) {
-    const apiKey = req.headers["x-auth-apikey"] as string | undefined;
+    const apiKey =
+      (req.headers["x-auth-apikey"] as string | undefined) ?? process.env.RHOMBUS_API_KEY;
     if (!apiKey) return null;
     return { apiKey };
   }
@@ -66,7 +67,10 @@ export default function streamableHttpTransport() {
   const mcpServerUrl = process.env.MCP_SERVER_URL;
   const allowedHost = process.env.ALLOWED_HOST;
   const allowedHosts = allowedHost
-    ? allowedHost.split(",").map((h) => h.trim()).filter(Boolean)
+    ? allowedHost
+        .split(",")
+        .map(h => h.trim())
+        .filter(Boolean)
     : [];
 
   app.use(
@@ -142,9 +146,7 @@ export default function streamableHttpTransport() {
     await requestAuthContext.run(auth, async () => {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
-        ...(allowedHosts.length > 0
-          ? { enableDnsRebindingProtection: true, allowedHosts }
-          : {}),
+        ...(allowedHosts.length > 0 ? { enableDnsRebindingProtection: true, allowedHosts } : {}),
       });
 
       const server = await createServer();
