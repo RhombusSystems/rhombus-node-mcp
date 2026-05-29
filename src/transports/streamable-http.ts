@@ -134,12 +134,28 @@ export default function streamableHttpTransport() {
     } else {
       auth = extractAuth(req);
       if (!auth) {
-        return reject401(req, res, mcpServerUrl, "no credentials presented");
+        // Deployment / probe path: a request that presents NO auth headers at
+        // all is allowed through as an unauthenticated session. Network calls
+        // then fall back to the env RHOMBUS_API_KEY (see constructRequestHeaders).
+        // Required so platform health/initialization probes that hit /mcp
+        // without credentials don't get a 401.
+        const hasAnyAuthHeaders =
+          "x-auth-scheme" in req.headers ||
+          "x-auth-apikey" in req.headers ||
+          "x-auth-access-token" in req.headers ||
+          "x-auth-session" in req.headers ||
+          "x-auth-cookie" in req.headers;
+
+        if (hasAnyAuthHeaders) {
+          return reject401(req, res, mcpServerUrl, "no credentials presented");
+        }
+        logger.info("🔒 MCP request initialized with NO auth (unauthenticated session)");
+      } else {
+        logger.info("MCP request authenticated via x-auth-* headers");
       }
-      logger.info("MCP request authenticated via x-auth-* headers");
     }
 
-    await requestAuthContext.run(auth, async () => {
+    const runTransport = async () => {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         ...(allowedHosts.length > 0
@@ -152,7 +168,14 @@ export default function streamableHttpTransport() {
       logger.info("🔗 Stateless MCP Transport connected");
 
       await transport.handleRequest(req, res, req.body);
-    });
+    };
+
+    if (auth) {
+      await requestAuthContext.run(auth, runTransport);
+    } else {
+      // Unauthenticated session — no auth context; env API key fallback applies.
+      await runTransport();
+    }
   };
 
   app.post("/mcp", handleMcpRequest);
