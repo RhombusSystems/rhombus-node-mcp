@@ -35,13 +35,6 @@
     "test:watch": "vitest",
     "watch": "npm run clean && tsc --watch",
     "generate-schemas": "npx tsx scripts/generate-zod-schemas.ts",
-    "scrape-sitemaps": "npx tsx scripts/scrape-sitemaps.ts",
-    "scrape-content": "npx tsx scripts/scrape-content.ts",
-    "scrape-progress": "npx tsx scripts/scrape-content.ts --progress",
-    "generate-embeddings": "npx tsx scripts/generate-embeddings.ts",
-    "embedding-progress": "npx tsx scripts/generate-embeddings.ts --progress",
-    "estimate-cost": "npx tsx scripts/generate-embeddings.ts --estimate-only",
-    "build-faiss-index": "npx tsx scripts/build-faiss-index.ts",
     "extract-route-outputs": "npx tsx assets/extract-route-outputs.ts",
     "create:tool": "tsx scripts/create-new-tool.ts"
   },
@@ -51,17 +44,12 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "axios": "^1.11.0",
-    "cheerio": "^1.1.2",
     "chrono-node": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "faiss-node": "^0.5.1",
-    "langchain": "^0.3.30",
     "log4js": "^6.9.1",
     "luxon": "^3.6.1",
-    "openai": "^6.32.0",
-    "tiktoken": "^1.0.21",
     "zod": "^4.3.6"
   },
   "devDependencies": {
