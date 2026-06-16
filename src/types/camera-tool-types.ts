@@ -253,6 +253,50 @@ export const BASE_TOOL_ARGS = {
       ` + ISOTimestampFormatDescription
     ),
   requestType: z.enum(["image", "get-settings", "get-media-uris", "get-ai-thresholds"]),
+  cropX: z
+    .number()
+    .min(0)
+    .max(100)
+    .nullable()
+    .optional()
+    .describe(
+      "For requestType 'image' only. Left edge of the crop region as a percentage (0-100) of image width, measured from the left. 0 = left edge. Omit for full frame."
+    ),
+  cropY: z
+    .number()
+    .min(0)
+    .max(100)
+    .nullable()
+    .optional()
+    .describe(
+      "For requestType 'image' only. Top edge of the crop region as a percentage (0-100) of image height, measured from the top. 0 = top edge. Omit for full frame."
+    ),
+  cropWidth: z
+    .number()
+    .min(0)
+    .max(100)
+    .nullable()
+    .optional()
+    .describe(
+      "For requestType 'image' only. Width of the crop region as a percentage (0-100) of image width. Omit for full frame (100)."
+    ),
+  cropHeight: z
+    .number()
+    .min(0)
+    .max(100)
+    .nullable()
+    .optional()
+    .describe(
+      "For requestType 'image' only. Height of the crop region as a percentage (0-100) of image height. Omit for full frame (100)."
+    ),
+  downscaleFactor: z
+    .number()
+    .min(1)
+    .nullable()
+    .optional()
+    .describe(
+      "For requestType 'image' only. Ratio to shrink the image pixels by (default 10). Use a smaller value (e.g. 1-3) when zooming into a crop to keep detail."
+    ),
 };
 
 const BASE_TOOL_ARGS_SCHEMA = z.object(BASE_TOOL_ARGS);
@@ -260,3 +304,15 @@ export type BaseToolArgs = z.infer<typeof BASE_TOOL_ARGS_SCHEMA>;
 
 // Type for tool args
 export type ToolArgs = BaseToolArgs;
+
+// TODO: replace with the generated schema["Video_GetExactFrameDataWSResponse"] once the
+// OpenAPI spec includes /video/getExactFrameData and schemas are regenerated
+// (npm run generate-schemas). The endpoint is new in ITG and not yet in schema.ts.
+export type Video_GetExactFrameDataWSResponse = {
+  error?: boolean | null;
+  errorMsg?: string | null;
+  warningMsg?: string | null;
+  /** base64-encoded JPEG */
+  frameData?: string | null;
+  responseMessage?: string | null;
+};
