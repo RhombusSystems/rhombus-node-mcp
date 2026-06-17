@@ -1,4 +1,5 @@
 import { postApi } from "../network/network.js";
+import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 export interface SearchOnGuardEventsArgs {
@@ -16,11 +17,8 @@ export interface SearchOnGuardEventsArgs {
 }
 
 /**
- * Calls the public webservice OnGuard event search (POST /eventSearchV2/searchOnGuardEvents).
- *
- * Typed as `any` for now: the endpoint post-dates the generated public OpenAPI schema
- * (`types/schema.ts`), so there is no `schema[...SearchOnGuardEvents...]` yet. Once the spec is
- * regenerated, swap `postApi<any>` for the generated request/response types and drop the casts.
+ * Calls the webservice OnGuard event search (POST /eventSearchV2/searchOnGuardEvents) and maps the
+ * raw seekpoints to an agent-friendly shape. Typed against the generated public OpenAPI schema.
  */
 export async function searchOnGuardEvents(
   args: SearchOnGuardEventsArgs,
@@ -28,31 +26,32 @@ export async function searchOnGuardEvents(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const res = await postApi<any>({
+  const body: schema["Eventsearch_SearchOnGuardEventsWSRequest"] = {
+    deviceUuids: args.deviceUuids,
+    locationUuids: args.locationUuids,
+    afterMs: args.afterMs,
+    beforeMs: args.beforeMs,
+    cardholderQuery: args.cardholderQuery,
+    badgeStatus: args.badgeStatus,
+    badgeType: args.badgeType,
+    area: args.area,
+    anomalyOnly: args.anomalyOnly,
+    entryMade: args.entryMade,
+    limit: args.limit ?? 200,
+  };
+
+  const res = await postApi<schema["Eventsearch_SearchOnGuardEventsWSResponse"]>({
     route: "/eventSearchV2/searchOnGuardEvents",
-    body: {
-      ...(args.deviceUuids?.length ? { deviceUuids: args.deviceUuids } : {}),
-      ...(args.locationUuids?.length ? { locationUuids: args.locationUuids } : {}),
-      ...(args.afterMs != null ? { afterMs: args.afterMs } : {}),
-      ...(args.beforeMs != null ? { beforeMs: args.beforeMs } : {}),
-      ...(args.cardholderQuery ? { cardholderQuery: args.cardholderQuery } : {}),
-      ...(args.badgeStatus ? { badgeStatus: args.badgeStatus } : {}),
-      ...(args.badgeType ? { badgeType: args.badgeType } : {}),
-      ...(args.area ? { area: args.area } : {}),
-      ...(args.anomalyOnly != null ? { anomalyOnly: args.anomalyOnly } : {}),
-      ...(args.entryMade != null ? { entryMade: args.entryMade } : {}),
-      limit: args.limit ?? 200,
-    },
+    body,
     modifiers: requestModifiers,
     sessionId,
   });
 
   if (res.error) {
-    throw new Error(res.status ?? "OnGuard event search failed");
+    throw new Error(res.status ?? res.errorMsg ?? "OnGuard event search failed");
   }
 
-  const rawEvents: any[] = res.events ?? [];
-  const events = rawEvents.map((e) => ({
+  const events = (res.events ?? []).map((e) => ({
     timestampMs: e.timestampMs ?? undefined,
     datetime: e.timestampMs != null ? formatTimestamp(e.timestampMs, timeZone) : undefined,
     deviceUuid: e.deviceUuid ?? undefined,
