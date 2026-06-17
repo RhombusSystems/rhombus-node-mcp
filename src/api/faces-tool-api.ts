@@ -143,8 +143,10 @@ export async function searchSimilarFaces(
 	if (res.error) throw new Error(JSON.stringify(res));
 	return (res.faceEvents || []).map((event: any) => ({
 		uuid: event.uuid ?? undefined,
+		deviceUuid: event.deviceUuid ?? undefined,
 		personUuid: event.personUuid ?? undefined,
 		similarity: event.similarity ?? undefined,
+		eventTimestampMs: event.eventTimestamp ?? undefined,
 		eventTimestamp: event.eventTimestamp
 			? formatTimestamp(event.eventTimestamp, timeZone)
 			: undefined,
