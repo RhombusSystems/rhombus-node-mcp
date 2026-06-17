@@ -5857,6 +5857,12 @@ const Camera_GetCustomFootageSeekpointsV2WSRequest: z.ZodObject<any> = z.object(
 });
 const SeekpointType = z.string();
 const SeekpointIndexType: z.ZodObject<any> = z.object({
+  alert: z.boolean().optional(),
+  areaEntering: z.string().optional(),
+  areaExiting: z.string().optional(),
+  badgeStatus: z.string().optional(),
+  badgeType: z.string().optional(),
+  entryMade: z.boolean().optional(),
   compositComponentUuid: z.string().optional(),
   customDescription: z.string().optional(),
   customDisplayName: z.string().optional(),
@@ -10818,6 +10824,25 @@ const Eventsearch_GetEventSeekpointsWSResponse: z.ZodObject<any> = z.object({
   combinedSeekpoints: z.array(Eventsearch_CombinedSeekPointType).optional(),
   error: z.boolean().optional(),
   errorMsg: z.string().optional(),
+  warningMsg: z.string().optional()
+});
+const Eventsearch_SearchOnGuardEventsWSRequest: z.ZodObject<any> = z.object({
+  afterMs: z.number().int().optional(),
+  anomalyOnly: z.boolean().optional(),
+  area: z.string().optional(),
+  badgeStatus: z.string().optional(),
+  badgeType: z.string().optional(),
+  beforeMs: z.number().int().optional(),
+  cardholderQuery: z.string().optional(),
+  deviceUuids: z.array(z.string()).optional(),
+  entryMade: z.boolean().optional(),
+  limit: z.number().int().optional(),
+  locationUuids: z.array(z.string()).optional()
+});
+const Eventsearch_SearchOnGuardEventsWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  events: z.array(SeekpointIndexType).optional(),
   warningMsg: z.string().optional()
 });
 const Export_ExportAuditEventsWSRequest: z.ZodObject<any> = z.object({
@@ -21989,6 +22014,8 @@ export const schemas = {
   Eventsearch_VideoFootageWSRequest,
   Eventsearch_GetEventSeekpointsWSRequest,
   Eventsearch_GetEventSeekpointsWSResponse,
+  Eventsearch_SearchOnGuardEventsWSRequest,
+  Eventsearch_SearchOnGuardEventsWSResponse,
   Export_ExportAuditEventsWSRequest,
   Export_ExportClimateEventsWSRequest,
   Export_ExportCountReportsWSRequest,
