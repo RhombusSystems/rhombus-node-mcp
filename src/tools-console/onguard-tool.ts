@@ -10,6 +10,11 @@ const TOOL_DESCRIPTION = `
 Searches Honeywell OnGuard (Lenel) badge / access-control events for the organization. Use this to answer
 "who entered WHERE and WHEN" questions, e.g. "who entered the back office yesterday".
 
+WHO / identity is answered HERE: cardholderName on each event is the person who badged, and this tool is the
+source of truth for "who badged in / who entered". Do NOT infer identity from the camera's location, from nearby
+access-control devices, or from the camera timeline. If you returned badge events earlier in the conversation and
+now need the person's name, re-query this tool rather than reporting that you couldn't find them.
+
 Each returned event includes:
 - cardholderName: the person's name
 - deviceUuid: the camera that saw the event
