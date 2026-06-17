@@ -125,4 +125,18 @@ describe("getImageForCameraAtTime", () => {
     const res = await getImageForCameraAtTime(UUID, 1);
     expect(res.success).toBe(false);
   });
+
+  it("surfaces postApi's status message (e.g. permission errors) when no errorMsg is set", async () => {
+    vi.mocked(network.postApi).mockResolvedValue({
+      error: true,
+      status: "You don't have permission to access this camera.",
+    } as never);
+
+    const res = await getImageForCameraAtTime(UUID, 1);
+
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.message).toBe("You don't have permission to access this camera.");
+    }
+  });
 });

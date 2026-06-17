@@ -94,13 +94,17 @@ export async function getImageForCameraAtTime(
 
   if (res.error || !res.frameData) {
     logger.error(
-      `getExactFrameData failed: ${JSON.stringify({ error: res.error, errorMsg: res.errorMsg })}`
+      `getExactFrameData failed: ${JSON.stringify({ error: res.error, errorMsg: res.errorMsg, status: res.status, hasFrameData: !!res.frameData })}`
     );
     return {
       success: false,
       status: "failed to fetch image",
+      // Prefer a structured business error from the endpoint, then any transport-level
+      // status set by postApi (e.g. permission/HTTP errors), and only fall back to the
+      // no-VOD explanation when no error detail is available.
       message:
         res.errorMsg ??
+        res.status ??
         "Camera snapshot unavailable: this camera may have no recorded video (VOD) at the requested time. " +
           "It may not have any footage stored, or the requested timestamp may be outside its retention window.",
     };
