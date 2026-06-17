@@ -45,6 +45,7 @@ export async function getImageForCameraAtTime(
       status: string;
       imageType: "base64";
       imageData: string;
+      crop: { x: number; y: number; width: number; height: number } | null;
     }
   | {
       success: false;
@@ -64,11 +65,19 @@ export async function getImageForCameraAtTime(
   const hasCrop =
     crop != null &&
     (crop.x != null || crop.y != null || crop.width != null || crop.height != null);
-  if (hasCrop) {
-    body.permyriadCropX = pctToPermyriad(crop!.x ?? 0);
-    body.permyriadCropY = pctToPermyriad(crop!.y ?? 0);
-    body.permyriadCropWidth = pctToPermyriad(crop!.width ?? 100);
-    body.permyriadCropHeight = pctToPermyriad(crop!.height ?? 100);
+  const resolvedCrop = hasCrop
+    ? {
+        x: crop!.x ?? 0,
+        y: crop!.y ?? 0,
+        width: crop!.width ?? 100,
+        height: crop!.height ?? 100,
+      }
+    : null;
+  if (resolvedCrop) {
+    body.permyriadCropX = pctToPermyriad(resolvedCrop.x);
+    body.permyriadCropY = pctToPermyriad(resolvedCrop.y);
+    body.permyriadCropWidth = pctToPermyriad(resolvedCrop.width);
+    body.permyriadCropHeight = pctToPermyriad(resolvedCrop.height);
   }
 
   logger.debug(
@@ -102,6 +111,7 @@ export async function getImageForCameraAtTime(
     status: "successfully fetched image",
     imageType: "base64",
     imageData: res.frameData,
+    crop: resolvedCrop,
   };
 }
 

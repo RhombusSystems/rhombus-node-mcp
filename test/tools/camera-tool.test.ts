@@ -107,9 +107,10 @@ describe("camera-tool handler", () => {
         status: "successfully fetched image",
         imageType: "base64",
         imageData: "x",
+        crop: { x: 50, y: 0, width: 25, height: 10 },
       });
 
-      await handler(
+      const result = await handler(
         {
           cameraUuid: CAMERA_UUID,
           requestType: "image",
@@ -130,6 +131,9 @@ describe("camera-tool handler", () => {
         undefined,
         { crop: { x: 50, y: 0, width: 25, height: 10 }, downscaleFactor: 2 }
       );
+
+      const meta = JSON.parse(findTextContent(result)!.text);
+      expect(meta.cropApplied).toEqual({ x: 50, y: 0, width: 25, height: 10 });
     });
 
     it("returns error text when the image fetch fails", async () => {

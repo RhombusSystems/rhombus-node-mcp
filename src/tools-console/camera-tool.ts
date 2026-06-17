@@ -119,10 +119,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
               status: "image-attached",
               cameraUuid,
               timestampMs,
-              cropApplied:
-                cropX != null || cropY != null || cropWidth != null || cropHeight != null
-                  ? { cropX, cropY, cropWidth, cropHeight }
-                  : null,
+              cropApplied: response.crop ?? null,
             }),
           },
         ],

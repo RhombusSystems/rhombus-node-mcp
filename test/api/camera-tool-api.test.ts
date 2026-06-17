@@ -26,6 +26,7 @@ describe("getImageForCameraAtTime", () => {
       status: "successfully fetched image",
       imageType: "base64",
       imageData: "BASE64==",
+      crop: null,
     });
 
     const call = vi.mocked(network.postApi).mock.calls[0][0];
@@ -82,6 +83,28 @@ describe("getImageForCameraAtTime", () => {
     await getImageForCameraAtTime(UUID, 1, undefined, undefined, { downscaleFactor: 2 });
 
     expect(firstBody().downscaleFactor).toBe(2);
+  });
+
+  it("reports the resolved crop (defaults filled in) on success", async () => {
+    vi.mocked(network.postApi).mockResolvedValue({ error: false, frameData: "X" } as never);
+
+    const res = await getImageForCameraAtTime(UUID, 1, undefined, undefined, { crop: { width: 50 } });
+
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.crop).toEqual({ x: 0, y: 0, width: 50, height: 100 });
+    }
+  });
+
+  it("reports null crop for a full-frame request", async () => {
+    vi.mocked(network.postApi).mockResolvedValue({ error: false, frameData: "X" } as never);
+
+    const res = await getImageForCameraAtTime(UUID, 1);
+
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.crop).toBeNull();
+    }
   });
 
   it("returns failure when response.error is true", async () => {
