@@ -1,11 +1,12 @@
 import { getLogger } from "../logger.js";
-import { constructRequestHeaders, postApi } from "../network/network.js";
+import { postApi } from "../network/network.js";
 import type {
   CameraFullStateResponse,
   CameraStorageData,
   ExternalUpdateableFacetedUserConfig,
   PresenceWindowsResponse,
   TimeWindowSeconds,
+  Video_GetExactFrameDataWSResponse,
 } from "../types/camera-tool-types.js";
 import type { schema } from "../types/schema.js";
 import { removeNullFields, type RequestModifiers } from "../util.js";
@@ -14,18 +15,37 @@ const logger = getLogger("camera-tool");
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/** Crop region expressed in percentages (0-100) of the frame. */
+export type CropPercent = {
+  x?: number | null;
+  y?: number | null;
+  width?: number | null;
+  height?: number | null;
+};
+
+export type GetImageOptions = {
+  crop?: CropPercent | null;
+  downscaleFactor?: number | null;
+};
+
+/** Convert a 0-100 percentage to permyriad (0-10000), clamped to the valid range. */
+function pctToPermyriad(pct: number): number {
+  return Math.round(Math.max(0, Math.min(100, pct)) * 100);
+}
+
 export async function getImageForCameraAtTime(
   cameraUuid: string,
   timestampMs: number,
   requestModifiers?: RequestModifiers,
-  sessionId?: string
+  sessionId?: string,
+  options?: GetImageOptions
 ): Promise<
   | {
       success: true;
       status: string;
-      frameUri: string;
       imageType: "base64";
       imageData: string;
+      crop: { x: number; y: number; width: number; height: number } | null;
     }
   | {
       success: false;
@@ -33,79 +53,69 @@ export async function getImageForCameraAtTime(
       message?: string;
     }
 > {
-  const body = {
-    cameraUuid: cameraUuid,
-    downscaleFactor: 10,
+  // biome-ignore lint/suspicious/noExplicitAny: request body is a loose JSON shape
+  const body: Record<string, any> = {
+    cameraUuid,
+    timestampMs,
+    downscaleFactor: options?.downscaleFactor ?? 10,
     jpgQuality: 70,
-    timestampMs: timestampMs,
   };
 
-  logger.debug(`Getting frameUri from UUID: ${cameraUuid} at timestampMs: ${timestampMs}`);
+  const crop = options?.crop;
+  const hasCrop =
+    crop != null &&
+    (crop.x != null || crop.y != null || crop.width != null || crop.height != null);
+  const resolvedCrop = hasCrop
+    ? {
+        x: crop!.x ?? 0,
+        y: crop!.y ?? 0,
+        width: crop!.width ?? 100,
+        height: crop!.height ?? 100,
+      }
+    : null;
+  if (resolvedCrop) {
+    body.permyriadCropX = pctToPermyriad(resolvedCrop.x);
+    body.permyriadCropY = pctToPermyriad(resolvedCrop.y);
+    body.permyriadCropWidth = pctToPermyriad(resolvedCrop.width);
+    body.permyriadCropHeight = pctToPermyriad(resolvedCrop.height);
+  }
 
-  let frameUri: string | undefined;
-  const base64Image = await postApi<schema["Video_GetExactFrameUriWSResponse"]>({
-    route: "/video/getExactFrameUri",
+  logger.debug(
+    `Getting exact frame data for UUID: ${cameraUuid} at timestampMs: ${timestampMs}` +
+      (hasCrop ? ` (cropped)` : ``)
+  );
+
+  const res = await postApi<Video_GetExactFrameDataWSResponse>({
+    route: "/video/getExactFrameData",
     body,
     modifiers: requestModifiers,
     sessionId,
-  }).then(async res => {
-    logger.debug(`Received frameUri ${res.frameUri}`);
-
-    if (!res.frameUri) {
-      throw new Error("No frameUri given. Maybe camera does not support it.");
-    }
-
-    // construct request headers
-    const { url: _frameUri, requestHeaders } = constructRequestHeaders(
-      res.frameUri,
-      requestModifiers,
-      sessionId
-    );
-    frameUri = _frameUri;
-
-    // remove content type
-    delete requestHeaders["Content-Type"];
-    delete requestHeaders["accept"];
-
-    logger.debug(`Fetching with headers\n${JSON.stringify(requestHeaders, null, 2)}`);
-
-    return await fetch(frameUri, {
-      method: "GET",
-      headers: requestHeaders as HeadersInit,
-    }).then(async res => {
-      if (!res.ok) {
-        logger.error(`Failed to fetch image (HTTP ${res.status}): ${await res.text()}`);
-        logger.error(res);
-        return res.status === 404 ? 404 : null;
-      }
-      const arrayBuffer = await res.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = buffer.toString("base64");
-      logger.debug(`Received image base64:\n ${base64}`);
-      return base64;
-    });
   });
-  if (!base64Image) {
+
+  if (res.error || !res.frameData) {
+    logger.error(
+      `getExactFrameData failed: ${JSON.stringify({ error: res.error, errorMsg: res.errorMsg, status: res.status, hasFrameData: !!res.frameData })}`
+    );
     return {
       success: false,
       status: "failed to fetch image",
-    };
-  }
-  if (base64Image === 404) {
-    return {
-      success: false,
-      status: "failed to fetch image",
+      // Prefer a structured business error from the endpoint, then any transport-level
+      // status set by postApi (e.g. permission/HTTP errors), and only fall back to the
+      // no-VOD explanation when no error detail is available.
       message:
-        "Camera snapshot unavailable: this camera has no recorded video (VOD) at the requested time. " +
-        "It may not have any footage stored, or the requested timestamp may be outside its retention window.",
+        res.errorMsg ??
+        res.status ??
+        "Camera snapshot unavailable: this camera may have no recorded video (VOD) at the requested time. " +
+          "It may not have any footage stored, or the requested timestamp may be outside its retention window.",
     };
   }
+
   return {
     success: true,
     status: "successfully fetched image",
-    frameUri: frameUri ?? "",
     imageType: "base64",
-    imageData: base64Image,
+    imageData: res.frameData,
+    crop: resolvedCrop,
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createTool } from "../../src/tools/camera-tool.js";
+import { createTool } from "../../src/tools-console/camera-tool.js";
 import * as cameraApi from "../../src/api/camera-tool-api.js";
 import type { ToolArgs } from "../../src/types/camera-tool-types.js";
 import { captureToolHandler, findTextContent } from "../utils.js";
@@ -72,7 +72,6 @@ describe("camera-tool handler", () => {
       vi.mocked(cameraApi.getImageForCameraAtTime).mockResolvedValue({
         success: true,
         status: "successfully fetched image",
-        frameUri: "https://cdn.example.com/frame.jpg",
         imageType: "base64",
         imageData: "abc123base64==",
       });
@@ -84,13 +83,11 @@ describe("camera-tool handler", () => {
 
       expect(result).toMatchObject({
         content: expect.arrayContaining([
-          // Image part
           expect.objectContaining({
             type: "image",
             data: "abc123base64==",
             mimeType: "image/jpeg",
           }),
-          // Metadata text part
           expect.objectContaining({
             type: "text",
             text: expect.stringContaining(CAMERA_UUID),
@@ -101,7 +98,42 @@ describe("camera-tool handler", () => {
       const textPart = findTextContent(result);
       const meta = JSON.parse(textPart!.text);
       expect(meta.success).toBe(true);
-      expect(meta.frameUri).toBe("https://cdn.example.com/frame.jpg");
+      expect(meta.cropApplied).toBeNull();
+    });
+
+    it("forwards percentage crop and downscaleFactor to the API", async () => {
+      vi.mocked(cameraApi.getImageForCameraAtTime).mockResolvedValue({
+        success: true,
+        status: "successfully fetched image",
+        imageType: "base64",
+        imageData: "x",
+        crop: { x: 50, y: 0, width: 25, height: 10 },
+      });
+
+      const result = await handler(
+        {
+          cameraUuid: CAMERA_UUID,
+          requestType: "image",
+          timestampISO: null,
+          cropX: 50,
+          cropY: 0,
+          cropWidth: 25,
+          cropHeight: 10,
+          downscaleFactor: 2,
+        },
+        EMPTY_EXTRA
+      );
+
+      expect(vi.mocked(cameraApi.getImageForCameraAtTime)).toHaveBeenCalledWith(
+        CAMERA_UUID,
+        expect.any(Number),
+        undefined,
+        undefined,
+        { crop: { x: 50, y: 0, width: 25, height: 10 }, downscaleFactor: 2 }
+      );
+
+      const meta = JSON.parse(findTextContent(result)!.text);
+      expect(meta.cropApplied).toEqual({ x: 50, y: 0, width: 25, height: 10 });
     });
 
     it("returns error text when the image fetch fails", async () => {
@@ -180,8 +212,9 @@ describe("camera-tool handler", () => {
       expect(vi.mocked(cameraApi.getImageForCameraAtTime)).toHaveBeenCalledWith(
         CAMERA_UUID,
         expect.any(Number),
-        undefined, // requestModifiers
-        undefined // sessionId
+        undefined,
+        undefined,
+        { crop: { x: null, y: null, width: null, height: null }, downscaleFactor: null }
       );
     });
   });

@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { createTool } from "../../src/tools/camera-tool.js";
+import { createTool } from "../../src/tools-console/camera-tool.js";
 import type { ToolArgs } from "../../src/types/camera-tool-types.js";
 import { getCameraList } from "../../src/api/get-entity-tool-api.js";
 import {
@@ -81,8 +81,6 @@ describe.skipIf(!isLiveConfigured())("camera-tool LIVE", () => {
       const meta = JSON.parse(textPart!.text);
       expect(meta.success).toBe(true);
       expect(meta.cameraUuid).toBe(CAMERA_UUID);
-      expect(typeof meta.frameUri).toBe("string");
-      expect(meta.frameUri.length).toBeGreaterThan(0);
     }, 15_000); // real network call — allow up to 15 s
   });
 

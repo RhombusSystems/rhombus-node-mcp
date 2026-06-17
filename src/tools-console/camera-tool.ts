@@ -24,8 +24,8 @@ This tool captures and returns a real-time snapshot from a designated security c
 The image reflects the current scene in the camera's field of view and serves as a contextual
 input source for downstream tasks such as object recognition, anomaly detection, incident investigation,
 or situational assessment. When invoked, the tool provides the following: 
-- Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects.  
-- The frameUri that was used to fetch the image. It may be useful to show the user this image as well through the frameUri.
+- Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects.
+- Optional zoom: pass cropX, cropY, cropWidth, cropHeight (each a percentage 0-100, origin at the top-left) to return only a sub-region of the frame so you can inspect a detail (e.g. a license plate or a doorway) more closely. Omit them for the full frame. When zooming into a small crop, pass a smaller downscaleFactor (e.g. 1-3) to preserve detail.
 
 What follows is a description of the behavior of this tool given the requestType "get-settings"
 
@@ -62,7 +62,8 @@ const logger = getLogger("camera-tool");
 const TOOL_ARGS = BASE_TOOL_ARGS;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
-  const { cameraUuid, timestampISO, requestType } = args;
+  const { cameraUuid, timestampISO, requestType, cropX, cropY, cropWidth, cropHeight, downscaleFactor } =
+    args;
 
   if (!cameraUuid) {
     return {
@@ -86,12 +87,15 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 
   switch (requestType) {
     case "image":
-      response = await getImageForCameraAtTime(
-        cameraUuid,
-        timestampMs,
-        requestModifiers,
-        sessionId
-      );
+      response = await getImageForCameraAtTime(cameraUuid, timestampMs, requestModifiers, sessionId, {
+        crop: {
+          x: cropX ?? null,
+          y: cropY ?? null,
+          width: cropWidth ?? null,
+          height: cropHeight ?? null,
+        },
+        downscaleFactor: downscaleFactor ?? null,
+      });
 
       if (!response.success || !response.imageData) {
         return {
@@ -99,7 +103,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         };
       }
 
-      logger.debug(`Received image response:\n ${JSON.stringify(response)}`);
+      logger.debug(`Received image response (base64 length ${response.imageData.length})`);
 
       return {
         content: [
@@ -115,7 +119,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
               status: "image-attached",
               cameraUuid,
               timestampMs,
-              frameUri: response.frameUri,
+              cropApplied: response.crop ?? null,
             }),
           },
         ],
