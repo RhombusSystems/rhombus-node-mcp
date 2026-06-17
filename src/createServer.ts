@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import path from "path";
+import { createAnalyticsProxy } from "./analytics/analyticsProxy.js";
 import { resolveAccessibleApps } from "./api/get-accessible-apps.js";
 import { logger } from "./logger.js";
 import { createFilteringProxy } from "./util.js";
@@ -135,8 +136,11 @@ export default async function createServer({ sessionId }: { sessionId?: string }
 		`🔒 Session ${sessionId ?? "(none)"}: apps=[${apps?.join(", ") ?? "unknown"}] — registering ${toolsToRegister.length} tools`,
 	);
 
+	// Analytics wraps every tool handler; filtering wraps on top so handlers are
+	// timed after includeFields/filterBy are stripped (keeping them out of
+	// arg_keys). Both are no-ops when their respective features are disabled.
 	const filteredServer = createFilteringProxy(
-		server,
+		createAnalyticsProxy(server),
 		new Set(["time-tool", "count-tool", "time-conversion-tool"]),
 	);
 

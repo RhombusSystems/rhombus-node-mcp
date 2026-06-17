@@ -2,6 +2,7 @@
 
 import "dotenv/config";
 
+import { flushAnalytics, initAnalytics } from "./analytics/amplitude.js";
 import { serverInit } from "./createServer.js";
 import { logger } from "./logger.js";
 import stdioTransport from "./transports/stdio.js";
@@ -19,6 +20,8 @@ async function main() {
   }
   logger.info("🌐 Using server url", serverUrl);
 
+  initAnalytics();
+
   await serverInit();
 
   if (TRANSPORT_TYPE === "stdio") {
@@ -28,6 +31,14 @@ async function main() {
   } else {
     throw new Error(`Invalid transport type: ${TRANSPORT_TYPE}`);
   }
+}
+
+// Flush buffered analytics on graceful shutdown so in-flight events aren't lost.
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, async () => {
+    await flushAnalytics();
+    process.exit(0);
+  });
 }
 
 main().catch(error => {

@@ -20,6 +20,7 @@ The official Model Context Protocol (MCP) server for the [Rhombus](https://www.r
 - **Test**: `npm test` (vitest).
 - **Tools** live in `src/tools/` — one file per tool, registered via `src/tools/getTools.ts`. Follow the existing pattern (zod input schemas; `npm run generate-schemas` regenerates derived schemas).
 - **Docker**: `npm run docker:build`.
+- **Analytics** (optional): set `AMPLITUDE_API_KEY` to emit a `"MCP Tool Called"` event per tool invocation via Amplitude (`AMPLITUDE_SERVER_ZONE=US|EU`). Disabled and fully no-op when the key is unset. Wiring lives in `src/analytics/` — `amplitude.ts` (client) and `analyticsProxy.ts` (wraps every tool handler); identity comes from the cached `getCurrentUser` in `src/api/get-accessible-apps.ts`.
 
 ## Related resources
 
