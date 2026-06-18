@@ -4,7 +4,7 @@ import { RhombusAppEnum, type Customer_GetCurrentUserWSResponse } from "../types
 
 export type AccessibleApp = RhombusAppEnum;
 
-/** Identity derived from `getCurrentUser`, used to tag analytics events. */
+/** Identity derived from `getCurrentUser`, used to tag trace spans. */
 export type SessionIdentity = {
   userId?: string;
   orgUuid?: string;
@@ -18,7 +18,7 @@ type CachedSession = {
 
 /**
  * Single cached `getCurrentUser` fetch per session. Both `resolveAccessibleApps`
- * and `resolveSessionIdentity` read from this cache, so identity for analytics
+ * and `resolveSessionIdentity` read from this cache, so identity for tracing
  * costs no extra API call. Successful results are cached for the lifetime of
  * the session; failures are NOT cached so transient errors don't poison it.
  */
