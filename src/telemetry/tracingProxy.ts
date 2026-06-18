@@ -1,6 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { SpanStatusCode, trace, type Span } from "@opentelemetry/api";
+import {
+  context,
+  SpanKind,
+  SpanStatusCode,
+  trace,
+  TraceFlags,
+  type Span,
+} from "@opentelemetry/api";
 
 import { resolveSessionIdentity } from "../api/get-accessible-apps.js";
 import { logger } from "../logger.js";
@@ -8,9 +15,23 @@ import { extractFromToolExtra } from "../util.js";
 
 const TRACER_NAME = "rhombus-node-mcp";
 const TOOL_CALL_SPAN = "mcp.tool.call";
+const INVALID_TRACE_ID = "00000000000000000000000000000000";
+
+let warnedNoopTracer = false;
 
 // biome-ignore lint/suspicious/noExplicitAny: MCP tool handler signature is dynamic
 type ToolHandler = (args: any, extra: unknown) => Promise<CallToolResult> | CallToolResult;
+
+function warnIfNoopTracer(span: Span): void {
+  if (warnedNoopTracer) return;
+  const { traceId, traceFlags } = span.spanContext();
+  if (traceId === INVALID_TRACE_ID || traceFlags === TraceFlags.NONE) {
+    warnedNoopTracer = true;
+    logger.warn(
+      "📡 OpenTelemetry custom spans are no-ops — @opentelemetry/api is not sharing the SDK TracerProvider. Check for duplicate @opentelemetry/api in node_modules.",
+    );
+  }
+}
 
 function setArgKeys(span: Span, args: unknown): void {
   if (args && typeof args === "object") {
@@ -41,39 +62,50 @@ async function attachSessionIdentity(span: Span, extra: unknown): Promise<void> 
 function wrapHandler(toolName: string, handler: ToolHandler): ToolHandler {
   return async (args: unknown, extra: unknown) => {
     const tracer = trace.getTracer(TRACER_NAME);
+    const parentContext = context.active();
 
-    return tracer.startActiveSpan(TOOL_CALL_SPAN, async (span) => {
-      const start = Date.now();
-      span.setAttribute("mcp.tool.name", toolName);
-      span.setAttribute("mcp.transport", process.env.TRANSPORT_TYPE ?? "stdio");
-      setArgKeys(span, args);
+    return tracer.startActiveSpan(
+      TOOL_CALL_SPAN,
+      { kind: SpanKind.INTERNAL },
+      parentContext,
+      async (span) => {
+        warnIfNoopTracer(span);
 
-      try {
-        await attachSessionIdentity(span, extra);
+        const start = Date.now();
+        span.setAttribute("mcp.tool.name", toolName);
+        span.setAttribute("mcp.transport", process.env.TRANSPORT_TYPE ?? "stdio");
+        setArgKeys(span, args);
 
-        const result = await handler(args, extra);
-        const isError =
-          result && typeof result === "object" && (result as CallToolResult).isError;
-        span.setAttribute("mcp.tool.success", !isError);
-        if (isError) {
+        try {
+          await attachSessionIdentity(span, extra);
+
+          const result = await handler(args, extra);
+          const isError =
+            result && typeof result === "object" && (result as CallToolResult).isError;
+          span.setAttribute("mcp.tool.success", !isError);
+          if (isError) {
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: "tool returned isError",
+            });
+          } else {
+            span.setStatus({ code: SpanStatusCode.OK });
+          }
+          return result;
+        } catch (error) {
+          span.setAttribute("mcp.tool.success", false);
+          span.recordException(error instanceof Error ? error : new Error(String(error)));
           span.setStatus({
             code: SpanStatusCode.ERROR,
-            message: "tool returned isError",
+            message: error instanceof Error ? error.message : String(error),
           });
+          throw error;
+        } finally {
+          span.setAttribute("mcp.tool.duration_ms", Date.now() - start);
+          span.end();
         }
-        return result;
-      } catch (error) {
-        span.setAttribute("mcp.tool.success", false);
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error),
-        });
-        throw error;
-      } finally {
-        span.setAttribute("mcp.tool.duration_ms", Date.now() - start);
-      }
-    });
+      },
+    );
   };
 }
 
