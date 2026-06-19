@@ -55,8 +55,12 @@ export async function searchOnGuardEvents(
     timestampMs: e.timestampMs ?? undefined,
     datetime: e.timestampMs != null ? formatTimestamp(e.timestampMs, timeZone) : undefined,
     deviceUuid: e.deviceUuid ?? undefined,
-    label: e.customDisplayName ?? undefined,
-    cardholderName: e.customDescription ?? undefined,
+    label: e.customDisplayName ?? e.objectType ?? undefined,
+    // Dedicated-event-types put the cardholder in its own `cardholderName` field (customDescription
+    // is null on ONGUARD_* docs); keep customDescription as a legacy fallback. The generated schema
+    // predates the field, so read it through a cast until `assets/openapi.json` is regenerated.
+    cardholderName:
+      (e as { cardholderName?: string | null }).cardholderName ?? e.customDescription ?? undefined,
     badgeStatus: e.badgeStatus ?? undefined,
     badgeType: e.badgeType ?? undefined,
     areaEntering: e.areaEntering ?? undefined,
