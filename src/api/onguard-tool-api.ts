@@ -1,4 +1,5 @@
 import { postApi } from "../network/network.js";
+import { ActivityEnum } from "../types/schema.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
@@ -26,9 +27,9 @@ export interface SearchOnGuardEventsArgs {
  * integration access-event search scopes results to OnGuard events only.
  */
 export const ONGUARD_ACTIVITY_TYPES = [
-  "ONGUARD_BADGE_AUTHORIZED",
-  "ONGUARD_BADGE_ANOMALY",
-  "ONGUARD_NO_ENTRY_MADE",
+  ActivityEnum.ONGUARD_BADGE_AUTHORIZED,
+  ActivityEnum.ONGUARD_BADGE_ANOMALY,
+  ActivityEnum.ONGUARD_NO_ENTRY_MADE,
 ] as const;
 
 export async function searchOnGuardEvents(
@@ -37,12 +38,9 @@ export async function searchOnGuardEvents(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  // Unified third-party integration access-event search, scoped to OnGuard via `activityTypes`. The
-  // generalized endpoint + `activityTypes` predate the generated schema, so the extra field is added via
-  // a cast off the OnGuard request DTO until `assets/openapi.json` is regenerated.
-  const body: schema["Eventsearch_SearchOnGuardEventsWSRequest"] & {
-    activityTypes: string[];
-  } = {
+  // Unified third-party integration access-event search, scoped to OnGuard via `activityTypes`. Typed
+  // against the generated public OpenAPI schema (Eventsearch_SearchIntegrationAccessEventsWSRequest/Response).
+  const body: schema["Eventsearch_SearchIntegrationAccessEventsWSRequest"] = {
     deviceUuids: args.deviceUuids,
     locationUuids: args.locationUuids,
     afterMs: args.afterMs,
@@ -57,7 +55,7 @@ export async function searchOnGuardEvents(
     activityTypes: [...ONGUARD_ACTIVITY_TYPES],
   };
 
-  const res = await postApi<schema["Eventsearch_SearchOnGuardEventsWSResponse"]>({
+  const res = await postApi<schema["Eventsearch_SearchIntegrationAccessEventsWSResponse"]>({
     route: "/eventSearchV2/searchIntegrationAccessEvents",
     body,
     modifiers: requestModifiers,
