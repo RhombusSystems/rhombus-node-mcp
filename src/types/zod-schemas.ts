@@ -10845,6 +10845,26 @@ const Eventsearch_SearchOnGuardEventsWSResponse: z.ZodObject<any> = z.object({
   events: z.array(SeekpointIndexType).optional(),
   warningMsg: z.string().optional()
 });
+const Eventsearch_SearchIntegrationAccessEventsWSRequest: z.ZodObject<any> = z.object({
+  activityTypes: z.array(ActivityEnum).optional(),
+  afterMs: z.number().int().optional(),
+  anomalyOnly: z.boolean().optional(),
+  area: z.string().optional(),
+  badgeStatus: z.string().optional(),
+  badgeType: z.string().optional(),
+  beforeMs: z.number().int().optional(),
+  cardholderQuery: z.string().optional(),
+  deviceUuids: z.array(z.string()).optional(),
+  entryMade: z.boolean().optional(),
+  limit: z.number().int().optional(),
+  locationUuids: z.array(z.string()).optional()
+});
+const Eventsearch_SearchIntegrationAccessEventsWSResponse: z.ZodObject<any> = z.object({
+  error: z.boolean().optional(),
+  errorMsg: z.string().optional(),
+  events: z.array(SeekpointIndexType).optional(),
+  warningMsg: z.string().optional()
+});
 const Export_ExportAuditEventsWSRequest: z.ZodObject<any> = z.object({
   endInterval: z.number().int().optional(),
   excludeActions: z.array(z.string()).optional(),
@@ -22016,6 +22036,8 @@ export const schemas = {
   Eventsearch_GetEventSeekpointsWSResponse,
   Eventsearch_SearchOnGuardEventsWSRequest,
   Eventsearch_SearchOnGuardEventsWSResponse,
+  Eventsearch_SearchIntegrationAccessEventsWSRequest,
+  Eventsearch_SearchIntegrationAccessEventsWSResponse,
   Export_ExportAuditEventsWSRequest,
   Export_ExportClimateEventsWSRequest,
   Export_ExportCountReportsWSRequest,

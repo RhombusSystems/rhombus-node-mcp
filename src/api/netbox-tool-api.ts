@@ -1,4 +1,5 @@
 import { postApi } from "../network/network.js";
+import { ActivityEnum } from "../types/schema.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
@@ -22,20 +23,16 @@ export interface SearchNetboxEventsArgs {
  * OnGuard search, which is implicitly scoped to ONGUARD_* types server-side.
  */
 export const NETBOX_ACTIVITY_TYPES = [
-  "NETBOX_BADGE_AUTHORIZED",
-  "NETBOX_BADGE_ANOMALY",
-  "NETBOX_NO_ENTRY_MADE",
+  ActivityEnum.NETBOX_BADGE_AUTHORIZED,
+  ActivityEnum.NETBOX_BADGE_ANOMALY,
+  ActivityEnum.NETBOX_NO_ENTRY_MADE,
 ] as const;
 
 /**
  * Calls the generalized webservice access-control event search
  * (POST /eventSearchV2/searchIntegrationAccessEvents) scoped to Lenel S2 NetBox via `activityTypes`, and
- * maps the raw seekpoints to the same agent-friendly shape as searchOnGuardEvents. The request DTO mirrors
- * Eventsearch_SearchOnGuardEventsWSRequest plus an `activityTypes` array; the response shape is identical.
- *
- * The generalized endpoint, its `activityTypes` field, and the NETBOX_* enum values predate the generated
- * public OpenAPI schema, so the body is built off the OnGuard request DTO and the extra field is added via a
- * cast until `assets/openapi.json` is regenerated.
+ * maps the raw seekpoints to the same agent-friendly shape as searchOnGuardEvents. Typed against the
+ * generated public OpenAPI schema (Eventsearch_SearchIntegrationAccessEventsWSRequest/Response).
  */
 export async function searchNetboxEvents(
   args: SearchNetboxEventsArgs,
@@ -43,9 +40,7 @@ export async function searchNetboxEvents(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const body: schema["Eventsearch_SearchOnGuardEventsWSRequest"] & {
-    activityTypes: string[];
-  } = {
+  const body: schema["Eventsearch_SearchIntegrationAccessEventsWSRequest"] = {
     deviceUuids: args.deviceUuids,
     locationUuids: args.locationUuids,
     afterMs: args.afterMs,
@@ -60,7 +55,7 @@ export async function searchNetboxEvents(
     activityTypes: [...NETBOX_ACTIVITY_TYPES],
   };
 
-  const res = await postApi<schema["Eventsearch_SearchOnGuardEventsWSResponse"]>({
+  const res = await postApi<schema["Eventsearch_SearchIntegrationAccessEventsWSResponse"]>({
     route: "/eventSearchV2/searchIntegrationAccessEvents",
     body,
     modifiers: requestModifiers,
