@@ -17,16 +17,32 @@ export interface SearchOnGuardEventsArgs {
 }
 
 /**
- * Calls the webservice OnGuard event search (POST /eventSearchV2/searchOnGuardEvents) and maps the
+ * Calls the unified integration access-event search (POST /eventSearchV2/searchIntegrationAccessEvents),
+ * scoped to OnGuard via `activityTypes`, and maps the
  * raw seekpoints to an agent-friendly shape. Typed against the generated public OpenAPI schema.
  */
+/**
+ * Honeywell OnGuard (Lenel) activity enum values. Passing these as `activityTypes` to the generalized
+ * integration access-event search scopes results to OnGuard events only.
+ */
+export const ONGUARD_ACTIVITY_TYPES = [
+  "ONGUARD_BADGE_AUTHORIZED",
+  "ONGUARD_BADGE_ANOMALY",
+  "ONGUARD_NO_ENTRY_MADE",
+] as const;
+
 export async function searchOnGuardEvents(
   args: SearchOnGuardEventsArgs,
   timeZone: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const body: schema["Eventsearch_SearchOnGuardEventsWSRequest"] = {
+  // Unified third-party integration access-event search, scoped to OnGuard via `activityTypes`. The
+  // generalized endpoint + `activityTypes` predate the generated schema, so the extra field is added via
+  // a cast off the OnGuard request DTO until `assets/openapi.json` is regenerated.
+  const body: schema["Eventsearch_SearchOnGuardEventsWSRequest"] & {
+    activityTypes: string[];
+  } = {
     deviceUuids: args.deviceUuids,
     locationUuids: args.locationUuids,
     afterMs: args.afterMs,
@@ -38,10 +54,11 @@ export async function searchOnGuardEvents(
     anomalyOnly: args.anomalyOnly,
     entryMade: args.entryMade,
     limit: args.limit ?? 200,
+    activityTypes: [...ONGUARD_ACTIVITY_TYPES],
   };
 
   const res = await postApi<schema["Eventsearch_SearchOnGuardEventsWSResponse"]>({
-    route: "/eventSearchV2/searchOnGuardEvents",
+    route: "/eventSearchV2/searchIntegrationAccessEvents",
     body,
     modifiers: requestModifiers,
     sessionId,

@@ -29,7 +29,7 @@ export const ELEMENTS_ACTIVITY_TYPES = [
 
 /**
  * Calls the generalized webservice access-control event search
- * (POST /eventSearchV2/searchAccessControlEvents) scoped to Honeywell Elements via `activityTypes`, and
+ * (POST /eventSearchV2/searchIntegrationAccessEvents) scoped to Honeywell Elements via `activityTypes`, and
  * maps the raw seekpoints to the same agent-friendly shape as searchOnGuardEvents. The request DTO mirrors
  * Eventsearch_SearchOnGuardEventsWSRequest plus an `activityTypes` array; the response shape is identical.
  *
@@ -61,7 +61,7 @@ export async function searchElementsEvents(
   };
 
   const res = await postApi<schema["Eventsearch_SearchOnGuardEventsWSResponse"]>({
-    route: "/eventSearchV2/searchAccessControlEvents",
+    route: "/eventSearchV2/searchIntegrationAccessEvents",
     body,
     modifiers: requestModifiers,
     sessionId,
