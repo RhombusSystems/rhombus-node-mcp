@@ -2,7 +2,7 @@ import { postApi } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
-export interface SearchOnGuardEventsArgs {
+export interface SearchElementsEventsArgs {
   area?: string;
   locationUuids?: string[];
   deviceUuids?: string[];
@@ -17,29 +17,32 @@ export interface SearchOnGuardEventsArgs {
 }
 
 /**
- * Calls the unified integration access-event search (POST /eventSearchV2/searchIntegrationAccessEvents),
- * scoped to OnGuard via `activityTypes`, and maps the
- * raw seekpoints to an agent-friendly shape. Typed against the generated public OpenAPI schema.
+ * Honeywell Elements (LenelS2 Elements) activity enum values. Passing these as `activityTypes` to the
+ * generalized access-control event search scopes results to Elements events only — exactly mirroring the
+ * OnGuard search, which is implicitly scoped to ONGUARD_* types server-side.
  */
-/**
- * Honeywell OnGuard (Lenel) activity enum values. Passing these as `activityTypes` to the generalized
- * integration access-event search scopes results to OnGuard events only.
- */
-export const ONGUARD_ACTIVITY_TYPES = [
-  "ONGUARD_BADGE_AUTHORIZED",
-  "ONGUARD_BADGE_ANOMALY",
-  "ONGUARD_NO_ENTRY_MADE",
+export const ELEMENTS_ACTIVITY_TYPES = [
+  "ELEMENTS_BADGE_AUTHORIZED",
+  "ELEMENTS_BADGE_ANOMALY",
+  "ELEMENTS_NO_ENTRY_MADE",
 ] as const;
 
-export async function searchOnGuardEvents(
-  args: SearchOnGuardEventsArgs,
+/**
+ * Calls the generalized webservice access-control event search
+ * (POST /eventSearchV2/searchIntegrationAccessEvents) scoped to Honeywell Elements via `activityTypes`, and
+ * maps the raw seekpoints to the same agent-friendly shape as searchOnGuardEvents. The request DTO mirrors
+ * Eventsearch_SearchOnGuardEventsWSRequest plus an `activityTypes` array; the response shape is identical.
+ *
+ * The generalized endpoint, its `activityTypes` field, and the ELEMENTS_* enum values predate the generated
+ * public OpenAPI schema, so the body is built off the OnGuard request DTO and the extra field is added via a
+ * cast until `assets/openapi.json` is regenerated.
+ */
+export async function searchElementsEvents(
+  args: SearchElementsEventsArgs,
   timeZone: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  // Unified third-party integration access-event search, scoped to OnGuard via `activityTypes`. The
-  // generalized endpoint + `activityTypes` predate the generated schema, so the extra field is added via
-  // a cast off the OnGuard request DTO until `assets/openapi.json` is regenerated.
   const body: schema["Eventsearch_SearchOnGuardEventsWSRequest"] & {
     activityTypes: string[];
   } = {
@@ -54,7 +57,7 @@ export async function searchOnGuardEvents(
     anomalyOnly: args.anomalyOnly,
     entryMade: args.entryMade,
     limit: args.limit ?? 200,
-    activityTypes: [...ONGUARD_ACTIVITY_TYPES],
+    activityTypes: [...ELEMENTS_ACTIVITY_TYPES],
   };
 
   const res = await postApi<schema["Eventsearch_SearchOnGuardEventsWSResponse"]>({
@@ -65,7 +68,7 @@ export async function searchOnGuardEvents(
   });
 
   if (res.error) {
-    throw new Error(res.status ?? res.errorMsg ?? "OnGuard event search failed");
+    throw new Error(res.status ?? res.errorMsg ?? "Elements event search failed");
   }
 
   const events = (res.events ?? []).map((e) => ({
@@ -74,7 +77,7 @@ export async function searchOnGuardEvents(
     deviceUuid: e.deviceUuid ?? undefined,
     label: e.customDisplayName ?? e.objectType ?? undefined,
     // Dedicated-event-types put the cardholder in its own `cardholderName` field (customDescription
-    // is null on ONGUARD_* docs); keep customDescription as a legacy fallback. The generated schema
+    // is null on those docs); keep customDescription as a legacy fallback. The generated schema
     // predates the field, so read it through a cast until `assets/openapi.json` is regenerated.
     cardholderName:
       (e as { cardholderName?: string | null }).cardholderName ?? e.customDescription ?? undefined,
