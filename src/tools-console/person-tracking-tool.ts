@@ -7,28 +7,25 @@ import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 const TOOL_NAME = "person-tracking-tool";
 
 const TOOL_DESCRIPTION = `
-Tracks one person's movements across cameras using face recognition. Use this for "track this person",
-"where did X go", "follow this person across the building", or "where was X last seen" — the camera-based
-counterpart to the badge-timeline tools (which follow door taps).
+Reconstructs where a named person went across cameras, e.g. "show me where Brandon Salzberg went" or
+"track Eve through the building yesterday". Identity is grounded in ACCESS CONTROL and the track uses
+person RE-IDENTIFICATION (appearance), NOT face recognition:
 
-Identify the person ONE of three ways (in priority order):
-- faceEventUuid: track by APPEARANCE from a specific sighting — works even for an unrecognized/unnamed
-  person (e.g. follow the person in this face event). Get a faceEventUuid from the faces-tool.
-- personUuid: the exact registered-person UUID (from faces-tool get-registered-faces).
-- personQuery: a full-text name (e.g. "Eve" or "Eve Adams"); it is resolved against the registered-faces
-  directory. If "ambiguousPeople" is returned the name matched more than one person — ask the user which
-  one before trusting the track.
+1. Finds the person's badge tap(s) (OnGuard / Elements / NetBox) in the window — a camera + time we KNOW
+   is them. (Pass the name as it appears on the badge.)
+2. Pulls the person re-id embedding recorded on that door camera nearest the badge tap (the person at the
+   door).
+3. Re-id-searches that appearance across all cameras over the window to reconstruct their movement.
 
-Returns the person's sightings in CHRONOLOGICAL order (oldest first), each with:
-- datetime / timestampMs, deviceUuid (the camera), and locationUuid
-- similarity (only on appearance/faceEventUuid tracks) and a face thumbnail key
-- clipHint (camera + start/end window) and stillHint (camera + timestamp)
-- gapToNextSeconds: time until the next sighting (a large gap = unobserved movement between cameras)
-plus a "path" array (the camera sequence, consecutive repeats collapsed) and "lastKnownSighting" (the
-person's last-known location).
+Returns:
+- resolvedPerson and "anchor" (the badge tap that grounded the track: door camera, time, integration).
+- sightings: chronological re-id hits, each with deviceUuid (camera), timestampMs/datetime, distance
+  (LOWER = closer appearance match), a thumbnail, clipHint/stillHint, and gapToNextSeconds.
+- path (camera sequence) and lastKnownSighting (last-known location).
+- note: set when no badge tap was found, or no re-id embedding existed on the door camera.
 
 Resolve relative times like "yesterday" to ISO 8601 first (use the timestamp tool), then pass
-startTime/endTime. Face tracking depends on face-recognition coverage, so treat the track as investigative.
+startTime/endTime. Re-id depends on human-detection coverage, so treat the track as investigative, not proof.
 
 IMPORTANT — to show the movement visually: for each sighting (or the key transitions), call the camera-tool
 (requestType "image", cameraUuid = sighting.deviceUuid, timestamp = sighting.timestampMs) for a still, and/or
@@ -42,12 +39,11 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   try {
     const result = await getPersonTrack(
       {
-        personQuery: args.personQuery ?? undefined,
-        personUuid: args.personUuid ?? undefined,
-        faceEventUuid: args.faceEventUuid ?? undefined,
-        locationUuids: args.locationUuids ?? undefined,
+        personQuery: args.personQuery,
         afterMs: args.startTime ? new Date(args.startTime).getTime() : undefined,
         beforeMs: args.endTime ? new Date(args.endTime).getTime() : undefined,
+        locationUuids: args.locationUuids ?? undefined,
+        badgeMatchWindowSeconds: args.badgeMatchWindowSeconds ?? undefined,
         clipPaddingSeconds: args.clipPaddingSeconds ?? undefined,
         limit: args.limit ?? undefined,
       },

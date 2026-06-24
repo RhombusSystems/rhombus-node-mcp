@@ -6,36 +6,29 @@ import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 export const TOOL_ARGS = {
   personQuery: z
     .string()
-    .nullable()
     .describe(
-      'The recognized person to track, full-text name match against registered faces, e.g. "Eve" or "Eve Adams". ' +
-        "Provide this OR personUuid OR faceEventUuid."
+      'The person to track, full-text name match against their access-control (badge) records, e.g. "Brandon" or "Brandon Salzberg".'
     ),
-  personUuid: z
-    .string()
-    .nullable()
-    .describe("The exact person UUID to track (from faces-tool get-registered-faces). Takes precedence over personQuery."),
-  faceEventUuid: z
-    .string()
-    .nullable()
-    .describe(
-      "Track by appearance from a specific face sighting (a faceEvent UUID), even when the person isn't a registered/named face. " +
-        "Use this for 'track THIS person' from a sighting. Takes precedence over personQuery/personUuid."
-    ),
-  locationUuids: z
-    .array(createUuidSchema())
-    .nullable()
-    .describe("Optional: restrict to these Rhombus location UUIDs. Use the location-tool to resolve names."),
   startTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .nullable()
-    .describe("Start of the window (inclusive). " + ISOTimestampFormatDescription),
+    .describe("Start of the window to search badge taps and track over (inclusive). " + ISOTimestampFormatDescription),
   endTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .nullable()
     .describe("End of the window (inclusive). " + ISOTimestampFormatDescription),
+  locationUuids: z
+    .array(createUuidSchema())
+    .nullable()
+    .describe("Optional: restrict badge search and the re-id track to these Rhombus location UUIDs."),
+  badgeMatchWindowSeconds: z
+    .number()
+    .nullable()
+    .describe(
+      "± seconds around the badge tap to look on the door camera for the person's re-id embedding (default 30)."
+    ),
   clipPaddingSeconds: z
     .number()
     .nullable()
@@ -51,39 +44,24 @@ const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
 const ClipHintSchema = z
-  .object({
-    deviceUuid: z.string(),
-    startTimeMs: z.number(),
-    endTimeMs: z.number(),
-  })
+  .object({ deviceUuid: z.string(), startTimeMs: z.number(), endTimeMs: z.number() })
   .describe("Pass to clips-tool createClip to get video of this sighting.");
 
 const StillHintSchema = z
-  .object({
-    deviceUuid: z.string(),
-    timestampMs: z.number(),
-  })
+  .object({ deviceUuid: z.string(), timestampMs: z.number() })
   .describe("Pass to camera-tool (requestType image) to get a still of this sighting.");
-
-const PersonRefSchema = z.object({
-  name: z.string().optional(),
-  personUuid: z.string().optional(),
-});
 
 export const SightingSchema = z.object({
   timestampMs: z.number().optional(),
   datetime: z.string().optional().describe("Human-readable sighting time in the requested timezone."),
-  deviceUuid: z
-    .string()
-    .optional()
-    .describe("The camera that saw the person. Pass to camera-tool (image) or clips-tool (createClip)."),
-  locationUuid: z.string().optional().describe("The location where the sighting occurred."),
-  faceName: z.string().optional().describe("The recognized name on this sighting, if any."),
-  similarity: z
+  deviceUuid: z.string().optional().describe("The camera that re-identified the person."),
+  locationUuid: z.string().optional(),
+  distance: z
     .number()
     .optional()
-    .describe("Appearance-match similarity (0-1) when tracking from a faceEventUuid seed."),
-  thumbnailS3Key: z.string().optional().describe("Thumbnail key for the detected face on this sighting."),
+    .describe("Re-id match distance to the door embedding — LOWER means a closer appearance match."),
+  stableTrackId: z.number().optional().describe("Per-camera track-consolidation id for this detection."),
+  thumbnailUri: z.string().optional().describe("Thumbnail of the detected person."),
   clipHint: ClipHintSchema.optional(),
   stillHint: StillHintSchema.optional(),
   gapToNextSeconds: z
@@ -92,22 +70,33 @@ export const SightingSchema = z.object({
     .describe("Seconds until the next sighting — large gaps mean the person was unobserved between cameras."),
 });
 
+const AnchorSchema = z
+  .object({
+    deviceUuid: z.string().optional().describe("The door camera where the badge tap happened."),
+    timestampMs: z.number().optional(),
+    datetime: z.string().optional(),
+    integration: z.string().optional().describe("Which badge system the tap came from (OnGuard / Elements / NetBox)."),
+    area: z.string().optional(),
+  })
+  .describe("The access-control badge tap used to ground the re-id track (the known identity moment).");
+
 export const OUTPUT_SCHEMA = z.object({
-  resolvedPerson: PersonRefSchema.optional().describe("The person actually tracked (name + UUID), when resolved."),
-  ambiguousPeople: z
-    .array(PersonRefSchema)
+  resolvedPerson: z
+    .object({ name: z.string().optional() })
     .optional()
-    .describe("Set when personQuery matched more than one registered person — disambiguate with the user before trusting the track."),
+    .describe("The person resolved from the badge record."),
+  anchor: AnchorSchema.optional(),
   sightings: z
     .array(SightingSchema)
     .optional()
-    .describe("The person's camera sightings in chronological order (oldest first)."),
+    .describe("Re-id sightings of the person across cameras, in chronological order (oldest first)."),
   path: z
     .array(z.string())
     .optional()
-    .describe("Camera UUIDs the person passed through, in order (consecutive repeats collapsed)."),
-  lastKnownSighting: SightingSchema.optional().describe("The most recent sighting — the person's last-known location."),
-  count: z.number().optional().describe("Number of sightings returned."),
+    .describe("Camera UUIDs the person was re-identified at, in order (consecutive repeats collapsed)."),
+  lastKnownSighting: SightingSchema.optional().describe("The most recent re-id sighting — last-known location."),
+  count: z.number().optional().describe("Number of re-id sightings returned."),
+  note: z.string().optional().describe("Set when the track couldn't be built (no badge tap, or no re-id at the door)."),
   error: z.string().optional(),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;
