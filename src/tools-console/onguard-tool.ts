@@ -10,6 +10,14 @@ const TOOL_DESCRIPTION = `
 Searches Honeywell OnGuard (Lenel) badge / access-control events for the organization. Use this to answer
 "who entered WHERE and WHEN" questions, e.g. "who entered the back office yesterday".
 
+NOTE: an organization may run any combination of Honeywell OnGuard (Lenel), Honeywell Elements (LenelS2
+Elements), and Lenel S2 NetBox badge integrations — each searched by its own sibling tool
+(onguard-events-tool / elements-events-tool / netbox-events-tool), all taking identical arguments and
+returning the same shape. For a general "who badged in / did anyone enter" question you usually do NOT
+know which integration recorded the event, so call ALL THREE sibling tools (in parallel) and combine the
+results — each returns an empty list when its integration isn't configured. Restrict to one vendor only
+when the user explicitly names it.
+
 Each returned event includes:
 - cardholderName: the person's name
 - deviceUuid: the camera that saw the event
