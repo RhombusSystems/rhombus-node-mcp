@@ -1,96 +1,118 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import * as facesApi from "../../src/api/faces-tool-api.js";
+import * as onguard from "../../src/api/onguard-tool-api.js";
+import * as elements from "../../src/api/elements-tool-api.js";
+import * as netbox from "../../src/api/netbox-tool-api.js";
+import * as entity from "../../src/api/get-entity-tool-api.js";
+import * as reid from "../../src/api/reid-tool-api.js";
 import { getPersonTrack } from "../../src/api/person-tracking-tool-api.js";
 
-vi.mock("../../src/api/faces-tool-api.js");
+vi.mock("../../src/api/onguard-tool-api.js");
+vi.mock("../../src/api/elements-tool-api.js");
+vi.mock("../../src/api/netbox-tool-api.js");
+vi.mock("../../src/api/get-entity-tool-api.js");
+vi.mock("../../src/api/reid-tool-api.js");
 
 const TZ = "America/Los_Angeles";
 
-describe("getPersonTrack", () => {
-  beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // default: no badge events anywhere unless a test overrides
+  vi.mocked(onguard.searchOnGuardEvents).mockResolvedValue({ events: [] } as never);
+  vi.mocked(elements.searchElementsEvents).mockResolvedValue({ events: [] } as never);
+  vi.mocked(netbox.searchNetboxEvents).mockResolvedValue({ events: [] } as never);
+  vi.mocked(entity.getCameraList).mockResolvedValue({ cameras: [] } as never);
+  vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([] as never);
+  vi.mocked(reid.searchReidentificationMatchesByEmbedding).mockResolvedValue([] as never);
+});
 
-  it("tracks by personUuid: chronological order, collapsed path, gaps, hints, lastKnownSighting", async () => {
-    vi.mocked(facesApi.getFaceEvents).mockResolvedValue({
-      faceEvents: [
-        // intentionally out of order; two consecutive on camA should collapse in path
-        { deviceUuid: "camB", eventTimestampMs: 6000, eventTimestamp: "t3", faceName: "Eve Adams", locationUuid: "loc1", personUuid: "p1", thumbnailS3Key: "k3", uuid: "e3" },
-        { deviceUuid: "camA", eventTimestampMs: 1000, eventTimestamp: "t1", faceName: "Eve Adams", locationUuid: "loc1", personUuid: "p1", thumbnailS3Key: "k1", uuid: "e1" },
-        { deviceUuid: "camA", eventTimestampMs: 3000, eventTimestamp: "t2", faceName: "Eve Adams", locationUuid: "loc1", personUuid: "p1", thumbnailS3Key: "k2", uuid: "e2" },
-      ],
-      lastEvaluatedKey: undefined,
-    } as never);
-
-    const res = await getPersonTrack({ personUuid: "p1", clipPaddingSeconds: 10 }, TZ);
-
-    expect(res.count).toBe(3);
-    expect(res.sightings.map((s) => s.timestampMs)).toEqual([1000, 3000, 6000]);
-    expect(res.path).toEqual(["camA", "camB"]);
-    expect(res.sightings[0].gapToNextSeconds).toBe(2); // (3000-1000)/1000
-    expect(res.sightings[1].gapToNextSeconds).toBe(3); // (6000-3000)/1000
-    expect(res.sightings[2].gapToNextSeconds).toBeUndefined();
-    expect(res.sightings[0].clipHint).toEqual({ deviceUuid: "camA", startTimeMs: 1000 - 10000, endTimeMs: 1000 + 10000 });
-    expect(res.sightings[0].stillHint).toEqual({ deviceUuid: "camA", timestampMs: 1000 });
-    expect(res.lastKnownSighting?.deviceUuid).toBe("camB");
-    expect(res.resolvedPerson).toEqual({ name: "Eve Adams", personUuid: "p1" });
-  });
-
-  it("flags ambiguity when a name matches more than one registered person and does not track", async () => {
-    vi.mocked(facesApi.getRegisteredFaces).mockResolvedValue({
-      people: [
-        { name: "Eve Adams", uuid: "p1" },
-        { name: "Eve Brown", uuid: "p2" },
+describe("getPersonTrack (re-id grounded by access control)", () => {
+  it("badge tap -> door embedding (closest in time) -> re-id track across cameras", async () => {
+    vi.mocked(elements.searchElementsEvents).mockResolvedValue({
+      events: [
+        {
+          deviceUuid: "camDoor",
+          timestampMs: 1000,
+          datetime: "badge-time",
+          cardholderName: "Brandon Salzberg",
+          areaEntering: "Warehouse Entry",
+        },
       ],
     } as never);
-
-    const res = await getPersonTrack({ personQuery: "Eve" }, TZ);
-
-    expect(res.ambiguousPeople?.map((p) => p.personUuid).sort()).toEqual(["p1", "p2"]);
-    expect(res.count).toBe(0);
-    expect(res.sightings).toEqual([]);
-    expect(facesApi.getFaceEvents).not.toHaveBeenCalled();
-  });
-
-  it("resolves a unique name match then tracks that person", async () => {
-    vi.mocked(facesApi.getRegisteredFaces).mockResolvedValue({
-      people: [
-        { name: "Eve Adams", uuid: "p1" },
-        { name: "Bob Lee", uuid: "p2" },
-      ],
+    vi.mocked(entity.getCameraList).mockResolvedValue({
+      cameras: [{ uuid: "camDoor", locationUuid: "loc1" }],
     } as never);
-    vi.mocked(facesApi.getFaceEvents).mockResolvedValue({
-      faceEvents: [{ deviceUuid: "camA", eventTimestampMs: 1000, eventTimestamp: "t1", faceName: "Eve Adams", personUuid: "p1" }],
-      lastEvaluatedKey: undefined,
-    } as never);
-
-    const res = await getPersonTrack({ personQuery: "eve adams" }, TZ);
-
-    expect(res.resolvedPerson).toEqual({ name: "Eve Adams", personUuid: "p1" });
-    expect(res.count).toBe(1);
-    expect(vi.mocked(facesApi.getFaceEvents).mock.calls[0][0].searchFilter?.personUuids).toEqual(["p1"]);
-  });
-
-  it("tracks by appearance from a faceEventUuid seed, carrying similarity and honoring the time window", async () => {
-    vi.mocked(facesApi.searchSimilarFaces).mockResolvedValue([
-      { uuid: "s1", deviceUuid: "camA", personUuid: undefined, similarity: 0.92, eventTimestampMs: 1000, eventTimestamp: "t1" },
-      { uuid: "s2", deviceUuid: "camB", personUuid: undefined, similarity: 0.81, eventTimestampMs: 5000, eventTimestamp: "t2" },
-      { uuid: "s3", deviceUuid: "camC", personUuid: undefined, similarity: 0.77, eventTimestampMs: 9000, eventTimestamp: "t3" },
+    vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([
+      { deviceUuid: "camDoor", timestamp: 5000, embedding: [0.9, 0.9], embeddingId: "far" },
+      { deviceUuid: "camDoor", timestamp: 1005, embedding: [0.1, 0.2], embeddingId: "near", stableTrackId: 7 },
+    ] as never);
+    vi.mocked(reid.searchReidentificationMatchesByEmbedding).mockResolvedValue([
+      { deviceUuid: "camHall", timestamp: 3000, distance: 0.1, thumbnailUri: "u2" },
+      { deviceUuid: "camDoor", timestamp: 1005, distance: 0.0, thumbnailUri: "u1" },
+      { deviceUuid: "camExit", timestamp: 6000, distance: 0.2, thumbnailUri: "u3" },
     ] as never);
 
-    // window excludes the 9000 sighting
-    const res = await getPersonTrack({ faceEventUuid: "seed", afterMs: 500, beforeMs: 6000 }, TZ);
+    const res = await getPersonTrack(
+      { personQuery: "Brandon", afterMs: 0, beforeMs: 10000, clipPaddingSeconds: 10 },
+      TZ
+    );
 
-    expect(res.count).toBe(2);
-    expect(res.sightings.map((s) => s.deviceUuid)).toEqual(["camA", "camB"]);
-    expect(res.sightings[0].similarity).toBe(0.92);
-    expect(facesApi.searchSimilarFaces).toHaveBeenCalledWith("seed", TZ, undefined, undefined);
+    // identity + anchor from the badge tap
+    expect(res.resolvedPerson).toEqual({ name: "Brandon Salzberg" });
+    expect(res.anchor).toMatchObject({ deviceUuid: "camDoor", integration: "Elements", area: "Warehouse Entry" });
+
+    // seeded the re-id search with the embedding CLOSEST in time to the badge tap (near, not far)
+    const seedArg = vi.mocked(reid.searchReidentificationMatchesByEmbedding).mock.calls[0][0];
+    expect(seedArg.searchEmbedding).toEqual([0.1, 0.2]);
+
+    // chronological track, collapsed path, last-known
+    expect(res.sightings.map((s) => s.timestampMs)).toEqual([1005, 3000, 6000]);
+    expect(res.path).toEqual(["camDoor", "camHall", "camExit"]);
+    expect(res.lastKnownSighting?.deviceUuid).toBe("camExit");
+    expect(res.sightings[0].clipHint).toEqual({ deviceUuid: "camDoor", startTimeMs: 1005 - 10000, endTimeMs: 1005 + 10000 });
+    expect(res.sightings[0].distance).toBe(0.0);
+    expect(res.count).toBe(3);
   });
 
-  it("returns empty (no error) when a name matches nobody", async () => {
-    vi.mocked(facesApi.getRegisteredFaces).mockResolvedValue({ people: [{ name: "Bob Lee", uuid: "p2" }] } as never);
-    const res = await getPersonTrack({ personQuery: "Zzz Nobody" }, TZ);
+  it("checks all three badge integrations and uses the earliest tap as the anchor", async () => {
+    vi.mocked(onguard.searchOnGuardEvents).mockResolvedValue({
+      events: [{ deviceUuid: "camA", timestampMs: 9000, datetime: "late", cardholderName: "X" }],
+    } as never);
+    vi.mocked(netbox.searchNetboxEvents).mockResolvedValue({
+      events: [{ deviceUuid: "camB", timestampMs: 2000, datetime: "early", cardholderName: "X" }],
+    } as never);
+    vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([
+      { deviceUuid: "camB", timestamp: 2000, embedding: [0.5], embeddingId: "e" },
+    ] as never);
+
+    const res = await getPersonTrack({ personQuery: "X" }, TZ);
+
+    expect(onguard.searchOnGuardEvents).toHaveBeenCalled();
+    expect(elements.searchElementsEvents).toHaveBeenCalled();
+    expect(netbox.searchNetboxEvents).toHaveBeenCalled();
+    expect(res.anchor).toMatchObject({ deviceUuid: "camB", integration: "NetBox" }); // earliest (2000 < 9000)
+  });
+
+  it("returns a note (not an error) when the person has no badge taps in the window", async () => {
+    const res = await getPersonTrack({ personQuery: "Nobody", afterMs: 0, beforeMs: 100 }, TZ);
     expect(res.count).toBe(0);
-    expect(res.ambiguousPeople).toBeUndefined();
-    expect(res.resolvedPerson).toBeUndefined();
+    expect(res.sightings).toEqual([]);
+    expect(res.note).toMatch(/No access-control/i);
+    expect(reid.searchReidentificationMatchesByEmbedding).not.toHaveBeenCalled();
+  });
+
+  it("returns the anchor + a note when no re-id embedding exists on the door camera", async () => {
+    vi.mocked(onguard.searchOnGuardEvents).mockResolvedValue({
+      events: [{ deviceUuid: "camDoor", timestampMs: 1000, datetime: "t", cardholderName: "Brandon Salzberg" }],
+    } as never);
+    vi.mocked(entity.getCameraList).mockResolvedValue({ cameras: [{ uuid: "camDoor", locationUuid: "loc1" }] } as never);
+    vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([] as never);
+
+    const res = await getPersonTrack({ personQuery: "Brandon" }, TZ);
+
+    expect(res.anchor).toMatchObject({ deviceUuid: "camDoor", integration: "OnGuard" });
+    expect(res.count).toBe(0);
+    expect(res.note).toMatch(/no person re-identification embedding/i);
+    expect(reid.searchReidentificationMatchesByEmbedding).not.toHaveBeenCalled();
   });
 });

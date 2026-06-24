@@ -1,179 +1,190 @@
 import { buildMediaHints } from "./badge-correlation.js";
-import { getFaceEvents, getRegisteredFaces, searchSimilarFaces } from "./faces-tool-api.js";
-import type { GetFaceEventsArgs, GetRegisteredFacesArgs } from "../types/faces-tools-types.js";
+import { searchElementsEvents } from "./elements-tool-api.js";
+import { getCameraList } from "./get-entity-tool-api.js";
+import { searchNetboxEvents } from "./netbox-tool-api.js";
+import { searchOnGuardEvents } from "./onguard-tool-api.js";
+import { listReidentificationEmbeddings, searchReidentificationMatchesByEmbedding } from "./reid-tool-api.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 export interface GetPersonTrackArgs {
-  personQuery?: string;
-  personUuid?: string;
-  faceEventUuid?: string;
-  locationUuids?: string[];
+  personQuery: string;
   afterMs?: number;
   beforeMs?: number;
+  locationUuids?: string[];
+  badgeMatchWindowSeconds?: number;
   clipPaddingSeconds?: number;
   limit?: number;
 }
 
-interface PersonRef {
-  name?: string;
-  personUuid?: string;
-}
+const DEFAULT_BADGE_MATCH_WINDOW_S = 30;
+const DEFAULT_TRACK_FORWARD_MS = 6 * 60 * 60 * 1000; // track 6h forward from the badge tap if no endTime
 
-/** A normalized face sighting before media hints are attached. */
-interface RawSighting {
-  deviceUuid?: string;
-  timestampMs?: number;
-  datetime?: string;
-  locationUuid?: string;
-  faceName?: string;
-  similarity?: number;
-  thumbnailS3Key?: string;
+/** RUUID without any `.vN` facet suffix, so a badge event's camera matches the camera-state list. */
+function stripFacet(uuid?: string): string {
+  return (uuid ?? "").split(".")[0];
 }
 
 /**
- * Fuzzy-match a free-text name against the registered-faces directory. Mirrors faces-tool's scoring
- * (4 = exact full name, 3 = first name, 2 = last name, 1 = substring ≥3 chars) but returns every person
- * tied at the best score so the caller can flag ambiguity instead of silently tracking the wrong person.
- */
-function matchRegisteredPeople(
-  query: string,
-  people: Array<{ name?: string | null; uuid?: string | null }>
-): PersonRef[] {
-  const input = query.toLowerCase().trim();
-  if (!input) return [];
-
-  let bestScore = 0;
-  const scored: Array<{ name: string; uuid: string; score: number }> = [];
-  for (const person of people) {
-    if (!person.name || !person.uuid) continue;
-    const fullName = person.name.toLowerCase().trim();
-    const parts = fullName.split(/\s+/);
-
-    let score = 0;
-    if (fullName === input) score = 4;
-    else if (parts[0] === input) score = 3;
-    else if (parts.length > 1 && parts[parts.length - 1] === input) score = 2;
-    else if (input.length >= 3 && fullName.includes(input)) score = 1;
-
-    if (score > 0) {
-      scored.push({ name: person.name, uuid: person.uuid, score });
-      if (score > bestScore) bestScore = score;
-    }
-  }
-
-  // Dedupe by uuid among the best-scoring tier.
-  const seen = new Set<string>();
-  const top: PersonRef[] = [];
-  for (const s of scored) {
-    if (s.score !== bestScore || seen.has(s.uuid)) continue;
-    seen.add(s.uuid);
-    top.push({ name: s.name, personUuid: s.uuid });
-  }
-  return top;
-}
-
-/**
- * Reconstructs one person's movements across cameras as a chronological track of face sightings, each
- * with the still/clip hints needed to show the moment. Pure orchestration over the face-recognition
- * APIs:
- *   - faceEventUuid  -> searchSimilarFaces (appearance match; works for unrecognized people)
- *   - personUuid     -> getFaceEvents filtered to that person
- *   - personQuery    -> resolve name against registered faces, then getFaceEvents
+ * Reconstructs where a named person went, grounded in access control + person re-identification:
+ *   1. find the person's badge tap(s) (OnGuard / Elements / NetBox) → a camera + time we KNOW is them,
+ *   2. pull the re-id embedding recorded on that camera nearest the badge time (the person at the door),
+ *   3. re-id-search that embedding across cameras over the window → their cross-camera movement track.
+ *
+ * Identity comes from the badge (not face recognition); the track is appearance/re-id based.
  */
 export async function getPersonTrack(
   args: GetPersonTrackArgs,
   timeZone: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-): Promise<{
-  resolvedPerson?: PersonRef;
-  ambiguousPeople?: PersonRef[];
-  sightings: ReturnType<typeof buildSightings>;
-  path: string[];
-  lastKnownSighting?: ReturnType<typeof buildSightings>[number];
-  count: number;
-}> {
-  let resolvedPerson: PersonRef | undefined;
-  let raw: RawSighting[] = [];
+) {
+  // 1. Anchor on access-control events. Check all three badge integrations; an org may use any.
+  const badgeArgs = {
+    cardholderQuery: args.personQuery,
+    locationUuids: args.locationUuids,
+    afterMs: args.afterMs,
+    beforeMs: args.beforeMs,
+    limit: args.limit ?? 200,
+  };
+  const empty = { events: [] as Array<Record<string, unknown>> };
+  const [og, el, nb] = await Promise.all([
+    searchOnGuardEvents(badgeArgs, timeZone, requestModifiers, sessionId).catch(() => empty),
+    searchElementsEvents(badgeArgs, timeZone, requestModifiers, sessionId).catch(() => empty),
+    searchNetboxEvents(badgeArgs, timeZone, requestModifiers, sessionId).catch(() => empty),
+  ]);
+  type BadgeEvent = {
+    deviceUuid?: string;
+    timestampMs?: number;
+    datetime?: string;
+    cardholderName?: string;
+    areaEntering?: string;
+    areaExiting?: string;
+  };
+  const badgeEvents = [
+    ...(og.events as BadgeEvent[]).map((e) => ({ ...e, integration: "OnGuard" })),
+    ...(el.events as BadgeEvent[]).map((e) => ({ ...e, integration: "Elements" })),
+    ...(nb.events as BadgeEvent[]).map((e) => ({ ...e, integration: "NetBox" })),
+  ]
+    .filter((e) => e.deviceUuid && e.timestampMs != null)
+    .sort((a, b) => (a.timestampMs ?? 0) - (b.timestampMs ?? 0));
 
-  if (args.faceEventUuid) {
-    // Appearance-based track from a seed sighting — handles people who aren't registered/named.
-    const similar = await searchSimilarFaces(args.faceEventUuid, timeZone, requestModifiers, sessionId);
-    raw = similar.map((s) => ({
-      deviceUuid: s.deviceUuid,
-      timestampMs: s.eventTimestampMs,
-      datetime: s.eventTimestamp,
-      similarity: s.similarity,
-      faceName: undefined,
-    }));
-  } else {
-    // Resolve to a person UUID (directly or by name) before pulling their face events.
-    let personUuid = args.personUuid;
-    if (!personUuid && args.personQuery) {
-      const peopleResponse = await getRegisteredFaces({} as GetRegisteredFacesArgs, requestModifiers, sessionId);
-      const matches = matchRegisteredPeople(args.personQuery, peopleResponse.people ?? []);
-      if (matches.length > 1) {
-        return { ambiguousPeople: matches, sightings: [], path: [], count: 0 };
-      }
-      if (matches.length === 0) {
-        return { sightings: [], path: [], count: 0 };
-      }
-      resolvedPerson = matches[0];
-      personUuid = matches[0].personUuid;
-    } else if (personUuid) {
-      resolvedPerson = { personUuid };
-    }
-
-    if (!personUuid) {
-      return { sightings: [], path: [], count: 0 };
-    }
-
-    const faceEventArgs: GetFaceEventsArgs = {
-      pageRequest: { maxPageSize: args.limit ?? 200, lastEvaluatedKey: null },
-      searchFilter: {
-        faceNameContains: null,
-        faceNames: [],
-        hasEmbedding: null,
-        hasName: null,
-        labels: [],
-        locationUuids: args.locationUuids ?? [],
-        personUuids: [personUuid],
-        timestampFilter:
-          args.afterMs != null || args.beforeMs != null
-            ? {
-                rangeStart: args.afterMs != null ? new Date(args.afterMs).toISOString() : null,
-                rangeEnd: args.beforeMs != null ? new Date(args.beforeMs).toISOString() : null,
-              }
-            : null,
-      },
+  if (badgeEvents.length === 0) {
+    return {
+      sightings: [],
+      path: [],
+      count: 0,
+      note: `No access-control (badge) events found for "${args.personQuery}" in the window — can't anchor a re-id track. Try a wider time range, or confirm the name as it appears on the badge.`,
     };
-    const { faceEvents } = await getFaceEvents(faceEventArgs, timeZone, requestModifiers, sessionId);
-    raw = faceEvents.map((e) => ({
-      deviceUuid: e.deviceUuid,
-      timestampMs: e.eventTimestampMs,
-      datetime: e.eventTimestamp,
-      locationUuid: e.locationUuid,
-      faceName: e.faceName,
-      thumbnailS3Key: e.thumbnailS3Key,
-    }));
-    if (!resolvedPerson?.name) {
-      const named = raw.find((r) => r.faceName);
-      if (named?.faceName) resolvedPerson = { name: named.faceName, personUuid };
-    }
   }
 
-  // Always enforce the time window client-side (searchSimilarFaces has no time filter, and the face-event
-  // time filter defaults to the last 7 days if unset) and order chronologically.
-  const ordered = raw
-    .filter((r) => r.timestampMs != null)
-    .filter((r) => (args.afterMs == null || (r.timestampMs as number) >= args.afterMs))
-    .filter((r) => (args.beforeMs == null || (r.timestampMs as number) <= args.beforeMs))
-    .sort((a, b) => (a.timestampMs ?? 0) - (b.timestampMs ?? 0))
-    .slice(0, args.limit ?? 200);
+  // Earliest badge tap in the window — track forward from there.
+  const anchor = badgeEvents[0];
+  const resolvedPerson = anchor.cardholderName ? { name: anchor.cardholderName } : undefined;
+  const anchorOut = {
+    deviceUuid: anchor.deviceUuid,
+    timestampMs: anchor.timestampMs,
+    datetime: anchor.datetime,
+    integration: anchor.integration,
+    area: anchor.areaEntering ?? anchor.areaExiting,
+  };
 
-  const sightings = buildSightings(ordered, timeZone, args.clipPaddingSeconds);
+  // 2. Resolve the badge camera's location (re-id list is scoped by location).
+  let anchorLocationUuid: string | undefined;
+  try {
+    const { cameras } = await getCameraList(requestModifiers, sessionId);
+    const dev = stripFacet(anchor.deviceUuid);
+    anchorLocationUuid = (cameras as Array<{ uuid?: string; locationUuid?: string }>).find(
+      (c) => stripFacet(c.uuid) === dev
+    )?.locationUuid;
+  } catch {
+    // best-effort; the re-id list can still run device-scoped without a location
+  }
 
-  // Camera sequence the person moved through, collapsing consecutive repeats.
+  // 3. Ground the re-id embedding: the person detected on that camera nearest the badge tap.
+  const winMs = (args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S) * 1000;
+  const anchorMs = anchor.timestampMs as number;
+  const embeddings = await listReidentificationEmbeddings(
+    {
+      deviceUuids: [anchor.deviceUuid as string],
+      locationUuid: anchorLocationUuid,
+      startTimestampMs: anchorMs - winMs,
+      endTimestampMs: anchorMs + winMs,
+      limit: 100,
+    },
+    requestModifiers,
+    sessionId
+  );
+
+  if (embeddings.length === 0) {
+    return {
+      resolvedPerson,
+      anchor: anchorOut,
+      sightings: [],
+      path: [],
+      count: 0,
+      note: `Found ${anchor.cardholderName ?? "the person"}'s badge tap at ${anchor.datetime}, but no person re-identification embedding was recorded on that camera within ±${args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S}s — can't build a re-id track. (Re-id needs human-detection coverage on the door camera.)`,
+    };
+  }
+
+  // The detection closest in time to the badge tap is the best proxy for the badge holder.
+  const seed = embeddings.reduce((best, e) =>
+    Math.abs((e.timestamp ?? 0) - anchorMs) < Math.abs((best.timestamp ?? 0) - anchorMs) ? e : best
+  );
+  if (!seed.embedding || seed.embedding.length === 0) {
+    return {
+      resolvedPerson,
+      anchor: anchorOut,
+      sightings: [],
+      path: [],
+      count: 0,
+      note: "The re-id detection at the door had no embedding vector; can't search for matches.",
+    };
+  }
+
+  // 4. Re-id search that appearance across cameras over the window.
+  const searchStart = args.afterMs ?? anchorMs;
+  const searchEnd = args.beforeMs ?? anchorMs + DEFAULT_TRACK_FORWARD_MS;
+  const matches = await searchReidentificationMatchesByEmbedding(
+    {
+      searchEmbedding: seed.embedding,
+      locationUuid: args.locationUuids?.[0],
+      startTimestampMs: searchStart,
+      endTimestampMs: searchEnd,
+      limit: args.limit ?? 200,
+    },
+    requestModifiers,
+    sessionId
+  );
+
+  // 5. Build the chronological track with media hints.
+  const ordered = matches
+    .filter((m) => m.timestamp != null)
+    .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+
+  const sightings = ordered.map((m, i) => {
+    const next = ordered[i + 1];
+    const gapToNextSeconds =
+      next?.timestamp != null && m.timestamp != null
+        ? Math.round((next.timestamp - m.timestamp) / 1000)
+        : undefined;
+    const { clipHint, stillHint } = buildMediaHints(
+      { deviceUuid: m.deviceUuid, timestampMs: m.timestamp },
+      args.clipPaddingSeconds
+    );
+    return {
+      timestampMs: m.timestamp,
+      datetime: m.timestamp != null ? formatTimestamp(m.timestamp, timeZone) : undefined,
+      deviceUuid: m.deviceUuid,
+      locationUuid: m.locationUuid,
+      distance: m.distance,
+      stableTrackId: m.stableTrackId,
+      thumbnailUri: m.thumbnailUri,
+      clipHint,
+      stillHint,
+      gapToNextSeconds,
+    };
+  });
+
   const path: string[] = [];
   for (const s of sightings) {
     if (s.deviceUuid && s.deviceUuid !== path[path.length - 1]) path.push(s.deviceUuid);
@@ -181,35 +192,10 @@ export async function getPersonTrack(
 
   return {
     resolvedPerson,
+    anchor: anchorOut,
     sightings,
     path,
     lastKnownSighting: sightings[sightings.length - 1],
     count: sightings.length,
   };
-}
-
-function buildSightings(ordered: RawSighting[], timeZone: string, clipPaddingSeconds?: number) {
-  return ordered.map((s, i) => {
-    const next = ordered[i + 1];
-    const gapToNextSeconds =
-      next?.timestampMs != null && s.timestampMs != null
-        ? Math.round((next.timestampMs - s.timestampMs) / 1000)
-        : undefined;
-    const { clipHint, stillHint } = buildMediaHints(
-      { deviceUuid: s.deviceUuid, timestampMs: s.timestampMs },
-      clipPaddingSeconds
-    );
-    return {
-      timestampMs: s.timestampMs,
-      datetime: s.datetime ?? (s.timestampMs != null ? formatTimestamp(s.timestampMs, timeZone) : undefined),
-      deviceUuid: s.deviceUuid,
-      locationUuid: s.locationUuid,
-      faceName: s.faceName,
-      similarity: s.similarity,
-      thumbnailS3Key: s.thumbnailS3Key,
-      clipHint,
-      stillHint,
-      gapToNextSeconds,
-    };
-  });
 }
