@@ -47,5 +47,14 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 };
 
 export function createTool(server: McpServer) {
-  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
+  server.registerTool(
+    TOOL_NAME,
+    {
+      title: "Locations",
+      description: TOOL_DESCRIPTION,
+      inputSchema: TOOL_ARGS,
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    TOOL_HANDLER
+  );
 }

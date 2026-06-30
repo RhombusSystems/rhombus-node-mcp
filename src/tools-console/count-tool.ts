@@ -3,18 +3,22 @@ import { z } from "zod";
 import { logger } from "../logger.js";
 
 export function createTool(server: McpServer) {
-  server.tool(
+  server.registerTool(
     "count-tool",
-    `
-      This tool counts the number of items by accepting an array of UUIDs. It can count anything that has UUIDs - users, devices, 
+    {
+      title: "Count Items",
+      description: `
+      This tool counts the number of items by accepting an array of UUIDs. It can count anything that has UUIDs - users, devices,
       records, or any other entities. Simply provide an array of UUID strings and it will return the precise count.
       `,
-    {
-      uuids: z
-        .array(z.string().describe("UUID string of an individual item"))
-        .describe(
-          "An array of UUID strings representing the items to count. Each string should be a valid UUID."
-        ),
+      inputSchema: {
+        uuids: z
+          .array(z.string().describe("UUID string of an individual item"))
+          .describe(
+            "An array of UUID strings representing the items to count. Each string should be a valid UUID."
+          ),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ uuids }) => {
       try {

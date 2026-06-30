@@ -240,9 +240,11 @@ export function createTool(server: McpServer) {
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Create Camera Policy",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
       outputSchema: OUTPUT_SCHEMA.shape,
+      annotations: { readOnlyHint: false, destructiveHint: false },
     },
     TOOL_HANDLER
   );

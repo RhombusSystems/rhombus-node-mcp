@@ -523,9 +523,11 @@ export function createTool(server: McpServer) {
 	server.registerTool(
 		TOOL_NAME,
 		{
+			title: "Reports",
 			description: TOOL_DESCRIPTION,
 			inputSchema: TOOL_ARGS.shape,
 			outputSchema: OUTPUT_SCHEMA.shape,
+			annotations: { readOnlyHint: true },
 		},
 		TOOL_HANDLER,
 	);

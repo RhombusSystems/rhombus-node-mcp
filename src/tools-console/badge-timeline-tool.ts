@@ -56,9 +56,11 @@ export function createTool(server: McpServer) {
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Badge Timeline",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
       outputSchema: OUTPUT_SCHEMA.shape,
+      annotations: { readOnlyHint: true },
     },
     TOOL_HANDLER
   );

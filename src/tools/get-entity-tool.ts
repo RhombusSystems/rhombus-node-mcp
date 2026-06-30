@@ -110,5 +110,14 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 };
 
 export function createTool(server: McpServer) {
-  server.tool(TOOL_NAME, TOOL_DESCRIPTION, TOOL_ARGS, TOOL_HANDLER);
+  server.registerTool(
+    TOOL_NAME,
+    {
+      title: "Get Entities",
+      description: TOOL_DESCRIPTION,
+      inputSchema: TOOL_ARGS,
+      annotations: { readOnlyHint: true },
+    },
+    TOOL_HANDLER
+  );
 }

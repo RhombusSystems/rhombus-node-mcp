@@ -162,8 +162,10 @@ export function createTool(server: McpServer) {
   server.registerTool(
     TOOL_NAME,
     {
+      title: "Cameras",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
+      annotations: { readOnlyHint: true },
     },
     TOOL_HANDLER
   );
