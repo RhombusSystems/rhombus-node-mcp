@@ -1,13 +1,18 @@
 import { z } from "zod";
 
 export const TOOL_ARGS = {
-  action: z.enum(["get", "update", "create", "get-labels"]),
+  action: z
+    .enum(["get", "update", "create", "get-labels"])
+    .describe(
+      "'get' = list all locations; 'create' = create a location (requires locationName); 'update' = update a location's name/address (requires locationUuid); 'get-labels' = list all location labels for the org."
+    ),
   locationUpdate: z
     .object({
-      uuid: z.string(),
-      name: z.string(),
+      uuid: z.string().describe("Ignored — pass the location's UUID via the top-level locationUuid arg instead."),
+      name: z.string().describe("The new name for the location."),
     })
-    .nullable(),
+    .nullable()
+    .describe("For 'update' only: the new values to apply. Only 'name' is used; the location is identified by the top-level locationUuid arg."),
   locationName: z.string().nullable().describe("Name for the new location. Required for 'create'."),
   locationAddress: z.string().nullable().describe("Address for the location. Optional for 'create' and 'update'."),
   locationUuid: z.string().nullable().describe("UUID of the location. Required for 'update'."),

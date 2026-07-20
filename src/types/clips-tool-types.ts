@@ -9,7 +9,7 @@ export const TOOL_ARGS = {
 	requestType: z
 		.enum(["saved", "expiringSoon", "sharedLiveStreams", "timelapseClips", "clipGroups", "sharedClips", "createClip", "deleteClip"])
 		.describe(
-			'The type of data to retrieve. Use "saved" for regular saved clips, "expiringSoon" for clips nearing expiration, "sharedLiveStreams" for all shared live video streams, or "timelapseClips" for all timelapse clips.',
+			'The type of data to retrieve or action to perform. "saved" = regular saved clips; "expiringSoon" = clips nearing expiration; "sharedLiveStreams" = all shared live video streams; "timelapseClips" = all timelapse clips; "clipGroups" = clip groups in the org; "sharedClips" = shared clip groups; "createClip" = save a new clip from a camera (requires spliceRequest); "deleteClip" = permanently delete a saved clip (requires clipUuid; destructive).',
 		),
 	deviceUuidFilters: z
 		.array(createUuidSchema())

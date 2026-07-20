@@ -17,7 +17,7 @@ For each lost/inactive-badge use it returns:
   face on a valid badge is the strongest stolen/shared-badge signal), with a thumbnail
 - sightings: that same face tracked across cameras, ordered in time, ending in lastKnownSighting (last-known location)
 
-Resolve relative times (e.g. "in the last hour") to ISO 8601 first via the timestamp tool.
+Resolve relative times (e.g. "in the last hour") to ISO 8601 first via time-tool.
 
 To present: show the door still/clip (camera-tool image / clips-tool createClip with the hints), the face at the
 door, and the cross-camera track to last-known location. Detection + door evidence are reliable; the face track

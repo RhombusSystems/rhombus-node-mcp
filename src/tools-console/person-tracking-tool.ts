@@ -24,11 +24,11 @@ Returns:
 - path (camera sequence) and lastKnownSighting (last-known location).
 - note: set when no badge tap was found, or no re-id embedding existed on the door camera.
 
-Resolve relative times like "yesterday" to ISO 8601 first (use the timestamp tool), then pass
+Resolve relative times like "yesterday" to ISO 8601 first (use time-tool), then pass
 startTime/endTime. Re-id depends on human-detection coverage, so treat the track as investigative, not proof.
 
 IMPORTANT — to show the movement visually: for each sighting (or the key transitions), call the camera-tool
-(requestType "image", cameraUuid = sighting.deviceUuid, timestamp = sighting.timestampMs) for a still, and/or
+(requestType "image", cameraUuid = sighting.deviceUuid, timestampISO = the sighting's time as ISO 8601 — convert sighting.timestampMs via time-conversion-tool) for a still, and/or
 the clips-tool (requestType "createClip", using sighting.clipHint) for video. Issue those per-sighting media
 calls in PARALLEL, then present the track as a chronological narrative.
 `;

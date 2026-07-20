@@ -18,12 +18,12 @@ Returns the cardholder's badge taps in CHRONOLOGICAL order (oldest first), each 
 - gapToNextSeconds: time until the next tap (a large gap = unobserved movement between doors)
 plus a "path" array summarizing the areas traversed in order.
 
-Resolve relative times like "yesterday" to ISO 8601 first (use the timestamp tool), then pass
+Resolve relative times like "yesterday" to ISO 8601 first (use time-tool), then pass
 startTime/endTime. cardholderQuery is a full-text name match; if "ambiguousCardholders" is returned the
 query matched more than one person — ask the user which one before trusting the timeline.
 
 IMPORTANT — to show the movement visually: for each stop (or the key transitions), call the camera-tool
-(requestType "image", cameraUuid = stop.deviceUuid, timestamp = stop.timestampMs) for a still you can see,
+(requestType "image", cameraUuid = stop.deviceUuid, timestampISO = the stop's time as ISO 8601 — convert stop.timestampMs via time-conversion-tool) for a still you can see,
 and/or the clips-tool (requestType "createClip", using stop.clipHint) for video. Issue those per-stop
 media calls in PARALLEL, then present the timeline as a chronological narrative.
 `;

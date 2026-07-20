@@ -23,7 +23,7 @@ export const CameraVideoSettings = z.object({
     .describe("Image brightness adjustment (-255 to 255)"),
   img_contrast: z.number().min(0).max(128).optional().describe("Image contrast (0 to 128)"),
   img_saturation: z.number().min(0).max(255).optional().describe("Image saturation (0 to 255)"),
-  img_sharpness: z.number().min(0).max(255).optional().describe("Image sharpness (0 to 255)"),
+  img_sharpness: z.number().min(0).max(11).optional().describe("Image sharpness (0 to 11; 6 works for most situations)"),
   resolution: z
     .object({
       width: z.number().int().positive().optional(),
@@ -62,9 +62,9 @@ export const CameraVideoSettings = z.object({
   night_img_sharpness: z
     .number()
     .min(0)
-    .max(255)
+    .max(11)
     .optional()
-    .describe("Night mode sharpness (0 to 255)"),
+    .describe("Night mode sharpness (0 to 11; 6 works for most situations)"),
 });
 
 export const CameraAudioSettings = z.object({

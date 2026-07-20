@@ -44,7 +44,7 @@ export const VehicleEventsArgs = z.object({
       offset: true,
     })
     .describe(
-      "The end of the time range (inclusive) for filtering license plate events." +
+      "The start of the time range (inclusive) for filtering license plate events." +
         ISOTimestampFormatDescription
     ),
   endTime: z
@@ -54,7 +54,7 @@ export const VehicleEventsArgs = z.object({
       offset: true,
     })
     .describe(
-      "The start of the time range (inclusive) for filtering license plate events." +
+      "The end of the time range (inclusive) for filtering license plate events." +
         ISOTimestampFormatDescription
     ),
 });

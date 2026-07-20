@@ -3,11 +3,11 @@ import { parseTimeDescription } from "../api/time-tool-api.js";
 import { TOOL_ARGS, type ToolArgs } from "../types/time-tool-types.js";
 
 const TOOL_NAME = "time-tool";
-const TOOL_DESCRIPTION = `This tool returns timestamps from natural-language descriptions of time. If the user asks about the "current time", use this tool. Keep time_description as close to the user's original phrasing as possible — e.g. for "was X person seen today?" use time_description "today".
+const TOOL_DESCRIPTION = `This tool converts a natural-language description of time ("today", "5 days ago", "last week", "this morning") into concrete timestamps. Use it when you need a timestamp as input to another tool, or when the user explicitly asks for the current time. Keep time_description as close to the user's original phrasing as possible.
 
-**When to call:** Whenever the user provides a natural-language time description ("today", "5 days ago", "last week", "this morning"), call time-tool to get accurate timestamps. Do not invent timestamps yourself. If you will need a timestamp as input to another tool, call time-tool first; multiple parallel calls are fine.
+**Call it at most once per distinct time reference.** The current time does not change during this conversation — once you have retrieved "now"/"today", reuse that result and reason about other relative dates from it. Do NOT call time-tool again for a time reference you already resolved, and do not call it at all for questions that have no time component.
 
-**Default timezone:** Assume "America/Los_Angeles" unless the user specifies otherwise or device/location context indicates a different one.`;
+**Timezone:** Pass the timezone of the relevant device/location when known; otherwise a timezone the user stated; otherwise UTC.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { time_description, timezone } = args;
