@@ -77,7 +77,7 @@ export const OUTPUT_SCHEMA = z.object({
 	videoWall: z
 		.array(z.any())
 		.describe(
-			"If requestType is `get`, then this field will be populated with the video wall.",
+			"Unused — no current requestType populates this field. Use `videoWalls` (from 'list') or `uuid` (from 'create').",
 		)
 		.optional(),
   uuid: z.string().describe("The uuid of the created video wall.").optional(),

@@ -57,7 +57,7 @@ This tool interacts with the Rhombus face recognition system to retrieve informa
 
 If the user is asking about how many people were seen (head count / occupancy), use the report-tool with GET_OCCUPANCY_ENABLED_CAMERAS and GET_OCCUPANCY_COUNT_REPORT instead. This tool (faces-tool) is best for identifying *who* was seen (unique individuals by name), and its face count data is also automatically included in report-tool people-counting responses via the faceCountEnrichment field.
 
-**Important for person-presence questions:** When asked whether specific people were seen or are present, you should ALSO call events-tool with eventType "access-control" to check badge-in records. Face recognition and access control are complementary — someone may badge in without face recognition triggering, or be seen by a camera without badging in.
+**Important for person-presence questions:** When asked whether specific people were seen or are present, you should ALSO check badge-in records for the same time range: the vendor badge tools (onguard-events-tool / elements-events-tool / netbox-events-tool — call all three in parallel; each returns empty when not configured) and events-tool with eventType "access-control" (native Rhombus doors) or "brivo-access-control" (Brivo). Face recognition and access control are complementary — someone may badge in without face recognition triggering, or be seen by a camera without badging in.
 
 If the requestType is "get-face-events":
 - Use this tool to answer questions about face sightings, including questions like "who was in the office" or "who was seen today". Can be used for reporting, to generate a report on who was seen by the camera system.

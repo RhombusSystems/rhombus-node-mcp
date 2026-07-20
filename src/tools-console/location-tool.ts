@@ -7,7 +7,7 @@ const TOOL_NAME = "location-tool";
 const TOOL_DESCRIPTION = `This tool performs operations on locations.
 - 'get': Retrieves all locations.  When generating reports with location details, use location names not uuids.
 - 'create': Creates a new location with a name and optional address.
-- 'update': Updates an existing location (requires locationUuid).
+- 'update': Updates an existing location. Requires locationUuid; pass the new name via locationUpdate.name and/or a new address via locationAddress.
 - 'get-labels': Retrieves all location labels for the organization.`;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {

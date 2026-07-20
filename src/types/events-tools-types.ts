@@ -63,7 +63,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "The UUID of the climate sensor. Required when eventType is 'climate-sensor'. Can be obtained from the get-entity-tool for SENSOR."
+      "The UUID of the climate sensor. Required when eventType is 'climate-sensor'. Can be obtained from the get-entity-tool for ENVIRONMENTAL_SENSOR."
     ),
   limit: z
     .number()

@@ -18,10 +18,10 @@ Runs deterministic rules and returns ranked findings (high severity first):
 - area_novelty: a cardholder's first-ever entry to an area vs their prior history (needs a baseline window)
 
 Each finding includes cardholderName, the rule, severity, datetime, area, the camera deviceUuid, a plain-language
-rationale, and clip/still hints. Resolve relative times (e.g. "this week") to ISO 8601 first via the timestamp tool.
+rationale, and clip/still hints. Resolve relative times (e.g. "this week") to ISO 8601 first via time-tool.
 
 This is a triage aid: present findings grouped by severity, and for the notable ones call the camera-tool
-(requestType "image", cameraUuid = finding.deviceUuid, timestamp = finding.timestampMs) and/or clips-tool
+(requestType "image", cameraUuid = finding.deviceUuid, timestampISO = the finding's time as ISO 8601 — convert finding.timestampMs via time-conversion-tool) and/or clips-tool
 ("createClip" using finding.clipHint) — in PARALLEL — so a human can confirm. Don't assert wrongdoing; surface the
 evidence.
 `;

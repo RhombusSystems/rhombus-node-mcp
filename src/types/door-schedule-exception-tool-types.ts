@@ -155,28 +155,28 @@ export const TOOL_ARGS = {
 		.optional()
 		.nullable()
 		.describe(
-			"Optional date range filter (inclusive) for local start date beginning (yyyy-MM-dd).",
+			"Optional date range filter (inclusive) for local start date beginning. ISO 8601 datetime with offset, e.g. 2026-07-20T00:00:00Z.",
 		),
 	localStartDateRangeEnd: z.iso
 		.datetime({ offset: true })
 		.optional()
 		.nullable()
 		.describe(
-			"Optional date range filter (inclusive) for local start date end (yyyy-MM-dd).",
+			"Optional date range filter (inclusive) for local start date end. ISO 8601 datetime with offset, e.g. 2026-07-20T23:59:59Z.",
 		),
 	localEndDateRangeStart: z.iso
 		.datetime({ offset: true })
 		.optional()
 		.nullable()
 		.describe(
-			"Optional date range filter (inclusive) for local end date beginning (yyyy-MM-dd).",
+			"Optional date range filter (inclusive) for local end date beginning. ISO 8601 datetime with offset, e.g. 2026-07-20T00:00:00Z.",
 		),
 	localEndDateRangeEnd: z.iso
 		.datetime({ offset: true })
 		.optional()
 		.nullable()
 		.describe(
-			"Optional date range filter (inclusive) for local end date end (yyyy-MM-dd).",
+			"Optional date range filter (inclusive) for local end date end. ISO 8601 datetime with offset, e.g. 2026-07-20T23:59:59Z.",
 		),
 	includeFields: INCLUDE_FIELDS_ARG,
 	filterBy: FILTER_BY_ARG,

@@ -16,7 +16,10 @@ Elements), and Lenel S2 NetBox badge integrations — each searched by its own s
 returning the same shape. For a general "who badged in / did anyone enter" question you usually do NOT
 know which integration recorded the event, so call ALL THREE sibling tools (in parallel) and combine the
 results — each returns an empty list when its integration isn't configured. Restrict to one vendor only
-when the user explicitly names it.
+when the user explicitly names it. Badge events may ALSO exist outside these three vendors: native
+Rhombus ACU doors and Brivo doors are searched via events-tool (eventType "access-control" /
+"brivo-access-control") — a deferred tool; discover it via tool search and include it for generic
+"who badged in" questions.
 
 Each returned event includes:
 - cardholderName: the person's name
@@ -27,11 +30,11 @@ Each returned event includes:
 
 Filters (all optional): area, locationUuids, deviceUuids, cardholderQuery, badgeStatus, badgeType,
 anomalyOnly, entryMade, startTime, endTime, limit. Resolve relative times like "yesterday" to ISO 8601
-first (use the timestamp tool), then pass startTime/endTime.
+first (use time-tool), then pass startTime/endTime.
 
 IMPORTANT — to show pictures and video of each person so the user can visually identify them: after this
 returns, for each event (or the most relevant ones) call the camera-tool (requestType "image",
-cameraUuid = the event's deviceUuid, timestamp = the event's time) to get a still you can see, and/or the
+cameraUuid = the event's deviceUuid, timestampISO = the event's time as ISO 8601 — convert its timestampMs via time-conversion-tool) to get a still you can see, and/or the
 clips-tool (requestType "createClip") with a short window around the timestamp for video. Issue those
 per-event media calls in PARALLEL.
 `;

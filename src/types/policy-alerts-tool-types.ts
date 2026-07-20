@@ -6,7 +6,7 @@ export const TOOL_ARGS = {
   queryType: z
     .enum(["existing", "expiringSoon", "details", "dismiss", "unhealthy-devices", "alert-groups"])
     .describe(
-      'The type of policy alerts to retrieve. Use "existing" to get current policy alerts, and "expiringSoon" to get policy alerts that are nearing their expiration date.'
+      'The operation to perform. "existing" = current policy alerts; "expiringSoon" = policy alerts nearing their expiration date; "details" = full details for one alert (requires alertUuid); "dismiss" = dismiss one alert (requires alertUuid — this is a mutation, confirm with the user first); "unhealthy-devices" = historical device-health alert notifications (NOT live connection status — see the tool description); "alert-groups" = policy alerts clustered into groups.'
     ),
   afterTimestampISO: z
     .string()

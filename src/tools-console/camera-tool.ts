@@ -20,11 +20,11 @@ This tool should be used any time someone wants to specify a subset of cameras t
 
 For instance if someone says "I want X using cameras with Y" then this tool should get a snapshot of the image to answer the question of if the camera satisfies the Y predicate.
 
-This tool captures and returns a real-time snapshot from a designated security camera.
-The image reflects the current scene in the camera's field of view and serves as a contextual
-input source for downstream tasks such as object recognition, anomaly detection, incident investigation,
-or situational assessment. When invoked, the tool provides the following: 
-- Visual Scene Capture: A high-resolution image of what the camera is actively observing, including people, vehicles, license plates, and any detectable objects.
+This tool fetches a frame from a designated security camera at a given time (timestampISO — defaults to ~5 minutes
+before now for a near-live view; pass a historical timestamp to see a past moment, e.g. the time of a badge event).
+The image serves as a contextual input source for downstream tasks such as object recognition, anomaly detection,
+incident investigation, or situational assessment. When invoked, the tool provides the following:
+- Visual Scene Capture: A high-resolution image of what the camera observed at that time, including people, vehicles, license plates, and any detectable objects.
 - Optional zoom: pass cropX, cropY, cropWidth, cropHeight (each a percentage 0-100, origin at the top-left) to return only a sub-region of the frame so you can inspect a detail (e.g. a license plate or a doorway) more closely. Omit them for the full frame. When zooming into a small crop, pass a smaller downscaleFactor (e.g. 1-3) to preserve detail.
 
 What follows is a description of the behavior of this tool given the requestType "get-settings"
@@ -32,6 +32,14 @@ What follows is a description of the behavior of this tool given the requestType
 This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations (e.g. storage settings).
 
 NOTE: To update camera settings, use the update-tool instead.
+
+What follows is a description of the behavior of this tool given the requestType "get-media-uris"
+
+Returns the camera's streaming/playback media URIs (LAN and WAN live-stream and VOD URLs, e.g. H.264 and M3U8 endpoints). Use when the user needs direct stream/playback endpoints for a camera.
+
+What follows is a description of the behavior of this tool given the requestType "get-ai-thresholds"
+
+Returns the camera's AI detection threshold configuration (e.g. confidence thresholds for detection events). Use when diagnosing why a camera is or isn't generating AI events.
 
 ---
 

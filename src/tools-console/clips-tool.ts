@@ -29,6 +29,9 @@ This tool allows you to:
 * Get saved clips or clips expiring soon (filter by devices, locations, search string, time range).
 * Get all shared live video streams for the organization.
 * Get all timelapse clips for the organization.
+* Get clip groups ("clipGroups") and shared clip groups ("sharedClips") for the organization.
+* Create (save) a new clip from a camera's footage ("createClip") — requires spliceRequest with cameraUuid and startTimeMs/endTimeMs (epoch milliseconds). Use this to save video evidence around an event.
+* Delete a saved clip ("deleteClip") — requires clipUuid. This is destructive and irreversible; confirm with the user first.
 
 Filter options (for saved and expiringSoon only):
 * Specific devices using their UUIDs (deviceUuidFilters).
