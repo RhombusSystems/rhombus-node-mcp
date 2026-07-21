@@ -1,5 +1,6 @@
 import z from "zod";
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
+import { logger } from "../logger.js";
 import { postApi } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
@@ -93,14 +94,21 @@ function mapAccessControlEvent(
   };
 }
 
+// Newest-N cap per door: the pagination loop below walks backwards through a
+// door's history and would otherwise fetch every event in a wide time window.
+const MAX_ACCESS_CONTROL_EVENTS_PER_DOOR = 500;
+// Defensive default window when no startTime reaches this layer.
+const DEFAULT_ACCESS_CONTROL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 async function getAccessControlEventsForDoor(
   doorUuid: string,
-  startTime: number | undefined,
+  startTimeArg: number | undefined,
   endTime: number | undefined,
   timeZone: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<MappedAccessControlEvent[]> {
+  const startTime = startTimeArg ?? Date.now() - DEFAULT_ACCESS_CONTROL_WINDOW_MS;
   const allEvents: MappedAccessControlEvent[] = [];
   let createdBeforeMs = endTime;
 
@@ -134,6 +142,13 @@ async function getAccessControlEventsForDoor(
       .filter(Boolean);
     allEvents.push(...mappedEvents);
 
+    if (allEvents.length >= MAX_ACCESS_CONTROL_EVENTS_PER_DOOR) {
+      logger.info(
+        `access-control events for door ${doorUuid} capped at newest ${MAX_ACCESS_CONTROL_EVENTS_PER_DOOR}`
+      );
+      break;
+    }
+
     if (componentEvents.length < ACCESS_CONTROL_EVENT_BATCH_SIZE) {
       break;
     }
@@ -164,7 +179,8 @@ async function getAccessControlEventsForDoor(
     createdBeforeMs = oldestTimestamp;
   }
 
-  return allEvents;
+  // Pages accumulate newest → oldest, so slicing keeps the newest events.
+  return allEvents.slice(0, MAX_ACCESS_CONTROL_EVENTS_PER_DOOR);
 }
 
 export async function getBrivoAccessControlEvents(
@@ -323,7 +339,7 @@ export async function getAccessControlEvents(
   // Flatten all componentEvents into a single array
   const accessControlEvents = responses.flatMap(events => events);
   accessControlEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
-  console.error(`componentEvents: ${JSON.stringify(accessControlEvents)}`);
+  logger.debug(`componentEvents: ${accessControlEvents.length} access-control events`);
   return accessControlEvents;
 }
 
@@ -623,7 +639,7 @@ export async function getComponentEventsByLocation(
   // Sort events by timestamp (newest first)
   events.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
 
-  console.error(`componentEvents: ${JSON.stringify(events)}`);
+  logger.debug(`componentEvents: ${events.length} events`);
   return events;
 }
 
