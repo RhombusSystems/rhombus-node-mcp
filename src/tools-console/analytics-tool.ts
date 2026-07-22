@@ -15,6 +15,7 @@ import {
 } from "../types/analytics-tool-types.js";
 import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 import { postApi } from "../network/network.js";
+import { cachedPostApi } from "../network/org-reference-cache.js";
 import { DateTime } from "luxon";
 
 const TOOL_NAME = "analytics-tool";
@@ -522,7 +523,7 @@ async function getCameraNameMap(
   sessionId: string | undefined
 ): Promise<Record<string, string>> {
   try {
-    const res = await postApi<any>({
+    const res = await cachedPostApi<any>({
       route: "/camera/getMinimalCameraStateList",
       body: {},
       modifiers: requestModifiers,

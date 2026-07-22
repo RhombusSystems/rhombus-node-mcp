@@ -1,4 +1,5 @@
 import { postApi } from "../network/network.js";
+import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -114,7 +115,7 @@ export async function getFleetUptime(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<{ cameras: CameraUptimeResult[]; summary: { totalCameras: number; averageUptimePercentage: number; worstCamera?: string; worstUptimePercentage?: number } }> {
-  const cameraListRes = await postApi<any>({
+  const cameraListRes = await cachedPostApi<any>({
     route: "/camera/getMinimalCameraStateList",
     body: {},
     modifiers: requestModifiers,

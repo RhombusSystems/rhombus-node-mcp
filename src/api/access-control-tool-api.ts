@@ -1,4 +1,5 @@
 import { postApi } from "../network/network.js";
+import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -262,7 +263,7 @@ export async function getRemoteUnlockUsers(
       modifiers: requestModifiers,
       sessionId,
     }),
-    postApi<schema["Component_FindAccessControlledDoorsWSResponse"]>({
+    cachedPostApi<schema["Component_FindAccessControlledDoorsWSResponse"]>({
       route: "/component/findAccessControlledDoors",
       body: {},
       modifiers: requestModifiers,

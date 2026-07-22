@@ -1,9 +1,10 @@
 import { postApi } from "../network/network.js";
+import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
 import { RequestModifiers } from "../util.js";
 
 export async function getLocations(requestModifiers?: RequestModifiers, sessionId?: string) {
-  const res = await postApi<any>({
+  const res = await cachedPostApi<any>({
     route: "/location/getLocationsV2",
     body: {},
     modifiers: requestModifiers,
@@ -55,7 +56,7 @@ export async function updateLocation(
 }
 
 export async function getLocationLabels(requestModifiers?: RequestModifiers, sessionId?: string) {
-  const res = await postApi<schema["Location_GetLocationLabelsForOrgWSResponse"]>({
+  const res = await cachedPostApi<schema["Location_GetLocationLabelsForOrgWSResponse"]>({
     route: "/location/getLocationLabelsForOrg",
     body: {},
     modifiers: requestModifiers,

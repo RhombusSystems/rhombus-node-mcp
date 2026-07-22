@@ -1,5 +1,5 @@
 import { logger } from "../logger.js";
-import { postApi } from "../network/network.js";
+import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, RequestModifiers } from "../util.js";
 import { tempFunc, TempUnit } from "../utils/temp.js";
@@ -8,7 +8,7 @@ export async function getCameraList(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	const body = await postApi<any>({
+	const body = await cachedPostApi<any>({
 		route: "/camera/getMinimalCameraStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -25,7 +25,7 @@ export async function getDoorbellCameras(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	const body = await postApi<any>({
+	const body = await cachedPostApi<any>({
 		route: "/doorbellcamera/getMinimalStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -43,7 +43,7 @@ export async function getBadgeReaders(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/badgereader/getMinimalStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -61,7 +61,7 @@ export async function getAccessControlledDoors(
 	requestModifiers?: RequestModifiers,
 	sessionId?: string,
 ): Promise<schema["Component_FindAccessControlledDoorsWSResponse"]> {
-	return await postApi<schema["Component_FindAccessControlledDoorsWSResponse"]>(
+	return await cachedPostApi<schema["Component_FindAccessControlledDoorsWSResponse"]>(
 		{
 			route: "/component/findAccessControlledDoors",
 			body: {},
@@ -94,7 +94,7 @@ export async function getAudioGateways(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/audiogateway/getMinimalAudioGatewayStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -117,7 +117,7 @@ export async function getDoorSensors(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/door/getMinimalDoorStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -137,7 +137,7 @@ export async function getEnvironmentalSensors(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/climate/getMinimalClimateStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -166,7 +166,7 @@ export async function getMotionSensors(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/occupancy/getMinimalOccupancySensorStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -186,7 +186,7 @@ export async function getButtons(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/button/getMinimalButtonStateList",
 		body: {},
 		modifiers: requestModifiers,
@@ -206,7 +206,7 @@ export async function getButtons(
 }
 
 export async function getKeypads(requestModifiers?: any, sessionId?: string) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/keypad/getKeypadsForOrg",
 		body: {},
 		modifiers: requestModifiers,
@@ -225,7 +225,7 @@ export async function getEnvironmentalGateways(
 	requestModifiers?: any,
 	sessionId?: string,
 ) {
-	return await postApi<any>({
+	return await cachedPostApi<any>({
 		route: "/climate/getMinimalEnvironmentalGatewayStates",
 		body: {},
 		modifiers: requestModifiers,

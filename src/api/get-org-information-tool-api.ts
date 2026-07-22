@@ -1,8 +1,8 @@
-import { postApi } from "../network/network.js";
+import { cachedPostApi } from "../network/org-reference-cache.js";
 import { RequestModifiers } from "../util.js";
 
 export async function getOrg(requestModifiers?: RequestModifiers, sessionId?: string) {
-  return await postApi<any>({
+  return await cachedPostApi<any>({
     route: "/org/getOrgV2",
     body: {},
     modifiers: requestModifiers,
