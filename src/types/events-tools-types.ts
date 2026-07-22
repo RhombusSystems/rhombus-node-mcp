@@ -37,7 +37,7 @@ export const TOOL_ARGS = {
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .describe(
-      "A timestamp representing when to start the search for access control events." +
+      "A timestamp representing when to start the search for access control events. Keep the window as narrow as the question allows (e.g. the last 24 hours) — access-control results are returned newest-first and capped at the newest 500 events per door, so an over-wide window only slows the search without returning more." +
         ISOTimestampFormatDescription
     ),
   endTime: z

@@ -1,27 +1,17 @@
 import { z } from "zod";
-import { createUuidSchema } from "../types.js";
 import DeviceType from "./deviceType.js";
 import { TempUnit } from "../utils/temp.js";
-
-const filterByObjectSchema = z.object({
-  locationUuids: z
-    .array(createUuidSchema())
-    .nullish()
-    .describe(
-      "The UUIDs of the locations to filter by. Set to null or an empty array to not filter by location."
-    ),
-});
 
 export const TOOL_ARGS = {
   entityTypes: z
     .array(z.nativeEnum(DeviceType).describe("The entity type to retreive"))
     .describe("What type of entities to retrieve."),
-  filterBy: z
-    .union([filterByObjectSchema, z.null()])
-    .optional()
-    .transform((v) => v ?? { locationUuids: null })
+  detail: z
+    .enum(["core", "full"])
+    .nullish()
+    .transform((v) => v ?? "core")
     .describe(
-      "Additional filters that can be applied to the result. Omit or pass null for no filtering."
+      'Level of per-device detail. "core" (default) returns each device\'s key fields: uuid, name, connection/health status, location, camera associations, temperature, door capabilities. "full" returns every field (model, firmware, serial, network info, ...) — when describing a single device, combine it with the filterBy output filter (e.g. [{field:"name", op:"contains", value:"..."}]) to avoid a huge response.'
     ),
   timeZone: z
     .string()

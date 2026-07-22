@@ -22,16 +22,35 @@ const TOOL_DESCRIPTION = `
 Retrieves entities (or devices) of certain types — cameras, doorbell cameras, badge readers, access-controlled doors, audio gateways, door sensors, environmental sensors, motion sensors, buttons, keypads, environmental gateways. Can request multiple entity types at once. The return structure is a JSON string that contains the states (including names, UUIDs, location, model, firmware, connection status) of the requested entities. This data is exact.
 
 **Primary use cases:**
-1. **Looking up a device by name.** When the user mentions a specific camera, door, sensor, etc. by name (e.g. "describe camera 1919 Front Door Entrance", "what's the status of HW Lab door"), call this tool with the matching entityType, scan the returned list, and **fuzzy/case-insensitive substring match** the user's reference against the \`name\` field. Don't ask the user to clarify — try this lookup first, and only ask if there are genuinely multiple plausible matches in the results.
-2. **Listing all devices of a type** (cameras, doors, sensors, etc.) for a location or org-wide.
-3. **Checking device health and connectivity.** Each device includes a \`connected\` boolean (true = online, false = offline). For "which devices are offline?" / "is X online?" / health questions, fetch the relevant entityTypes and inspect \`connected\`.
+1. **Looking up a device by name.** When the user mentions a specific camera, door, sensor, etc. by name (e.g. "describe camera 1919 Front Door Entrance", "what's the status of HW Lab door"), call this tool with the matching entityType, scan the returned list, and **fuzzy/case-insensitive substring match** the user's reference against the \`name\` field. Don't ask the user to clarify — try this lookup first, and only ask if there are genuinely multiple plausible matches in the results. To describe one device in depth (model, firmware, serial, network), pass \`detail: "full"\` together with a \`filterBy\` name predicate so only that device comes back at full size.
+2. **Listing all devices of a type** (cameras, doors, sensors, etc.) for a location or org-wide. The default \`detail: "core"\` keeps lists compact (uuid, name, connection/health status, location, associations).
+3. **Checking device health and connectivity.** Each device includes a \`connected\` boolean (true = online, false = offline). For "which devices are offline?" / "is X online?" / health questions, fetch the relevant entityTypes and inspect \`connected\` — the default detail level includes it.
 
 When the user asks to "describe", "look up", "find", "show me", or "tell me about" a named device, this is almost always the right starting tool — call it before asking the user for more specifics.`;
 
+// Fields kept per device when detail is "core" (the default) — the union of
+// the identifying/health/association fields across every entity type. Fields a
+// type doesn't have are simply absent. "full" skips the projection entirely.
+const CORE_FIELDS = new Set([
+  "uuid",
+  "name",
+  "connectionStatus",
+  "connected",
+  "healthStatus",
+  "healthStatusDetails",
+  "locationUuid",
+  "floorNumber",
+  "temperature",
+  "humidity",
+  "batteryStatus",
+  "associatedCameras",
+  "policyUuid",
+  "remoteUnlockEnabled",
+  "geofenceEnabled",
+]);
+
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
-  const { entityTypes, timeZone, tempUnit } = args;
-  const filterBy = args.filterBy ?? { locationUuids: null };
-  const locationFilter = filterBy.locationUuids;
+  const { entityTypes, timeZone, tempUnit, detail } = args;
   const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   const promises = [];
@@ -78,18 +97,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     for (const key of Object.keys(response)) {
       const value = response[key];
       if (Array.isArray(value)) {
-        // then filter
-        response[key] = value.filter((item: any) => {
-          let pass = true;
-          if (
-            item.locationUuid &&
-            locationFilter &&
-            locationFilter.length > 0
-          ) {
-            pass = pass && locationFilter.includes(item.locationUuid);
-          }
-          return pass;
-        });
+        if (detail !== "full") {
+          response[key] = value.map((item: any) =>
+            Object.fromEntries(
+              Object.entries(item).filter(([field]) => CORE_FIELDS.has(field)),
+            ),
+          );
+        }
 
         response[`${key}Count`] = (response[key] as unknown[]).length;
       }
