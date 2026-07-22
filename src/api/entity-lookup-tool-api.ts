@@ -45,7 +45,7 @@ async function getDeviceFeatures(
 }
 
 export async function getAllEntities(
-  deviceUuids: string[],
+  deviceUuids: string[] | null,
   timeZone: string,
   tempUnit: TempUnit | null,
   requestModifiers?: RequestModifiers,
@@ -67,7 +67,10 @@ export async function getAllEntities(
 
   const responses = await Promise.all<Record<string, unknown>>(promises);
 
-  // Filter each response to only include devices with matching UUIDs and fetch device features
+  // Filter each response to only include devices with matching UUIDs and fetch device features.
+  // deviceUuids === null means "no UUID filter" (return all entities); in that case skip the
+  // per-device getDeviceFeatures fan-out — running it for every device in the org would be an
+  // N+1 feature-call storm. License/feature details are only attached for explicit UUID lists.
   for (let i = 0; i < responses.length; i++) {
     const response = responses[i];
 
@@ -75,6 +78,11 @@ export async function getAllEntities(
     for (const key of Object.keys(response)) {
       const value = response[key];
       if (Array.isArray(value)) {
+        if (deviceUuids === null) {
+          response[`${key}Count`] = value.length;
+          continue;
+        }
+
         // Filter to only include devices with matching UUIDs
         const filteredDevices = value.filter((item: { uuid: string }) => {
           return deviceUuids.includes(item.uuid);

@@ -4,7 +4,13 @@ import { TempUnit } from "../utils/temp.js";
 import { INCLUDE_FIELDS_ARG, FILTER_BY_ARG } from "../util.js";
 
 export const TOOL_ARGS = {
-  deviceUuids: z.array(createUuidSchema()).describe("The UUIDs of the devices to look up."),
+  deviceUuids: z
+    .array(createUuidSchema())
+    .min(1)
+    .nullable()
+    .describe(
+      "The UUIDs of the devices to look up. Pass null to return ALL entities of every type (no UUID filter) and narrow with filterBy/includeFields instead. NEVER invent placeholder UUIDs — an unknown UUID matches nothing and returns empty results."
+    ),
   timeZone: z
     .string()
     .describe(

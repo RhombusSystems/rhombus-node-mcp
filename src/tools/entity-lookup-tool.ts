@@ -6,11 +6,13 @@ import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 const TOOL_NAME = "entity-lookup-tool";
 
 const TOOL_DESCRIPTION = `
-Retrieves specific entities (or devices) by their UUIDs.
-Takes a list of device UUIDs and returns the device information for those specific devices. 
-Use this tool when the user asks for details on devices' states and details about their licenses and features.
+Retrieves specific entities (or devices) by their UUIDs, including license and feature details.
+Use this tool ONLY when you already have exact device UUIDs (e.g. from get-entity-tool, get-org-information, or an earlier tool result).
+
+To look up a device by NAME, do NOT use this tool — use get-entity-tool with a filterBy name predicate instead. NEVER invent or guess placeholder UUIDs; an unknown UUID matches nothing and returns empty results.
+
+Pass deviceUuids: null to return ALL entities of every type (no UUID filter) and narrow with filterBy/includeFields — note that license/feature details are only included when explicit UUIDs are provided.
 The return structure is a JSON object that contains the states of the requested entities.
-This data is exact. Only devices with matching UUIDs will be returned.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
