@@ -15,7 +15,7 @@ async function main() {
   const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
   if (RHOMBUS_API_KEY) {
-    logger.info(`🔑 Using API_KEY: ${RHOMBUS_API_KEY}`);
+    logger.info(`🔑 Using API_KEY: <set, ${RHOMBUS_API_KEY.length} chars>`);
   }
   logger.info("🌐 Using server url", serverUrl);
 

@@ -93,6 +93,28 @@ export function constructRequestHeaders(
   return { url, requestHeaders };
 }
 
+// Credential-bearing headers must never reach the log store (they were being
+// written verbatim to OpenSearch on every outbound call, prod included). The
+// session token also rides in the URL as `_rs`, so redact that too.
+const SENSITIVE_HEADERS = new Set([
+  "x-auth-apikey",
+  "x-auth-access-token",
+  "x-auth-session",
+  "cookie",
+]);
+
+function redactHeadersForLog(headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    out[key] = SENSITIVE_HEADERS.has(key.toLowerCase()) ? `<set, ${value.length} chars>` : value;
+  }
+  return out;
+}
+
+function redactUrlForLog(url: string): string {
+  return url.replace(/([?&]_rs=)[^&]+/g, "$1<redacted>");
+}
+
 export async function postApi<T>({
   route,
   body,
@@ -119,7 +141,9 @@ export async function postApi<T>({
   }
 
   try {
-    logger.info(`[POSTAPI] REQUEST - ${url} - ${body} - ${JSON.stringify(requestHeaders)}`);
+    logger.info(
+      `[POSTAPI] REQUEST - ${redactUrlForLog(url)} - ${body} - ${JSON.stringify(redactHeadersForLog(requestHeaders))}`
+    );
     const response = await fetch(url, {
       method: "POST",
       headers: requestHeaders as HeadersInit,
