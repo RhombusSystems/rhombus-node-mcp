@@ -31,6 +31,8 @@ What follows is a description of the behavior of this tool given the requestType
 
 This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations (e.g. storage settings).
 
+By default (detail: "core") bulky geometry/table sub-configs (metering tables, ROI polygons, PTZ/motor config) are elided with an "<omitted...>" placeholder — everything you need to read or change image/video/exposure/storage settings is included. Pass detail: "full" only when the user asks about one of the elided areas.
+
 NOTE: To update camera settings, use the update-tool instead.
 
 What follows is a description of the behavior of this tool given the requestType "get-media-uris"
@@ -68,6 +70,46 @@ Examples that REQUIRE the automatic snapshot flow:
 const logger = getLogger("camera-tool");
 
 const TOOL_ARGS = BASE_TOOL_ARGS;
+
+// get-settings `detail: "core"` — the faceted config carries geometry/table
+// sub-configs that dwarf the settings anyone reads or edits. Elide those
+// (recursively, so facet nesting doesn't matter) and cap any remaining
+// oversized leaf so the default response stays well under the 5k
+// LLM-compaction threshold. `detail: "full"` skips this entirely.
+const SETTINGS_BLOAT_KEYS = new Set([
+  "metering_config",
+  "motor_config",
+  "ptz_config",
+  "region_for_occupancy",
+  "region_of_interest",
+  "privacy_window_config",
+  "alert_regions",
+]);
+const SETTINGS_VALUE_CHAR_LIMIT = 1_500;
+const OMITTED_PLACEHOLDER = '<omitted at detail:"core" — pass detail:"full" to include>';
+
+function compactSettings(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const json = JSON.stringify(value);
+    if (json && json.length > SETTINGS_VALUE_CHAR_LIMIT) return OMITTED_PLACEHOLDER;
+    return value.map(compactSettings);
+  }
+  if (typeof value === "object" && value !== null) {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (SETTINGS_BLOAT_KEYS.has(key)) {
+        out[key] = OMITTED_PLACEHOLDER;
+        continue;
+      }
+      out[key] = compactSettings(child);
+    }
+    return out;
+  }
+  if (typeof value === "string" && value.length > SETTINGS_VALUE_CHAR_LIMIT) {
+    return OMITTED_PLACEHOLDER;
+  }
+  return value;
+}
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { cameraUuid, timestampISO, requestType, cropX, cropY, cropWidth, cropHeight, downscaleFactor } =
@@ -133,11 +175,15 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         ],
       };
 
-    case "get-settings":
+    case "get-settings": {
       response = await getCameraSettings(cameraUuid, requestModifiers, sessionId);
+      if (args.detail !== "full" && response?.config) {
+        response = { ...response, config: compactSettings(response.config) };
+      }
       return {
         content: [{ type: "text" as const, text: JSON.stringify(response) }],
       };
+    }
     case "get-media-uris":
       response = await getCameraMediaUris(cameraUuid, requestModifiers, sessionId);
       return {

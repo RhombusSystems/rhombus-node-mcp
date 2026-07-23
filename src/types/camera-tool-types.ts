@@ -253,6 +253,13 @@ export const BASE_TOOL_ARGS = {
       ` + ISOTimestampFormatDescription
     ),
   requestType: z.enum(["image", "get-settings", "get-media-uris", "get-ai-thresholds"]),
+  detail: z
+    .enum(["core", "full"])
+    .nullish()
+    .transform((v) => v ?? "core")
+    .describe(
+      "For requestType 'get-settings' only. 'core' (default) elides bulky geometry/table sub-configs (metering tables, ROI polygons, PTZ/motor config) and oversized values, keeping the settings you can read and change (image/video/exposure/storage). Pass 'full' for the complete raw config."
+    ),
   cropX: z
     .number()
     .min(0)
