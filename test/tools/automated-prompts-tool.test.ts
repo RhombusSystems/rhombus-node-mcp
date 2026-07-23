@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createTool } from "../../src/tools/automated-prompts-tool.js";
+import { createTool } from "../../src/tools-console/automated-prompts-tool.js";
 import * as automatedPromptsApi from "../../src/api/automated-prompts-tool-api.js";
 import {
   AutomatedPromptsRequestType,

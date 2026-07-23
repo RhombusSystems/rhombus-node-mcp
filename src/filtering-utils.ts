@@ -12,7 +12,9 @@ export const INCLUDE_FIELDS_ARG = z
 	.describe(
 		`Dot-notation field paths to include in the response (e.g. "vehicleEvents.vehicleLicensePlate").
 Pass null to return all fields. WARNING: some responses can exceed 400k characters — use includeFields
-to request only the data you need. For high-volume tools this may be required to get a complete answer.`,
+to request only the data you need. For high-volume tools this may be required to get a complete answer.
+Core device-status fields (connected, connectionStatus, healthStatus, healthStatusDetails, batteryStatus)
+are always retained where present, even if not listed here.`,
 	);
 
 export const FILTER_BY_ARG = z
@@ -66,6 +68,29 @@ function buildTrie(paths: string[]): Trie {
 	return trie;
 }
 
+// Device-status fields the model must never be able to project away: a status
+// query where includeFields omits these returns data with no status in it, and
+// the model then truthfully answers "status not included" (observed in prod,
+// 2026-07-22). Grafted onto every internal trie node — fields a payload
+// doesn't have are simply absent, so this is a no-op outside device lists.
+const PROTECTED_STATUS_FIELDS = [
+	"connected",
+	"connectionStatus",
+	"healthStatus",
+	"healthStatusDetails",
+	"batteryStatus",
+];
+
+function addProtectedStatusFields(trie: Trie): void {
+	const children = Object.keys(trie);
+	// An empty node means "include everything below" — already keeps them.
+	if (children.length === 0) return;
+	for (const key of children) addProtectedStatusFields(trie[key]);
+	for (const field of PROTECTED_STATUS_FIELDS) {
+		if (!(field in trie)) trie[field] = {};
+	}
+}
+
 function filterByTrie(obj: any, trie: Trie): any {
 	// Empty trie at this level means "include everything"
 	if (Object.keys(trie).length === 0) {
@@ -107,6 +132,7 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
 		return obj;
 	}
 	const trie = buildTrie(fieldsToInclude);
+	addProtectedStatusFields(trie);
 	return filterByTrie(obj, trie);
 }
 
