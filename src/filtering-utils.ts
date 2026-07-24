@@ -6,16 +6,16 @@ import { z } from "zod";
 // Shared tool arg schemas
 // ---------------------------------------------------------------------------
 
-export const INCLUDE_FIELDS_ARG = z
-	.array(z.string())
-	.nullable()
-	.describe(
-		`Dot-notation field paths to include in the response (e.g. "vehicleEvents.vehicleLicensePlate").
+const INCLUDE_FIELDS_DESCRIPTION = `Dot-notation field paths to include in the response (e.g. "vehicleEvents.vehicleLicensePlate").
 Pass null to return all fields. WARNING: some responses can exceed 400k characters — use includeFields
 to request only the data you need. For high-volume tools this may be required to get a complete answer.
 Core device-status fields (connected, connectionStatus, healthStatus, healthStatusDetails, batteryStatus)
-are always retained where present, even if not listed here.`,
-	);
+are always retained where present, even if not listed here.`;
+
+export const INCLUDE_FIELDS_ARG = z
+	.array(z.string())
+	.nullable()
+	.describe(INCLUDE_FIELDS_DESCRIPTION);
 
 export const FILTER_BY_ARG = z
 	.array(
@@ -309,12 +309,16 @@ export function zodToDotNotationPaths(
 // createFilteringProxy — MCP server proxy that adds includeFields + filterBy
 // ---------------------------------------------------------------------------
 
+// Tool DESCRIPTIONS are always in the model's billed context (even for
+// deferred tools behind hosted tool_search — only parameter schemas are
+// deferred). Keep this suffix to one short line and put the usage docs +
+// per-tool field-path catalog in the includeFields/filterBy PARAMETER
+// descriptions instead, which cost nothing until the tool is loaded.
+// (PERF_MASTER_PLAN P2 #4a — the old suffix + path list was 46% of the
+// entire 131KB description surface.)
 const FILTERING_DESCRIPTION_SUFFIX = `
 
-**Output filtering (all tools):**
-- \`includeFields\` (string[]): Dot-notation paths to keep in the response (e.g. \`"vehicleEvents.vehicleLicensePlate"\`). Omit to return all fields.
-- \`filterBy\` (array): Predicates to filter array items. Each entry: \`{field, op, value}\` where op is one of \`= != > >= < <= contains\`. All conditions are ANDed. Example: \`[{field:"vehicleLicensePlate", op:"=", value:"ABC123"}]\`
-WARNING: some tool responses exceed 400k characters — use these params to request only the data you need.`;
+Supports \`includeFields\` (field projection) and \`filterBy\` (row predicates) params to shrink large responses — see their parameter descriptions for usage and this tool's available field paths.`;
 
 function applyFilteringToResult(
 	result: CallToolResult,
@@ -388,7 +392,10 @@ export function createFilteringProxy(
 					return (target as any).registerTool(name, config, handler);
 				}
 
-				let descriptionSuffix = FILTERING_DESCRIPTION_SUFFIX;
+				// Field-path catalog goes on the includeFields PARAM description
+				// (deferred/unbilled until the tool is loaded), not the tool
+				// description.
+				let includeFieldsArg = INCLUDE_FIELDS_ARG;
 				if (config.outputSchema) {
 					try {
 						let schema: z.ZodTypeAny;
@@ -405,22 +412,27 @@ export function createFilteringProxy(
 								(p) => p !== "requestType" && p !== "error" && p.trim() !== ""
 							))].sort();
 							if (filteredPaths.length > 0) {
-								descriptionSuffix += `\n\n**Available output field paths for this tool's \`includeFields\` / \`filterBy\`:**\n` +
-									filteredPaths.map((p) => `- \`"${p}"\``).join("\n");
+								includeFieldsArg = z
+									.array(z.string())
+									.nullable()
+									.describe(
+										`${INCLUDE_FIELDS_DESCRIPTION}\n\nAvailable output field paths for this tool's includeFields / filterBy:\n` +
+											filteredPaths.map((p) => `- "${p}"`).join("\n"),
+									);
 							}
 						}
 					} catch (error) {
-						// Fall back to the default description suffix on parsing failure
+						// Fall back to the base includeFields description on parsing failure
 					}
 				}
 
 				const augmentedConfig = {
 					...config,
 					description:
-						(config.description ?? "") + descriptionSuffix,
+						(config.description ?? "") + FILTERING_DESCRIPTION_SUFFIX,
 					inputSchema: {
 						...config.inputSchema,
-						includeFields: INCLUDE_FIELDS_ARG,
+						includeFields: includeFieldsArg,
 						filterBy: FILTER_BY_ARG,
 					},
 				};
