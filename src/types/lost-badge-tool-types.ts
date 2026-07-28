@@ -3,6 +3,21 @@ import { z } from "zod";
 import { createUuidSchema } from "../types.js";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
+/**
+ * Description shared by the three lost-badge tools (OnGuard / Elements /
+ * NetBox), which differ only in vendor. Kept short because tool descriptions
+ * are billed on every LLM call even while deferred, and this text is
+ * duplicated across all three siblings; presentation guidance and the
+ * reliability caveat live on the arguments below. See PERF_MASTER_PLAN P2 #4a.
+ */
+export function buildLostBadgeToolDescription(vendor: string): string {
+  return `
+Lost / stolen-badge live response for ${vendor} access. Use for "a lost badge was just used — who is it and where did they go?", or to review lost/inactive-badge use over a window.
+
+For each lost/inactive-badge use it returns cardholderOfRecord (who the badge belongs to — may NOT be who used it) and badgeStatus, the door deviceUuid + time with clip/still hints, facesAtDoor (the face captured at the door — a recognized name, or UNIDENTIFIED, which on a valid badge is the strongest stolen/shared-badge signal), and sightings of that same face tracked across cameras in time order, ending in lastKnownSighting.
+`;
+}
+
 export const TOOL_ARGS = {
   area: z.string().nullable().describe("Optional: restrict to events entering this area (full-text)."),
   locationUuids: z.array(createUuidSchema()).nullable().describe("Optional: restrict to these location UUIDs."),
@@ -11,7 +26,10 @@ export const TOOL_ARGS = {
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .nullable()
-    .describe("Start of the window to scan for lost/inactive-badge use (inclusive). " + ISOTimestampFormatDescription),
+    .describe(
+      'Start of the window to scan for lost/inactive-badge use (inclusive). Resolve relative phrasing like "in the last hour" with time-tool first, then pass ISO 8601 here. ' +
+        ISOTimestampFormatDescription
+    ),
   endTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
@@ -20,7 +38,9 @@ export const TOOL_ARGS = {
   faceWindowSeconds: z
     .number()
     .nullable()
-    .describe("± seconds around each badge event to look for the face at the door (default 30)."),
+    .describe(
+      "± seconds around each badge event to look for the face at the door (default 30). To present the result: show the door still/clip (camera-tool requestType \"image\" / clips-tool \"createClip\" with the returned hints), the face at the door, and the cross-camera track to the last-known location. Detection and door evidence are reliable; the face track depends on face-recognition coverage, so treat it as investigative, not proof."
+    ),
   limit: z.number().nullable().describe("Max badge events to scan in the window (default 50)."),
   timeZone: z
     .string()

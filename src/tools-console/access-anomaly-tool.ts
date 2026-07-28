@@ -3,28 +3,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getAccessAnomalies } from "../api/access-anomaly-tool-api.js";
 import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/access-anomaly-tool-types.js";
 import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
+import { buildAccessAnomalyToolDescription } from "../types/access-anomaly-tool-types.js";
 
 const TOOL_NAME = "access-anomaly-tool";
 
-const TOOL_DESCRIPTION = `
-Scans Honeywell OnGuard (Lenel) access events over a time window and flags anomalous badge activity. Use for
-"find unusual badge activity", "anything suspicious in access this week", or proactive access review.
-
-Runs deterministic rules and returns ranked findings (high severity first):
-- lost_or_inactive_badge: a non-active badge (lost/suspended) was used
-- entry_not_made: access granted but no entry made (possible tailgating)
-- off_hours: entry outside business hours (configurable)
-- impossible_travel: one cardholder at two different areas seconds apart
-- area_novelty: a cardholder's first-ever entry to an area vs their prior history (needs a baseline window)
-
-Each finding includes cardholderName, the rule, severity, datetime, area, the camera deviceUuid, a plain-language
-rationale, and clip/still hints. Resolve relative times (e.g. "this week") to ISO 8601 first via time-tool.
-
-This is a triage aid: present findings grouped by severity, and for the notable ones call the camera-tool
-(requestType "image", cameraUuid = finding.deviceUuid, timestampISO = the finding's time as ISO 8601 — convert finding.timestampMs via time-conversion-tool) and/or clips-tool
-("createClip" using finding.clipHint) — in PARALLEL — so a human can confirm. Don't assert wrongdoing; surface the
-evidence.
-`;
+const TOOL_DESCRIPTION = buildAccessAnomalyToolDescription("Honeywell OnGuard (Lenel)");
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);

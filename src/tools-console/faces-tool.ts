@@ -53,29 +53,13 @@ function resolveNamesToRegisteredFaces(
 }
 
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus face recognition system to retrieve information about face sightings and registered faces.
+Rhombus **face recognition**: face sightings and registered faces. Use it to identify *who* was seen (unique individuals by name) — "who was in the office", "who was seen today" — to list the people registered in the org, or to work with person label groups (e.g. "Engineering", "Visitors").
 
-If the user is asking about how many people were seen (head count / occupancy), use the report-tool with GET_OCCUPANCY_ENABLED_CAMERAS and GET_OCCUPANCY_COUNT_REPORT instead. This tool (faces-tool) is best for identifying *who* was seen (unique individuals by name), and its face count data is also automatically included in report-tool people-counting responses via the faceCountEnrichment field.
+**Head counts are a different tool:** if the user asks how MANY people were seen (head count / occupancy), use report-tool with GET_OCCUPANCY_ENABLED_CAMERAS and GET_OCCUPANCY_COUNT_REPORT instead. Its people-counting responses already carry this tool's unique-face data in the faceCountEnrichment field.
 
-**Important for person-presence questions:** When asked whether specific people were seen or are present, you should ALSO check badge-in records for the same time range: the vendor badge tools (onguard-events-tool / elements-events-tool / netbox-events-tool — call all three in parallel; each returns empty when not configured) and events-tool with eventType "access-control" (native Rhombus doors) or "brivo-access-control" (Brivo). Face recognition and access control are complementary — someone may badge in without face recognition triggering, or be seen by a camera without badging in.
+**Important for person-presence questions:** when asked whether specific people were seen or are present, you should ALSO check badge-in records for the same time range — the vendor badge tools (onguard-events-tool / elements-events-tool / netbox-events-tool; call all three in parallel, each returns empty when not configured) and events-tool with eventType "access-control" (native Rhombus doors) or "brivo-access-control" (Brivo). Face recognition and access control are complementary: someone may badge in without face recognition triggering, or be seen by a camera without badging in.
 
-If the requestType is "get-face-events":
-- Use this tool to answer questions about face sightings, including questions like "who was in the office" or "who was seen today". Can be used for reporting, to generate a report on who was seen by the camera system.
-- **Automatic name resolution:** You can pass partial or first-name-only names in faceNames (e.g., "Brandon", "Omar"). The tool automatically looks up the registered faces directory and resolves them to exact names and person UUIDs before searching. Check the "resolvedNames" field in the response to see what each queried name was matched to (null means no match found).
-- You can filter face events using parameters like 'faceNames', 'hasEmbedding', 'hasName', 'labels', 'locationUuids', 'personUuids', and a time range using 'rangeStart' and 'rangeEnd' (timestamps in milliseconds).
-- If you'd like to know about all face events at a location, pass in a location UUID and no device UUIDs. This will correctly return all face events at that location.
-- When the user asks about a specific person at a location (e.g. "Jane Doe at Main Office"), call get-registered-faces first to get the list of registered names, find the best match, then call get-face-events with that precise name. The tool expects precise names as stored in the system.
-- When querying faces at a location, pass only the location UUID in searchFilter; do not pass device UUIDs in searchFilter.deviceUuids, so the API returns all faces detected at that location.
-
-If the requestType is "get-registered-faces":
-- This tool retrieves a list of all people (registered faces) currently known to the Rhombus system for your organization. This list includes information about each registered person, including their assigned labels.
-- This returns ALL people registered in the system, regardless of the provided timestampFilter.
-- Each person in the response includes a "labels" array showing which label groups they belong to (e.g., "Engineering", "Visitors"). Use these labels to answer questions about groups of people.
-
-If the requestType is "get-person-labels":
-- This retrieves a mapping of all person UUIDs to their assigned labels across the organization.
-- Use this to discover what label groups exist and which registered faces belong to each group.
-- Useful when the user asks about a group (e.g., "was anyone from Engineering seen today?") — get the labels first, find the person UUIDs for that label, then query face events filtered by those personUuids or labels.
+Per-requestType behaviour — automatic name resolution, the available filters, and how to query a whole location — is documented on the requestType parameter.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {

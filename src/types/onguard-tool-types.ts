@@ -3,6 +3,26 @@ import { z } from "zod";
 import { createUuidSchema } from "../types.js";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
+/**
+ * Description shared by the three badge-integration event tools
+ * (onguard-events-tool / elements-events-tool / netbox-events-tool), which
+ * differ only in vendor.
+ *
+ * Kept deliberately short: tool descriptions are billed on EVERY LLM call even
+ * while the tool is deferred behind hosted tool_search, and this text is
+ * duplicated across all three siblings. Filter semantics live on the arguments
+ * below (unbilled until the tool loads). See PERF_MASTER_PLAN P2 #4a.
+ */
+export function buildBadgeEventsToolDescription(vendor: string): string {
+  return `
+Searches ${vendor} badge / access-control events for the organization. Use this to answer "who entered WHERE and WHEN" questions, e.g. "who entered the back office yesterday". Each event carries cardholderName (the person), deviceUuid (the camera that saw it), timestampMs/datetime, label (e.g. "${vendor.split(" ")[0]}: Badge Authorized" for a grant, or an anomaly label), badgeStatus, badgeType, areaEntering, areaExiting, entryMade, isAnomaly.
+
+**Siblings — for a generic "who badged in / did anyone enter" question, call ALL THREE in parallel:** onguard-events-tool, elements-events-tool and netbox-events-tool take identical arguments and return the same shape; an org may run any combination of those integrations, and each returns an empty list when its integration isn't configured. Narrow to one vendor only when the user names it. Native Rhombus ACU doors and Brivo doors are NOT covered here — those badge events come from events-tool (eventType "access-control" / "brivo-access-control"), so include it for generic badge questions too.
+
+After results, to show who it was: per event call camera-tool (requestType "image", cameraUuid = the event's deviceUuid, timestampISO = its time) and/or clips-tool (requestType "createClip") for a short window around the timestamp — issue those media calls IN PARALLEL.
+`;
+}
+
 export const TOOL_ARGS = {
   area: z
     .string()
@@ -36,7 +56,10 @@ export const TOOL_ARGS = {
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .nullable()
-    .describe("Only events at or after this time (inclusive). " + ISOTimestampFormatDescription),
+    .describe(
+      "Only events at or after this time (inclusive). Resolve relative phrasing like \"yesterday\" with time-tool first, then pass ISO 8601 here. " +
+        ISOTimestampFormatDescription
+    ),
   endTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })

@@ -3,10 +3,27 @@ import { z } from "zod";
 import { createUuidSchema } from "../types.js";
 import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
 
+/**
+ * Description shared by the three badge-timeline tools (OnGuard / Elements /
+ * NetBox), which differ only in vendor. Kept short because tool descriptions
+ * are billed on every LLM call even while deferred, and this text is
+ * duplicated across all three siblings; the how-to-present guidance lives on
+ * the arguments below. See PERF_MASTER_PLAN P2 #4a.
+ */
+export function buildBadgeTimelineToolDescription(vendor: string): string {
+  return `
+Reconstructs one person's movements through a building from their ${vendor} badge taps. Use this for incident reconstruction / "follow the badge" requests, e.g. "reconstruct Eve's movements yesterday" or "where did this cardholder go".
+
+Returns the cardholder's badge taps in CHRONOLOGICAL order (oldest first) — datetime, the area entered, deviceUuid of the camera at that door, clip/still hints, and gapToNextSeconds (a large gap means unobserved movement between doors) — plus a "path" array summarizing the areas traversed in order.
+`;
+}
+
 export const TOOL_ARGS = {
   cardholderQuery: z
     .string()
-    .describe('The cardholder (person) to reconstruct, full-text name match, e.g. "Eve" or "Eve Adams".'),
+    .describe(
+      'The cardholder (person) to reconstruct, full-text name match, e.g. "Eve" or "Eve Adams". If the response contains "ambiguousCardholders" the query matched more than one person — ask the user which one before trusting the timeline.'
+    ),
   locationUuids: z
     .array(createUuidSchema())
     .nullable()
@@ -15,7 +32,10 @@ export const TOOL_ARGS = {
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
     .nullable()
-    .describe("Start of the window (inclusive). " + ISOTimestampFormatDescription),
+    .describe(
+      'Start of the window (inclusive). Resolve relative phrasing like "yesterday" with time-tool first, then pass ISO 8601 here. ' +
+        ISOTimestampFormatDescription
+    ),
   endTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
@@ -24,7 +44,9 @@ export const TOOL_ARGS = {
   clipPaddingSeconds: z
     .number()
     .nullable()
-    .describe("Seconds of video before/after each badge tap to include in the clip hint (default 15)."),
+    .describe(
+      "Seconds of video before/after each badge tap to include in the clip hint (default 15). To show the movement visually after this returns: for each stop (or the key transitions) call camera-tool (requestType \"image\", cameraUuid = stop.deviceUuid, timestampISO = the stop's time — convert stop.timestampMs with time-conversion-tool) for a still, and/or clips-tool (requestType \"createClip\", using stop.clipHint) for video. Issue those per-stop media calls IN PARALLEL, then present the timeline as a chronological narrative."
+    ),
   limit: z.number().nullable().describe("Maximum badge taps to include (default 200)."),
   timeZone: z
     .string()
