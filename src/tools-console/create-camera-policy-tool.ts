@@ -204,7 +204,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     // i.e. UNASSIGN their existing policies, not assign the new one.
     if (!policyUuid?.trim()) {
       return errorResult(
-        `Cannot assign cameras: policyUuid is empty. The policy has not been created (or its creation failed). Create the policy first (name/description/orgUuid call) and pass the returned policyUuid. Do NOT combine creation, schedule, and camera args in one call — the steps run one at a time.`
+        `Cannot assign cameras: policyUuid is empty. The policy has not been created (or its creation failed). Either pass the full set (name, scheduleConfigs, cameraUuids) in one call to create everything at once, or create the policy first (name/description/orgUuid call) and pass the returned policyUuid.`
       );
     }
     try {
@@ -391,13 +391,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     }
   }
 
-  // Step 0: Show initial form (no args provided)
+  // Step 0: no args provided — tell the caller what's needed (plain facts, no
+  // legacy elicitation requestType/submitAction hints).
   const initialFormResponse = {
     needUserInput: true,
     message:
-      "Please provide the following information to create your camera policy:\n\n1. **Policy Name** (required): A descriptive name for the policy\n2. **Policy Description** (optional): What this policy does\n3. **Organization UUID** (optional): Leave blank to use your current organization\n\nOnce you provide this information, I'll create the policy for you.",
-    requestType: "policy-creation-form" as const,
-    submitAction: "create-camera-policy-tool",
+      "No policy was created — this call had no arguments. To create a camera policy, collect from the user: a policy name (required), an optional description, the schedule triggers, and the cameras to assign, then call this tool again with name, description, orgUuid, scheduleConfigs, and cameraUuids together.",
   };
   return {
     content: [
