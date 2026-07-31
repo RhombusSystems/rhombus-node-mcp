@@ -11,7 +11,7 @@ import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "onguard-events-tool";
 
-const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Honeywell OnGuard (Lenel)");
+const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Honeywell OnGuard (Lenel)", "OnGuard");
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);

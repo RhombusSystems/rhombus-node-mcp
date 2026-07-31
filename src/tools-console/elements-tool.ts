@@ -7,7 +7,7 @@ import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "elements-events-tool";
 
-const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Honeywell Elements (LenelS2 Elements)");
+const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Honeywell Elements (LenelS2 Elements)", "Elements");
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);

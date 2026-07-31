@@ -7,7 +7,7 @@ import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "netbox-events-tool";
 
-const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Lenel S2 NetBox (Honeywell NetBox)");
+const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Lenel S2 NetBox (Honeywell NetBox)", "NetBox");
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);
