@@ -115,7 +115,19 @@ export const GetFaceEventsArgs = z.object({
 export type GetFaceEventsArgs = z.infer<typeof GetFaceEventsArgs>;
 
 export const TOOL_ARGS = {
-  requestType: z.nativeEnum(RequestType),
+  requestType: z.nativeEnum(RequestType).describe(
+    `Which face-recognition request to run.
+
+"get-face-events" — face sightings; use it for reporting on who was seen by the camera system.
+- **Automatic name resolution:** faceNames accepts partial or first-name-only names (e.g. "Brandon", "Omar"); the tool looks up the registered-faces directory and resolves them to exact names and person UUIDs before searching. The response's "resolvedNames" field shows what each queried name matched (null = no match).
+- Filter with faceNames, hasEmbedding, hasName, labels, locationUuids, personUuids, and a time range via rangeStart / rangeEnd (milliseconds).
+- For all face events at a location, pass only the location UUID in searchFilter and NO device UUIDs (searchFilter.deviceUuids), so the API returns every face detected there.
+- When the user asks about a specific person at a location (e.g. "Jane Doe at Main Office"), call get-registered-faces first, find the best match, then call get-face-events with that precise name — this request expects names exactly as stored.
+
+"get-registered-faces" — every person (registered face) known to the org, each with a "labels" array showing the label groups they belong to. Returns ALL people regardless of any timestamp filter.
+
+"get-person-labels" — a mapping of person UUIDs to their assigned labels across the org. Use it to discover what label groups exist; for a group question ("was anyone from Engineering seen today?") get the labels first, then query face events filtered by those personUuids or labels.`,
+  ),
   faceEventFilter: GetFaceEventsArgs,
   timeZone: z
     .string()

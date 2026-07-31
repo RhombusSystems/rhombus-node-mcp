@@ -5,7 +5,10 @@ import path from "path";
 import { DateTime } from "luxon";
 import { filterIncludedFields, applyFilterBy, type FilterCondition } from "./filtering-utils.js";
 
-export { INCLUDE_FIELDS_ARG, FILTER_BY_ARG, FilterCondition, filterIncludedFields, applyFilterBy, zodToDotNotationPaths, createFilteringProxy } from "./filtering-utils.js";
+export { INCLUDE_FIELDS_ARG, FILTER_BY_ARG, filterIncludedFields, applyFilterBy, zodToDotNotationPaths, createFilteringProxy } from "./filtering-utils.js";
+// Re-exported separately as a type so per-file transpilers (tsx/esbuild) don't
+// emit a runtime import for it.
+export type { FilterCondition } from "./filtering-utils.js";
 
 export function generateRandomString(length: number): string {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

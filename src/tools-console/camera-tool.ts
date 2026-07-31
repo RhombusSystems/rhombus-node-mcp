@@ -6,65 +6,22 @@ import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "camera-tool";
 
+// Tool descriptions are billed on EVERY LLM call even while the tool is
+// deferred behind hosted tool_search, so this string carries only what the
+// model needs to CHOOSE this tool (including the triggers that MUST route
+// here). The step-by-step flows live on the requestType parameter description
+// — unbilled until the tool is loaded, and in front of the model exactly when
+// it is acting. See PERF_MASTER_PLAN P2 #4a.
 const TOOL_DESCRIPTION = `
-This tool can perform some action pertaining to the video stream of a camera. There are four types of requests
-that can be passed into "requestType":
-- image
-- get-settings
-- get-media-uris
-- get-ai-thresholds
+Acts on a camera's video stream. Set "requestType":
+- **image** — a frame from the camera at a given time (timestampISO defaults to ~5 minutes before now for a near-live view; pass a historical timestamp for a past moment, e.g. the time of a badge event). A high-resolution capture of what the camera saw — people, vehicles, license plates, any detectable object — for object recognition, anomaly detection, incident investigation, or situational assessment. Optional crop args zoom into a sub-region.
+- **get-settings** — current configuration of a camera or associated device (sensor, access controller): resolution, bitrate, image/exposure settings, storage. To CHANGE settings use **update-tool** instead.
+- **get-media-uris** — the camera's streaming/playback URIs (LAN and WAN live-stream and VOD URLs, e.g. H.264 and M3U8). Use when the user needs direct stream or playback endpoints.
+- **get-ai-thresholds** — the camera's AI detection threshold configuration (confidence thresholds for detection events). Use when diagnosing why a camera is or isn't generating AI events.
 
-What follows is a description of the behavior of this tool given the requestType "image"
-
-This tool should be used any time someone wants to specify a subset of cameras to use for a task, based on some features that the camera sees.  For example, interior cameras, cameras facing the street, cameras with a view of X, Y, Z, etc.
-
-For instance if someone says "I want X using cameras with Y" then this tool should get a snapshot of the image to answer the question of if the camera satisfies the Y predicate.
-
-This tool fetches a frame from a designated security camera at a given time (timestampISO — defaults to ~5 minutes
-before now for a near-live view; pass a historical timestamp to see a past moment, e.g. the time of a badge event).
-The image serves as a contextual input source for downstream tasks such as object recognition, anomaly detection,
-incident investigation, or situational assessment. When invoked, the tool provides the following:
-- Visual Scene Capture: A high-resolution image of what the camera observed at that time, including people, vehicles, license plates, and any detectable objects.
-- Optional zoom: pass cropX, cropY, cropWidth, cropHeight (each a percentage 0-100, origin at the top-left) to return only a sub-region of the frame so you can inspect a detail (e.g. a license plate or a doorway) more closely. Omit them for the full frame. When zooming into a small crop, pass a smaller downscaleFactor (e.g. 1-3) to preserve detail.
-
-What follows is a description of the behavior of this tool given the requestType "get-settings"
-
-This tool retrieves the current configuration for a specified camera or associated device (e.g., sensor, access controller). The returned JSON object can include detailed camera settings (e.g., resolution, bitrate) and various device-specific configurations (e.g. storage settings).
-
-By default (detail: "core") bulky geometry/table sub-configs (metering tables, ROI polygons, PTZ/motor config) are elided with an "<omitted...>" placeholder — everything you need to read or change image/video/exposure/storage settings is included. Pass detail: "full" only when the user asks about one of the elided areas.
-
-NOTE: To update camera settings, use the update-tool instead.
-
-What follows is a description of the behavior of this tool given the requestType "get-media-uris"
-
-Returns the camera's streaming/playback media URIs (LAN and WAN live-stream and VOD URLs, e.g. H.264 and M3U8 endpoints). Use when the user needs direct stream/playback endpoints for a camera.
-
-What follows is a description of the behavior of this tool given the requestType "get-ai-thresholds"
-
-Returns the camera's AI detection threshold configuration (e.g. confidence thresholds for detection events). Use when diagnosing why a camera is or isn't generating AI events.
-
----
-
-**AUTOMATIC SNAPSHOT FOR IMAGE QUALITY ISSUES** — When a user mentions camera image quality (darkness, brightness, blur, washed out, "doesn't look great", "fix the image", etc.), you MUST IMMEDIATELY:
-1. Call camera-tool with requestType "image" to capture a snapshot WITHOUT asking first.
-2. Analyze the image to identify quality issues.
-3. Call camera-tool with requestType "get-settings" to check current camera settings.
-4. Propose specific setting changes based on your analysis (store the exact values you plan to change, e.g. img_brightness, wdr_strength).
-5. When the user confirms ("yes", "confirm", "fix it", "apply", "go ahead", "ok", etc.), call update-tool with those stored settings — see update-tool's description for the confirmation flow. NEVER skip the update-tool call.
-
-Examples that REQUIRE the automatic snapshot flow:
-- "This camera's image doesn't look great"
-- "The image quality is poor"
-- "Can you fix the image"
-- "Adjust settings to be optimal"
-- "The camera looks blurry/dark/washed out"
-- Any mention of image appearance problems.
-
-**VISUAL-FEATURE CAMERA FILTERING** — When the user asks for cameras filtered by what they can see (indoors/outdoors, "facing the street", "with a view of X", parking lot, entrance), you MUST:
-1. First get the camera list via get-entity-tool or location-tool.
-2. Then call camera-tool with requestType "image" for EACH candidate camera (in PARALLEL).
-3. Analyze each image to determine if it meets the user's criteria.
-4. Return only the cameras that match.
+**This tool is REQUIRED, not optional, for two situations** (the exact steps are on the requestType parameter):
+1. **Camera image quality** — "doesn't look great", poor image quality, dark, bright, blurry, washed out, "fix the image", "adjust settings to be optimal", or any mention of image appearance problems: snapshot immediately without asking, then check settings, then propose changes.
+2. **Filtering cameras by what they see** — interior vs exterior, "facing the street", "with a view of X", parking lot, entrance, or any "I want X using cameras with Y": snapshot each candidate camera and judge the predicate from the images.
 `;
 
 const logger = getLogger("camera-tool");

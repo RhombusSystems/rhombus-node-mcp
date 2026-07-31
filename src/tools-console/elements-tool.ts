@@ -2,42 +2,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { searchElementsEvents } from "../api/elements-tool-api.js";
 import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/elements-tool-types.js";
+import { buildBadgeEventsToolDescription } from "../types/onguard-tool-types.js";
 import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "elements-events-tool";
 
-const TOOL_DESCRIPTION = `
-Searches Honeywell Elements (LenelS2 Elements) badge / access-control events for the organization. Use this to answer
-"who entered WHERE and WHEN" questions, e.g. "who entered the back office yesterday".
-
-NOTE: an organization may run any combination of Honeywell OnGuard (Lenel), Honeywell Elements (LenelS2
-Elements), and Lenel S2 NetBox badge integrations — each searched by its own sibling tool
-(onguard-events-tool / elements-events-tool / netbox-events-tool), all taking identical arguments and
-returning the same shape. For a general "who badged in / did anyone enter" question you usually do NOT
-know which integration recorded the event, so call ALL THREE sibling tools (in parallel) and combine the
-results — each returns an empty list when its integration isn't configured. Restrict to one vendor only
-when the user explicitly names it. Badge events may ALSO exist outside these three vendors: native
-Rhombus ACU doors and Brivo doors are searched via events-tool (eventType "access-control" /
-"brivo-access-control") — a deferred tool; discover it via tool search and include it for generic
-"who badged in" questions.
-
-Each returned event includes:
-- cardholderName: the person's name
-- deviceUuid: the camera that saw the event
-- timestampMs / datetime: when it happened
-- label: e.g. "Elements: Badge Authorized" (a grant) or an anomaly label
-- badgeStatus, badgeType, areaEntering, areaExiting, entryMade, isAnomaly
-
-Filters (all optional): area, locationUuids, deviceUuids, cardholderQuery, badgeStatus, badgeType,
-anomalyOnly, entryMade, startTime, endTime, limit. Resolve relative times like "yesterday" to ISO 8601
-first (use time-tool), then pass startTime/endTime.
-
-IMPORTANT — to show pictures and video of each person so the user can visually identify them: after this
-returns, for each event (or the most relevant ones) call the camera-tool (requestType "image",
-cameraUuid = the event's deviceUuid, timestampISO = the event's time as ISO 8601 — convert its timestampMs via time-conversion-tool) to get a still you can see, and/or the
-clips-tool (requestType "createClip") with a short window around the timestamp for video. Issue those
-per-event media calls in PARALLEL.
-`;
+const TOOL_DESCRIPTION = buildBadgeEventsToolDescription("Honeywell Elements (LenelS2 Elements)", "Elements");
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);

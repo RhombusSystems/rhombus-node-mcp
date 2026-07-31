@@ -25,50 +25,20 @@ import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "report-tool";
 
+// Tool descriptions are billed on EVERY LLM call even while the tool is
+// deferred behind hosted tool_search, so this string carries only what the
+// model needs to CHOOSE this tool. Per-requestType behaviour, call ordering,
+// and the people/occupancy strategy live on the requestType parameter
+// description (unbilled until the tool is loaded, still in front of the model
+// when it builds the call). See PERF_MASTER_PLAN P2 #4a.
 const TOOL_DESCRIPTION = `
-**Scope:** This tool returns **aggregated counts and time-series summaries** over specified intervals and scopes. Use **events-tool** when you need raw, event-level data (individual events with timestamps). Use this tool for high-level reports, analytics, and trends—especially over periods of a day or more.
+**Scope:** **aggregated counts and time-series summaries** over specified intervals and scopes (device, location, region, org). Use **events-tool** when you need raw, event-level data (individual events with timestamps). Use this tool for high-level reports, analytics, and trends—especially over periods of a day or more.
+
+Covers: people counting and occupancy reports (enriched with unique-face counts), line-crossing / threshold ingress-egress counts, custom LLM event reports and their prompt configurations (e.g. "black dog sightings", "delivery truck arrivals", "parking availability %"), the org audit log of user and admin actions, device diagnostic feeds, and the most recent people-count readings for a device.
+
+Pick one with "requestType". Each type's arguments, response enrichment, and required call ordering (some types must be called first to discover which cameras support a feature) are documented on the requestType parameter.
 
 **Interval guidance:** A shorter interval (HOURLY instead of DAILY) gives a better representation of data over time. Balance interval and range so you don't request too much data. For ranges spanning a week or so, HOURLY is appropriate.
-
----
-
-**People / occupancy counting strategy**
-
-When asked to count people on a camera or at a location, follow this strategy:
-1. **Always call GET_OCCUPANCY_ENABLED_CAMERAS first** to discover which cameras have occupancy counting enabled.
-2. If the target camera IS in the list, call **GET_OCCUPANCY_COUNT_REPORT** for that device. The response will automatically include a \`faceCountEnrichment\` field with the number of unique individuals identified by face recognition in the same time range. Present both data sources: occupancy estimate and unique face count.
-3. If the target camera is NOT in the list, **tell the user** that camera does not have occupancy counting enabled, and list the cameras that do. You can still call GET_SUMMARY_COUNT_REPORT with PEOPLE type — its response will also include \`faceCountEnrichment\` with unique face data as a fallback. If the PEOPLE count returns zero, the response will also include the list of occupancy-enabled cameras and a hint.
-4. When both occupancy data and face recognition data are available, **synthesize both** in your answer (e.g., "Occupancy estimates ~15 people. Face recognition identified 9 unique individuals during this period.").
-
-**PEOPLE type (in GET_SUMMARY_COUNT_REPORT):** Not a unique person count; it counts people-detection events. Requires people detection to be enabled on the camera. Use for high-level activity trends, not for deduplicated head counts.
-
----
-
-**Summary and occupancy**
-- **GET_SUMMARY_COUNT_REPORT:** Aggregated counts (people, faces, motion, vehicles, etc.) over time at device, location, or org scope. Interval: minutely, hourly, daily, weekly, monthly, yearly. When called with PEOPLE type at DEVICE scope, the response is automatically enriched with face recognition data.
-- **GET_OCCUPANCY_ENABLED_CAMERAS:** List of cameras with occupancy reporting enabled. **Always call this first** before any people/occupancy counting request to verify camera support.
-- **GET_OCCUPANCY_COUNT_REPORT:** Occupancy count time series for a specific device over a time range. Response is automatically enriched with face recognition data. If the device does not support occupancy, the response will include a hint and the list of cameras that do.
-
----
-
-**Line crossing**
-- **GET_LINE_CROSSING_ENABLED_CAMERAS:** Cameras at a location with line crossing enabled, plus their configs. Call first to see which cameras support threshold crossing reports.
-- **GET_THRESHOLD_CROSSING_COUNT_REPORT:** Ingress/egress counts for line crossings over time. Supports human and vehicle detection; bucket size: quarter hour, hour, day, week. Response includes computed metrics: average entries/exits per hour, hour with most entries/exits, busiest hour (with breakdown).
-
----
-
-**Custom LLM events**
-- **FIND_PROMPT_CONFIGURATIONS:** All custom event prompt configurations (e.g. "black dog sightings", "delivery truck arrivals", "parking availability %"). Each has prompt text, UUID, and promptType (COUNT, PERCENT, BOOLEAN). Call first to discover available custom events.
-- **GET_CUSTOM_LLM_REPORT:** **This is the PRIMARY way to get custom event reports.** Aggregated time-series for one custom event by prompt UUID. Automatically selects the correct API based on promptType: COUNT (numeric counts), PERCENT (percentages), BOOLEAN (true/false). Intervals: minutely, quarter-hourly, hourly, daily, weekly, monthly. **Always use this for custom event reports, trends, and analytics.** Use FIND_PROMPT_CONFIGURATIONS first to get the promptUuid and promptType.
-- **GET_CUSTOM_EVENTS_REPORT:** Raw individual event values only (not aggregated). Use only when you need per-event granularity, not for reports or trends.
-
----
-
-**Audit and diagnostics**
-- **GET_AUDIT_FEED:** Audit log of all user/admin actions in the org over a time range. Returns who did what and when (principalName, targetName, action, displayText).
-- **GET_DIAGNOSTIC_FEED:** Device diagnostic events over a time range.
-- **GET_THRESHOLD_CROSSING_EVENTS:** Individual line-crossing events (not aggregated counts).
-- **GET_PEOPLE_COUNT_EVENTS:** Most recent people count readings for specified devices.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {

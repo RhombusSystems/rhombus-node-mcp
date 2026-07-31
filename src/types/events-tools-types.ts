@@ -21,17 +21,17 @@ export const TOOL_ARGS = {
   eventType: z
     .nativeEnum(EventsToolRequestType)
     .describe(
-      "The type of events to retrieve. " +
-        "access-control: Access control events like unlocks, badge ins, credentials, arrivals. " +
-        "brivo-access-control: Badge/credential events from Brivo-integrated doors. Does not require door UUIDs — automatically looks up which doors are configured via the Brivo integration. " +
-        "environmental-gateway: Environmental gateway events with sensor readings and derived values. " +
-        "climate-sensor: Climate sensor events with temperature, humidity, air quality readings. " +
-        "component-events: All types of component events for a location (most flexible option). " +
-        "camera: Footage seekpoints for one camera—all timeline activity types that camera recorded (human motion, vehicle motion, etc., depending on device/analytics). For org LPR saved vehicles, labels, and plate search APIs, use lpr-tool. " +
-        "button-press: Button press events from button sensors. " +
-        "occupancy: Occupancy sensor events with people count. " +
-        "proximity: Proximity tag events with RSSI readings. " +
-        "doorbell: Doorbell camera events."
+      "The type of events to retrieve. Every mode takes startTime and endTime (ISO 8601); the per-mode UUID argument is named below and in that argument's own description.\n\n" +
+        "access-control: Access control events (arrivals, badge ins, credentials, unlocks) for the doors in accessControlledDoorUuids. Can return a lot of data — use a narrow time range. The returned `credSource` field says how the event was triggered: REMOTE = Rhombus Key app remote unlock; 'REMOTE (Admin)' = unlock via the Rhombus console or browser/mobile app; BLE_WAVE = user waved a hand over the reader; NFC = user tapped a badge or phone on the reader.\n" +
+        "brivo-access-control: Badge/credential events from Brivo-integrated doors. Does not require door UUIDs — automatically fetches the Brivo integration configuration to determine which locations have Brivo doors mapped. Returns integrationEnabled, brivoDoorsConfigured, the brivoDoors list (Brivo IDs, names, Rhombus location UUIDs), and credential-received events newest first. Events are fetched at the LOCATION level, so results may include events from all access-controlled doors at locations where Brivo is configured.\n" +
+        "environmental-gateway: Environmental gateway events (sensor readings and derived values) for deviceUuid.\n" +
+        "climate-sensor: Climate sensor events (temperature, humidity, air quality, vape/THC detection, battery) for sensorUuid. Cap the row count with limit (default 1000).\n" +
+        "component-events: All component event types for locationUuid — the most flexible option. Narrow it with componentEventTypes (see that argument for the full list; omit it for every type).\n" +
+        "camera: Footage seekpoints for cameraUuid over a window of `duration` seconds starting at startTime — all timeline activity types that camera recorded (human motion, vehicle motion, etc., depending on device/analytics), each with an activity string and timestamp; plate/vehicle/face fields appear when the API provides them. For org LPR saved vehicles, labels, and plate search APIs, use lpr-tool.\n" +
+        "button-press: Button press events from the sensor in buttonSensorUuid.\n" +
+        "occupancy: Occupancy sensor events with people count, for occupancySensorUuid.\n" +
+        "proximity: Proximity tag events with RSSI readings, for proximityTagUuids.\n" +
+        "doorbell: Doorbell camera events for doorbellCameraUuid."
     ),
   startTime: z
     .string()
@@ -94,7 +94,7 @@ export const TOOL_ARGS = {
   timeZone: z
     .string()
     .describe(
-      "The timezone of the requested locations or devices. This is necessary for the tool to produce accurate formatted timestamps."
+      "The timezone of the requested locations or devices. This is necessary for the tool to produce accurate formatted timestamps. Formatted event timestamps come back in the device / sensor / location timezone, not necessarily UTC."
     ),
   cameraUuid: z
     .string()

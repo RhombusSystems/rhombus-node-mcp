@@ -252,7 +252,24 @@ export const BASE_TOOL_ARGS = {
       the timestamp for the image. This will default to 5 minutes before the current time. You can also call time-tool to parse the user's time description.
       ` + ISOTimestampFormatDescription
     ),
-  requestType: z.enum(["image", "get-settings", "get-media-uris", "get-ai-thresholds"]),
+  requestType: z
+    .enum(["image", "get-settings", "get-media-uris", "get-ai-thresholds"])
+    .describe(
+      `Which camera action to run: "image" (fetch a frame), "get-settings" (current device configuration), "get-media-uris" (live-stream and VOD URLs), "get-ai-thresholds" (AI detection thresholds).
+
+**AUTOMATIC SNAPSHOT FOR IMAGE QUALITY ISSUES** — when a user mentions camera image quality (darkness, brightness, blur, washed out, "doesn't look great", "fix the image", etc.), you MUST IMMEDIATELY:
+1. Call camera-tool with requestType "image" to capture a snapshot WITHOUT asking first.
+2. Analyze the image to identify quality issues.
+3. Call camera-tool with requestType "get-settings" to check current camera settings.
+4. Propose specific setting changes based on your analysis (store the exact values you plan to change, e.g. img_brightness, wdr_strength).
+5. When the user confirms ("yes", "confirm", "fix it", "apply", "go ahead", "ok", etc.), call update-tool with those stored settings — see update-tool's description for the confirmation flow. NEVER skip the update-tool call.
+
+**VISUAL-FEATURE CAMERA FILTERING** — when the user asks for cameras filtered by what they can see (indoors/outdoors, "facing the street", "with a view of X", parking lot, entrance), you MUST:
+1. First get the camera list via get-entity-tool or location-tool.
+2. Then call camera-tool with requestType "image" for EACH candidate camera (in PARALLEL).
+3. Analyze each image to determine if it meets the user's criteria.
+4. Return only the cameras that match.`,
+    ),
   detail: z
     .enum(["core", "full"])
     .nullish()

@@ -30,7 +30,37 @@ export const TOOL_ARGS = z.object({
 		RequestType.GET_THRESHOLD_CROSSING_EVENTS,
 		RequestType.GET_CUSTOM_EVENTS_REPORT,
 		RequestType.GET_PEOPLE_COUNT_EVENTS,
-	]),
+	]).describe(
+		`Which report to run.
+
+**People / occupancy counting strategy.** When asked to count people on a camera or at a location:
+1. **Always call GET_OCCUPANCY_ENABLED_CAMERAS first** to discover which cameras have occupancy counting enabled.
+2. If the target camera IS in the list, call **GET_OCCUPANCY_COUNT_REPORT** for that device. The response automatically includes a \`faceCountEnrichment\` field with the number of unique individuals identified by face recognition in the same time range. Present both data sources: occupancy estimate and unique face count.
+3. If the target camera is NOT in the list, **tell the user** that camera does not have occupancy counting enabled, and list the cameras that do. You can still call GET_SUMMARY_COUNT_REPORT with PEOPLE type — its response also includes \`faceCountEnrichment\` with unique face data as a fallback. If the PEOPLE count returns zero, the response also includes the list of occupancy-enabled cameras and a hint.
+4. When both occupancy data and face recognition data are available, **synthesize both** in your answer (e.g. "Occupancy estimates ~15 people. Face recognition identified 9 unique individuals during this period.").
+
+**PEOPLE type (in GET_SUMMARY_COUNT_REPORT):** not a unique person count; it counts people-detection events, and requires people detection to be enabled on the camera. Use for high-level activity trends, not for deduplicated head counts.
+
+**Summary and occupancy**
+- GET_SUMMARY_COUNT_REPORT: aggregated counts (people, faces, motion, vehicles, etc.) over time at device, location, or org scope. Interval: minutely, hourly, daily, weekly, monthly, yearly. With PEOPLE type at DEVICE scope the response is automatically enriched with face recognition data.
+- GET_OCCUPANCY_ENABLED_CAMERAS: cameras with occupancy reporting enabled. **Always call this first** before any people/occupancy counting request to verify camera support.
+- GET_OCCUPANCY_COUNT_REPORT: occupancy count time series for one device over a time range, enriched with face recognition data. If the device does not support occupancy, the response includes a hint and the list of cameras that do.
+
+**Line crossing**
+- GET_LINE_CROSSING_ENABLED_CAMERAS: cameras at a location with line crossing enabled, plus their configs. Call first to see which cameras support threshold crossing reports.
+- GET_THRESHOLD_CROSSING_COUNT_REPORT: ingress/egress counts for line crossings over time. Supports human and vehicle detection; bucket size quarter hour, hour, day, or week. Response includes computed metrics: average entries/exits per hour, hour with most entries/exits, busiest hour (with breakdown).
+- GET_THRESHOLD_CROSSING_EVENTS: individual line-crossing events (not aggregated counts).
+
+**Custom LLM events**
+- FIND_PROMPT_CONFIGURATIONS: all custom event prompt configurations. Each has prompt text, UUID, and promptType (COUNT, PERCENT, BOOLEAN). Call first to discover available custom events.
+- GET_CUSTOM_LLM_REPORT: **the PRIMARY way to get custom event reports.** Aggregated time series for one custom event by prompt UUID; automatically selects the correct API from promptType — COUNT (numeric counts), PERCENT (percentages), BOOLEAN (true/false). Intervals: minutely, quarter-hourly, hourly, daily, weekly, monthly. **Always use this for custom event reports, trends, and analytics.** Use FIND_PROMPT_CONFIGURATIONS first to get the promptUuid and promptType.
+- GET_CUSTOM_EVENTS_REPORT: raw individual event values only (not aggregated). Use only when you need per-event granularity, not for reports or trends.
+
+**Audit and diagnostics**
+- GET_AUDIT_FEED: audit log of all user/admin actions in the org over a time range — who did what and when (principalName, targetName, action, displayText).
+- GET_DIAGNOSTIC_FEED: device diagnostic events over a time range.
+- GET_PEOPLE_COUNT_EVENTS: most recent people count readings for specified devices.`,
+	),
 	occupancyCountRequest: z
 		.object({
 			deviceUuid: z

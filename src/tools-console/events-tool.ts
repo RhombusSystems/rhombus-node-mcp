@@ -26,109 +26,21 @@ const logger = getLogger("events-tool");
 const TOOL_NAME = "events-tool";
 
 // "faces" | "people" | "human" | "access-control"
+//
+// Tool descriptions are billed on EVERY LLM call even while the tool is
+// deferred behind hosted tool_search, so this string carries only what the
+// model needs to CHOOSE this tool. Per-mode arguments, field semantics, and
+// enum catalogs live on the input-parameter descriptions (unbilled until the
+// tool is loaded, still in front of the model when it builds the call).
+// See PERF_MASTER_PLAN P2 #4a.
 const TOOL_DESCRIPTION = `
-**Scope:** This tool returns **raw, event-level data** (individual events with timestamps). Use **report-tool** when you need aggregated counts, time-series summaries, or analytics over intervals.
+**Raw, event-level records** — individual events, each with a timestamp. Modes are set by "eventType": access-control, brivo-access-control, environmental-gateway, climate-sensor, component-events, camera, button-press, occupancy, proximity, doorbell.
 
-**Vehicles vs lpr-tool:** **eventType "camera"** returns **footage seekpoints** from that camera's recording timeline—**every activity type** the API returns for the window (human motion, vehicle motion, and others depending on the camera and analytics). Some rows may include plate or vehicle metadata on the seekpoint. **lpr-tool** is still the right choice for **org LPR workflows**: saved vehicles, vehicle labels, fuzzy plate search, and vehicle event APIs—not a replacement for "everything this camera logged on its timeline."
+Use it when the user asks for specific events: unlocks, badge ins, credentials, arrivals, Brivo access control, door state changes, panic or doorbell button presses, environmental gateway readings, climate data (temperature, humidity, air quality, vape), occupancy counts, proximity tags, or a camera's timeline activity. For maximum flexibility across event types at a location, use eventType "component-events".
 
-This tool has multiple modes, set by "eventType": access-control, brivo-access-control, environmental-gateway, climate-sensor, component-events, camera. Use it when the user asks for specific events (unlocks, badge ins, credentials, arrivals, environmental readings, climate data, camera timeline activity, or other component events). It can return large result sets; keep time ranges narrow. For ranges spanning more than ~24 hours, prefer report-tool for aggregates. For maximum flexibility across event types at a location, use eventType "component-events".
+**Not this tool:** use **report-tool** for aggregated counts, time-series summaries, or analytics over intervals — including any range spanning more than ~24 hours. Use **lpr-tool** for org LPR workflows: saved vehicles, vehicle labels, fuzzy plate search, and vehicle event APIs. eventType "camera" returns that camera's own **footage seekpoints** — **every activity type** on its recording timeline (human motion, vehicle motion, and others depending on camera and analytics), sometimes carrying plate or vehicle metadata — which is not a replacement for lpr-tool's plate search.
 
----
-
-When eventType is "brivo-access-control":
-
-Retrieves badge/credential events from Brivo-integrated doors. Automatically fetches the Brivo integration configuration to determine which locations have Brivo doors mapped. No door UUIDs are required.
-
-Use this when the user asks specifically about Brivo events, Brivo badge ins, Brivo access control, or events from Brivo doors.
-
-Arguments:
-  * **startTime (string):** Start of the time range (ISO 8601).
-  * **endTime (string):** End of the time range (ISO 8601).
-
-Returns:
-  * **integrationEnabled:** Whether the Brivo integration is currently enabled.
-  * **brivoDoorsConfigured:** Number of Brivo doors configured in the integration.
-  * **brivoDoors:** List of Brivo doors with their IDs, names, and associated Rhombus location UUIDs.
-  * **events:** Credential received events from all locations that have Brivo doors configured, sorted newest first.
-
-Note: Events are fetched at the location level, so results may include events from all access-controlled doors at locations where Brivo is configured.
-
----
-
-When eventType is "access-control":
-
-Retrieves access control events (arrivals, badge ins, credentials, unlocks) for the given door(s). Can return a lot of data—use a narrow time range.
-
-Arguments:
-  * **accessControlledDoorUuids (array of strings):** UUIDs of the access-controlled doors.
-  * **startTime (string):** Start of the time range (ISO 8601).
-  * **endTime (string):** End of the time range (ISO 8601).
-
-The \`credSource\` field indicates how the event was triggered:
-  * **REMOTE:** Rhombus Key app remote unlock.
-  * **REMOTE (Admin):** Unlock via Rhombus console or browser/mobile app.
-  * **BLE_WAVE:** User waved hand over the reader.
-  * **NFC:** User tapped badge or phone on the reader.
-
----
-
-Retrieves environmental gateway events (sensor readings, derived values) for a device in a time range. Timestamps are in the **device** timezone, not necessarily UTC.
-
-Arguments:
-  * **deviceUuid (string):** UUID of the environmental gateway device.
-  * **startTime (string):** Start of range (ISO 8601).
-  * **endTime (string):** End of range (ISO 8601).
-
----
-
-When eventType is "climate-sensor":
-
-Retrieves climate sensor events (temperature, humidity, air quality, etc.) for a sensor in a time range. Timestamps are in the **sensor** timezone, not necessarily UTC.
-
-Arguments:
-  * **sensorUuid (string):** UUID of the climate sensor.
-  * **startTime (string):** Start of range (ISO 8601).
-  * **endTime (string):** End of range (ISO 8601).
-  * **limit (number, optional):** Max events to return. Default 1000.
-
----
-
-When eventType is "component-events":
-
-Retrieves all component event types for a location in a time range. Most flexible option; filter by event type via componentEventTypes. Timestamps are in the **location** timezone, not necessarily UTC.
-
-Arguments:
-  * **locationUuid (string):** UUID of the location.
-  * **componentEventTypes (array, optional):** Event types to include. If empty or omitted, returns all types.
-  * **startTime (string):** Start of range (ISO 8601).
-  * **endTime (string):** End of range (ISO 8601).
-
-Valid event types include:
-  * **DoorbellEvent:** Doorbell button press events
-  * **CredentialReceivedEvent:** Badge/credential scans (NFC, BLE_WAVE, REMOTE unlocks)
-  * **DoorStateChangeEvent:** Door state changes (locked/unlocked)
-  * **ButtonEvent:** Generic button press events
-  * **PanicButtonEvent:** Panic/emergency button activations
-  * **DoorReaderStateChangeEvent:** Changes in door reader state
-  * **DoorRelayStateChangeEvent:** Changes in door relay state
-  * **AccessControlUnitTamperEvent:** Tamper detection events
-  * **AccessControlUnitBatteryStateChangeEvent:** Battery state changes
-  * **WaveToUnlockIntentExpiredEvent:** Wave-to-unlock timeout events
-  * **DoorAuthFirstInStateEvent:** First-in authentication state events
-  * **DoorScheduleFirstInStateEvent:** First-in schedule state events
-  * And more (see input schema for full list).
-
----
-
-When eventType is "camera":
-
-Retrieves **footage seekpoints** for one camera: **all activity types** returned for the search window (not limited to human motion). Each item includes an **activity** string plus **timestamp**; plate/vehicle/face fields appear when the API provides them. Use **lpr-tool** for org LPR saved vehicles, labels, and dedicated plate search.
-
-Arguments:
-  * **cameraUuid (string):** UUID of the camera.
-  * **startTime (string):** Start of range (ISO 8601).
-  * **duration (number):** Search window in seconds. Default 3600 (1 hour).
-
+Result sets can be large: keep time ranges narrow. Per-mode required arguments, field semantics, and the full component-event-type list are documented on the input parameters.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
