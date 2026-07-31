@@ -45,7 +45,7 @@ Future support planned for:
 - Doorbell cameras
 - Badge readers
 
-The tool uses elicitation forms for rich user interaction and shows current settings before updates.
+The tool shows current settings before updates.
 
 ---
 
