@@ -46,8 +46,13 @@ export type FilterCondition = {
 	value: string | number | boolean;
 };
 
-/** These keys will always be included in processed output schemas */
-const INCLUDE_WHITELIST = ["requestType"];
+/**
+ * These keys will always be included in processed output schemas.
+ * `note` carries tool-emitted diagnostics (e.g. "this location has no doors, so
+ * the empty result is not an absence of activity") — projecting it away would
+ * hide exactly the caveat the model needs.
+ */
+const INCLUDE_WHITELIST = ["requestType", "note", "error", "filterByWarnings"];
 
 // ---------------------------------------------------------------------------
 // filterIncludedFields — trie-based dot-notation field projection
@@ -133,7 +138,30 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
 	}
 	const trie = buildTrie(fieldsToInclude);
 	addProtectedStatusFields(trie);
-	return filterByTrie(obj, trie);
+	const projected = filterByTrie(obj, trie);
+
+	// A `<key>Count` sibling is authoritative metadata for its array (post-
+	// filterBy it is the match count) — keep it whenever its array survives the
+	// projection, even if the caller didn't list it explicitly.
+	if (
+		projected &&
+		typeof projected === "object" &&
+		!Array.isArray(projected) &&
+		typeof obj === "object" &&
+		!Array.isArray(obj)
+	) {
+		for (const key of Object.keys(projected)) {
+			if (
+				Array.isArray(projected[key]) &&
+				typeof obj[`${key}Count`] === "number" &&
+				!(`${key}Count` in projected)
+			) {
+				projected[`${key}Count`] = obj[`${key}Count`];
+			}
+		}
+	}
+
+	return projected;
 }
 
 // ---------------------------------------------------------------------------
@@ -219,33 +247,68 @@ export function applyFilterBy(obj: any, conditions: FilterCondition[]): any {
 	}
 
 	const result: any = { ...obj };
+	const warnings: string[] = [];
+
+	// A condition whose field is absent from EVERY item of the target array
+	// would silently drop all rows (undefined never matches) — the model then
+	// reads {items: [], count: N} as "0 matches" when really it filtered on a
+	// phantom field. Skip such conditions and warn loudly instead.
+	const partitionConds = (items: any[], conds: FilterCondition[], arrayKey: string) => {
+		if (items.length === 0) return conds;
+		const applicable: FilterCondition[] = [];
+		for (const c of conds) {
+			if (items.some((item) => getNestedValue(item, c.field) !== undefined)) {
+				applicable.push(c);
+			} else {
+				const available = [...new Set(items.slice(0, 50).flatMap((item) =>
+					item && typeof item === "object" ? Object.keys(item) : [],
+				))].sort();
+				warnings.push(
+					`filterBy condition on field "${c.field}" was IGNORED — no item in "${arrayKey}" has that field (it would have matched nothing). Available fields: ${available.join(", ")}`,
+				);
+			}
+		}
+		return applicable;
+	};
+
 	for (const [topKey, keyConds] of Object.entries(conditionsByTopKey)) {
 		if (topKey === "*") {
 			// Apply conditions to every top-level array in the object
 			for (const k of Object.keys(result)) {
 				if (Array.isArray(result[k])) {
+					const conds = partitionConds(result[k], keyConds, k);
 					result[k] = result[k].filter((item: any) =>
-						keyConds.every((c) => matchesCondition(item, c)),
+						conds.every((c) => matchesCondition(item, c)),
 					);
 				}
 			}
 		} else if (topKey in result && Array.isArray(result[topKey])) {
+			const conds = partitionConds(result[topKey], keyConds, topKey);
 			result[topKey] = result[topKey].filter((item: any) =>
-				keyConds.every((c) => matchesCondition(item, c)),
+				conds.every((c) => matchesCondition(item, c)),
 			);
 		}
 	}
 
-	// If the result has a sibling `count: number` and exactly one top-level
-	// array, sync count to the (now-filtered) array length. This makes `count`
+	// Sync sibling counts to the (now-filtered) array lengths so counts always
 	// reflect what the model is looking at — pre-filter total when no filterBy
-	// was applied (handler computed it), post-filter total when one was. Any
-	// tool returning {count, items[]} gets this for free.
+	// was applied (handler computed it), post-filter total when one was.
+	// Covers both the bare `{count, items[]}` convention and the
+	// `{<key>Count, <key>[]}` convention (e.g. camerasCount next to cameras).
 	if (typeof result.count === "number") {
 		const arrayKeys = Object.keys(result).filter((k) => Array.isArray(result[k]));
 		if (arrayKeys.length === 1) {
 			result.count = result[arrayKeys[0]].length;
 		}
+	}
+	for (const k of Object.keys(result)) {
+		if (Array.isArray(result[k]) && typeof result[`${k}Count`] === "number") {
+			result[`${k}Count`] = result[k].length;
+		}
+	}
+
+	if (warnings.length > 0) {
+		result.filterByWarnings = warnings;
 	}
 
 	return result;
@@ -303,6 +366,128 @@ export function zodToDotNotationPaths(
 
 	// Scalar — no further nesting
 	return [];
+}
+
+// ---------------------------------------------------------------------------
+// deepOptionalizeSchema — relax an outputSchema for post-projection validation
+// ---------------------------------------------------------------------------
+
+/** Carry a rebuilt schema's description over from the schema it replaces. */
+function withDescription(
+	next: z.ZodTypeAny,
+	prev: z.ZodTypeAny,
+): z.ZodTypeAny {
+	return prev.description ? next.describe(prev.description) : next;
+}
+
+/**
+ * Returns a copy of `schema` with every object field made optional, recursively.
+ *
+ * The MCP SDK validates a tool's `structuredContent` against its registered
+ * `outputSchema` AFTER the handler returns — which is after this proxy has
+ * already projected the payload down to the caller's `includeFields`. Any field
+ * the schema marks required but the projection dropped then fails validation,
+ * and a working tool call comes back to the model as
+ * `MCP error -32602: Output validation error`. (Hit in prod by
+ * events-tool/brivo-access-control: includeFields asked for
+ * `brivoDoors.doorName` + `.locationUuid` but not the required
+ * `brivoDoors.brivoDoornId`, so the model reported Brivo data as unreadable.)
+ *
+ * Projection inherently invalidates required-ness, so the schema we register
+ * has to be all-optional. Nothing model-facing changes: `outputSchema` is never
+ * forwarded to the LLM, and the includeFields path catalog is derived from the
+ * ORIGINAL schema before this runs. Descriptions are preserved.
+ */
+export function deepOptionalizeSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
+	// Wrappers: unwrap, recurse, re-wrap so nested objects are relaxed too.
+	if (schema instanceof z.ZodOptional) {
+		return deepOptionalizeSchema(schema.unwrap() as z.ZodTypeAny).optional();
+	}
+	if (schema instanceof z.ZodNullable) {
+		return deepOptionalizeSchema(schema.unwrap() as z.ZodTypeAny).nullable();
+	}
+	// The default is dropped: this schema is only ever used for validation, and
+	// a defaulted field is already satisfied by `undefined`.
+	if (schema instanceof z.ZodDefault) {
+		return deepOptionalizeSchema((schema as any)._def.innerType).optional();
+	}
+
+	if (schema instanceof z.ZodObject) {
+		const relaxed: Record<string, z.ZodTypeAny> = {};
+		for (const [key, value] of Object.entries(
+			schema.shape as Record<string, z.ZodTypeAny>,
+		)) {
+			relaxed[key] = optionalize(deepOptionalizeSchema(value));
+		}
+		return withDescription(z.object(relaxed), schema);
+	}
+
+	if (schema instanceof z.ZodArray) {
+		return withDescription(
+			z.array(deepOptionalizeSchema(schema.element as z.ZodTypeAny)),
+			schema,
+		);
+	}
+
+	if (schema instanceof z.ZodRecord) {
+		const def = (schema as any)._def;
+		return withDescription(
+			z.record(def.keyType, deepOptionalizeSchema(def.valueType)),
+			schema,
+		);
+	}
+
+	// Covers discriminated unions too. Rebuilding one as a plain union is
+	// deliberate — an optional discriminator is not a legal discriminated union.
+	if (
+		schema instanceof z.ZodUnion ||
+		schema instanceof z.ZodDiscriminatedUnion
+	) {
+		const options = (schema as any)._def.options as z.ZodTypeAny[];
+		if (Array.isArray(options) && options.length >= 2) {
+			return withDescription(
+				z.union(options.map(deepOptionalizeSchema) as any),
+				schema,
+			);
+		}
+		return schema;
+	}
+
+	// Scalars and anything we don't model (effects, pipes, lazy) pass through.
+	return schema;
+}
+
+/** `.optional()` builds a fresh wrapper, which does not inherit the description. */
+function optionalize(schema: z.ZodTypeAny): z.ZodTypeAny {
+	return schema instanceof z.ZodOptional
+		? schema
+		: withDescription(schema.optional(), schema);
+}
+
+/**
+ * Applies {@link deepOptionalizeSchema} to either form `registerTool` accepts —
+ * a `ZodObject` or a raw `{ key: ZodType }` shape — returning the same form.
+ * A schema we cannot rewrite is left untouched; strict validation is a better
+ * failure mode than a broken registration.
+ */
+function relaxOutputSchemaForProjection(outputSchema: unknown): unknown {
+	try {
+		if (outputSchema instanceof z.ZodType) {
+			return deepOptionalizeSchema(outputSchema as z.ZodTypeAny);
+		}
+		if (outputSchema && typeof outputSchema === "object") {
+			const relaxed: Record<string, z.ZodTypeAny> = {};
+			for (const [key, value] of Object.entries(
+				outputSchema as Record<string, z.ZodTypeAny>,
+			)) {
+				relaxed[key] = optionalize(deepOptionalizeSchema(value));
+			}
+			return relaxed;
+		}
+	} catch {
+		// fall through
+	}
+	return outputSchema;
 }
 
 // ---------------------------------------------------------------------------
@@ -428,6 +613,15 @@ export function createFilteringProxy(
 
 				const augmentedConfig = {
 					...config,
+					// Must come after the spread: the registered schema has to
+					// tolerate the projection this proxy applies to the result.
+					...(config.outputSchema
+						? {
+								outputSchema: relaxOutputSchemaForProjection(
+									config.outputSchema,
+								),
+							}
+						: {}),
 					description:
 						(config.description ?? "") + FILTERING_DESCRIPTION_SUFFIX,
 					inputSchema: {

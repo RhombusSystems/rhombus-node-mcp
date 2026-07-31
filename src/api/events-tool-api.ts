@@ -2,6 +2,7 @@ import z from "zod";
 import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
 import { logger } from "../logger.js";
 import { postApi } from "../network/network.js";
+import { getAccessControlledDoors } from "./get-entity-tool-api.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 import { tempFunc, TempUnit } from "../utils/temp.js";
@@ -181,6 +182,80 @@ async function getAccessControlEventsForDoor(
 
   // Pages accumulate newest → oldest, so slicing keeps the newest events.
   return allEvents.slice(0, MAX_ACCESS_CONTROL_EVENTS_PER_DOOR);
+}
+
+/** Substrings marking a component event type that only an access-controlled door emits. */
+const DOOR_RELATED_COMPONENT_EVENT_MARKERS = [
+  "Door",
+  "Credential",
+  "RequestToExit",
+  "AccessControlUnit",
+  "Aperio",
+];
+
+function isDoorRelatedComponentEventQuery(eventTypes: string[]): boolean {
+  // No filter means "all types", which includes the door ones.
+  if (eventTypes.length === 0) return true;
+  return eventTypes.some(t => DOOR_RELATED_COMPONENT_EVENT_MARKERS.some(marker => t.includes(marker)));
+}
+
+/**
+ * Explains an empty component-events result when the caller scoped it to a location
+ * that has no access-controlled doors.
+ *
+ * Without this the tool returns a bare `{componentEvents: []}` and the model reports
+ * "no door activity" — which is what happened in prod when it queried a real but
+ * doorless location while 42 doors sat at seven other locations. The door list is a
+ * cached call, and this only runs on the empty-result path, so it costs nothing on
+ * the hot path.
+ */
+export async function describeEmptyComponentEventResult(
+  locationUuid: string,
+  eventTypes: string[],
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<string | undefined> {
+  if (!isDoorRelatedComponentEventQuery(eventTypes)) return undefined;
+
+  let doors: { locationUuid?: string | null }[];
+  try {
+    const response = await getAccessControlledDoors(requestModifiers, sessionId);
+    doors = response.accessControlledDoors ?? [];
+  } catch (error) {
+    logger.debug(`Could not load doors to annotate empty component-events result: ${error}`);
+    return undefined;
+  }
+
+  if (doors.some(door => door.locationUuid === locationUuid)) return undefined;
+
+  const doorsPerLocation = new Map<string, number>();
+  for (const door of doors) {
+    if (door.locationUuid) {
+      doorsPerLocation.set(door.locationUuid, (doorsPerLocation.get(door.locationUuid) ?? 0) + 1);
+    }
+  }
+
+  if (doorsPerLocation.size === 0) {
+    return (
+      `No component events were returned, and this organization has no access-controlled doors at any location. ` +
+      `Do not report this as "no door activity" without saying that no doors are configured.`
+    );
+  }
+
+  const MAX_LISTED_LOCATIONS = 20;
+  const listed = [...doorsPerLocation.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_LISTED_LOCATIONS)
+    .map(([uuid, count]) => `${uuid} (${count})`)
+    .join(", ");
+  const omitted = doorsPerLocation.size - Math.min(doorsPerLocation.size, MAX_LISTED_LOCATIONS);
+
+  return (
+    `Location ${locationUuid} has no access-controlled doors, so this query could not return door events — ` +
+    `the empty result does not mean there was no door activity. Doors exist at these locations ` +
+    `(locationUuid and door count): ${listed}${omitted > 0 ? `, and ${omitted} more` : ""}. ` +
+    `Re-run this query for those locations before answering.`
+  );
 }
 
 export async function getBrivoAccessControlEvents(

@@ -76,7 +76,13 @@ export const TOOL_ARGS = {
   locationUuid: z
     .string()
     .nullable()
-    .describe("The UUID of the location. Required when eventType is 'component-events'."),
+    .describe(
+      "The UUID of the location. Required when eventType is 'component-events'. Must be a UUID returned by a " +
+        "prior tool call in this conversation (get-entity-tool for LOCATION, or the locationUuid on an " +
+        "access-control-door) — never guess or reuse a UUID from memory. Scoping to a location that has no " +
+        "access-controlled doors silently returns zero door events; to review door activity org-wide, query " +
+        "each location that actually has doors."
+    ),
   componentEventTypes: z
     .array(z.nativeEnum(ComponentEventEnumType))
     .nullable()
@@ -437,5 +443,11 @@ export const OUTPUT_SCHEMA = z.object({
     .describe("Doorbell camera events"),
   needUserInput: z.boolean().optional(),
   commandForUser: z.string().optional(),
+  note: z
+    .string()
+    .optional()
+    .describe(
+      "Diagnostic note about why a result set may be empty or incomplete. Read it before concluding that no events occurred."
+    ),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;
