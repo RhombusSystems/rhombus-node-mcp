@@ -3,9 +3,9 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 import { DateTime } from "luxon";
-import { filterIncludedFields, applyFilterBy, type FilterCondition } from "./filtering-utils.js";
+import { filterIncludedFields, applyFilterBy, applyGroupBy, type FilterCondition } from "./filtering-utils.js";
 
-export { INCLUDE_FIELDS_ARG, FILTER_BY_ARG, filterIncludedFields, applyFilterBy, zodToDotNotationPaths, createFilteringProxy } from "./filtering-utils.js";
+export { INCLUDE_FIELDS_ARG, FILTER_BY_ARG, GROUP_BY_ARG, filterIncludedFields, applyFilterBy, applyGroupBy, zodToDotNotationPaths, createFilteringProxy } from "./filtering-utils.js";
 // Re-exported separately as a type so per-file transpilers (tsx/esbuild) don't
 // emit a runtime import for it.
 export type { FilterCondition } from "./filtering-utils.js";
@@ -111,12 +111,19 @@ export function createToolStructuredContent<
   T extends { [key: string]: unknown } = { [key: string]: unknown },
 >(
   content: T,
-  opts?: { includeFields?: string[] | null; filterBy?: FilterCondition[] | null }
+  opts?: {
+    includeFields?: string[] | null;
+    filterBy?: FilterCondition[] | null;
+    groupBy?: string | null;
+  }
 ): CallToolResult {
   // biome-ignore lint/suspicious/noExplicitAny: intentional runtime manipulation
   let result: any = content;
   if (opts?.filterBy?.length) {
     result = applyFilterBy(result, opts.filterBy) ?? result;
+  }
+  if (opts?.groupBy) {
+    result = applyGroupBy(result, opts.groupBy) ?? result;
   }
   if (opts?.includeFields?.length) {
     result = filterIncludedFields(result, opts.includeFields) ?? result;

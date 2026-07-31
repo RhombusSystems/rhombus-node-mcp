@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   filterIncludedFields,
   applyFilterBy,
+  applyGroupBy,
   createFilteringProxy,
   deepOptionalizeSchema,
 } from "../src/filtering-utils.js";
@@ -326,5 +327,88 @@ describe("applyFilterBy — phantom fields and count sync", () => {
     expect(result.cameras).toHaveLength(3);
     expect(result.doorStates).toHaveLength(1); // untargeted array untouched
     expect(result.filterByWarnings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyGroupBy — server-side per-group counts, so "how many per X" is computed
+// in code instead of the model tallying rows (observed off-by-one on ITG:
+// 36 vs 37 offline at a location, tallied from 63 in-context rows).
+// ---------------------------------------------------------------------------
+
+describe("applyGroupBy", () => {
+  const cams = [
+    { uuid: "c1", locationUuid: "loc-a", connected: false },
+    { uuid: "c2", locationUuid: "loc-a", connected: false },
+    { uuid: "c3", locationUuid: "loc-b", connected: false },
+    { uuid: "c4", locationUuid: "loc-a", connected: true },
+  ];
+
+  it("replaces the array with exact per-group counts, sorted descending", () => {
+    const result = applyGroupBy({ cameras: cams, camerasCount: 4 }, "locationUuid");
+    expect(result.cameras).toBeUndefined();
+    expect(result.camerasGrouped).toEqual({
+      by: "locationUuid",
+      total: 4,
+      groups: { "loc-a": 3, "loc-b": 1 },
+    });
+    expect(result.camerasCount).toBe(4);
+  });
+
+  it("composes with filterBy: offline per location", () => {
+    const filtered = applyFilterBy({ cameras: cams, camerasCount: 4 }, [
+      { field: "connected", op: "=", value: false },
+    ]);
+    const result = applyGroupBy(filtered, "locationUuid");
+    expect(result.camerasGrouped.groups).toEqual({ "loc-a": 2, "loc-b": 1 });
+    expect(result.camerasGrouped.total).toBe(3);
+    expect(result.camerasCount).toBe(3);
+  });
+
+  it("targets one array with a dotted path and leaves others alone", () => {
+    const result = applyGroupBy(
+      { cameras: cams, doorStates: [{ uuid: "d1" }] },
+      "cameras.locationUuid",
+    );
+    expect(result.camerasGrouped).toBeDefined();
+    expect(result.doorStates).toHaveLength(1);
+  });
+
+  it("warns and keeps rows when no item has the field", () => {
+    const result = applyGroupBy({ cameras: cams }, "sector");
+    expect(result.cameras).toHaveLength(4);
+    expect(result.camerasGrouped).toBeUndefined();
+    expect(result.groupByWarnings[0]).toContain('"sector"');
+    expect(result.groupByWarnings[0]).toContain("locationUuid");
+  });
+
+  it("warns when the targeted array key does not exist", () => {
+    const result = applyGroupBy({ cameras: cams }, "widgets.locationUuid");
+    expect(result.cameras).toHaveLength(4);
+    expect(result.groupByWarnings[0]).toContain("widgets");
+  });
+
+  it("buckets missing values under (none)", () => {
+    const result = applyGroupBy(
+      { cameras: [...cams, { uuid: "c5", connected: false }] },
+      "locationUuid",
+    );
+    expect(result.camerasGrouped.groups["(none)"]).toBe(1);
+  });
+
+  it("caps high-cardinality groupings and reports the omission", () => {
+    const wide = Array.from({ length: 120 }, (_, i) => ({ uuid: `u${i}`, tag: `t${i}` }));
+    const result = applyGroupBy({ items: wide }, "tag");
+    expect(Object.keys(result.itemsGrouped.groups)).toHaveLength(50);
+    expect(result.itemsGrouped.omittedGroups).toBe(70);
+    expect(result.itemsGrouped.note).toContain("120 distinct");
+  });
+
+  it("grouped summaries survive an includeFields projection", () => {
+    const grouped = applyGroupBy({ cameras: cams, camerasCount: 4 }, "locationUuid");
+    const projected = filterIncludedFields(grouped, ["cameras.uuid", "cameras.name"]);
+    expect(projected.camerasGrouped).toBeDefined();
+    expect(projected.camerasGrouped.groups["loc-a"]).toBe(3);
+    expect(projected.camerasCount).toBe(4);
   });
 });
