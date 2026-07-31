@@ -13,8 +13,8 @@ import {
   getMotionSensors,
 } from "../api/get-entity-tool-api.js";
 import DeviceType from "../types/deviceType.js";
-import { TOOL_ARGS, type ToolArgs } from "../types/get-entity-tool-types.js";
-import { createToolTextContent, extractFromToolExtra } from "../util.js";
+import { OUTPUT_SCHEMA, TOOL_ARGS, type ToolArgs } from "../types/get-entity-tool-types.js";
+import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "get-entity-tool";
 
@@ -24,7 +24,7 @@ Retrieves entities (or devices) of certain types — cameras, doorbell cameras, 
 **Primary use cases:**
 1. **Looking up a device by name.** When the user mentions a specific camera, door, sensor, etc. by name (e.g. "describe camera 1919 Front Door Entrance", "what's the status of HW Lab door"), call this tool with the matching entityType, scan the returned list, and **fuzzy/case-insensitive substring match** the user's reference against the \`name\` field. Don't ask the user to clarify — try this lookup first, and only ask if there are genuinely multiple plausible matches in the results. To describe one device in depth (model, firmware, serial, network), pass \`detail: "full"\` together with a \`filterBy\` name predicate so only that device comes back at full size.
 2. **Listing all devices of a type** (cameras, doors, sensors, etc.) for a location or org-wide. The default \`detail: "core"\` keeps lists compact (uuid, name, connection/health status, location, associations).
-3. **Checking device health and connectivity.** Each device includes a \`connected\` boolean (true = online, false = offline). For "which devices are offline?" / "is X online?" / health questions, fetch the relevant entityTypes and inspect \`connected\` — the default detail level includes it.
+3. **Checking device health and connectivity.** Devices with a connection state include a \`connected\` boolean (true = online, false = offline). For "how many devices are offline?" / "which are offline?", pass \`filterBy: [{"field": "connected", "op": "=", "value": false}]\` — the returned list and its \`<type>Count\` sibling then reflect exactly the offline devices, so the count needs no manual tallying.
 
 When the user asks to "describe", "look up", "find", "show me", or "tell me about" a named device, this is almost always the right starting tool — call it before asking the user for more specifics.`;
 
@@ -97,15 +97,26 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     for (const key of Object.keys(response)) {
       const value = response[key];
       if (Array.isArray(value)) {
+        // The upstream states only carry a 4-color connectionStatus
+        // (RED = disconnected). Derive the uniform `connected` boolean the
+        // description promises so "offline" questions are a filterBy, not a
+        // model-side tally over the raw statuses.
+        let items = value.map((item: any) =>
+          item && typeof item === "object" && "connectionStatus" in item && !("connected" in item)
+            ? { ...item, connected: item.connectionStatus !== "RED" }
+            : item,
+        );
+
         if (detail !== "full") {
-          response[key] = value.map((item: any) =>
+          items = items.map((item: any) =>
             Object.fromEntries(
               Object.entries(item).filter(([field]) => CORE_FIELDS.has(field)),
             ),
           );
         }
 
-        response[`${key}Count`] = (response[key] as unknown[]).length;
+        response[key] = items;
+        response[`${key}Count`] = items.length;
       }
     }
   }
@@ -120,7 +131,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     ),
   };
 
-  return createToolTextContent(JSON.stringify(ret));
+  return createToolStructuredContent<OUTPUT_SCHEMA>(ret);
 };
 
 export function createTool(server: McpServer) {
@@ -130,6 +141,7 @@ export function createTool(server: McpServer) {
       title: "Get Entities",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
+      outputSchema: OUTPUT_SCHEMA.shape,
       annotations: { readOnlyHint: true },
     },
     TOOL_HANDLER

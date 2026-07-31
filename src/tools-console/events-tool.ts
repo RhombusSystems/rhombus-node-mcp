@@ -5,6 +5,7 @@ import {
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
   getComponentEventsByLocation,
+  describeEmptyComponentEventResult,
   getCameraFootageSeekpointEvents,
   getButtonPressEvents,
   getOccupancyEvents,
@@ -155,7 +156,22 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        return createToolStructuredContent({ eventType: "component-events", componentEvents: events });
+        // An empty result from a doorless location reads identically to "nothing
+        // happened" — say which it is rather than letting the model guess.
+        const note =
+          events.length === 0
+            ? await describeEmptyComponentEventResult(
+                locationUuid,
+                componentEventTypes || [],
+                extra._meta?.requestModifiers as RequestModifiers,
+                extra.sessionId
+              )
+            : undefined;
+        return createToolStructuredContent({
+          eventType: "component-events",
+          componentEvents: events,
+          ...(note ? { note } : {}),
+        });
       }
     }
     case EventsToolRequestType.CAMERA: {
