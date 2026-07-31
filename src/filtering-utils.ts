@@ -46,13 +46,36 @@ export type FilterCondition = {
 	value: string | number | boolean;
 };
 
+// nullish, not nullable: pre-existing callers (evals, specs, cached tool-call
+// replays) omit the key entirely and must stay valid.
+export const GROUP_BY_ARG = z
+	.string()
+	.nullish()
+	.describe(
+		`Group array items by a field and return EXACT per-group counts computed server-side, instead of the rows.
+Use this for "how many per X" / "which X has the most Y" questions — never tally rows yourself.
+Example: groupBy "locationUuid" on a camera list returns {camerasGrouped: {by: "locationUuid", total: 63, groups: {"<uuid>": 37, ...}}} (groups sorted by count, descending).
+Applied after filterBy, so e.g. filterBy [{field: "connected", op: "=", value: false}] + groupBy "locationUuid" = offline devices per location.
+Accepts the same dot-notation field paths as filterBy (optionally prefixed with the array key, e.g. "cameras.locationUuid").`,
+	);
+
+// Grouping by a high-cardinality field (e.g. a uuid) must not bloat the
+// response: keep the top N groups and report how many were omitted.
+const GROUP_BY_MAX_GROUPS = 50;
+
 /**
  * These keys will always be included in processed output schemas.
  * `note` carries tool-emitted diagnostics (e.g. "this location has no doors, so
  * the empty result is not an absence of activity") — projecting it away would
  * hide exactly the caveat the model needs.
  */
-const INCLUDE_WHITELIST = ["requestType", "note", "error", "filterByWarnings"];
+const INCLUDE_WHITELIST = [
+	"requestType",
+	"note",
+	"error",
+	"filterByWarnings",
+	"groupByWarnings",
+];
 
 // ---------------------------------------------------------------------------
 // filterIncludedFields — trie-based dot-notation field projection
@@ -138,11 +161,18 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
 	}
 	const trie = buildTrie(fieldsToInclude);
 	addProtectedStatusFields(trie);
-	const projected = filterByTrie(obj, trie);
+	// When groupBy replaced an array with its summary, no trie path can match
+	// anything — start from an empty object so the re-attach below still runs
+	// (an empty final result falls back to `undefined`, the old behavior).
+	const projected =
+		filterByTrie(obj, trie) ??
+		(obj && typeof obj === "object" && !Array.isArray(obj) ? {} : undefined);
 
 	// A `<key>Count` sibling is authoritative metadata for its array (post-
 	// filterBy it is the match count) — keep it whenever its array survives the
-	// projection, even if the caller didn't list it explicitly.
+	// projection, even if the caller didn't list it explicitly. `<key>Grouped`
+	// summaries (from groupBy) replace their array entirely, so no trie path
+	// can match them — always re-attach, along with their Count sibling.
 	if (
 		projected &&
 		typeof projected === "object" &&
@@ -159,6 +189,16 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
 				projected[`${key}Count`] = obj[`${key}Count`];
 			}
 		}
+		for (const key of Object.keys(obj)) {
+			if (key.endsWith("Grouped") && !(key in projected)) {
+				projected[key] = obj[key];
+				const countKey = `${key.slice(0, -"Grouped".length)}Count`;
+				if (typeof obj[countKey] === "number" && !(countKey in projected)) {
+					projected[countKey] = obj[countKey];
+				}
+			}
+		}
+		if (Object.keys(projected).length === 0) return undefined;
 	}
 
 	return projected;
@@ -312,6 +352,100 @@ export function applyFilterBy(obj: any, conditions: FilterCondition[]): any {
 	}
 
 	return result;
+}
+
+// ---------------------------------------------------------------------------
+// applyGroupBy — server-side per-group counts
+// ---------------------------------------------------------------------------
+
+/**
+ * Replaces each targeted array with a `<key>Grouped` summary of EXACT counts
+ * per distinct value of `groupByField` — so "how many per location" is
+ * computed in code, never tallied by the model (LLM tallies over long lists
+ * are reliably off by small amounts).
+ *
+ * `groupByField` uses the same addressing as filterBy conditions: a bare
+ * field applies to every top-level array, `arrayKey.field` targets one array.
+ * A field no item has leaves the rows intact and warns via `groupByWarnings`.
+ */
+export function applyGroupBy(obj: any, groupByField: string): any {
+	if (!groupByField || typeof obj !== "object" || obj === null) {
+		return obj;
+	}
+
+	const dotIdx = groupByField.indexOf(".");
+	const topKey = dotIdx === -1 ? "*" : groupByField.substring(0, dotIdx);
+	const field = dotIdx === -1 ? groupByField : groupByField.substring(dotIdx + 1);
+
+	const result: any = Array.isArray(obj) ? { items: obj } : { ...obj };
+	const warnings: string[] = [];
+
+	const groupArray = (items: any[], arrayKey: string): boolean => {
+		if (items.length === 0) return false;
+		if (!items.some((item) => getNestedValue(item, field) !== undefined)) {
+			const available = [...new Set(items.slice(0, 50).flatMap((item) =>
+				item && typeof item === "object" ? Object.keys(item) : [],
+			))].sort();
+			warnings.push(
+				`groupBy field "${field}" was IGNORED — no item in "${arrayKey}" has that field; rows returned ungrouped. Available fields: ${available.join(", ")}`,
+			);
+			return false;
+		}
+
+		const tally = new Map<string, number>();
+		for (const item of items) {
+			const value = getNestedValue(item, field);
+			const key =
+				value === undefined || value === null
+					? "(none)"
+					: typeof value === "object"
+						? "(non-scalar)"
+						: String(value);
+			tally.set(key, (tally.get(key) ?? 0) + 1);
+		}
+
+		const sorted = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+		const kept = sorted.slice(0, GROUP_BY_MAX_GROUPS);
+		const grouped: any = {
+			by: field,
+			total: items.length,
+			groups: Object.fromEntries(kept),
+		};
+		if (sorted.length > kept.length) {
+			grouped.omittedGroups = sorted.length - kept.length;
+			grouped.note = `${sorted.length} distinct values; showing the top ${kept.length} by count.`;
+		}
+
+		result[`${arrayKey}Grouped`] = grouped;
+		delete result[arrayKey];
+		if (typeof result[`${arrayKey}Count`] === "number") {
+			result[`${arrayKey}Count`] = items.length;
+		}
+		return true;
+	};
+
+	let groupedAny = false;
+	if (topKey === "*") {
+		for (const k of Object.keys(result)) {
+			if (Array.isArray(result[k])) {
+				groupedAny = groupArray(result[k], k) || groupedAny;
+			}
+		}
+	} else if (topKey in result && Array.isArray(result[topKey])) {
+		groupedAny = groupArray(result[topKey], topKey);
+	} else {
+		warnings.push(
+			`groupBy "${groupByField}" was IGNORED — the response has no array at "${topKey}".`,
+		);
+	}
+
+	if (warnings.length > 0) {
+		result.groupByWarnings = [...(result.groupByWarnings ?? []), ...warnings];
+	}
+
+	return Array.isArray(obj) && !groupedAny && warnings.length === 0
+		? obj
+		: result;
 }
 
 // ---------------------------------------------------------------------------
@@ -509,8 +643,9 @@ function applyFilteringToResult(
 	result: CallToolResult,
 	includeFields?: string[] | null,
 	filterBy?: FilterCondition[] | null,
+	groupBy?: string | null,
 ): CallToolResult {
-	if (!includeFields?.length && !filterBy?.length) return result;
+	if (!includeFields?.length && !filterBy?.length && !groupBy) return result;
 
 	// Always include whitelisted fields
 	const effectiveIncludeFields = includeFields?.length
@@ -523,6 +658,7 @@ function applyFilteringToResult(
 			// biome-ignore lint/suspicious/noExplicitAny: runtime JSON manipulation
 			let parsed: any = JSON.parse(item.text);
 			if (filterBy?.length) parsed = applyFilterBy(parsed, filterBy) ?? parsed;
+			if (groupBy) parsed = applyGroupBy(parsed, groupBy) ?? parsed;
 			if (effectiveIncludeFields?.length)
 				parsed = filterIncludedFields(parsed, effectiveIncludeFields) ?? parsed;
 			return { ...item, text: JSON.stringify(parsed) };
@@ -537,6 +673,9 @@ function applyFilteringToResult(
 		if (filterBy?.length)
 			filteredStructured =
 				applyFilterBy(filteredStructured, filterBy) ?? filteredStructured;
+		if (groupBy)
+			filteredStructured =
+				applyGroupBy(filteredStructured, groupBy) ?? filteredStructured;
 		if (effectiveIncludeFields?.length)
 			filteredStructured =
 				filterIncludedFields(filteredStructured, effectiveIncludeFields) ??
@@ -628,14 +767,15 @@ export function createFilteringProxy(
 						...config.inputSchema,
 						includeFields: includeFieldsArg,
 						filterBy: FILTER_BY_ARG,
+						groupBy: GROUP_BY_ARG,
 					},
 				};
 
 				// biome-ignore lint/suspicious/noExplicitAny: proxy intercept
 				const wrappedHandler = async (args: any, extra: unknown) => {
-					const { includeFields, filterBy, ...restArgs } = args;
+					const { includeFields, filterBy, groupBy, ...restArgs } = args;
 					const result = await handler(restArgs, extra);
-					return applyFilteringToResult(result, includeFields, filterBy);
+					return applyFilteringToResult(result, includeFields, filterBy, groupBy);
 				};
 
 				return (target as any).registerTool(
