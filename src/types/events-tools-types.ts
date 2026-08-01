@@ -202,7 +202,7 @@ export const OUTPUT_SCHEMA = z.object({
         brivoDoors: z
           .array(
             z.object({
-              brivoDoornId: z.string().describe("Brivo's door ID"),
+              brivoDoorId: z.string().describe("Brivo's door ID"),
               doorName: z.string().optional().describe("Brivo door name"),
               locationUuid: z.string().optional().describe("Rhombus location UUID for this door"),
             })

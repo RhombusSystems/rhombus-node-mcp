@@ -279,8 +279,8 @@ export async function getBrivoAccessControlEvents(
 
   const brivoDoors = Object.entries(doorInfoMap)
     .filter(([, info]) => info != null)
-    .map(([brivoDoornId, info]) => ({
-      brivoDoornId,
+    .map(([brivoDoorId, info]) => ({
+      brivoDoorId,
       doorName: info!.doorName ?? undefined,
       locationUuid: info!.locationUuid ?? undefined,
     }));

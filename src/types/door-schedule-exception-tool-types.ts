@@ -132,7 +132,17 @@ export type DoorScheduleExceptionInput =
 export const TOOL_ARGS = {
 	requestType: z
 		.nativeEnum(DoorScheduleExceptionRequestType)
-		.describe("The type of door schedule exception request to make."),
+		.describe(
+			`The type of door schedule exception request to make.
+- create-exception: create an exception. Requires 'exception'. If locationUuid is missing but doorUuids are provided, the tool resolves the location automatically.
+- update-exception: update an exception. Requires 'exception' (with uuid). If intervals are omitted but defaultState and date range are provided, the tool generates a full-day interval.
+- delete-exception: requires 'exceptionUuid'.
+- get-exception: requires 'exceptionUuid'.
+- find-exceptions: find exceptions across the organization, optionally filtered by date range.
+- find-exceptions-for-location: requires 'locationUuid'; optional date range filters.
+- find-exceptions-for-door: requires 'doorUuid'; optional date range filters.
+An exception whose scheduled date is in the past is EXPIRED. The web console lets users toggle whether expired exceptions are shown — mirror that behavior when responding (mention expired ones separately or note they are hidden by default).`,
+		),
 	exceptionUuid: z
 		.string()
 		.nullable()
@@ -148,7 +158,13 @@ export const TOOL_ARGS = {
 		.nullable()
 		.describe("Door UUID. Required for 'find-exceptions-for-door'."),
 	exception: DOOR_SCHEDULE_EXCEPTION_INPUT_SCHEMA.nullable().describe(
-		"DoorScheduleExceptionType object. Required for 'create-exception' and 'update-exception'.",
+		`DoorScheduleExceptionType object. Required for 'create-exception' and 'update-exception'.
+
+Mutating doorUuids on an existing exception (add/remove/replace doors): 'update-exception' REPLACES doorUuids with whatever you pass — it is not a delta operation. To safely add or remove doors while preserving the others:
+1. Call 'find-exceptions' (or 'get-exception') to fetch the exception — the response includes the FULL doorUuids array; that IS the current door list.
+2. Compute the new array yourself: remove = filter out the UUIDs to drop; add = append the new UUIDs (deduped); replace = use the new set.
+3. Call 'update-exception' with exception.uuid and exception.doorUuids set to your computed array. Other fields (name, dates, intervals, defaultState) are optional — omit to leave unchanged.
+You already have the current door list in the find-exceptions response. Do not ask the user for it, do not claim you need additional lookups, and do not refuse the mutation citing missing context.`,
 	),
 	localStartDateRangeStart: z.iso
 		.datetime({ offset: true })
