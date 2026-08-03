@@ -9,13 +9,13 @@ interface UptimeWindow {
   durationSeconds?: number | null;
 }
 
-// /camera/getUptimeWindowsBatch (not yet in the generated swagger schema)
+// /camera/getUptimeWindowsForOrg (not yet in the generated swagger schema)
 interface DeviceUptimeWindows {
   deviceUuid?: string;
   uptimeWindows?: UptimeWindow[] | null;
 }
 
-interface GetUptimeWindowsBatchResponse {
+interface GetUptimeWindowsForOrgResponse {
   uptimeByDevice?: DeviceUptimeWindows[] | null;
   error?: boolean;
   status?: string;
@@ -125,14 +125,14 @@ export async function getCameraUptime(
   );
 }
 
-async function getFleetUptimeWindowsBatch(
+async function getFleetUptimeWindowsForOrg(
   startTimeSec: number,
   endTimeSec: number,
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<Map<string, UptimeWindow[]> | null> {
-  const res = await postApi<GetUptimeWindowsBatchResponse>({
-    route: "/camera/getUptimeWindowsBatch",
+  const res = await postApi<GetUptimeWindowsForOrgResponse>({
+    route: "/camera/getUptimeWindowsForOrg",
     body: {
       startTimeMs: startTimeSec * 1000,
       endTimeMs: endTimeSec * 1000,
@@ -144,7 +144,7 @@ async function getFleetUptimeWindowsBatch(
   if (res.error || !Array.isArray(res.uptimeByDevice)) {
     // Most likely an older webservice without the batch route yet.
     logger.warn(
-      `getUptimeWindowsBatch unavailable (${res.status ?? "no uptimeByDevice in response"}); falling back to per-camera fan-out`
+      `getUptimeWindowsForOrg unavailable (${res.status ?? "no uptimeByDevice in response"}); falling back to per-camera fan-out`
     );
     return null;
   }
@@ -183,7 +183,7 @@ export async function getFleetUptime(
 
   const uptimeResults: CameraUptimeResult[] = [];
 
-  const batchWindows = await getFleetUptimeWindowsBatch(
+  const batchWindows = await getFleetUptimeWindowsForOrg(
     startTimeSec,
     endTimeSec,
     requestModifiers,

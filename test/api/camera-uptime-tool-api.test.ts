@@ -48,7 +48,7 @@ describe("getFleetUptime", () => {
     vi.mocked(orgCache.cachedPostApi).mockResolvedValue(CAMERA_LIST as never);
   });
 
-  it("uses /camera/getUptimeWindowsBatch when available (single call, no fan-out)", async () => {
+  it("uses /camera/getUptimeWindowsForOrg when available (single call, no fan-out)", async () => {
     vi.mocked(network.postApi).mockResolvedValue({
       uptimeByDevice: [
         { deviceUuid: "cam-1", uptimeWindows: [{ startSeconds: START_SEC, durationSeconds: 86_400 }] },
@@ -60,7 +60,7 @@ describe("getFleetUptime", () => {
 
     expect(vi.mocked(network.postApi)).toHaveBeenCalledTimes(1);
     const call = vi.mocked(network.postApi).mock.calls[0][0];
-    expect(call.route).toBe("/camera/getUptimeWindowsBatch");
+    expect(call.route).toBe("/camera/getUptimeWindowsForOrg");
     expect(call.body).toMatchObject({
       startTimeMs: START_SEC * 1000,
       endTimeMs: END_SEC * 1000,
@@ -94,7 +94,7 @@ describe("getFleetUptime", () => {
 
   it("falls back to the per-camera fan-out (in ms) when the batch route is unavailable", async () => {
     vi.mocked(network.postApi).mockImplementation(async ({ route }: { route: string }) => {
-      if (route === "/camera/getUptimeWindowsBatch") {
+      if (route === "/camera/getUptimeWindowsForOrg") {
         return { error: true, status: "Request Error: 404" } as never;
       }
       return { uptimeWindows: [{ startSeconds: START_SEC, durationSeconds: 86_400 }] } as never;
@@ -103,7 +103,7 @@ describe("getFleetUptime", () => {
     const res = await getFleetUptime(START_SEC, END_SEC);
 
     const routes = vi.mocked(network.postApi).mock.calls.map(c => c[0].route);
-    expect(routes[0]).toBe("/camera/getUptimeWindowsBatch");
+    expect(routes[0]).toBe("/camera/getUptimeWindowsForOrg");
     expect(routes.filter(r => r === "/camera/getUptimeWindows")).toHaveLength(2);
 
     const perCameraCall = vi.mocked(network.postApi).mock.calls[1][0];
