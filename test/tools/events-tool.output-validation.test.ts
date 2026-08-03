@@ -44,7 +44,7 @@ function withNulledArgs(overrides: Record<string, unknown>) {
 
 // Driven end-to-end through the real SDK, because the bug lived in the SDK's
 // post-handler validation of structuredContent, not in our own code paths: the
-// proxy projected `brivoDoornId` away and the SDK then rejected the result
+// proxy projected `brivoDoorId` away and the SDK then rejected the result
 // against the unrelaxed outputSchema with "MCP error -32602". A handler-level
 // test cannot see this.
 async function callEventsTool(args: Record<string, unknown>) {
@@ -67,8 +67,8 @@ const BRIVO_RESULT = {
   integrationEnabled: true,
   brivoDoorsConfigured: 2,
   brivoDoors: [
-    { brivoDoornId: "11001", doorName: "Front Lobby", locationUuid: "loc-1" },
-    { brivoDoornId: "11002", doorName: "Rear Dock", locationUuid: "loc-2" },
+    { brivoDoorId: "11001", doorName: "Front Lobby", locationUuid: "loc-1" },
+    { brivoDoorId: "11002", doorName: "Rear Dock", locationUuid: "loc-2" },
   ],
   events: [],
 };
@@ -79,7 +79,7 @@ describe("events-tool — brivo-access-control output validation", () => {
     vi.mocked(eventsApi.getBrivoAccessControlEvents).mockResolvedValue(BRIVO_RESULT as never);
   });
 
-  it("succeeds when includeFields omits the required brivoDoornId", async () => {
+  it("succeeds when includeFields omits the required brivoDoorId", async () => {
     const result = await callEventsTool(
       withNulledArgs({
         eventType: "brivo-access-control",
@@ -109,6 +109,6 @@ describe("events-tool — brivo-access-control output validation", () => {
 
     expect(result.isError).toBeFalsy();
     const payload = JSON.parse((result.content as { text: string }[])[0].text);
-    expect(payload.brivoAccessControlEvents.brivoDoors[0].brivoDoornId).toBe("11001");
+    expect(payload.brivoAccessControlEvents.brivoDoors[0].brivoDoorId).toBe("11001");
   });
 });
