@@ -54,7 +54,15 @@ const ConnectedDeviceSchema = z.object({
 });
 
 const ClimateSensorSchema = ConnectedDeviceSchema.extend({
-  temperature: z.string().optional(),
+  // NUMBER, not a formatted string: the api layer converts the upstream
+  // `temperatureCelcius` with tempFunc() and emits the raw value in whatever
+  // unit `tempUnit` asked for. Declaring it a string made the SDK reject every
+  // environmental-sensor call with "-32602 Output validation error" — the
+  // proxy's deepOptionalizeSchema relaxes required-ness, never scalar types.
+  temperature: z
+    .number()
+    .optional()
+    .describe("Temperature in the unit requested via the tempUnit arg (Celsius by default)."),
   humidity: z.number().optional(),
   batteryStatus: z.string().optional(),
 });
