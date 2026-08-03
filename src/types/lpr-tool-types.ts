@@ -64,10 +64,14 @@ export const TOOL_ARGS = {
   requestType: z
     .nativeEnum(LprToolRequestType)
     .describe(
-      "Org LPR operation (vehicle events, saved vehicles, labels, plate search, save vehicle). Per-camera VOD timeline seekpoints use events-tool (eventType camera)."
+      `Org LPR operation (vehicle events, saved vehicles, labels, plate search, save vehicle). Per-camera VOD timeline seekpoints use events-tool (eventType camera).
+- get-vehicle-events: detected plate events. Recognition can be a PARTIAL match — keep that in mind when asserting a plate was seen. When a saved vehicle has a label, its events carry that label.
+- get-saved-vehicles: plates users saved (optionally named/labelled).
+- get-vehicle-labels: the org's vehicle labels. For any label question, best practice is get-vehicle-labels first, then get-vehicle-events.
+Pair events to locations by NAME via location-tool — never show location UUIDs in responses or reports.`
     ),
   vehicleEventsArgs: VehicleEventsArgs.nullable().describe(
-    "Only necessary for requestType 'get-vehicle-events'"
+    "Only necessary for requestType 'get-vehicle-events'. Can return a lot of data — if the user gives no time range, 7 days is a reasonable default."
   ),
   timeZone: z
     .string()

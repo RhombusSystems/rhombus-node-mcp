@@ -25,40 +25,9 @@ import {
 const TOOL_NAME = "door-schedule-exception-tool";
 
 const TOOL_DESCRIPTION = `
-This tool manages Rhombus door schedule exceptions. 
-A door lock/unlock exception is a one-time rule used to change an access controlled door's locked/unlocked state. 
-If a lock/unlock exception is enabled, it will overwrite the existing lock/unlock schedule. 
-A schedule exception allows you to create a custom schedule that is only active for the specified dates/times. 
-Once the date/time a schedule exception is set for passes, the original schedule will resume.
+Manages Rhombus door schedule exceptions — one-time overrides of an access-controlled door's lock/unlock schedule for specific dates/times; the regular schedule resumes once the exception passes. Use for requests like "unlock the front door this Saturday", "cancel/modify the holiday exception", "what schedule exceptions are set for <door/location>", including adding or removing doors on an existing exception.
 
-Door schedule exceptions can be either expired or not expired. If its scheduled date is in the past, then it is expired.
-Users through the web console can toggle whether to see expired door schedule exceptions or not. Please mirror this behavior
-when responding to the user.
-
-It has the following modes of operation, determined by the "requestType" parameter:
-- ${DoorScheduleExceptionRequestType.CREATE_EXCEPTION}: Create a door schedule exception. Requires exception (DoorScheduleExceptionType object). If locationUuid is missing but doorUuids are provided, the tool will resolve the location automatically.
-- ${DoorScheduleExceptionRequestType.DELETE_EXCEPTION}: Delete a door schedule exception. Requires exceptionUuid.
-- ${DoorScheduleExceptionRequestType.FIND_EXCEPTIONS}: Find door schedule exceptions across the organization, optionally filtered by date range.
-- ${DoorScheduleExceptionRequestType.FIND_EXCEPTIONS_FOR_LOCATION}: Find door schedule exceptions for a location. Requires locationUuid. Supports optional date range filters.
-- ${DoorScheduleExceptionRequestType.FIND_EXCEPTIONS_FOR_DOOR}: Find door schedule exceptions for a door. Requires doorUuid. Supports optional date range filters.
-- ${DoorScheduleExceptionRequestType.GET_EXCEPTION}: Get a single door schedule exception by UUID. Requires exceptionUuid.
-- ${DoorScheduleExceptionRequestType.UPDATE_EXCEPTION}: Update a door schedule exception. Requires exception (DoorScheduleExceptionType object). If intervals are omitted but defaultState and date range are provided, the tool will generate a full-day interval.
-
-Use get-entity-tool to look up location and door UUIDs when needed.
-
----
-
-**Mutating doorUuids on an existing exception (add/remove/replace doors):**
-\`update-exception\` REPLACES \`doorUuids\` with whatever you pass — it is not a delta operation. To safely remove or add doors while preserving the others:
-
-1. Call \`find-exceptions\` (or \`get-exception\`) to fetch the exception. The response includes the **full \`doorUuids\` array** for that exception — that IS the current door list.
-2. Compute the new array yourself:
-   - **Remove doors:** filter the existing \`doorUuids\` array, dropping the ones to remove.
-   - **Add doors:** append the new UUIDs to the existing array (deduped).
-   - **Replace wholesale:** just use the new set.
-3. Call \`update-exception\` with \`exception.uuid\` and \`exception.doorUuids\` set to your computed array. Other fields (name, dates, intervals, defaultState) are optional — omit them to leave them unchanged.
-
-**You already have the current door list in the find-exceptions response.** Do not ask the user for it, do not claim you need additional lookups, and do not refuse the mutation citing missing context. The doorUuids array you got back IS the context.
+Modes via "requestType": ${DoorScheduleExceptionRequestType.CREATE_EXCEPTION}, ${DoorScheduleExceptionRequestType.UPDATE_EXCEPTION}, ${DoorScheduleExceptionRequestType.DELETE_EXCEPTION}, ${DoorScheduleExceptionRequestType.GET_EXCEPTION}, ${DoorScheduleExceptionRequestType.FIND_EXCEPTIONS}, ${DoorScheduleExceptionRequestType.FIND_EXCEPTIONS_FOR_LOCATION}, ${DoorScheduleExceptionRequestType.FIND_EXCEPTIONS_FOR_DOOR} — per-mode requirements and the add/remove-doors procedure are documented on the parameters. Use get-entity-tool to resolve location and door UUIDs.
 `;
 
 function buildDateRangeFilter(args: ToolArgs) {

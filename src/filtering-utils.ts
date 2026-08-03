@@ -525,7 +525,7 @@ function withDescription(
  * `MCP error -32602: Output validation error`. (Hit in prod by
  * events-tool/brivo-access-control: includeFields asked for
  * `brivoDoors.doorName` + `.locationUuid` but not the required
- * `brivoDoors.brivoDoornId`, so the model reported Brivo data as unreadable.)
+ * `brivoDoors.brivoDoorId`, so the model reported Brivo data as unreadable.)
  *
  * Projection inherently invalidates required-ness, so the schema we register
  * has to be all-optional. Nothing model-facing changes: `outputSchema` is never

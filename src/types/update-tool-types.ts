@@ -102,21 +102,30 @@ export const CameraDeviceSettings = z.object({
 // Input schema for the tool
 export const TOOL_ARGS = {
   entityType: ENTITY_TYPE.describe("Type of entity to update"),
-  entityUuid: z.string().nullable().describe("UUID of the entity to update"),
+  entityUuid: z
+    .string()
+    .nullable()
+    .describe(
+      'UUID of the entity to update. Faceted UUIDs are supported (e.g. "cameraUuid.v0" / "cameraUuid.v1") to target a specific camera facet; defaults to "v0" when no facet is given.',
+    ),
 
   // Camera-specific update fields
   cameraVideoSettings: z
     .string()
     .nullable()
-    .describe("JSON string of video settings to update for camera"),
+    .describe(
+      `JSON string of video settings to update for camera. Example for a dark image: '{"img_brightness": 0, "wdr_strength": 64}'; for a washed-out image: '{"img_brightness": -50, "img_contrast": 80}'. Saturation matters — 0 yields grayscale; most cameras look best mid-range, tune from there.`,
+    ),
   cameraAudioSettings: z
     .string()
     .nullable()
-    .describe("JSON string of audio settings to update for camera"),
+    .describe("JSON string of audio settings to update for camera (recording, microphone, speaker)."),
   cameraDeviceSettings: z
     .string()
     .nullable()
-    .describe("JSON string of device settings to update for camera"),
+    .describe(
+      `JSON string of device settings to update for camera (name, timezone, LED). LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'.`,
+    ),
 
   // Step tracking for multi-step updates
   step: z

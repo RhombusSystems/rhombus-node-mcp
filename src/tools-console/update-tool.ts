@@ -22,45 +22,11 @@ import { logger } from "../logger.js";
 const TOOL_NAME = "update-tool";
 
 const TOOL_DESCRIPTION = `
-This tool allows updating configuration settings for various Rhombus entities. Currently supports:
-- **Cameras**: Update video settings (resolution, HDR, WDR, brightness, contrast, etc.), audio settings (recording, microphone, speaker), and device settings (name, timezone, LED control).
+Updates configuration settings for Rhombus entities — currently cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, timezone, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
 
-For LED control, use EXACTLY these field names in cameraDeviceSettings:
-- To turn LED off: {"led_stealth_mode": true} (recommended) or {"led_mode": "always_off"}
-- To turn LED on: {"led_stealth_mode": false} or {"led_mode": "always_on"} or {"led_mode": "auto"}
-- IMPORTANT: Use underscore in field names (led_mode, led_stealth_mode), not camelCase
+MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
 
-The tool supports faceted UUIDs (e.g., "cameraUuid.v0" or "cameraUuid.v1") to update specific camera facets. If no facet is specified, defaults to "v0".
-
-The tool guides users through a multi-step process:
-1. Entity selection (if not provided)
-2. Settings configuration with current values shown
-3. Confirmation and application of changes
-
-Future support planned for:
-- Climate sensors
-- Door controllers
-- Environmental gateways
-- Audio gateways
-- Doorbell cameras
-- Badge readers
-
-The tool shows current settings before updates.
-
----
-
-**CAMERA SETTINGS UPDATE FLOW** — Use this tool for ALL camera settings updates (brightness, contrast, WDR, resolution, audio, LED, etc.).
-- For camera image-quality fixes: provide entityType="camera", entityUuid, and the specific settings to change in cameraVideoSettings.
-- Example for dark image: update-tool(entityType="camera", entityUuid="<uuid>", cameraVideoSettings='{"img_brightness": 0, "wdr_strength": 64}').
-- Example for washed out: update-tool(entityType="camera", entityUuid="<uuid>", cameraVideoSettings='{"img_brightness": -50, "img_contrast": 80}').
-- Saturation matters — saturation 0 yields a grayscale image. Most cameras look best with mid-range values; tune from there.
-
-**CONFIRMATION FLOW (MANDATORY)** — When the conversation history shows you analyzed a camera and proposed fixes, and the user replies with any affirmative ("yes", "confirm", "fix it", "apply", "do it", "go ahead", "proceed", "sure", "ok"):
-1. DO NOT generate any text response first.
-2. IMMEDIATELY call update-tool with the camera settings you previously identified.
-3. Only after update-tool returns successfully, say "Done! Check your camera now…".
-
-NEVER respond saying settings were updated without first calling update-tool — without the call, no changes take effect. Avoid multiple rounds of confirmation; get one confirmation for all proposed changes.
+Exact field names, LED rules, example payloads and faceted-UUID handling are documented on the parameters. The tool shows current settings before applying updates.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {

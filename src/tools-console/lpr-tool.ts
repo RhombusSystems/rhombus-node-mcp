@@ -15,29 +15,11 @@ import {
 const TOOL_NAME = "lpr-tool";
 
 const TOOL_DESCRIPTION = `
-This tool interacts with the Rhombus LPR system to retrieve information about license plate recognition events and registered license plates.
+Rhombus LPR (license plate recognition): plate/vehicle events, saved vehicles, vehicle labels, and org-wide plate search. Users say "vehicle", "car" and "license plate" interchangeably — all route here.
 
-**Vs events-tool (camera):** **events-tool** with eventType **camera** returns that camera’s **VOD footage seekpoints** (many activity types on the timeline, including vehicle-related activity when present). **lpr-tool** is for the **LPR product surface**: plate events, **saved vehicles**, **labels**, and plate **search** APIs across the org—use it when the user needs registry, labeling, or org-wide LPR queries, not only “what showed up on this camera’s timeline.”
+**Vs events-tool (camera):** events-tool with eventType camera returns that camera's VOD timeline seekpoints (which include vehicle activity). lpr-tool is the LPR product surface — the plate registry, labeling, and org-wide LPR queries. Use lpr-tool when the user needs plates/vehicles as entities, not just "what showed up on this camera's timeline".
 
-The system's cameras may have LPR enabled, and when it is enabled, it will detect "license plate recognition" events when it sees a license plate
-come into view. However, it is possible that the recognized license is only a partial match, so keep that in mind when using this tool.
-Users will be able to save license plates into the system, and then additionally label them with a name.
-
-Regarding vehicle labels:  Users in the Rhombus LPR system can assign labels to vehicles.  When a vehicle (license plate) is assigned a label, and then later
-is recognized by a rhombus security camera, it will attach the label to the event and will be available on the events returned from (${LprToolRequestType.GET_SAVED_VEHICLES}).
-
-You should use the location-tool if trying to pair vehicle events to a particular location.  Never use location UUIDs in reports, use names.
-
-As such, if the user is asking anything about a label or labels it would be best practice to first call ${LprToolRequestType.GET_VEHICLE_LABELS} and then ${LprToolRequestType.GET_VEHICLE_EVENTS}
-or ${LprToolRequestType.GET_VEHICLE_EVENTS}.
-
-This tool has 3 modes of operation, determined by the "requestType" parameter:
-- ${LprToolRequestType.GET_VEHICLE_EVENTS}: Retrieves a list of vehicle events that have been detected by the system. Please keep in mind that this has the *potential*
-  to return a lot of data. However, 7 days should be a reasonable time range to start from if the user is not specific.
-- ${LprToolRequestType.GET_SAVED_VEHICLES}: Retrieves a list of saved vehicles that have been saved in the organization.
-- ${LprToolRequestType.GET_VEHICLE_LABELS}: Retrieves a list of vehicle labels that have been saved in the organization.
-
-Its very likely that "vehicle", "car", and "license plates" are used interchangeably. Please keep this in mind.
+Modes via "requestType": ${LprToolRequestType.GET_VEHICLE_EVENTS}, ${LprToolRequestType.GET_SAVED_VEHICLES}, ${LprToolRequestType.GET_VEHICLE_LABELS} (plus plate search / save-vehicle) — usage details, label workflow and defaults are documented on the parameters.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
