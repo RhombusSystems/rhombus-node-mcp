@@ -114,7 +114,7 @@ describe("applyFilterBy — unaffected by the protection", () => {
 // the registered outputSchema AFTER the proxy has projected it, so a required
 // field the caller did not ask for used to fail the whole call with
 // "MCP error -32602: Output validation error". Reproduced here with the shape
-// that hit prod: events-tool/brivo-access-control, where brivoDoornId is the
+// that hit prod: events-tool/brivo-access-control, where brivoDoorId is the
 // only required field under brivoDoors.
 // ---------------------------------------------------------------------------
 
@@ -126,7 +126,7 @@ const brivoOutputShape = {
       brivoDoorsConfigured: z.number(),
       brivoDoors: z.array(
         z.object({
-          brivoDoornId: z.string().describe("Brivo's door ID"),
+          brivoDoorId: z.string().describe("Brivo's door ID"),
           doorName: z.string().optional(),
           locationUuid: z.string().optional(),
         }),
@@ -141,8 +141,8 @@ const brivoResult = {
     integrationEnabled: true,
     brivoDoorsConfigured: 2,
     brivoDoors: [
-      { brivoDoornId: "11001", doorName: "Front", locationUuid: "loc-1" },
-      { brivoDoornId: "11002", doorName: "Back", locationUuid: "loc-1" },
+      { brivoDoorId: "11001", doorName: "Front", locationUuid: "loc-1" },
+      { brivoDoorId: "11002", doorName: "Back", locationUuid: "loc-1" },
     ],
   },
 };
@@ -176,7 +176,7 @@ describe("createFilteringProxy — outputSchema survives projection", () => {
       }),
     );
 
-    // The exact includeFields the model sent in prod — no brivoDoornId.
+    // The exact includeFields the model sent in prod — no brivoDoorId.
     const result = await handler(
       {
         includeFields: [
@@ -219,7 +219,7 @@ describe("createFilteringProxy — outputSchema survives projection", () => {
       async () => ({ content: [] }),
     );
     expect(config.inputSchema.includeFields.description).toContain(
-      "brivoAccessControlEvents.brivoDoors.brivoDoornId",
+      "brivoAccessControlEvents.brivoDoors.brivoDoorId",
     );
   });
 });
