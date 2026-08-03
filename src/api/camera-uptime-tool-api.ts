@@ -1,3 +1,4 @@
+import { logger } from "../logger.js";
 import { postApi } from "../network/network.js";
 import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
@@ -6,6 +7,18 @@ import type { RequestModifiers } from "../util.js";
 interface UptimeWindow {
   startSeconds?: number | null;
   durationSeconds?: number | null;
+}
+
+// /camera/getUptimeWindowsBatch (not yet in the generated swagger schema)
+interface DeviceUptimeWindows {
+  deviceUuid?: string;
+  uptimeWindows?: UptimeWindow[] | null;
+}
+
+interface GetUptimeWindowsBatchResponse {
+  uptimeByDevice?: DeviceUptimeWindows[] | null;
+  error?: boolean;
+  status?: string;
 }
 
 interface CameraUptimeResult {
@@ -88,8 +101,11 @@ export async function getCameraUptime(
     route: "/camera/getUptimeWindows",
     body: {
       cameraUuid,
-      startTime: startTimeSec,
-      endTime: endTimeSec,
+      // The endpoint takes MILLISECONDS despite its (formerly wrong) swagger
+      // docs saying seconds — passing seconds makes the server clamp the
+      // range away entirely and return zero windows for every camera.
+      startTime: startTimeSec * 1000,
+      endTime: endTimeSec * 1000,
     } satisfies schema["Camera_GetUptimeWindowsWSRequest"],
     modifiers: requestModifiers,
     sessionId,
@@ -107,6 +123,39 @@ export async function getCameraUptime(
     startTimeSec,
     endTimeSec
   );
+}
+
+async function getFleetUptimeWindowsBatch(
+  startTimeSec: number,
+  endTimeSec: number,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<Map<string, UptimeWindow[]> | null> {
+  const res = await postApi<GetUptimeWindowsBatchResponse>({
+    route: "/camera/getUptimeWindowsBatch",
+    body: {
+      startTimeMs: startTimeSec * 1000,
+      endTimeMs: endTimeSec * 1000,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (res.error || !Array.isArray(res.uptimeByDevice)) {
+    // Most likely an older webservice without the batch route yet.
+    logger.warn(
+      `getUptimeWindowsBatch unavailable (${res.status ?? "no uptimeByDevice in response"}); falling back to per-camera fan-out`
+    );
+    return null;
+  }
+
+  const windowsByCamera = new Map<string, UptimeWindow[]>();
+  for (const entry of res.uptimeByDevice) {
+    if (entry?.deviceUuid) {
+      windowsByCamera.set(entry.deviceUuid, entry.uptimeWindows ?? []);
+    }
+  }
+  return windowsByCamera;
 }
 
 export async function getFleetUptime(
@@ -134,36 +183,59 @@ export async function getFleetUptime(
 
   const uptimeResults: CameraUptimeResult[] = [];
 
-  const batchSize = 10;
-  for (let i = 0; i < cameras.length; i += batchSize) {
-    const batch = cameras.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map(async cam => {
-        try {
-          const res = await postApi<schema["Camera_GetUptimeWindowsWSResponse"]>({
-            route: "/camera/getUptimeWindows",
-            body: {
-              cameraUuid: cam.uuid,
-              startTime: startTimeSec,
-              endTime: endTimeSec,
-            } satisfies schema["Camera_GetUptimeWindowsWSRequest"],
-            modifiers: requestModifiers,
-            sessionId,
-          });
-          return computeUptimeStats(
-            cam.uuid,
-            cam.name,
-            cam.locationUuid,
-            (res.uptimeWindows ?? []) as UptimeWindow[],
-            startTimeSec,
-            endTimeSec
-          );
-        } catch {
-          return computeUptimeStats(cam.uuid, cam.name, cam.locationUuid, [], startTimeSec, endTimeSec);
-        }
-      })
-    );
-    uptimeResults.push(...batchResults);
+  const batchWindows = await getFleetUptimeWindowsBatch(
+    startTimeSec,
+    endTimeSec,
+    requestModifiers,
+    sessionId
+  );
+
+  if (batchWindows) {
+    for (const cam of cameras) {
+      uptimeResults.push(
+        computeUptimeStats(
+          cam.uuid,
+          cam.name,
+          cam.locationUuid,
+          batchWindows.get(cam.uuid) ?? [],
+          startTimeSec,
+          endTimeSec
+        )
+      );
+    }
+  } else {
+    const batchSize = 10;
+    for (let i = 0; i < cameras.length; i += batchSize) {
+      const batch = cameras.slice(i, i + batchSize);
+      const batchResults = await Promise.all(
+        batch.map(async cam => {
+          try {
+            const res = await postApi<schema["Camera_GetUptimeWindowsWSResponse"]>({
+              route: "/camera/getUptimeWindows",
+              body: {
+                cameraUuid: cam.uuid,
+                // milliseconds — see getCameraUptime
+                startTime: startTimeSec * 1000,
+                endTime: endTimeSec * 1000,
+              } satisfies schema["Camera_GetUptimeWindowsWSRequest"],
+              modifiers: requestModifiers,
+              sessionId,
+            });
+            return computeUptimeStats(
+              cam.uuid,
+              cam.name,
+              cam.locationUuid,
+              (res.uptimeWindows ?? []) as UptimeWindow[],
+              startTimeSec,
+              endTimeSec
+            );
+          } catch {
+            return computeUptimeStats(cam.uuid, cam.name, cam.locationUuid, [], startTimeSec, endTimeSec);
+          }
+        })
+      );
+      uptimeResults.push(...batchResults);
+    }
   }
 
   uptimeResults.sort((a, b) => a.uptimePercentage - b.uptimePercentage);
