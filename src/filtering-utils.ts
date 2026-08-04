@@ -64,18 +64,52 @@ Accepts the same dot-notation field paths as filterBy (optionally prefixed with 
 const GROUP_BY_MAX_GROUPS = 50;
 
 /**
- * These keys will always be included in processed output schemas.
- * `note` carries tool-emitted diagnostics (e.g. "this location has no doors, so
- * the empty result is not an absence of activity") — projecting it away would
- * hide exactly the caveat the model needs.
+ * Cross-cutting keys every tool emits (or may emit), always kept regardless of
+ * what the caller projected. `note` carries tool-emitted diagnostics (e.g.
+ * "this location has no doors, so the empty result is not an absence of
+ * activity") — projecting it away would hide exactly the caveat the model needs.
+ *
+ * Tool-SPECIFIC fields do not belong here. Declare those at the tool's own
+ * `registerTool` call with `protectFields` below, so the protection lives next
+ * to the thing being protected instead of in a list nobody reads.
  */
-const INCLUDE_WHITELIST = [
+const ALWAYS_PROTECTED_FIELDS = [
 	"requestType",
 	"note",
 	"error",
 	"filterByWarnings",
 	"groupByWarnings",
 ];
+
+/**
+ * Carries a tool's protected field names on its registerTool config. A symbol
+ * so it cannot collide with an SDK config key and never survives into JSON;
+ * the proxy strips it before forwarding the config on regardless.
+ */
+const PROTECTED_FIELDS = Symbol.for("rhombus.protectedFields");
+
+/**
+ * Marks top-level output fields that must survive an `includeFields`
+ * projection even when the caller didn't ask for them.
+ *
+ * Use it for anything the model needs in order to read the rest of the result
+ * correctly — pre-computed rosters/aggregates it would otherwise have to derive
+ * from a long list, scope/caveat markers, and the like:
+ *
+ * ```ts
+ * server.registerTool(
+ *   TOOL_NAME,
+ *   protectFields({ title: "Faces", ... }, ["faceEventSummary"]),
+ *   TOOL_HANDLER,
+ * );
+ * ```
+ *
+ * Names are matched at the TOP LEVEL of the result only, and a bare name keeps
+ * the field's entire subtree.
+ */
+export function protectFields<T extends object>(config: T, fields: string[]): T {
+	return { ...config, [PROTECTED_FIELDS]: fields };
+}
 
 // ---------------------------------------------------------------------------
 // filterIncludedFields — trie-based dot-notation field projection
@@ -644,12 +678,14 @@ function applyFilteringToResult(
 	includeFields?: string[] | null,
 	filterBy?: FilterCondition[] | null,
 	groupBy?: string | null,
+	protectedFields: string[] = [],
 ): CallToolResult {
 	if (!includeFields?.length && !filterBy?.length && !groupBy) return result;
 
-	// Always include whitelisted fields
+	// Re-add the cross-cutting keys plus whatever this tool declared, so a
+	// projection can only ever narrow the rows the caller asked about.
 	const effectiveIncludeFields = includeFields?.length
-		? [...INCLUDE_WHITELIST, ...includeFields]
+		? [...ALWAYS_PROTECTED_FIELDS, ...protectedFields, ...includeFields]
 		: includeFields;
 
 	const filteredContent = result.content.map((item) => {
@@ -716,6 +752,9 @@ export function createFilteringProxy(
 					return (target as any).registerTool(name, config, handler);
 				}
 
+				// Declared via protectFields() at the tool's own registration.
+				const protectedFields: string[] = config?.[PROTECTED_FIELDS] ?? [];
+
 				// Field-path catalog goes on the includeFields PARAM description
 				// (deferred/unbilled until the tool is loaded), not the tool
 				// description.
@@ -775,8 +814,17 @@ export function createFilteringProxy(
 				const wrappedHandler = async (args: any, extra: unknown) => {
 					const { includeFields, filterBy, groupBy, ...restArgs } = args;
 					const result = await handler(restArgs, extra);
-					return applyFilteringToResult(result, includeFields, filterBy, groupBy);
+					return applyFilteringToResult(
+						result,
+						includeFields,
+						filterBy,
+						groupBy,
+						protectedFields,
+					);
 				};
+
+				// The marker is proxy-internal metadata; don't hand it to the SDK.
+				delete augmentedConfig[PROTECTED_FIELDS];
 
 				return (target as any).registerTool(
 					name,

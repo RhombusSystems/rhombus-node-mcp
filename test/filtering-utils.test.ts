@@ -6,6 +6,7 @@ import {
   applyGroupBy,
   createFilteringProxy,
   deepOptionalizeSchema,
+  protectFields,
 } from "../src/filtering-utils.js";
 
 // ---------------------------------------------------------------------------
@@ -221,6 +222,93 @@ describe("createFilteringProxy — outputSchema survives projection", () => {
     expect(config.inputSchema.includeFields.description).toContain(
       "brivoAccessControlEvents.brivoDoors.brivoDoorId",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Protected fields — the cross-cutting set is global, everything else is
+// declared by the tool that emits it via protectFields().
+// ---------------------------------------------------------------------------
+
+/** A result shaped like faces-tool's: bulky rows plus a small roster beside them. */
+const rosterResult = {
+  requestType: "get-face-events",
+  getFaceEventsResponse: [
+    { faceName: "Jess", uuid: "e1" },
+    { faceName: "Alex", uuid: "e2" },
+  ],
+  faceEventSummary: {
+    totalEventsThisPage: 2,
+    identifiedPeople: [
+      { name: "Jess", eventCount: 1 },
+      { name: "Alex", eventCount: 1 },
+    ],
+  },
+  note: "SCOPE CHANGED: results are org-wide.",
+};
+
+/** The narrow projection a model sends when it only wants the raw rows. */
+const ROWS_ONLY = ["getFaceEventsResponse.faceName"];
+
+function registerRosterTool(config: any) {
+  return registerThroughProxy(config, async () => ({
+    content: [{ type: "text", text: JSON.stringify(rosterResult) }],
+    structuredContent: rosterResult,
+  }));
+}
+
+describe("createFilteringProxy — protected fields", () => {
+  it("keeps a field the tool declared, even when the caller didn't ask for it", async () => {
+    const { handler } = registerRosterTool(
+      protectFields({ description: "faces" }, ["faceEventSummary"]),
+    );
+
+    const result = await handler({ includeFields: ROWS_ONLY, filterBy: null }, {});
+
+    // The projection still narrows the rows it was pointed at...
+    expect(result.structuredContent.getFaceEventsResponse).toEqual([
+      { faceName: "Jess" },
+      { faceName: "Alex" },
+    ]);
+    // ...but the roster survives whole, subtree included.
+    expect(result.structuredContent.faceEventSummary.identifiedPeople).toHaveLength(2);
+    expect(JSON.parse(result.content[0].text).faceEventSummary.totalEventsThisPage).toBe(2);
+  });
+
+  it("does NOT keep that field for a tool that didn't declare it", async () => {
+    const { handler } = registerRosterTool({ description: "some other tool" });
+
+    const result = await handler({ includeFields: ROWS_ONLY, filterBy: null }, {});
+
+    // This is the whole point of moving it off the global list.
+    expect(result.structuredContent.faceEventSummary).toBeUndefined();
+  });
+
+  it("keeps the cross-cutting fields for every tool regardless", async () => {
+    const { handler } = registerRosterTool({ description: "some other tool" });
+
+    const result = await handler({ includeFields: ROWS_ONLY, filterBy: null }, {});
+
+    expect(result.structuredContent.note).toBe("SCOPE CHANGED: results are org-wide.");
+    expect(result.structuredContent.requestType).toBe("get-face-events");
+  });
+
+  it("does not hand the marker to the SDK", () => {
+    const { config } = registerRosterTool(
+      protectFields({ description: "faces" }, ["faceEventSummary"]),
+    );
+
+    expect(Object.getOwnPropertySymbols(config)).toHaveLength(0);
+  });
+
+  it("leaves an unprojected result untouched", async () => {
+    const { handler } = registerRosterTool(
+      protectFields({ description: "faces" }, ["faceEventSummary"]),
+    );
+
+    const result = await handler({ includeFields: null, filterBy: null }, {});
+
+    expect(result.structuredContent).toEqual(rosterResult);
   });
 });
 
