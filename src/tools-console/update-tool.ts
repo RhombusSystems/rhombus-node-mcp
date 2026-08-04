@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
   updateCameraConfig,
   getCameraDetails,
@@ -28,6 +29,91 @@ MANDATORY confirmation flow: when you have proposed camera-settings fixes and th
 
 Exact field names, LED rules, example payloads and faceted-UUID handling are documented on the parameters. The tool shows current settings before applying updates.
 `;
+
+// EVERY result from this tool must carry structuredContent: the tool registers
+// an outputSchema, and the MCP SDK rejects any non-isError result without
+// structuredContent as "MCP error -32602: ... no structured content was
+// provided" — which REPLACES the real failure text. That is how an out-of-range
+// img_sharpness once reached the user as "a system error" with nothing for the
+// model to correct, so it retried the identical bad value and gave up.
+function errorResult(text: string) {
+  return {
+    isError: true,
+    content: [{ type: "text" as const, text }],
+    structuredContent: { needUserInput: false, success: false, message: text },
+  };
+}
+
+// "Not implemented yet" is a real answer, not a transport failure — leaving
+// isError off keeps the model relaying the message instead of reporting that
+// the tool broke.
+function unsupportedResult(text: string) {
+  return {
+    content: [{ type: "text" as const, text }],
+    structuredContent: { needUserInput: false, success: false, message: text },
+  };
+}
+
+function valueAtPath(root: unknown, path: readonly PropertyKey[]): unknown {
+  return path.reduce<unknown>(
+    (node, key) =>
+      node && typeof node === "object" ? (node as Record<PropertyKey, unknown>)[key] : undefined,
+    root
+  );
+}
+
+// The settings blocks are free-form JSON strings, so an out-of-range value is
+// the normal failure here, not an exotic one. The message MUST name the field,
+// the bound, and what was received — otherwise the model has nothing to act on.
+function describeSettingsIssues(label: string, error: z.ZodError, input: unknown): string {
+  const details = error.issues.map(issue => {
+    const field = issue.path.length ? issue.path.join(".") : label;
+    const received = valueAtPath(input, issue.path);
+    const suffix = received === undefined ? "" : ` (received ${JSON.stringify(received)})`;
+    if (issue.code === "too_big") {
+      return `${field} must be at most ${(issue as z.core.$ZodIssueTooBig).maximum}${suffix}`;
+    }
+    if (issue.code === "too_small") {
+      return `${field} must be at least ${(issue as z.core.$ZodIssueTooSmall).minimum}${suffix}`;
+    }
+    return `${field}: ${issue.message}${suffix}`;
+  });
+  return `Invalid ${label}: ${details.join("; ")}. Check the allowed ranges documented on this tool's parameters, then call again with in-range values. No settings were changed.`;
+}
+
+function parseSettingsBlock<T extends z.ZodType>(
+  label: string,
+  raw: string,
+  schema: T,
+  normalize?: (value: Record<string, unknown>) => void
+): { ok: true; value: z.infer<T> } | { ok: false; message: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return {
+      ok: false,
+      message: `Invalid ${label}: not valid JSON (${
+        error instanceof Error ? error.message : "parse error"
+      }). Pass a JSON object string, e.g. '{"img_brightness": 0}'. No settings were changed.`,
+    };
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      ok: false,
+      message: `Invalid ${label}: expected a JSON object, received ${
+        Array.isArray(parsed) ? "an array" : String(parsed === null ? "null" : typeof parsed)
+      }. No settings were changed.`,
+    };
+  }
+
+  normalize?.(parsed as Record<string, unknown>);
+  const result = schema.safeParse(parsed);
+  if (!result.success) {
+    return { ok: false, message: describeSettingsIssues(label, result.error, parsed) };
+  }
+  return { ok: true, value: result.data };
+}
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const {
@@ -60,49 +146,65 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
         // Parse and add video settings
         if (cameraVideoSettings && cameraVideoSettings.trim()) {
-          const videoSettings = JSON.parse(cameraVideoSettings);
-          // Validate with zod schema
-          const validatedVideo = CameraVideoSettings.parse(videoSettings);
+          const video = parseSettingsBlock(
+            "camera video settings",
+            cameraVideoSettings,
+            CameraVideoSettings
+          );
+          if (!video.ok) {
+            return errorResult(video.message);
+          }
           updatePayload.configUpdate.videoFacetSettings = {
-            [facet]: cleanUpdatePayload(validatedVideo),
+            [facet]: cleanUpdatePayload(video.value),
           };
         }
 
         // Parse and add audio settings
         if (cameraAudioSettings && cameraAudioSettings.trim()) {
-          const audioSettings = JSON.parse(cameraAudioSettings);
-          // Validate with zod schema
-          const validatedAudio = CameraAudioSettings.parse(audioSettings);
+          const audio = parseSettingsBlock(
+            "camera audio settings",
+            cameraAudioSettings,
+            CameraAudioSettings
+          );
+          if (!audio.ok) {
+            return errorResult(audio.message);
+          }
           updatePayload.configUpdate.audioFacetSettings = {
-            [facet]: cleanUpdatePayload(validatedAudio),
+            [facet]: cleanUpdatePayload(audio.value),
           };
         }
 
         // Parse and add device settings
         if (cameraDeviceSettings && cameraDeviceSettings.trim()) {
-          const deviceSettings = JSON.parse(cameraDeviceSettings);
-          logger.debug("[update-tool] Raw device settings:", deviceSettings);
+          const device = parseSettingsBlock(
+            "camera device settings",
+            cameraDeviceSettings,
+            CameraDeviceSettings,
+            deviceSettings => {
+              logger.debug("[update-tool] Raw device settings:", deviceSettings);
 
-          // Transform ledMode to led_mode and OFF to always_off before validation
-          if ("ledMode" in deviceSettings) {
-            deviceSettings.led_mode =
-              deviceSettings.ledMode === "OFF" ? "always_off" : deviceSettings.ledMode;
-            delete deviceSettings.ledMode;
+              // Transform ledMode to led_mode and OFF to always_off before validation
+              if ("ledMode" in deviceSettings) {
+                deviceSettings.led_mode =
+                  deviceSettings.ledMode === "OFF" ? "always_off" : deviceSettings.ledMode;
+                delete deviceSettings.ledMode;
+              }
+
+              // Convert string "true"/"false" to boolean for led_stealth_mode
+              if (
+                "led_stealth_mode" in deviceSettings &&
+                typeof deviceSettings.led_stealth_mode === "string"
+              ) {
+                deviceSettings.led_stealth_mode = deviceSettings.led_stealth_mode === "true";
+              }
+            }
+          );
+          if (!device.ok) {
+            return errorResult(device.message);
           }
+          logger.debug("[update-tool] Validated device settings:", device.value);
 
-          // Convert string "true"/"false" to boolean for led_stealth_mode
-          if (
-            "led_stealth_mode" in deviceSettings &&
-            typeof deviceSettings.led_stealth_mode === "string"
-          ) {
-            deviceSettings.led_stealth_mode = deviceSettings.led_stealth_mode === "true";
-          }
-
-          // Validate with zod schema
-          const validatedDevice = CameraDeviceSettings.parse(deviceSettings);
-          logger.debug("[update-tool] Validated device settings:", validatedDevice);
-
-          const cleaned = cleanUpdatePayload(validatedDevice);
+          const cleaned = cleanUpdatePayload(device.value);
           logger.debug("[update-tool] Cleaned device settings:", cleaned);
 
           updatePayload.configUpdate.deviceSettings = cleaned;
@@ -117,16 +219,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra.sessionId
         );
         if (!featureValidation.canProceed) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text:
-                  featureValidation.error ||
-                  "This camera does not support one or more requested features.",
-              },
-            ],
-          };
+          return errorResult(
+            featureValidation.error ||
+              "This camera does not support one or more requested features."
+          );
         }
 
         // Apply the updates
@@ -141,14 +237,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           const normalizedError = hasCapabilitySensitiveChange
             ? "This camera may not support one or more requested settings."
             : result.error;
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Failed to update camera settings: ${normalizedError}`,
-              },
-            ],
-          };
+          return errorResult(`Failed to update camera settings: ${normalizedError}`);
         }
 
         // Format the updated settings for display
@@ -173,16 +262,11 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           structuredContent: jsonResultResponse,
         };
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error updating camera settings: ${
-                error instanceof Error ? error.message : "Unknown error"
-              }`,
-            },
-          ],
-        };
+        return errorResult(
+          `Error updating camera settings: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     }
 
@@ -200,14 +284,9 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         );
 
         if (!cameraDetails.success || !cameraDetails.data) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Failed to get camera details: ${cameraDetails.error || "Camera not found"}`,
-              },
-            ],
-          };
+          return errorResult(
+            `Failed to get camera details: ${cameraDetails.error || "Camera not found"}`
+          );
         }
 
         const camera = cameraDetails.data;
@@ -244,16 +323,11 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           structuredContent: jsonResultResponse,
         };
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error retrieving camera details: ${
-                error instanceof Error ? error.message : "Unknown error"
-              }`,
-            },
-          ],
-        };
+        return errorResult(
+          `Error retrieving camera details: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     }
 
@@ -282,85 +356,50 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
   // Handle other entity types (future implementation)
   if (entityType === "climate-sensor") {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Climate sensor updates are not yet implemented. Coming soon!",
-        },
-      ],
-    };
+    return unsupportedResult("Climate sensor updates are not yet implemented. Coming soon!");
   }
 
   if (entityType === "door-controller") {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Door controller updates are not yet implemented. Coming soon!",
-        },
-      ],
-    };
+    return unsupportedResult("Door controller updates are not yet implemented. Coming soon!");
   }
 
   if (entityType === "environmental-gateway") {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Environmental gateway updates are not yet implemented. Coming soon!",
-        },
-      ],
-    };
+    return unsupportedResult(
+      "Environmental gateway updates are not yet implemented. Coming soon!"
+    );
   }
 
   if (entityType === "audio-gateway") {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Audio gateway updates are not yet fully implemented. Coming soon!",
-        },
-      ],
-    };
+    return unsupportedResult("Audio gateway updates are not yet fully implemented. Coming soon!");
   }
 
   if (entityType === "doorbell-camera") {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Doorbell camera updates are not yet fully implemented. Coming soon!",
-        },
-      ],
-    };
+    return unsupportedResult(
+      "Doorbell camera updates are not yet fully implemented. Coming soon!"
+    );
   }
 
   if (entityType === "badge-reader") {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Badge reader updates are not yet fully implemented. Coming soon!",
-        },
-      ],
-    };
+    return unsupportedResult("Badge reader updates are not yet fully implemented. Coming soon!");
   }
 
   // Step 0: Show initial form (no entityType provided)
+  const entityTypeFormResponse = {
+    needUserInput: true,
+    message:
+      "Welcome to the Rhombus entity update tool!\n\nWhat type of entity would you like to update?\n\n• **camera** - Update camera video, audio, or device settings\n• **climate-sensor** - Update climate sensor settings (coming soon)\n• **door-controller** - Update door controller settings (coming soon)\n• **environmental-gateway** - Update environmental gateway settings (coming soon)\n\nPlease specify the entity type to continue.",
+    requestType: "entity-type-selection",
+    submitAction: "update-tool",
+  };
+
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify({
-          needUserInput: true,
-          message:
-            "Welcome to the Rhombus entity update tool!\n\nWhat type of entity would you like to update?\n\n• **camera** - Update camera video, audio, or device settings\n• **climate-sensor** - Update climate sensor settings (coming soon)\n• **door-controller** - Update door controller settings (coming soon)\n• **environmental-gateway** - Update environmental gateway settings (coming soon)\n\nPlease specify the entity type to continue.",
-          requestType: "entity-type-selection",
-          submitAction: "update-tool",
-        }),
+        text: JSON.stringify(entityTypeFormResponse),
       },
     ],
+    structuredContent: entityTypeFormResponse,
   };
 };
 

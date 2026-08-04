@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { logger } from "./logger.js";
 
 // ---------------------------------------------------------------------------
 // Shared tool arg schemas
@@ -726,10 +727,53 @@ function applyFilteringToResult(
 }
 
 /**
+ * Backstop for the single most damaging tool-result mistake in this codebase: a
+ * tool that registers an `outputSchema` but returns `{content: [...]}` with no
+ * `structuredContent`. The SDK's validateToolOutput then throws
+ *   "MCP error -32602: Tool <x> has an output schema but no structured content"
+ * which REPLACES the tool's own text. Because these are almost always error
+ * paths, the message the model needed ("img_sharpness must be at most 11",
+ * "doorControllerUuid is required") is exactly what gets destroyed — the model
+ * is left with an opaque protocol failure, retries identical args, and gives up.
+ * That shipped to prod at least twice.
+ *
+ * Setting `isError` makes the SDK skip output validation entirely, so the text
+ * survives. This is a safety net, NOT a license to skip `structuredContent` in
+ * new tools: it can only flag the result as an error, so a legitimate non-error
+ * text result must still carry its own `structuredContent` (see
+ * `unsupportedResult` in update-tool.ts). Hence the warn — it means "fix the tool".
+ */
+function backstopMissingStructuredContent(
+	// biome-ignore lint/suspicious/noExplicitAny: SDK CallToolResult shape
+	result: any,
+	toolName: string,
+	hasOutputSchema: boolean,
+	// biome-ignore lint/suspicious/noExplicitAny: SDK CallToolResult shape
+): any {
+	if (
+		!hasOutputSchema ||
+		!result ||
+		typeof result !== "object" ||
+		!("content" in result) ||
+		result.structuredContent ||
+		result.isError
+	) {
+		return result;
+	}
+	logger.warn(
+		`[filtering-proxy] ${toolName} returned no structuredContent despite registering an outputSchema; ` +
+			`flagging isError so the SDK does not replace the message with -32602. Fix the tool: ` +
+			`return structuredContent (or set isError) explicitly.`,
+	);
+	return { ...result, isError: true };
+}
+
+/**
  * Returns a Proxy over an McpServer that intercepts every `registerTool` call to:
  * 1. Inject `includeFields` and `filterBy` into the tool's inputSchema
  * 2. Append a description suffix explaining the filtering params
  * 3. Wrap the handler to apply filtering to the tool result
+ * 4. Backstop results that would otherwise fail SDK output validation
  *
  * Tools whose names appear in `blacklist` are registered without modification.
  *
@@ -814,12 +858,16 @@ export function createFilteringProxy(
 				const wrappedHandler = async (args: any, extra: unknown) => {
 					const { includeFields, filterBy, groupBy, ...restArgs } = args;
 					const result = await handler(restArgs, extra);
-					return applyFilteringToResult(
-						result,
-						includeFields,
-						filterBy,
-						groupBy,
-						protectedFields,
+					return backstopMissingStructuredContent(
+						applyFilteringToResult(
+							result,
+							includeFields,
+							filterBy,
+							groupBy,
+							protectedFields,
+						),
+						name,
+						Boolean(config.outputSchema),
 					);
 				};
 

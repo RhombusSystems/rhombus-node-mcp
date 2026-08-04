@@ -83,10 +83,20 @@ export function getFilePathsInDirectory(dirPath: string): string[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns an object in the form expected by `server.tool`
+ * Returns an object in the form expected by `server.tool`, for the text-only
+ * results tools use to report a bad/missing argument.
+ *
+ * `isError` is REQUIRED here, not cosmetic. Every tool that calls this also
+ * registers an `outputSchema`, and the SDK's post-handler validation throws
+ * "MCP error -32602: ... no structured content was provided" for any result
+ * that lacks `structuredContent` — unless `isError` is set, which short-circuits
+ * that check (see validateToolOutput in @modelcontextprotocol/sdk server/mcp.js).
+ * Without it the -32602 REPLACES this text, so the model sees a protocol crash
+ * instead of "doorControllerUuid is required" and cannot correct its call.
  */
 export function createToolTextContent(content: string): CallToolResult {
   return {
+    isError: true,
     content: [
       {
         type: "text",
