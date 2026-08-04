@@ -9,6 +9,7 @@ import {
   TOOL_ARGS,
   type ToolArgs,
 } from "../types/faces-tools-types.js";
+import { protectFields } from "../filtering-utils.js";
 import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "faces-tool";
@@ -50,6 +51,63 @@ function resolveNamesToRegisteredFaces(
       resolvedPersonUuid: best?.uuid ?? null,
     };
   });
+}
+
+/**
+ * Roll a page of face events up into a distinct-person roster.
+ *
+ * Enumerating "who was seen" from a 200-event page is exactly the operation the
+ * response model does badly: the raw page is well over the chatbot's compaction
+ * threshold, so the model never sees it directly, and when it reads the compacted
+ * form it tends to answer from whatever chunk arrived last. Doing the dedupe here
+ * means the answer is a field lookup rather than a 200-row scan.
+ */
+function summarizeFaceEvents(
+  faceEvents: Array<{ faceName?: string | null; eventTimestamp?: string | null; eventTimestampMs?: number | null }>,
+  morePagesAvailable: boolean
+) {
+  const byName = new Map<
+    string,
+    { name: string; eventCount: number; firstMs: number; lastMs: number; firstSeen: string; lastSeen: string }
+  >();
+  let unnamedEvents = 0;
+
+  for (const event of faceEvents) {
+    const name = event.faceName?.trim();
+    if (!name) {
+      unnamedEvents++;
+      continue;
+    }
+    const ms = event.eventTimestampMs ?? 0;
+    const label = event.eventTimestamp ?? String(ms);
+    const existing = byName.get(name);
+    if (!existing) {
+      byName.set(name, { name, eventCount: 1, firstMs: ms, lastMs: ms, firstSeen: label, lastSeen: label });
+      continue;
+    }
+    existing.eventCount++;
+    if (ms < existing.firstMs) {
+      existing.firstMs = ms;
+      existing.firstSeen = label;
+    }
+    if (ms > existing.lastMs) {
+      existing.lastMs = ms;
+      existing.lastSeen = label;
+    }
+  }
+
+  const identifiedPeople = [...byName.values()]
+    // Most-seen first, then alphabetical so the ordering is stable across pages.
+    .sort((a, b) => b.eventCount - a.eventCount || a.name.localeCompare(b.name))
+    .map(({ name, eventCount, firstSeen, lastSeen }) => ({ name, eventCount, firstSeen, lastSeen }));
+
+  return {
+    totalEventsThisPage: faceEvents.length,
+    namedEvents: faceEvents.length - unnamedEvents,
+    unnamedEvents,
+    identifiedPeople,
+    morePagesAvailable,
+  };
 }
 
 const TOOL_DESCRIPTION = `
@@ -111,12 +169,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 
     let { faceEvents, lastEvaluatedKey } = await getFaceEvents(faceEventArgs, args.timeZone, requestModifiers, sessionId);
 
-    const hadLocationFilter =
-      faceEventArgs.searchFilter?.locationUuids &&
-      faceEventArgs.searchFilter.locationUuids.length > 0;
+    const requestedLocationUuids = faceEventArgs.searchFilter?.locationUuids ?? [];
+    const hadLocationFilter = requestedLocationUuids.length > 0;
+    let note: string | undefined;
     if (faceEvents.length === 0 && hadLocationFilter) {
       logger.info(
-        `[faces-tool] Empty results with locationUuids filter ${JSON.stringify(faceEventArgs.searchFilter!.locationUuids)}, retrying without location filter`
+        `[faces-tool] Empty results with locationUuids filter ${JSON.stringify(requestedLocationUuids)}, retrying without location filter`
       );
       const retryArgs = {
         ...faceEventArgs,
@@ -125,13 +183,29 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
       const retry = await getFaceEvents(retryArgs as GetFaceEventsArgs, args.timeZone, requestModifiers, sessionId);
       faceEvents = retry.faceEvents;
       lastEvaluatedKey = retry.lastEvaluatedKey;
+      // Without this the caller cannot tell a location-scoped result from an
+      // org-wide one, and reports org-wide sightings as having happened at the
+      // requested location (observed in prod, 2026-08-03).
+      if (faceEvents.length > 0) {
+        note =
+          `SCOPE CHANGED: no face events were found at the requested location(s) ` +
+          `[${requestedLocationUuids.join(", ")}], so this search was re-run ACROSS THE WHOLE ORG. ` +
+          `The events below are NOT limited to those locations — check each event's locationUuid before ` +
+          `attributing a sighting to the location the user asked about, and tell the user the scope was widened.`;
+      } else {
+        note =
+          `No face events at the requested location(s) [${requestedLocationUuids.join(", ")}], ` +
+          `and none org-wide for this time range either.`;
+      }
     }
 
     return createToolStructuredContent({
       requestType: RequestType.GET_FACE_EVENTS,
       getFaceEventsResponse: faceEvents,
+      faceEventSummary: summarizeFaceEvents(faceEvents, Boolean(lastEvaluatedKey)),
       lastEvaluatedKey: lastEvaluatedKey ?? undefined,
       resolvedNames: resolvedNamesOutput ?? undefined,
+      note,
     });
   }
 
@@ -222,13 +296,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 export function createTool(server: McpServer) {
   server.registerTool(
     TOOL_NAME,
-    {
-      title: "Faces",
-      description: TOOL_DESCRIPTION,
-      inputSchema: TOOL_ARGS,
-      outputSchema: OUTPUT_SCHEMA.shape,
-      annotations: { readOnlyHint: true },
-    },
+    // faceEventSummary is the whole point of the roster: a caller that projects
+    // down to the raw event rows must not lose the deduplicated person list.
+    protectFields(
+      {
+        title: "Faces",
+        description: TOOL_DESCRIPTION,
+        inputSchema: TOOL_ARGS,
+        outputSchema: OUTPUT_SCHEMA.shape,
+        annotations: { readOnlyHint: true },
+      },
+      ["faceEventSummary"]
+    ),
     TOOL_HANDLER
   );
 }

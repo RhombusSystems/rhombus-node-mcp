@@ -120,8 +120,10 @@ export const TOOL_ARGS = {
 
 "get-face-events" — face sightings; use it for reporting on who was seen by the camera system.
 - **Automatic name resolution:** faceNames accepts partial or first-name-only names (e.g. "Brandon", "Omar"); the tool looks up the registered-faces directory and resolves them to exact names and person UUIDs before searching. The response's "resolvedNames" field shows what each queried name matched (null = no match).
-- Filter with faceNames, hasEmbedding, hasName, labels, locationUuids, personUuids, and a time range via rangeStart / rangeEnd (milliseconds).
-- For all face events at a location, pass only the location UUID in searchFilter and NO device UUIDs (searchFilter.deviceUuids), so the API returns every face detected there.
+- Filter with faceNames, hasEmbedding, hasName, labels, locationUuids, personUuids, and a time range via searchFilter.timestampFilter.rangeStart / rangeEnd, which are ISO 8601 strings WITH a UTC offset (e.g. "2026-08-03T00:00:00-07:00") — not epoch milliseconds.
+- **For "who was seen" questions, set searchFilter.hasName to true.** Unnamed detections cannot answer a who-question and they consume the page budget: an unfiltered page is typically ~85% nameless, so the named people you need get pushed onto later pages.
+- **Read the faceEventSummary field in the response.** It lists every distinct identified person on the page with their event count and first/last sighting, already deduplicated. Enumerate people from it rather than by scanning getFaceEventsResponse by hand, and page until morePagesAvailable is false before saying who was or wasn't seen.
+- For all face events at a location, pass only the location UUID in searchFilter and NO device UUIDs (searchFilter.deviceUuids), so the API returns every face detected there. If that location has no face events the tool falls back to an org-wide search and says so in the "note" field — read it before attributing results to the requested location.
 - When the user asks about a specific person at a location (e.g. "Jane Doe at Main Office"), call get-registered-faces first, find the best match, then call get-face-events with that precise name — this request expects names exactly as stored.
 
 "get-registered-faces" — every person (registered face) known to the org, each with a "labels" array showing the label groups they belong to. Returns ALL people regardless of any timestamp filter.
@@ -129,6 +131,9 @@ export const TOOL_ARGS = {
 "get-person-labels" — a mapping of person UUIDs to their assigned labels across the org. Use it to discover what label groups exist; for a group question ("was anyone from Engineering seen today?") get the labels first, then query face events filtered by those personUuids or labels.`,
   ),
   faceEventFilter: GetFaceEventsArgs,
+  // Only pageRequest and searchFilter live inside faceEventFilter. Everything
+  // below is a top-level sibling — nesting them under faceEventFilter is the
+  // most common way this tool gets called wrong and costs a rejected round trip.
   timeZone: z
     .string()
     .describe(
@@ -243,7 +248,43 @@ export const OUTPUT_SCHEMA = z.object({
     eventTimestamp: z.string().optional(),
     deviceUuid: z.string().optional(),
   })).optional().describe("Face events for a specific person"),
+  faceEventSummary: z
+    .optional(
+      z.object({
+        totalEventsThisPage: z.number().describe("How many face events this page contains."),
+        namedEvents: z.number().describe("How many of them resolved to a registered person."),
+        unnamedEvents: z
+          .number()
+          .describe("How many were unrecognized faces. These cannot answer a 'who' question."),
+        identifiedPeople: z
+          .array(
+            z.object({
+              name: z.string(),
+              eventCount: z.number(),
+              firstSeen: z.string().describe("Human-readable timestamp of their earliest sighting on this page."),
+              lastSeen: z.string().describe("Human-readable timestamp of their latest sighting on this page."),
+            })
+          )
+          .describe(
+            "Every DISTINCT identified person on this page, most-seen first. This is the complete roster for this page — report all of these names, not a sample."
+          ),
+        morePagesAvailable: z
+          .boolean()
+          .describe(
+            "True when lastEvaluatedKey is set. More people may appear on later pages; do not state who was or wasn't seen until this is false."
+          ),
+      })
+    )
+    .describe(
+      "Pre-computed roster of distinct people on this page of face events. Enumerate people from here instead of deduplicating getFaceEventsResponse by hand."
+    ),
   lastEvaluatedKey: z.string().optional().describe("For paginated requests, this is the returned last evaluated key that can be passed back in on the next request to get the next page of results"),
+  note: z
+    .string()
+    .optional()
+    .describe(
+      "Diagnostic note about why a result set may be empty, incomplete, or scoped differently than requested. Read it before attributing results to the filters you asked for."
+    ),
   error: z.optional(z.string()),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;
