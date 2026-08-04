@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
   filterIncludedFields,
   applyFilterBy,
@@ -498,5 +501,70 @@ describe("applyGroupBy", () => {
     expect(projected.camerasGrouped).toBeDefined();
     expect(projected.camerasGrouped.groups["loc-a"]).toBe(3);
     expect(projected.camerasCount).toBe(4);
+  });
+});
+
+describe("createFilteringProxy — missing structuredContent backstop", () => {
+  /**
+   * The failure this guards against is invisible at the handler level: the
+   * handler returns readable text and only the SDK's post-handler validation
+   * turns it into -32602. So drive it through the real SDK.
+   */
+  async function callThroughProxy(result: unknown, opts: { outputSchema?: boolean } = {}) {
+    const server = new McpServer({ name: "test", version: "0.0.0" });
+    createFilteringProxy(server).registerTool(
+      "forgetful-tool",
+      {
+        description: "a tool whose author forgot structuredContent",
+        inputSchema: {},
+        ...(opts.outputSchema === false ? {} : { outputSchema: { message: z.string().optional() } }),
+      },
+      async () => result as never
+    );
+
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    try {
+      return await client.callTool({
+        name: "forgetful-tool",
+        arguments: { includeFields: null, filterBy: null, groupBy: null },
+      });
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  }
+
+  it("preserves the tool's message instead of letting the SDK emit -32602", async () => {
+    const result = await callThroughProxy({
+      content: [{ type: "text", text: "doorControllerUuid is required." }],
+    });
+
+    const text = (result.content as { text: string }[])[0].text;
+    expect(text).toBe("doorControllerUuid is required.");
+    expect(text).not.toContain("-32602");
+    expect(result.isError).toBe(true);
+  });
+
+  it("leaves a well-formed result untouched", async () => {
+    const result = await callThroughProxy({
+      content: [{ type: "text", text: "ok" }],
+      structuredContent: { message: "ok" },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual({ message: "ok" });
+  });
+
+  it("does not touch tools that register no outputSchema", async () => {
+    const result = await callThroughProxy(
+      { content: [{ type: "text", text: "plain success text" }] },
+      { outputSchema: false }
+    );
+
+    // No outputSchema means no validation to fail — flagging isError here would
+    // wrongly turn legitimate text results (the private MCP's pattern) into errors.
+    expect(result.isError).toBeFalsy();
   });
 });

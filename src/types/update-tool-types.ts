@@ -110,21 +110,34 @@ export const TOOL_ARGS = {
     ),
 
   // Camera-specific update fields
+  // These three arrive as free-form JSON strings, so the field schemas below are
+  // NOT part of the input schema the model sees — this description text is the
+  // only range guidance it ever gets. Keep it in sync with CameraVideoSettings /
+  // CameraAudioSettings / CameraDeviceSettings.
+  //
+  // Promoting them to real object schemas would NOT make out-of-range values
+  // impossible: the chatbot sends MCP tools to OpenAI with `strict: false`
+  // (chatbot src/mcp/toolAdapters.ts), so there is no constrained decoding, and
+  // even under `strict: true` JSON Schema `minimum`/`maximum` are not enforced
+  // keywords. Range checking is therefore ALWAYS the tool's job — which is why
+  // parseSettingsBlock reports the field, the bound, and the received value.
   cameraVideoSettings: z
     .string()
     .nullable()
     .describe(
-      `JSON string of video settings to update for camera. Example for a dark image: '{"img_brightness": 0, "wdr_strength": 64}'; for a washed-out image: '{"img_brightness": -50, "img_contrast": 80}'. Saturation matters — 0 yields grayscale; most cameras look best mid-range, tune from there.`,
+      `JSON string of video settings to update for camera. Values outside these ranges are REJECTED — img_brightness: -255 to 255 · img_contrast: 0 to 128 · img_saturation: 0 to 255 · img_sharpness: 0 to 11 (6 is typical — NOT a 0-100 scale) · wdr_strength: 0 to 128 (64 is typical) · zero_motion_video_bitrate_percent: 0 to 100 · hdr_enabled / wdr_enabled / video_persist_disabled: booleans · resolution: {"width": n, "height": n}. The night-mode fields (night_img_brightness, night_img_contrast, night_img_saturation, night_img_sharpness) take the same ranges as their daytime counterparts. Example for a dark image: '{"img_brightness": 0, "wdr_strength": 64}'; for a washed-out image: '{"img_brightness": -50, "img_contrast": 80}'; for a blurry image: '{"img_sharpness": 8}'. Saturation matters — 0 yields grayscale; most cameras look best mid-range, tune from there.`,
     ),
   cameraAudioSettings: z
     .string()
     .nullable()
-    .describe("JSON string of audio settings to update for camera (recording, microphone, speaker)."),
+    .describe(
+      `JSON string of audio settings to update for camera. audio_record / device_mic_enabled / device_speaker_enabled: booleans · audio_internal_mic_volume: 0 to 100 · audio_internal_speaker_volume: 0 to 100. Example: '{"audio_record": true, "audio_internal_mic_volume": 80}'.`,
+    ),
   cameraDeviceSettings: z
     .string()
     .nullable()
     .describe(
-      `JSON string of device settings to update for camera (name, timezone, LED). LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'.`,
+      `JSON string of device settings to update for camera (name, timezone, LED). camera_name / camera_timezone: strings · led_intensity: 0 to 100 · led_mode: one of "auto", "always_on", "always_off" · led_stealth_mode: boolean. LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'.`,
     ),
 
   // Step tracking for multi-step updates
