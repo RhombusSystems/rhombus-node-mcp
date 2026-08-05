@@ -94,7 +94,8 @@ export function createTool(server: McpServer) {
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
       outputSchema: OUTPUT_SCHEMA.shape,
-      annotations: { readOnlyHint: false, destructiveHint: false },
+      // `dismiss` cannot be undone, which is what destructiveHint is for.
+      annotations: { readOnlyHint: false, destructiveHint: true },
     },
     TOOL_HANDLER
   );

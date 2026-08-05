@@ -1,5 +1,5 @@
 import { logger } from "../logger.js";
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type {
 	CreateVideoWallOptions,
@@ -7,25 +7,20 @@ import type {
 } from "../types/video-walls-tool-types.js";
 import type { RequestModifiers } from "../util.js";
 
-export async function createVideoWall(
-	options: CreateVideoWallOptions,
-	requestModifiers: RequestModifiers,
-	sessionId?: string,
-) {
-	// our grid layout settings is a little complicated. we'll dumb it down
-	// to certain presets based on length of device list
-	const numDevices =
-		options?.settings.numVisibleDevicesAtOnce ??
-		options?.deviceList?.length ??
-		1;
+export type GridSettings = {
+	gridLayout: string;
+	gridSize: { width: number; height: number };
+};
 
-	let gridSettings: {
-		gridLayout: string;
-		gridSize: {
-			width: number;
-			height: number;
-		};
-	};
+/**
+ * Our grid layout settings are a little complicated, so we dumb them down to
+ * presets chosen by how many devices are visible at once.
+ *
+ * Exported because UPDATE has to recompute it: a wall grown from 4 cameras to 9
+ * while keeping its 2x2 layout would render five of them invisibly.
+ */
+export function computeGridSettings(numDevices: number): GridSettings {
+	let gridSettings: GridSettings;
 	if (numDevices <= 1) {
 		gridSettings = {
 			gridLayout: "1",
@@ -128,6 +123,17 @@ export async function createVideoWall(
 			gridSize: { width: 8, height: 8 },
 		};
 	}
+	return gridSettings;
+}
+
+export async function createVideoWall(
+	options: CreateVideoWallOptions,
+	requestModifiers: RequestModifiers,
+	sessionId?: string,
+) {
+	const gridSettings = computeGridSettings(
+		options?.settings.numVisibleDevicesAtOnce ?? options?.deviceList?.length ?? 1,
+	);
 
 	const body = {
 		videoWall: {
@@ -206,4 +212,75 @@ export async function handleCreateVideoWallRequest(
 			error: response?.errorMsg ?? undefined,
 		};
 	}
+}
+
+/**
+ * api2's `updateVideoWalls` REPLACES the whole videoWall object, so the caller
+ * must read the current wall and merge before calling this — see the tool's
+ * update branch.
+ */
+export async function updateVideoWall(
+	videoWall: {
+		uuid: string;
+		displayName?: string;
+		deviceList: string[];
+		orgUuid?: string;
+		othersCanEdit?: boolean;
+		shared?: boolean;
+		settings: Record<string, unknown>;
+	},
+	requestModifiers: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<schema["Camera_UpdateVideoWallWSResponse"]>({
+		route: "/camera/updateVideoWalls",
+		body: { videoWall } as schema["Camera_UpdateVideoWallWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return {
+		updated: { success: true, uuid: videoWall.uuid },
+		warningMsg: res.warningMsg ?? undefined,
+	};
+}
+
+export async function deleteVideoWall(
+	uuid: string,
+	requestModifiers: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<schema["Camera_DeleteVideoWallWSResponse"]>({
+		route: "/camera/deleteVideoWall",
+		body: { uuid } satisfies schema["Camera_DeleteVideoWallWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return {
+		deleted: { success: true, uuid },
+		warningMsg: res.warningMsg ?? undefined,
+	};
+}
+
+/** The raw wall, for the read-modify-write that update requires. */
+export async function findVideoWall(
+	uuid: string,
+	requestModifiers: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<schema["Camera_GetVideoWallsWSResponse"]>({
+		route: "/camera/getVideoWalls",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return res.videoWalls?.find(wall => wall?.uuid === uuid) ?? undefined;
 }

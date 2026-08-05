@@ -8,6 +8,10 @@ export enum LprToolRequestType {
   GET_VEHICLE_LABELS = "get-vehicle-labels",
   SEARCH_LICENSE_PLATES = "search-license-plates",
   SAVE_VEHICLE = "save-vehicle",
+  UPDATE_VEHICLE = "update-vehicle",
+  DELETE_VEHICLE = "delete-vehicle",
+  ADD_VEHICLE_LABEL = "add-vehicle-label",
+  REMOVE_VEHICLE_LABEL = "remove-vehicle-label",
 }
 
 export const VehicleEventsArgs = z.object({
@@ -79,9 +83,28 @@ Pair events to locations by NAME via location-tool — never show location UUIDs
       "The timezone for formatting timestamps which should come from the location of the device for the LPR event, or the user's timezone. This is necessary for the tool to produce accurate formatted timestamps."
     ),
   licensePlateQuery: z.string().nullable().describe("License plate number to search. Required for 'search-license-plates'."),
-  vehicleName: z.string().nullable().describe("Name for the vehicle. Required for 'save-vehicle'."),
-  vehicleLicensePlate: z.string().nullable().describe("License plate for the vehicle. Required for 'save-vehicle'."),
-  vehicleDescription: z.string().nullable().describe("Description for the vehicle. Optional for 'save-vehicle'."),
+  vehicleName: z
+    .string()
+    .nullable()
+    .describe(
+      "Name for the vehicle. Required for 'save-vehicle'; for 'update-vehicle' it is the new name (omit to leave it unchanged)."
+    ),
+  vehicleLicensePlate: z
+    .string()
+    .nullable()
+    .describe(
+      "License plate for the vehicle. This is the vehicle's identity — there is no separate UUID. Required for 'save-vehicle', 'update-vehicle', 'delete-vehicle', 'add-vehicle-label' and 'remove-vehicle-label'. A plate cannot be edited: to correct a mistyped plate, 'delete-vehicle' the wrong one and 'save-vehicle' the right one."
+    ),
+  vehicleDescription: z
+    .string()
+    .nullable()
+    .describe(
+      "Description for the vehicle. Optional for 'save-vehicle'; for 'update-vehicle' it is the new description (omit to leave it unchanged)."
+    ),
+  vehicleLabel: z
+    .string()
+    .nullable()
+    .describe("A single vehicle label name. Required for 'add-vehicle-label' and 'remove-vehicle-label'."),
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
@@ -150,7 +173,25 @@ export const OUTPUT_SCHEMA = z.object({
   })).optional().describe("License plate search results"),
   saveVehicleResult: z.object({
     success: z.boolean().optional(),
-  }).optional().describe("Result of saving a vehicle"),
+    licensePlate: z.string().optional(),
+  }).optional().describe("Result of saving or updating a vehicle"),
+  deleteVehicleResult: z.object({
+    success: z.boolean().optional(),
+    licensePlate: z.string().optional(),
+  }).optional().describe("Result of deleting a saved vehicle"),
+  vehicleLabelResult: z.object({
+    success: z.boolean().optional(),
+    licensePlate: z.string().optional(),
+    label: z.string().optional(),
+  }).optional().describe("Result of adding or removing a vehicle label"),
+  note: z
+    .string()
+    .optional()
+    .describe("A caveat about this result that the user needs to be told."),
+  warningMsg: z
+    .string()
+    .optional()
+    .describe("A warning from the Rhombus API — the call succeeded, but with a caveat."),
   error: z.string().optional().describe("An error message if the request failed."),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

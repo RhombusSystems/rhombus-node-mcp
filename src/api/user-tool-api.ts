@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { apiWarning, postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -167,4 +167,85 @@ export async function getPermissionGroups(
       locationGranularAccessMap: toNestedStringMap(group.locationGranularAccessMap as any),
     })) ?? []
   );
+}
+
+// ---------------------------------------------------------------------------
+// User write paths
+// ---------------------------------------------------------------------------
+
+export async function createUser(
+  input: {
+    name: string;
+    email: string;
+    permissionGroupUuid: string;
+    suppressWelcomeEmail?: boolean;
+  },
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["User_CreateUserWSResponse"]>({
+    route: "/user/createUser",
+    body: {
+      name: input.name,
+      email: input.email,
+      permissionGroupUuid: input.permissionGroupUuid,
+      // Creating a user normally emails them an invitation. That is an
+      // outward-facing side effect, so the caller has to opt into suppressing it
+      // rather than us silently picking either behaviour.
+      suppressWelcomeEmail: input.suppressWelcomeEmail ?? false,
+    } satisfies schema["User_CreateUserWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return {
+    success: true,
+    uuid: res.userUuid ?? undefined,
+    warningMsg: res.warningMsg ?? undefined,
+  };
+}
+
+/**
+ * Selective user update — omitted fields are left alone, so a rename cannot
+ * blank someone's notification settings or MFA flag.
+ */
+export async function updateUser(
+  userUuid: string,
+  changes: { name?: string; permissionGroupUuid?: string },
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["User_UpdateUserSelectiveWSResponse"]>({
+    route: "/user/updateUserSelective",
+    body: {
+      userUuid,
+      name: changes.name,
+      permissionGroupUuid: changes.permissionGroupUuid,
+    } satisfies schema["User_UpdateUserSelectiveWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: userUuid, warningMsg: apiWarning(res) };
+}
+
+export async function deleteUser(
+  userUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["User_DeleteUserWSResponse"]>({
+    route: "/user/deleteUser",
+    body: { userUuid } satisfies schema["User_DeleteUserWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: userUuid, warningMsg: apiWarning(res) };
 }

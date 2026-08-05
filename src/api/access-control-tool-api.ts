@@ -1,6 +1,11 @@
-import { postApi } from "../network/network.js";
+import { apiWarning, postApi, throwIfApiError } from "../network/network.js";
 import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
+import type {
+  AccessControlGroup,
+  AccessGrant,
+  LockdownPlanSummary,
+} from "../types/access-control-tool-types.js";
 import type { RequestModifiers } from "../util.js";
 
 const PERMISSION_RANK: Record<string, number> = {
@@ -35,7 +40,7 @@ export async function unlockDoor(
 export async function getAccessControlGroups(
   requestModifiers?: RequestModifiers,
   sessionId?: string
-) {
+): Promise<AccessControlGroup[]> {
   const res = await postApi<schema["Group_FindOrgGroupsByOrgWSResponse"]>({
     route: "/accesscontrol/findAccessControlGroupsByOrg",
     body: {} satisfies schema["Group_FindOrgGroupsByOrgWSRequest"],
@@ -88,7 +93,7 @@ export async function getCredentialsByUser(
 export async function getLockdownPlans(
   requestModifiers?: RequestModifiers,
   sessionId?: string
-) {
+): Promise<LockdownPlanSummary[]> {
   const res = await postApi<schema["Accesscontrol_lockdownplan_FindLockdownPlansWSResponse"]>({
     route: "/accesscontrol/lockdownPlan/findLockdownPlans",
     body: {} satisfies schema["Accesscontrol_lockdownplan_FindLockdownPlansWSRequest"],
@@ -182,7 +187,7 @@ export async function getAccessGrants(
   locationUuid?: string | null,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-) {
+): Promise<AccessGrant[]> {
   const res = locationUuid
     ? await postApi<schema["Accesscontrol_accessgrant_FindLocationAccessGrantsByLocationWSResponse"]>({
         route: "/accesscontrol/findLocationAccessGrantsByLocation",
@@ -354,4 +359,348 @@ export async function getRemoteUnlockUsers(
 
   const totalUsers = seenUsers.size;
   return { doors: doorNames, totalUsers, groups };
+}
+
+// ---------------------------------------------------------------------------
+// Access control groups
+// ---------------------------------------------------------------------------
+
+export async function createAccessControlGroup(
+  name: string,
+  description?: string,
+  userUuids?: string[],
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Group_CreateOrgGroupWSResponse"]>({
+    route: "/accesscontrol/createAccessControlGroup",
+    body: {
+      name,
+      description: description || undefined,
+      userUuids: userUuids ?? [],
+    } satisfies schema["Group_CreateOrgGroupWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return {
+    success: true,
+    uuid: res.group?.uuid ?? undefined,
+    memberCount: res.groupMembers?.length ?? userUuids?.length ?? 0,
+  };
+}
+
+export async function updateAccessControlGroup(
+  groupUuid: string,
+  changes: { name?: string; description?: string },
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Group_UpdateOrgGroupWSResponse"]>({
+    route: "/accesscontrol/updateAccessControlGroup",
+    body: {
+      groupUuid,
+      name: changes.name,
+      description: changes.description,
+    } satisfies schema["Group_UpdateOrgGroupWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: groupUuid };
+}
+
+export async function deleteAccessControlGroup(
+  groupUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Group_DeleteOrgGroupWSResponse"]>({
+    route: "/accesscontrol/deleteAccessControlGroup",
+    body: { groupUuid } satisfies schema["Group_DeleteOrgGroupWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: groupUuid };
+}
+
+export async function changeAccessControlGroupMembers(
+  groupUuid: string,
+  userUuids: string[],
+  action: "add" | "remove",
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Group_AddUsersToOrgGroupWSResponse"]>({
+    route:
+      action === "add"
+        ? "/accesscontrol/addUsersToAccessControlGroup"
+        : "/accesscontrol/removeUsersFromAccessControlGroup",
+    body: { groupUuid, userUuids } satisfies schema["Group_AddUsersToOrgGroupWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: groupUuid, userCount: userUuids.length };
+}
+
+// ---------------------------------------------------------------------------
+// Location access grants
+// ---------------------------------------------------------------------------
+
+/**
+ * `createAccessGrant` / `updateAccessGrant` both take the WHOLE grant object,
+ * so update callers must read the current grant and merge. Both can also
+ * succeed while reporting doors whose access-control licences are expired or
+ * unassigned — those doors silently do not get access, so they are surfaced.
+ */
+export async function writeAccessGrant(
+  accessGrant: Record<string, unknown>,
+  mode: "create" | "update",
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Accesscontrol_accessgrant_CreateAccessGrantWSResponse"]>({
+    route:
+      mode === "create"
+        ? "/accesscontrol/createAccessGrant"
+        : "/accesscontrol/updateAccessGrant",
+    body: {
+      accessGrant,
+    } as schema["Accesscontrol_accessgrant_CreateAccessGrantWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  // `src/types/schema.ts` is generated from an older assets/openapi.json than
+  // the one in the repo, so these three response fields exist on the wire and in
+  // the current spec but not yet in the generated type. Read them through a
+  // narrow local shape rather than dropping them — an expired-licence door is
+  // one that silently grants nobody access.
+  const licenceInfo = res as {
+    expiredACDLicensesDoorUuids?: (string | null)[] | null;
+    unassignedACDLicensesDoorUuids?: (string | null)[] | null;
+    warningMsg?: string | null;
+  };
+
+  return {
+    success: true,
+    uuid: res.accessGrant?.uuid ?? (accessGrant.uuid as string | undefined),
+    expiredACDLicensesDoorUuids:
+      licenceInfo.expiredACDLicensesDoorUuids?.filter((value): value is string => !!value) ?? [],
+    unassignedACDLicensesDoorUuids:
+      licenceInfo.unassignedACDLicensesDoorUuids?.filter((value): value is string => !!value) ??
+      [],
+    warningMsg: licenceInfo.warningMsg ?? undefined,
+  };
+}
+
+export async function deleteAccessGrant(
+  accessGrantUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<
+    schema["Accesscontrol_accessgrant_DeleteLocationAccessGrantWSResponse"]
+  >({
+    route: "/accesscontrol/deleteLocationAccessGrant",
+    body: {
+      accessGrantUuid,
+    } satisfies schema["Accesscontrol_accessgrant_DeleteLocationAccessGrantWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: accessGrantUuid, warningMsg: res.warningMsg ?? undefined };
+}
+
+// ---------------------------------------------------------------------------
+// Credentials
+// ---------------------------------------------------------------------------
+
+/** Attach an existing (unassigned) physical credential to a user. */
+export async function assignCredential(
+  credentialHexValue: string,
+  userUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<
+    schema["Accesscontrol_credentials_AssignAccessControlCredentialWSResponse"]
+  >({
+    route: "/accesscontrol/assignAccessControlCredential",
+    body: {
+      credentialHexValue,
+      userUuid,
+    } satisfies schema["Accesscontrol_credentials_AssignAccessControlCredentialWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, userUuid, warningMsg: apiWarning(res) };
+}
+
+/**
+ * The four credential state changes that share a `{credentialUuid}` body.
+ *
+ * They are NOT interchangeable and the difference matters operationally:
+ * suspend is reversible (unsuspend restores it), revoke detaches the credential
+ * from its user but keeps the record, and delete destroys the record entirely.
+ */
+export async function changeCredentialState(
+  credentialUuid: string,
+  action: "revoke" | "suspend" | "unsuspend" | "delete",
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const routes = {
+    revoke: "/accesscontrol/revokeAccessControlCredential",
+    suspend: "/accesscontrol/suspendAccessControlCredential",
+    unsuspend: "/accesscontrol/unsuspendAccessControlCredential",
+    delete: "/accesscontrol/deleteAccessControlCredential",
+  } as const;
+
+  const res = await postApi<
+    schema["Accesscontrol_credentials_RevokeAccessControlCredentialWSResponse"]
+  >({
+    route: routes[action],
+    body: {
+      credentialUuid,
+    } satisfies schema["Accesscontrol_credentials_RevokeAccessControlCredentialWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: credentialUuid, warningMsg: apiWarning(res) };
+}
+
+export async function updateCredentialNote(
+  credentialUuid: string,
+  note: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<
+    schema["Accesscontrol_credentials_UpdateAccessControlCredentialNoteWSResponse"]
+  >({
+    route: "/accesscontrol/updateAccessControlCredentialNote",
+    body: {
+      credentialUuid,
+      note,
+    } satisfies schema["Accesscontrol_credentials_UpdateAccessControlCredentialNoteWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: credentialUuid, warningMsg: apiWarning(res) };
+}
+
+// ---------------------------------------------------------------------------
+// Lockdown plans
+// ---------------------------------------------------------------------------
+
+export async function getLockdownPlan(
+  lockdownPlanUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Accesscontrol_lockdownplan_GetLockdownPlanWSResponse"]>({
+    route: "/accesscontrol/lockdownPlan/getLockdownPlan",
+    body: {
+      lockdownPlanUuid,
+    } satisfies schema["Accesscontrol_lockdownplan_GetLockdownPlanWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return res.lockdownPlan ?? undefined;
+}
+
+/**
+ * Rename a lockdown plan.
+ *
+ * `updateLocationLockdownPlan` takes the plan's door-state map, activation,
+ * deactivation and test plans as sibling fields, so a name-only body would blank
+ * them — which on a lockdown plan means doors silently stop locking in an
+ * emergency. Everything except the name is therefore read back and resent
+ * verbatim. Authoring those nested plans from natural language is deliberately
+ * NOT exposed.
+ */
+export async function renameLockdownPlan(
+  lockdownPlanUuid: string,
+  name: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const existing = await getLockdownPlan(lockdownPlanUuid, requestModifiers, sessionId);
+  if (!existing) return { success: false as const, missing: true as const };
+
+  const res = await postApi<
+    schema["Accesscontrol_lockdownplan_UpdateLocationLockdownPlanWSResponse"]
+  >({
+    route: "/accesscontrol/lockdownPlan/updateLocationLockdownPlan",
+    body: {
+      lockdownPlanUuid,
+      name,
+      activationPlan: existing.activationPlan,
+      deactivationPlan: existing.deactivationPlan,
+      defaultLockdownState: existing.defaultLockdownState,
+      doorLockdownStateMap: existing.doorLockdownStateMap,
+      physicalAccess: existing.physicalAccess,
+      testPlan: existing.testPlan,
+    } as schema["Accesscontrol_lockdownplan_UpdateLocationLockdownPlanWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return {
+    success: true as const,
+    missing: false as const,
+    uuid: lockdownPlanUuid,
+    previousName: existing.name ?? undefined,
+  };
+}
+
+export async function deleteLockdownPlan(
+  lockdownPlanUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<
+    schema["Accesscontrol_lockdownplan_DeleteLockdownPlanWSResponse"]
+  >({
+    route: "/accesscontrol/lockdownPlan/deleteLockdownPlan",
+    body: {
+      lockdownPlanUuid,
+    } satisfies schema["Accesscontrol_lockdownplan_DeleteLockdownPlanWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return { success: true, uuid: lockdownPlanUuid };
 }

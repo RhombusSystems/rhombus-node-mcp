@@ -493,3 +493,89 @@ export function formatCameraSettings(settings: any): string {
 
   return sections.join("\n\n");
 }
+
+/**
+ * Apply settings to a DOORBELL camera.
+ *
+ * Doorbell cameras take the same setting NAMES as cameras but a different
+ * envelope: `/doorbellcamera/updateConfig` wants one FLAT `configUpdate` object,
+ * where `/camera/updateFacetedConfig` wants `videoFacetSettings` /
+ * `audioFacetSettings` / `deviceSettings` keyed by facet. Sending the faceted
+ * shape here is accepted and silently changes nothing, so the flattening has to
+ * happen on this side.
+ */
+export async function updateDoorbellCameraConfig(
+  deviceUuid: string,
+  settings: Record<string, unknown>,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  updatedSettings?: Record<string, unknown>;
+}> {
+  try {
+    const configUpdate = { deviceUuid, ...settings };
+    const result = await postApi<schema["Common_devices_UpdateConfigWSResponse"]>({
+      route: "/doorbellcamera/updateConfig",
+      body: { configUpdate },
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return {
+        success: false,
+        error: result.errorMsg || "Failed to update doorbell camera configuration",
+      };
+    }
+
+    return { success: true, updatedSettings: configUpdate };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+/** Confirm a doorbell camera exists before writing to it. */
+export async function getDoorbellCameraDetails(
+  deviceUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string; name?: string }> {
+  try {
+    const result = await postApi<{
+      minimalStates?: ({ uuid?: string | null; name?: string | null } | null)[] | null;
+      error?: boolean;
+      errorMsg?: string | null;
+    }>({
+      route: "/doorbellcamera/getMinimalStateList",
+      body: {},
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return {
+        success: false,
+        error: result.errorMsg || "Failed to list doorbell cameras",
+      };
+    }
+
+    const match = result.minimalStates?.find(state => state?.uuid === deviceUuid);
+    if (!match) {
+      return {
+        success: false,
+        error: `No doorbell camera in this organization has the uuid "${deviceUuid}". Use get-entity-tool with entityType doorbell-camera to list them — do not guess a uuid.`,
+      };
+    }
+    return { success: true, name: match.name ?? undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}

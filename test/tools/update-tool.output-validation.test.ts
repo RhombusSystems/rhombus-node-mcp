@@ -151,24 +151,34 @@ describe("update-tool — error paths survive output validation", () => {
     expect(result.isError).toBe(true);
   });
 
-  // "Coming soon" is an answer, not a transport failure: it must carry
-  // structuredContent to clear validation, but must NOT be flagged isError or
-  // the model narrates it as a broken tool.
-  it("returns the not-implemented message for other entity types without erroring", async () => {
-    const result = await callUpdateTool(withNulledArgs({ entityType: "badge-reader" }));
+  // ENTITY_TYPE used to advertise five types with no handler, each answering
+  // "not yet implemented. Coming soon!". The enum now lists only what works, so
+  // those values are rejected up front.
+  //
+  // This IS a -32602, but the input-validation kind, which is the opposite
+  // problem to the one this file is about: it enumerates the values that ARE
+  // accepted, so the model can correct itself. The failure mode being guarded
+  // against elsewhere here is an OUTPUT-validation -32602, which replaces a real
+  // message with an opaque protocol crash.
+  it.each([["badge-reader"], ["climate-sensor"], ["audio-gateway"]])(
+    "rejects the unimplemented entity type %s by naming the ones that work",
+    async unimplementedType => {
+      const result = await callUpdateTool(withNulledArgs({ entityType: unimplementedType }));
+
+      const text = textOf(result);
+      expect(text).toContain("camera");
+      expect(text).toContain("doorbell-camera");
+      expect(text).not.toContain("Coming soon");
+    }
+  );
+
+  it("accepts doorbell-camera, which now has a handler", async () => {
+    const result = await callUpdateTool(withNulledArgs({ entityType: "doorbell-camera" }));
 
     const text = textOf(result);
-    expect(text).not.toContain("-32602");
-    expect(text).toContain("not yet fully implemented");
-    expect(result.isError).toBeFalsy();
-  });
-
-  it("returns the entity-type form when no entityType is resolvable", async () => {
-    // `entityType` is required by the input schema, so the step-0 form is only
-    // reachable via an unhandled enum member — assert the shape directly.
-    const result = await callUpdateTool(withNulledArgs({ entityType: "climate-sensor" }));
-    expect(result.isError).toBeFalsy();
-    expect((result.structuredContent as { message?: string }).message).toContain("Climate sensor");
+    // Reaches the handler rather than being rejected by the input schema.
+    expect(text).not.toContain("Invalid option");
+    expect(text).toContain("cameraVideoSettings");
   });
 
   it("still applies a valid update and reports success", async () => {
