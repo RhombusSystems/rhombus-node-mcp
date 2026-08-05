@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getCameraSettings, getImageForCameraAtTime, getCameraMediaUris, getCameraAIThresholds } from "../api/camera-tool-api.js";
 import { getLogger } from "../logger.js";
-import { BASE_TOOL_ARGS, type ToolArgs } from "../types/camera-tool-types.js";
+import { BASE_TOOL_ARGS, OUTPUT_SCHEMA, type ToolArgs } from "../types/camera-tool-types.js";
 import { extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "camera-tool";
@@ -73,16 +73,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     args;
 
   if (!cameraUuid) {
+    const ask = {
+      needUserInput: true,
+      commandForUser: "Which camera are you talking about?",
+    };
     return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            needUserInput: true,
-            commandForUser: "Which camera are you talking about?",
-          }),
-        },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(ask) }],
+      structuredContent: ask,
     };
   }
 
@@ -105,68 +102,81 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
       });
 
       if (!response.success || !response.imageData) {
+        // isError skips output validation, so the failure detail (status,
+        // message) reaches the model instead of being replaced by a -32602.
         return {
+          isError: true,
           content: [{ type: "text" as const, text: JSON.stringify(response) }],
         };
       }
 
       logger.debug(`Received image response (base64 length ${response.imageData.length})`);
 
-      return {
-        content: [
-          {
-            type: "image" as const,
-            data: response.imageData,
-            mimeType: "image/jpeg",
-          },
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              success: true,
-              status: "image-attached",
-              cameraUuid,
-              timestampMs,
-              cropApplied: response.crop ?? null,
-            }),
-          },
-        ],
-      };
+      {
+        const imageStatus = {
+          success: true,
+          status: "image-attached",
+          cameraUuid,
+          timestampMs,
+          cropApplied: response.crop ?? null,
+        };
+        return {
+          content: [
+            {
+              type: "image" as const,
+              data: response.imageData,
+              mimeType: "image/jpeg",
+            },
+            {
+              type: "text" as const,
+              text: JSON.stringify(imageStatus),
+            },
+          ],
+          structuredContent: imageStatus,
+        };
+      }
 
     case "get-settings": {
       response = await getCameraSettings(cameraUuid, requestModifiers, sessionId);
+      if (!response?.success) {
+        return {
+          isError: true,
+          content: [{ type: "text" as const, text: JSON.stringify(response) }],
+        };
+      }
       if (args.detail !== "full" && response?.config) {
         response = { ...response, config: compactSettings(response.config) };
       }
       return {
         content: [{ type: "text" as const, text: JSON.stringify(response) }],
+        structuredContent: response,
       };
     }
+    // Both throw on an api2 rejection (throwIfApiError), which the SDK turns
+    // into an isError result — so the success path is the only one here.
     case "get-media-uris":
       response = await getCameraMediaUris(cameraUuid, requestModifiers, sessionId);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(response) }],
+        structuredContent: response,
       };
     case "get-ai-thresholds":
       response = await getCameraAIThresholds(cameraUuid, requestModifiers, sessionId);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(response) }],
+        structuredContent: response,
       };
     default:
-      response = {
-        error: true,
-        status: "missing unknown type from tool call",
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: `Unknown requestType "${requestType}" — expected one of: image, get-settings, get-media-uris, get-ai-thresholds.`,
+          },
+        ],
       };
-      break;
   }
-
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify({ response }),
-      },
-    ],
-  };
 };
 
 export function createTool(server: McpServer) {
@@ -176,6 +186,7 @@ export function createTool(server: McpServer) {
       title: "Cameras",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
+      outputSchema: OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true },
     },
     TOOL_HANDLER

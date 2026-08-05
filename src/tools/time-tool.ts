@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { parseTimeDescription } from "../api/time-tool-api.js";
 import { TOOL_ARGS, type ToolArgs } from "../types/time-tool-types.js";
 
@@ -11,6 +12,8 @@ const TOOL_DESCRIPTION = `This tool converts a natural-language description of t
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { time_description, timezone } = args;
+  // parseTimeDescription throws on an unparseable description; the SDK turns a
+  // thrown handler error into an isError result, which skips output validation.
   const result = parseTimeDescription(time_description ?? undefined, timezone ?? undefined, extra);
 
   return {
@@ -20,6 +23,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         text: JSON.stringify(result),
       },
     ],
+    structuredContent: result,
   };
 };
 
@@ -30,6 +34,11 @@ export function createTool(server: McpServer) {
       title: "Current Time",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
+      outputSchema: {
+        timestamp: z.number().optional().describe("Epoch milliseconds of the resolved time"),
+        iso: z.string().nullable().optional().describe("ISO 8601 form of the resolved time"),
+        timezone: z.string().nullable().optional().describe("IANA timezone the time was resolved in"),
+      },
       annotations: { readOnlyHint: true },
     },
     TOOL_HANDLER
