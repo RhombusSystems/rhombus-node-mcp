@@ -467,26 +467,14 @@ export async function writeAccessGrant(
 
   throwIfApiError(res);
 
-  // `src/types/schema.ts` is generated from an older assets/openapi.json than
-  // the one in the repo, so these three response fields exist on the wire and in
-  // the current spec but not yet in the generated type. Read them through a
-  // narrow local shape rather than dropping them — an expired-licence door is
-  // one that silently grants nobody access.
-  const licenceInfo = res as {
-    expiredACDLicensesDoorUuids?: (string | null)[] | null;
-    unassignedACDLicensesDoorUuids?: (string | null)[] | null;
-    warningMsg?: string | null;
-  };
-
   return {
     success: true,
     uuid: res.accessGrant?.uuid ?? (accessGrant.uuid as string | undefined),
     expiredACDLicensesDoorUuids:
-      licenceInfo.expiredACDLicensesDoorUuids?.filter((value): value is string => !!value) ?? [],
+      res.expiredACDLicensesDoorUuids?.filter((value): value is string => !!value) ?? [],
     unassignedACDLicensesDoorUuids:
-      licenceInfo.unassignedACDLicensesDoorUuids?.filter((value): value is string => !!value) ??
-      [],
-    warningMsg: licenceInfo.warningMsg ?? undefined,
+      res.unassignedACDLicensesDoorUuids?.filter((value): value is string => !!value) ?? [],
+    warningMsg: res.warningMsg ?? undefined,
   };
 }
 

@@ -272,11 +272,8 @@ export function apiFailureMessage(res: {
  * reporting that part of it did not apply, and that caveat has to reach the
  * user.
  *
- * Takes `unknown` on purpose: `src/types/schema.ts` is generated, and several
- * responses that carry `warningMsg` on the wire (and in the current
- * assets/openapi.json) do not declare it in the generated type yet. Reading it
- * structurally here keeps the caveat rather than dropping it to satisfy the
- * compiler.
+ * Takes `unknown` so any response shape can be checked without a cast at the
+ * call site — the caveat should never be dropped just to satisfy the compiler.
  */
 export function apiWarning(res: unknown): string | undefined {
   if (!res || typeof res !== "object") return undefined;

@@ -4,22 +4,7 @@ import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
-interface UptimeWindow {
-  startSeconds?: number | null;
-  durationSeconds?: number | null;
-}
-
-// /camera/getUptimeWindowsForOrg (not yet in the generated swagger schema)
-interface DeviceUptimeWindows {
-  deviceUuid?: string;
-  uptimeWindows?: UptimeWindow[] | null;
-}
-
-interface GetUptimeWindowsForOrgResponse {
-  uptimeByDevice?: DeviceUptimeWindows[] | null;
-  error?: boolean;
-  status?: string;
-}
+type UptimeWindow = schema["TimeWindowSeconds"];
 
 interface CameraUptimeResult {
   cameraUuid: string;
@@ -131,7 +116,7 @@ async function getFleetUptimeWindowsForOrg(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ): Promise<Map<string, UptimeWindow[]> | null> {
-  const res = await postApi<GetUptimeWindowsForOrgResponse>({
+  const res = await postApi<schema["Common_devices_GetUptimeWindowsForOrgWSResponse"]>({
     route: "/camera/getUptimeWindowsForOrg",
     body: {
       startTimeMs: startTimeSec * 1000,

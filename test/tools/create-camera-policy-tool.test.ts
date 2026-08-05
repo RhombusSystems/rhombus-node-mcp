@@ -205,21 +205,23 @@ describe("create-camera-policy-tool — malformed scheduleConfigs", () => {
     expect(vi.mocked(network.postApi)).not.toHaveBeenCalled();
   });
 
-  // The playbook used to offer LOITER_HUMAN / INACTIVITY_HUMAN, which are not in
-  // the API's ActivityEnum at all: create succeeded, updateCameraPolicy then
-  // rejected them, and the user was left with an empty orphan policy.
+  // The playbook used to offer activities that were not in the API's ActivityEnum
+  // at all: create succeeded, updateCameraPolicy then rejected them, and the user
+  // was left with an empty orphan policy. (The original offenders, LOITER_HUMAN /
+  // INACTIVITY_HUMAN, were added to ActivityEnum in the 2026-08-04 spec, so this
+  // now uses a value that is still not a constant.)
   it("rejects an activity that is not an API constant before creating anything", async () => {
     const result = await callTool(
       fullRunArgs({
         scheduleConfigs: JSON.stringify([
-          { scheduleUuid: SCHEDULE_UUID, activities: ["LOITER_HUMAN"] },
+          { scheduleUuid: SCHEDULE_UUID, activities: ["NOT_A_REAL_ACTIVITY"] },
         ]),
       })
     );
 
     const text = textOf(result);
     expect(result.isError).toBe(true);
-    expect(text).toContain("LOITER_HUMAN");
+    expect(text).toContain("NOT_A_REAL_ACTIVITY");
     expect(text).toContain("MOTION_HUMAN"); // lists what IS supported
     expect(vi.mocked(network.postApi)).not.toHaveBeenCalled();
   });

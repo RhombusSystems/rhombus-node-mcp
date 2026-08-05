@@ -1,6 +1,6 @@
 import { logger } from "../logger.js";
 import { postApi } from "../network/network.js";
-import { RhombusAppEnum, type Customer_GetCurrentUserWSResponse } from "../types/schema.js";
+import { RhombusAppEnum, type CustomerGetCurrentUserWsResponse } from "../types/schema.js";
 
 export type AccessibleApp = RhombusAppEnum;
 
@@ -29,7 +29,7 @@ async function fetchSession(sessionId: string): Promise<CachedSession | null> {
   if (cached !== undefined) return cached;
 
   try {
-    const res = await postApi<Customer_GetCurrentUserWSResponse>({
+    const res = await postApi<CustomerGetCurrentUserWsResponse>({
       route: "/customer/getCurrentUser",
       body: {},
       sessionId,
