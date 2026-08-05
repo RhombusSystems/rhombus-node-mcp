@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { apiFailureMessage, postApi } from "../network/network.js";
 import type { RequestModifiers } from "../util.js";
 import type { UpdateCameraConfigPayload } from "../types/update-tool-types.js";
 import { schema } from "../types/schema.js";
@@ -531,6 +531,42 @@ export async function updateDoorbellCameraConfig(
     }
 
     return { success: true, updatedSettings: configUpdate };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+/**
+ * Read a doorbell camera's current config. The response `config` is the same
+ * FLAT object `/doorbellcamera/updateConfig` writes, so a write can be verified
+ * by reading the changed keys back — which matters here because the update
+ * response only echoes the caller's own input (`updatedSettings`) and cannot
+ * distinguish a real write from a silent no-op.
+ */
+export async function getDoorbellCameraConfig(
+  deviceUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string; config?: Record<string, unknown> }> {
+  try {
+    const result = await postApi<schema["Doorbellcamera_GetDoorbellCameraConfigWSResponse"]>({
+      route: "/doorbellcamera/getConfig",
+      body: { deviceUuid } satisfies schema["Device_config_GetConfigWSRequest"],
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return {
+        success: false,
+        error: apiFailureMessage(result) ?? "Failed to read the doorbell camera's configuration",
+      };
+    }
+
+    return { success: true, config: (result.config ?? {}) as Record<string, unknown> };
   } catch (error) {
     return {
       success: false,

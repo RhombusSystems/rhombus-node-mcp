@@ -167,6 +167,11 @@ export const OUTPUT_SCHEMA = z.object({
   success: z.boolean().optional(),
   error: z.string().optional(),
   updatedSettings: z.any().optional(),
+  // Doorbell writes are verified by reading /doorbellcamera/getConfig back;
+  // these carry the before values and anything the read-back contradicted.
+  previousSettings: z.any().optional(),
+  settingsNotApplied: z.any().optional(),
+  settingsNotVerified: z.any().optional(),
 });
 
 // API payload types

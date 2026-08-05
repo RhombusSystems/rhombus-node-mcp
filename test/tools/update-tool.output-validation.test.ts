@@ -220,3 +220,220 @@ describe("update-tool — error paths survive output validation", () => {
     });
   });
 });
+
+const DOORBELL_UUID = "LEAIcNIVT3yAGjkD4mtbRw";
+
+/**
+ * Doorbell writes are verified against /doorbellcamera/getConfig, because the
+ * update response only echoes the caller's own input — before this read was
+ * wired up, a silent no-op was indistinguishable from a real write (gap 5 in
+ * docs/crud_missing_gaps.md). The mock flips the config it serves once
+ * updateConfig has been called, so the before/after reads see different states
+ * exactly like the live API.
+ */
+function mockDoorbellApi({
+  before,
+  after,
+}: {
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}) {
+  let updated = false;
+  vi.mocked(network.postApi).mockImplementation(async (call: unknown) => {
+    const { route } = call as { route: string };
+    if (route === "/doorbellcamera/getMinimalStateList") {
+      return { minimalStates: [{ uuid: DOORBELL_UUID, name: "Front Door" }] } as never;
+    }
+    if (route === "/doorbellcamera/updateConfig") {
+      updated = true;
+      return { error: false } as never;
+    }
+    if (route === "/doorbellcamera/getConfig") {
+      return { error: false, config: updated ? after : before } as never;
+    }
+    throw new Error(`unexpected route ${route}`);
+  });
+}
+
+describe("update-tool — doorbell writes are verified via getConfig", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows the settable subset of the current config when no settings are passed", async () => {
+    mockDoorbellApi({
+      before: {
+        img_sharpness: 6,
+        img_contrast: 64,
+        audio_record: true,
+        // internal fields must NOT leak into currentSettings — the full config
+        // has ~150 of them and none are settable through this tool
+        obj_ai_threshold: 0.5,
+        orgUuid: "someOrgUuid",
+      },
+      after: {},
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({ entityType: "doorbell-camera", entityUuid: DOORBELL_UUID })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as {
+      needUserInput?: boolean;
+      currentSettings?: { video?: Record<string, unknown>; audio?: Record<string, unknown> };
+    };
+    expect(structured.needUserInput).toBe(true);
+    expect(structured.currentSettings?.video).toEqual({ img_sharpness: 6, img_contrast: 64 });
+    expect(structured.currentSettings?.audio).toEqual({ audio_record: true });
+    expect(JSON.stringify(structured.currentSettings)).not.toContain("obj_ai_threshold");
+  });
+
+  it("reports a verified write, with the previous values, when the read-back matches", async () => {
+    mockDoorbellApi({
+      before: { img_contrast: 64 },
+      after: { img_contrast: 32 },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as {
+      success?: boolean;
+      message?: string;
+      previousSettings?: Record<string, unknown>;
+      settingsNotApplied?: unknown;
+    };
+    expect(structured.success).toBe(true);
+    expect(structured.message).toContain("verified");
+    expect(structured.previousSettings).toEqual({ img_contrast: 64 });
+    expect(structured.settingsNotApplied).toBeUndefined();
+  });
+
+  // The exact failure mode that motivated wiring up getConfig: api2 accepts the
+  // update, returns error:false, and changes nothing. Without the read-back the
+  // tool reported this as a success.
+  it("reports an error when the read-back shows the write was a silent no-op", async () => {
+    mockDoorbellApi({
+      before: { img_contrast: 64 },
+      after: { img_contrast: 64 },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBe(true);
+    const text = textOf(result);
+    expect(text).toContain("unchanged");
+    expect(text).toContain("64"); // the actual value
+    expect(text).toContain("32"); // the requested value
+    expect(text).toContain("Do not retry");
+  });
+
+  it("flags settings the doorbell config does not report instead of failing them", async () => {
+    // camera_name is settable through updateConfig but never appears in the
+    // getConfig response, so it lands in settingsNotVerified — not in
+    // settingsNotApplied, which would be a false alarm.
+    mockDoorbellApi({
+      before: { img_contrast: 64 },
+      after: { img_contrast: 32 },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        cameraDeviceSettings: JSON.stringify({ camera_name: "Renamed Doorbell" }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as {
+      success?: boolean;
+      message?: string;
+      settingsNotVerified?: string[];
+      settingsNotApplied?: unknown;
+    };
+    expect(structured.success).toBe(true);
+    expect(structured.settingsNotVerified).toEqual(["camera_name"]);
+    expect(structured.settingsNotApplied).toBeUndefined();
+    expect(structured.message).toContain("could not be verified");
+  });
+
+  it("still applies the write when the config read-back itself fails", async () => {
+    vi.mocked(network.postApi).mockImplementation(async (call: unknown) => {
+      const { route } = call as { route: string };
+      if (route === "/doorbellcamera/getMinimalStateList") {
+        return { minimalStates: [{ uuid: DOORBELL_UUID, name: "Front Door" }] } as never;
+      }
+      if (route === "/doorbellcamera/updateConfig") {
+        return { error: false } as never;
+      }
+      if (route === "/doorbellcamera/getConfig") {
+        return { error: true, errorMsg: "config service unavailable" } as never;
+      }
+      throw new Error(`unexpected route ${route}`);
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        step: "confirmation",
+      })
+    );
+
+    // A broken read path must not block the write the user asked for — but the
+    // result has to say the new value is unverified rather than claiming it.
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as { success?: boolean; message?: string };
+    expect(structured.success).toBe(true);
+    expect(structured.message).toContain("could not be verified");
+    const updateCall = vi
+      .mocked(network.postApi)
+      .mock.calls.find(([arg]) => (arg as { route: string }).route === "/doorbellcamera/updateConfig");
+    expect(updateCall).toBeDefined();
+  });
+
+  it("normalizes ledMode into the flat doorbell configUpdate too", async () => {
+    mockDoorbellApi({
+      before: { led_stealth_mode: false },
+      after: { led_stealth_mode: true },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraDeviceSettings: JSON.stringify({ ledMode: "OFF", led_stealth_mode: "true" }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const sent = vi.mocked(network.postApi).mock.calls.find(
+      ([arg]) => (arg as { route: string }).route === "/doorbellcamera/updateConfig"
+    );
+    expect((sent?.[0] as { body: any }).body.configUpdate).toEqual({
+      deviceUuid: DOORBELL_UUID,
+      led_mode: "always_off",
+      led_stealth_mode: true,
+    });
+  });
+});
