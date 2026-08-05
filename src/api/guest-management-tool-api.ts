@@ -152,27 +152,12 @@ export async function deleteGuest(
   return { success: true, email, warningMsg: apiWarning(res) };
 }
 
-// The guestpass request/response types are present in assets/openapi.json but
-// not yet in the generated src/types/schema.ts, so these four are typed inline
-// rather than through `schema[...]`.
-type GuestPass = {
-  uuid?: string | null;
-  locationUuid?: string | null;
-  lifecycle?: string | null;
-  note?: string | null;
-  passStartTimeMs?: number | null;
-  principalType?: string | null;
-};
-
 export async function getGuestPasses(
   range: { startAfterMs?: number; startBeforeMs?: number },
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const res = await postApi<{
-    guestPasses?: (GuestPass | null)[] | null;
-    lastEvaluatedKey?: string | null;
-  }>({
+  const res = await postApi<schema["Accesscontrol_guestpass_FindGuestPassesWSResponse"]>({
     route: "/accesscontrol/guestpass/findGuestPasses",
     body: {
       startAfterMs: range.startAfterMs,

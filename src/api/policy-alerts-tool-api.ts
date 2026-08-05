@@ -3,7 +3,7 @@ import type { ApiPayload } from "../types/policy-alerts-tool-types.js";
 import type { schema } from "../types/schema.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
-type PolicyAlert = schema["PolicyAlertV2Type"];
+type PolicyAlert = NonNullable<schema["PolicyAlertV2Type"]>;
 
 export async function getPolicyAlerts(
   args: ApiPayload,
@@ -18,12 +18,14 @@ export async function getPolicyAlerts(
   }).then(response => {
     return {
       ...response,
-      policyAlerts: (response.policyAlerts || []).map((alert: PolicyAlert) => ({
+      policyAlerts: (response.policyAlerts || [])
+        .filter((alert): alert is PolicyAlert => alert != null)
+        .map((alert: PolicyAlert) => ({
         ...alert,
         labels: [
           ...(alert.alertingEventFaces || []),
           ...(alert.alertingEventVehicles || []),
-        ].flatMap(alert => alert.labels),
+        ].flatMap(event => event?.labels ?? []),
         createdOnString: alert.timestampMs
           ? formatTimestamp(alert.timestampMs, args.timeZone)
           : undefined,
@@ -45,7 +47,9 @@ export async function getExpiringPolicyAlerts(
   }).then(response => {
     return {
       ...response,
-      policyAlerts: (response.policyAlerts || []).map((alert: PolicyAlert) => ({
+      policyAlerts: (response.policyAlerts || [])
+        .filter((alert): alert is PolicyAlert => alert != null)
+        .map((alert: PolicyAlert) => ({
         ...alert,
         createdOnString: alert.timestampMs
           ? formatTimestamp(alert.timestampMs)
