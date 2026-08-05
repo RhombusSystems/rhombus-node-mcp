@@ -78,6 +78,10 @@ const ALWAYS_PROTECTED_FIELDS = [
 	"requestType",
 	"note",
 	"error",
+	// api2 can succeed *with a caveat* (`warningMsg`), and a mutation that half
+	// applied says so only there. Projecting it away turns a qualified success
+	// into an unqualified one, which is worse than losing the field.
+	"warningMsg",
 	"filterByWarnings",
 	"groupByWarnings",
 ];

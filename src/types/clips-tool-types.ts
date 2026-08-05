@@ -7,9 +7,9 @@ import {
 
 export const TOOL_ARGS = {
 	requestType: z
-		.enum(["saved", "expiringSoon", "sharedLiveStreams", "timelapseClips", "clipGroups", "sharedClips", "createClip", "deleteClip"])
+		.enum(["saved", "expiringSoon", "sharedLiveStreams", "timelapseClips", "clipGroups", "sharedClips", "createClip", "updateClip", "deleteClip"])
 		.describe(
-			'The type of data to retrieve or action to perform. "saved" = regular saved clips; "expiringSoon" = clips nearing expiration; "sharedLiveStreams" = all shared live video streams; "timelapseClips" = all timelapse clips; "clipGroups" = clip groups in the org; "sharedClips" = shared clip groups; "createClip" = save a new clip from a camera (requires spliceRequest); "deleteClip" = permanently delete a saved clip (requires clipUuid; destructive).',
+			'The type of data to retrieve or action to perform. "saved" = regular saved clips; "expiringSoon" = clips nearing expiration; "sharedLiveStreams" = all shared live video streams; "timelapseClips" = all timelapse clips; "clipGroups" = clip groups in the org; "sharedClips" = shared clip groups; "createClip" = save a new clip from a camera (requires spliceRequest); "updateClip" = retitle or re-describe an existing saved clip (requires clipUuid plus clipTitle and/or clipDescription); "deleteClip" = permanently delete a saved clip (requires clipUuid; destructive).',
 		),
 	deviceUuidFilters: z
 		.array(createUuidSchema())
@@ -49,7 +49,22 @@ export const TOOL_ARGS = {
 			"The end of the time range for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned. Required when requestType is saved or expiringSoon." +
 				ISOTimestampFormatDescription,
 		),
-	clipUuid: z.string().nullable().describe("UUID of a clip. Required for 'deleteClip'."),
+	clipUuid: z
+		.string()
+		.nullable()
+		.describe("UUID of a saved clip. Required for 'deleteClip' and 'updateClip'."),
+	clipTitle: z
+		.string()
+		.nullable()
+		.describe(
+			"Only for 'updateClip': a new title for the clip. Omit to leave the title unchanged.",
+		),
+	clipDescription: z
+		.string()
+		.nullable()
+		.describe(
+			"Only for 'updateClip': a new description for the clip. Omit to leave the description unchanged.",
+		),
 	spliceRequest: z.object({
 		cameraUuid: z.string().describe("Camera UUID to create clip from"),
 		startTimeMs: z.number().describe("Start time in milliseconds"),
@@ -67,6 +82,7 @@ export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
 		args.requestType === "clipGroups" ||
 		args.requestType === "sharedClips" ||
 		args.requestType === "createClip" ||
+		args.requestType === "updateClip" ||
 		args.requestType === "deleteClip"
 	) {
 		return {};
@@ -112,5 +128,17 @@ export const OUTPUT_SCHEMA = z.object({
 	deleteResult: z.object({
 		success: z.boolean().optional(),
 	}).optional().describe("Result of deleting a clip"),
+	updateResult: z.object({
+		success: z.boolean().optional(),
+		clipUuid: z.string().optional(),
+	}).optional().describe("Result of updating a clip's title or description"),
+	note: z
+		.string()
+		.optional()
+		.describe("A caveat about this result that the user needs to be told."),
+	warningMsg: z
+		.string()
+		.optional()
+		.describe("A warning from the Rhombus API — the call succeeded, but with a caveat."),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

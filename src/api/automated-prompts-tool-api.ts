@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import {
   AutomatedPromptSummary,
@@ -138,7 +138,7 @@ export async function listAutomatedPrompts(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
 
   const settingsList = (res.settingsList ?? [])
     .map((p) => toSummary(p, timeZone))
@@ -162,7 +162,7 @@ export async function getAutomatedPrompt(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return toSummary(res.settings, timeZone);
 }
 
@@ -179,7 +179,7 @@ export async function createAutomatedPrompt(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return toSummary(res.settings, timeZone);
 }
 
@@ -196,7 +196,7 @@ export async function updateAutomatedPrompt(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return toSummary(res.settings, timeZone);
 }
 
@@ -211,7 +211,7 @@ export async function deleteAutomatedPrompt(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return { ok: true, action: "deleted" };
 }
 
@@ -232,7 +232,7 @@ export async function getAutomatedPromptChatHistory(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
 
   const chatHistory = (res.chatHistory ?? [])
     .map((r) => toHistoryEntry(r, timeZone))
@@ -259,7 +259,7 @@ export async function shareAutomatedPromptResponse(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return { ok: true, action: `visibility set to ${visibility}` };
 }
 
@@ -274,7 +274,7 @@ export async function verifyJobScheduled(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return {
     scheduleExpression: res.scheduleExpression ?? undefined,
     scheduleTimezone: res.scheduleTimezone ?? undefined,

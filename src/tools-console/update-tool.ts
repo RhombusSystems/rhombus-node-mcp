@@ -6,6 +6,9 @@ import {
   cleanUpdatePayload,
   formatCameraSettings,
   validateCameraFeatureSupport,
+  updateDoorbellCameraConfig,
+  getDoorbellCameraDetails,
+  getDoorbellCameraConfig,
 } from "../api/update-tool-api.js";
 import {
   OUTPUT_SCHEMA,
@@ -23,7 +26,7 @@ import { logger } from "../logger.js";
 const TOOL_NAME = "update-tool";
 
 const TOOL_DESCRIPTION = `
-Updates configuration settings for Rhombus entities — currently cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, timezone, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
+Updates configuration settings for Rhombus cameras and doorbell cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, timezone, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
 
 MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
 
@@ -44,14 +47,19 @@ function errorResult(text: string) {
   };
 }
 
-// "Not implemented yet" is a real answer, not a transport failure — leaving
-// isError off keeps the model relaying the message instead of reporting that
-// the tool broke.
-function unsupportedResult(text: string) {
-  return {
-    content: [{ type: "text" as const, text }],
-    structuredContent: { needUserInput: false, success: false, message: text },
-  };
+// Slice a doorbell camera's flat config down to the fields this tool can set
+// (the keys of one of the three camera settings schemas). The full config has
+// ~150 internal fields — showing all of them would bury the settable ones.
+function pickDoorbellSettings(
+  config: Record<string, unknown>,
+  settingsSchema: z.ZodObject<z.ZodRawShape>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(settingsSchema.shape)) {
+    const value = config[key];
+    if (value !== undefined && value !== null) out[key] = value;
+  }
+  return out;
 }
 
 function valueAtPath(root: unknown, path: readonly PropertyKey[]): unknown {
@@ -354,40 +362,273 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     }
   }
 
-  // Handle other entity types (future implementation)
-  if (entityType === "climate-sensor") {
-    return unsupportedResult("Climate sensor updates are not yet implemented. Coming soon!");
-  }
-
-  if (entityType === "door-controller") {
-    return unsupportedResult("Door controller updates are not yet implemented. Coming soon!");
-  }
-
-  if (entityType === "environmental-gateway") {
-    return unsupportedResult(
-      "Environmental gateway updates are not yet implemented. Coming soon!"
-    );
-  }
-
-  if (entityType === "audio-gateway") {
-    return unsupportedResult("Audio gateway updates are not yet fully implemented. Coming soon!");
-  }
-
+  // Doorbell cameras take the same setting names as cameras, but through
+  // /doorbellcamera/updateConfig with ONE FLAT configUpdate rather than the
+  // faceted video/audio/device split. Validation reuses the camera schemas, so
+  // the documented ranges apply identically.
   if (entityType === "doorbell-camera") {
-    return unsupportedResult(
-      "Doorbell camera updates are not yet fully implemented. Coming soon!"
-    );
-  }
+    if (!entityUuid) {
+      return errorResult(
+        "To update a doorbell camera, pass entityUuid plus at least one of cameraVideoSettings, cameraAudioSettings or cameraDeviceSettings. Use get-entity-tool with entityType doorbell-camera to find the uuid."
+      );
+    }
 
-  if (entityType === "badge-reader") {
-    return unsupportedResult("Badge reader updates are not yet fully implemented. Coming soon!");
+    const hasDoorbellSettings = Boolean(
+      (cameraVideoSettings && cameraVideoSettings.trim()) ||
+        (cameraAudioSettings && cameraAudioSettings.trim()) ||
+        (cameraDeviceSettings && cameraDeviceSettings.trim())
+    );
+
+    // Step 2 equivalent: uuid but no settings — show the current config so the
+    // model proposes changes against real values rather than guesses. The read
+    // comes from /doorbellcamera/getConfig, which returns the same flat object
+    // the update writes.
+    if (!hasDoorbellSettings) {
+      try {
+        const { baseUuid } = parseFacetedUuid(entityUuid);
+
+        const details = await getDoorbellCameraDetails(
+          baseUuid,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        if (!details.success) {
+          return errorResult(details.error ?? "Could not verify the doorbell camera.");
+        }
+
+        const current = await getDoorbellCameraConfig(
+          baseUuid,
+          extra._meta?.requestModifiers as RequestModifiers,
+          extra.sessionId
+        );
+        if (!current.success || !current.config) {
+          return errorResult(
+            `Failed to read the doorbell camera's current settings: ${current.error ?? "unknown error"}`
+          );
+        }
+
+        const jsonResultResponse = {
+          needUserInput: true,
+          message: `Configure settings for doorbell camera "${details.name ?? baseUuid}" (${baseUuid})\n\nCurrent settings are shown below. Modify the values you want to change:`,
+          requestType: "camera-settings-configuration",
+          submitAction: "update-tool",
+          entityType: "doorbell-camera",
+          entityUuid: baseUuid,
+          currentSettings: {
+            video: pickDoorbellSettings(current.config, CameraVideoSettings),
+            audio: pickDoorbellSettings(current.config, CameraAudioSettings),
+            device: pickDoorbellSettings(current.config, CameraDeviceSettings),
+          },
+        };
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(jsonResultResponse) }],
+          structuredContent: jsonResultResponse,
+        };
+      } catch (error) {
+        return errorResult(
+          `Error retrieving doorbell camera settings: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    try {
+      // Doorbell configs are not faceted, so any .v0 suffix is dropped.
+      const { baseUuid } = parseFacetedUuid(entityUuid);
+
+      const flatSettings: Record<string, unknown> = {};
+
+      if (cameraVideoSettings && cameraVideoSettings.trim()) {
+        const video = parseSettingsBlock(
+          "doorbell camera video settings",
+          cameraVideoSettings,
+          CameraVideoSettings
+        );
+        if (!video.ok) {
+          return errorResult(video.message);
+        }
+        Object.assign(flatSettings, cleanUpdatePayload(video.value));
+      }
+
+      if (cameraAudioSettings && cameraAudioSettings.trim()) {
+        const audio = parseSettingsBlock(
+          "doorbell camera audio settings",
+          cameraAudioSettings,
+          CameraAudioSettings
+        );
+        if (!audio.ok) {
+          return errorResult(audio.message);
+        }
+        Object.assign(flatSettings, cleanUpdatePayload(audio.value));
+      }
+
+      if (cameraDeviceSettings && cameraDeviceSettings.trim()) {
+        const device = parseSettingsBlock(
+          "doorbell camera device settings",
+          cameraDeviceSettings,
+          CameraDeviceSettings,
+          deviceSettings => {
+            if ("ledMode" in deviceSettings) {
+              deviceSettings.led_mode =
+                deviceSettings.ledMode === "OFF" ? "always_off" : deviceSettings.ledMode;
+              delete deviceSettings.ledMode;
+            }
+            if (
+              "led_stealth_mode" in deviceSettings &&
+              typeof deviceSettings.led_stealth_mode === "string"
+            ) {
+              deviceSettings.led_stealth_mode = deviceSettings.led_stealth_mode === "true";
+            }
+          }
+        );
+        if (!device.ok) {
+          return errorResult(device.message);
+        }
+        Object.assign(flatSettings, cleanUpdatePayload(device.value));
+      }
+
+      if (Object.keys(flatSettings).length === 0) {
+        return errorResult(
+          "No doorbell camera settings were recognised in the provided values, so nothing was changed."
+        );
+      }
+
+      // Confirm the device exists first: /doorbellcamera/updateConfig accepts an
+      // unknown uuid without complaining, which would report success for a
+      // change that reached no device.
+      const details = await getDoorbellCameraDetails(
+        baseUuid,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      if (!details.success) {
+        return errorResult(details.error ?? "Could not verify the doorbell camera.");
+      }
+
+      // The update response only echoes the caller's input, so a before/after
+      // read of /doorbellcamera/getConfig is the ONLY way to tell a real write
+      // from a silent no-op. Both reads are best-effort: a failed read skips
+      // verification rather than blocking the write the user asked for.
+      const before = await getDoorbellCameraConfig(
+        baseUuid,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+
+      const result = await updateDoorbellCameraConfig(
+        baseUuid,
+        flatSettings,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      if (!result.success) {
+        return errorResult(`Failed to update doorbell camera settings: ${result.error}`);
+      }
+
+      const changedKeys = Object.keys(flatSettings);
+      const deviceName = details.name ?? baseUuid;
+
+      const previousSettings: Record<string, unknown> = {};
+      if (before.success && before.config) {
+        for (const key of changedKeys) {
+          previousSettings[key] = before.config[key] ?? null;
+        }
+      }
+
+      const after = await getDoorbellCameraConfig(
+        baseUuid,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+
+      if (!after.success || !after.config) {
+        const doorbellResponse = {
+          needUserInput: false,
+          message: `Updated ${changedKeys.length} setting(s) on the doorbell camera "${deviceName}": ${changedKeys.join(", ")}. NOTE: the config read-back failed (${after.error ?? "unknown error"}), so the new values could not be verified.`,
+          entityType: "doorbell-camera",
+          entityUuid: baseUuid,
+          success: true,
+          updatedSettings: flatSettings,
+          ...(before.success && before.config ? { previousSettings } : {}),
+        };
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(doorbellResponse) }],
+          structuredContent: doorbellResponse,
+        };
+      }
+
+      const applied: string[] = [];
+      const notApplied: { setting: string; requested: unknown; actual: unknown }[] = [];
+      const notVerifiable: string[] = [];
+      for (const key of changedKeys) {
+        const actual = after.config[key];
+        if (actual === undefined) {
+          // getConfig doesn't report this key (e.g. camera_name / led_mode live
+          // outside the doorbell config object), so it can't be checked here.
+          notVerifiable.push(key);
+        } else if (JSON.stringify(actual) === JSON.stringify(flatSettings[key])) {
+          applied.push(key);
+        } else {
+          notApplied.push({ setting: key, requested: flatSettings[key], actual });
+        }
+      }
+
+      // api2 said success but the read-back shows every value unchanged: the
+      // write was a silent no-op. Retrying the same arguments would no-op again
+      // — surface it instead of reporting a success that didn't happen.
+      if (notApplied.length > 0 && applied.length === 0 && notVerifiable.length === 0) {
+        return errorResult(
+          `The API accepted the update for doorbell camera "${deviceName}" but a config read-back shows the value(s) unchanged: ${notApplied
+            .map(f => `${f.setting} is still ${JSON.stringify(f.actual)} (requested ${JSON.stringify(f.requested)})`)
+            .join("; ")}. Do not retry with the same arguments — tell the user the setting did not take effect.`
+        );
+      }
+
+      const verificationNotes: string[] = [];
+      if (notApplied.length > 0) {
+        verificationNotes.push(
+          `WARNING — ${notApplied.length} setting(s) did NOT take effect: ${notApplied
+            .map(f => `${f.setting} is still ${JSON.stringify(f.actual)} (requested ${JSON.stringify(f.requested)})`)
+            .join("; ")}`
+        );
+      }
+      if (notVerifiable.length > 0) {
+        verificationNotes.push(
+          `${notVerifiable.length} setting(s) are not reported by the doorbell config and could not be verified: ${notVerifiable.join(", ")}`
+        );
+      }
+
+      const doorbellResponse = {
+        needUserInput: false,
+        message:
+          `Updated ${changedKeys.length} setting(s) on the doorbell camera "${deviceName}"` +
+          (applied.length > 0
+            ? ` — verified by reading the config back: ${applied.join(", ")}.`
+            : `: ${changedKeys.join(", ")}.`) +
+          (verificationNotes.length > 0 ? ` ${verificationNotes.join(". ")}.` : ""),
+        entityType: "doorbell-camera",
+        entityUuid: baseUuid,
+        success: true,
+        updatedSettings: flatSettings,
+        ...(before.success && before.config ? { previousSettings } : {}),
+        ...(notApplied.length > 0 ? { settingsNotApplied: notApplied } : {}),
+        ...(notVerifiable.length > 0 ? { settingsNotVerified: notVerifiable } : {}),
+      };
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(doorbellResponse) }],
+        structuredContent: doorbellResponse,
+      };
+    } catch (error) {
+      return errorResult(
+        `Failed to update doorbell camera settings: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
   }
 
   // Step 0: Show initial form (no entityType provided)
   const entityTypeFormResponse = {
     needUserInput: true,
     message:
-      "Welcome to the Rhombus entity update tool!\n\nWhat type of entity would you like to update?\n\n• **camera** - Update camera video, audio, or device settings\n• **climate-sensor** - Update climate sensor settings (coming soon)\n• **door-controller** - Update door controller settings (coming soon)\n• **environmental-gateway** - Update environmental gateway settings (coming soon)\n\nPlease specify the entity type to continue.",
+      "Welcome to the Rhombus entity update tool!\n\nWhat type of entity would you like to update?\n\n• **camera** - Update camera video, audio, or device settings\n• **doorbell-camera** - Update doorbell camera video, audio, or device settings\n\nPlease specify the entity type to continue.",
     requestType: "entity-type-selection",
     submitAction: "update-tool",
   };

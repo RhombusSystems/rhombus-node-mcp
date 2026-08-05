@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type { ApiPayload, OutputSchema } from "../types/clips-tool-types.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
@@ -102,7 +102,7 @@ export async function getClipGroups(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return {
 		clipGroups: (res.clipGroups || []).map((group: any) => ({
@@ -124,7 +124,7 @@ export async function getSharedClipGroups(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return {
 		sharedClipGroups: (res.sharedClipGroups || []).map((group: any) => ({
@@ -156,7 +156,7 @@ export async function createClip(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return { spliceResult: { success: true, clipUuid: (res as any).clipUuid ?? undefined } };
 }
@@ -173,7 +173,58 @@ export async function deleteClip(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return { deleteResult: { success: true } };
+}
+
+/**
+ * Retitle / re-describe a saved clip.
+ *
+ * `updateSavedClip` is a whole-object write, not a selective one: omitting
+ * `title` blanks the title rather than leaving it. So this reads the clip first
+ * and merges, which also gives the caller a real "no such clip" error instead of
+ * a silent no-op on a bad uuid.
+ */
+export async function updateClip(
+	clipUuid: string,
+	changes: { title?: string; description?: string },
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+): Promise<OutputSchema & { existingTitle?: string }> {
+	const current = await postApi<schema["Event_GetSavedClipDetailsWSResponse"]>({
+		route: "/event/getSavedClipDetails",
+		body: { clipUuid } satisfies schema["Event_GetSavedClipDetailsWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(current);
+
+	const existing = current.savedClip;
+	if (!existing) {
+		return {
+			error: `No saved clip has the uuid "${clipUuid}". Use requestType 'saved' to list the clips that exist — do not guess a uuid.`,
+		};
+	}
+
+	const res = await postApi<schema["Event_UpdateSavedClipWSResponse"]>({
+		route: "/event/updateSavedClip",
+		body: {
+			savedClipUuid: clipUuid,
+			title: changes.title ?? existing.title ?? undefined,
+			description: changes.description ?? existing.description ?? undefined,
+			accessSettings: existing.accessSettings ?? undefined,
+		} as schema["Event_UpdateSavedClipWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return {
+		updateResult: { success: true, clipUuid },
+		warningMsg: res.warningMsg ?? undefined,
+		existingTitle: existing.title ?? undefined,
+	};
 }

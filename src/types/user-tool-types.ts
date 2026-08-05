@@ -5,6 +5,9 @@ export enum UserToolRequestType {
   FIND_BY_EMAIL = "find-by-email",
   GET_PERMISSIONS = "get-permissions",
   GET_PERMISSION_GROUPS = "get-permission-groups",
+  CREATE_USER = "create-user",
+  UPDATE_USER = "update-user",
+  DELETE_USER = "delete-user",
 }
 
 // NOTE: `includeFields` and `filterBy` are NOT declared here — the
@@ -16,7 +19,39 @@ export const TOOL_ARGS = {
   email: z
     .string()
     .nullable()
-    .describe("The email address of the user to find. Required for 'find-by-email'."),
+    .describe(
+      "The email address of the user. Required for 'find-by-email' and 'create-user'. For 'create-user' this is where the invitation is sent, so read it back to the user before creating — a typo invites a stranger into the organization."
+    ),
+  userUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "The UUID of the user. Required for 'update-user' and 'delete-user'. Get it from 'list-users' or 'find-by-email' — do not guess one."
+    ),
+  userName: z
+    .string()
+    .nullable()
+    .describe(
+      "The user's display name. Required for 'create-user'; for 'update-user' it is the new name (omit to leave it unchanged)."
+    ),
+  permissionGroupUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "UUID of the permission group (role) to assign. Required for 'create-user'; for 'update-user' it is the new role (omit to leave the role unchanged). Get it from 'get-permission-groups' with includeFields ['permissionGroups.uuid','permissionGroups.name','permissionGroups.description']. A role decides what the person can see and do, so confirm the role NAME with the user rather than picking one."
+    ),
+  suppressWelcomeEmail: z
+    .boolean()
+    .nullable()
+    .describe(
+      "Only for 'create-user'. Creating a user emails them an invitation by default. Set true only when the user explicitly asks not to notify the new person."
+    ),
+  confirmDelete: z
+    .boolean()
+    .nullable()
+    .describe(
+      "Required to be true for 'delete-user'. Deleting a user revokes their console access and their credentials, and cannot be undone, so it refuses without explicit confirmation."
+    ),
 };
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
@@ -115,6 +150,26 @@ export const OUTPUT_SCHEMA = z.object({
     .array(PermissionGroupSchema)
     .optional()
     .describe("List of permission groups in the organization."),
+  created: z
+    .object({ success: z.boolean().optional(), uuid: z.string().optional() })
+    .optional()
+    .describe("Result of 'create-user'."),
+  updated: z
+    .object({ success: z.boolean().optional(), uuid: z.string().optional() })
+    .optional()
+    .describe("Result of 'update-user'."),
+  deleted: z
+    .object({ success: z.boolean().optional(), uuid: z.string().optional() })
+    .optional()
+    .describe("Result of 'delete-user'."),
+  note: z
+    .string()
+    .optional()
+    .describe("A caveat about this result that the user needs to be told."),
+  warningMsg: z
+    .string()
+    .optional()
+    .describe("A warning from the Rhombus API — the call succeeded, but with a caveat."),
   error: z.string().optional().describe("An error message if the request failed."),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

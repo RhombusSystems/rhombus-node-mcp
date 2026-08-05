@@ -18,19 +18,27 @@ export function createTool(server: McpServer) {
             "An array of UUID strings representing the items to count. Each string should be a valid UUID."
           ),
       },
+      // Every result from a tool with an outputSchema must carry
+      // structuredContent or isError: true — the SDK otherwise replaces the
+      // real message with an opaque -32602 (see CLAUDE.md).
+      outputSchema: {
+        count: z.number().optional().describe("How many UUIDs were provided"),
+      },
       annotations: { readOnlyHint: true },
     },
     async ({ uuids }) => {
       try {
         logger.info("Counting UUIDs", uuids);
         return {
-          content: [{ type: "text", text: `Count: ${uuids.length}` }],
+          content: [{ type: "text" as const, text: `Count: ${uuids.length}` }],
+          structuredContent: { count: uuids.length },
         };
       } catch (e: unknown) {
         const errorMessage = e instanceof Error ? e.message : `Unknown error: ${e}`;
 
         return {
-          content: [{ type: "text", text: `Error counting UUIDs: ${errorMessage}` }],
+          isError: true,
+          content: [{ type: "text" as const, text: `Error counting UUIDs: ${errorMessage}` }],
         };
       }
     }

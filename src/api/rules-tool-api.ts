@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -13,9 +13,7 @@ export async function listRules(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.rules?.map((rule: any) => ({
@@ -42,9 +40,7 @@ export async function createRule(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return {
     uuid: res.ruleUuid ?? undefined,
@@ -64,9 +60,7 @@ export async function updateRule(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return { success: true };
 }
@@ -83,9 +77,7 @@ export async function deleteRule(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return { uuid: ruleUuid, success: true };
 }
@@ -102,9 +94,7 @@ export async function getRuleRecords(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.rulesEventRecords?.map((record: any) => ({

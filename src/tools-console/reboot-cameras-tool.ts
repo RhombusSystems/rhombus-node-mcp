@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { RequestModifiers } from "../util.js";
 import { isConfirmed, requireConfirmation } from "../utils/confirmation.js";
 import { rebootCameras } from "../api/reboot-cameras-tool-api.js";
@@ -22,12 +23,16 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     extra.sessionId
   );
 
-  if (!cameraRebootData) {
+  if (!cameraRebootData || ("error" in cameraRebootData && cameraRebootData.error)) {
     return {
+      isError: true,
       content: [
         {
           type: "text" as const,
-          text: "Failed to reboot cameras",
+          text:
+            cameraRebootData && "status" in cameraRebootData && cameraRebootData.status
+              ? String(cameraRebootData.status)
+              : "Failed to reboot cameras",
         },
       ],
     };
@@ -40,6 +45,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         text: JSON.stringify(cameraRebootData),
       },
     ],
+    structuredContent: cameraRebootData,
   };
 };
 
@@ -50,6 +56,16 @@ export function createTool(server: McpServer) {
       title: "Reboot Cameras",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
+      // The confirmation-needed result goes through createToolTextContent,
+      // which sets isError: true — so it legitimately skips output validation.
+      outputSchema: {
+        status: z
+          .string()
+          .optional()
+          .describe("SUCCESS when every camera rebooted, PARTIAL_SUCCESS when some did, ERROR when none did"),
+        successCount: z.number().optional(),
+        errorCount: z.number().optional(),
+      },
       annotations: { readOnlyHint: false, destructiveHint: true },
     },
     TOOL_HANDLER

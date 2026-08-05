@@ -40,9 +40,27 @@ export type CreateVideoWallOptions = z.infer<typeof CreateVideoWallOptions>;
 
 export const TOOL_ARGS = {
 	requestType: z
-		.enum(["list", "create"])
+		.enum(["list", "create", "update", "delete"])
 		.describe("The type of request to make."),
 	videoWallCreateOptions: CreateVideoWallOptions,
+	videoWallUuid: z
+		.string()
+		.nullable()
+		.describe(
+			"The uuid of the video wall to act on. Required for `update` and `delete`. Get it from `list` — do not guess one.",
+		),
+	displayName: z
+		.string()
+		.nullable()
+		.describe(
+			"Only for `update`: a new name for the wall. Omit to leave the name unchanged.",
+		),
+	deviceList: z
+		.array(z.string())
+		.nullable()
+		.describe(
+			"Only for `update`: the camera uuids the wall should contain AFTER the update. This REPLACES the wall's current cameras rather than adding to them, so include the ones being kept. To add or remove a few, read the wall with `list` first and send the full resulting set. The grid layout is recomputed from the new count.",
+		),
 	includeFields: INCLUDE_FIELDS_ARG,
 	filterBy: FILTER_BY_ARG,
 };
@@ -81,5 +99,21 @@ export const OUTPUT_SCHEMA = z.object({
 		)
 		.optional(),
   uuid: z.string().describe("The uuid of the created video wall.").optional(),
+	updated: z
+		.object({ success: z.boolean().optional(), uuid: z.string().optional() })
+		.optional()
+		.describe("Result of an `update` request."),
+	deleted: z
+		.object({ success: z.boolean().optional(), uuid: z.string().optional() })
+		.optional()
+		.describe("Result of a `delete` request."),
+	note: z
+		.string()
+		.optional()
+		.describe("A caveat about this result that the user needs to be told."),
+	warningMsg: z
+		.string()
+		.optional()
+		.describe("A warning from the Rhombus API — the call succeeded, but with a caveat."),
 });
 export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

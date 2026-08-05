@@ -1,5 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getFaceEvents, getFaceEventsByPerson, getFaceMatchmakers, getPersonLabels, getRegisteredFaces, searchSimilarFaces } from "../api/faces-tool-api.js";
+import {
+  changePersonLabel,
+  createPerson,
+  deleteFaceMatchmaker,
+  deletePerson,
+  findPerson,
+  getFaceEvents,
+  getFaceEventsByPerson,
+  getFaceMatchmakers,
+  getPersonLabels,
+  getRegisteredFaces,
+  searchSimilarFaces,
+  updatePerson,
+} from "../api/faces-tool-api.js";
 import { logger } from "../logger.js";
 import {
   type GetFaceEventsArgs,
@@ -221,6 +234,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         getSavedFacesResponse: peopleResponse.people.map(p => ({
           createdOn: p.createdOn ? parseInt(p.createdOn, 10) : undefined,
           name: p.name ?? undefined,
+          // As of 2026-08-05 api2 never serializes Person.email, so this is
+          // always undefined today — mapped anyway so it surfaces for free if
+          // the API starts returning it.
+          email: p.email ?? undefined,
           orgUuid: p.orgUuid ?? undefined,
           updatedOn: p.updatedOn ? parseInt(p.updatedOn, 10) : undefined,
           uuid: p.uuid ?? undefined,
@@ -249,6 +266,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     return createToolStructuredContent({
       requestType: RequestType.GET_PERSON_LABELS,
       getPersonLabelsResponse: cleaned,
+      // A bare {} reads as "the lookup returned nothing" — say what the empty
+      // result actually means so the model doesn't have to interpret it.
+      note:
+        Object.keys(cleaned).length === 0
+          ? "This organization has no person labels at all: the query succeeded and every registered person currently has zero labels."
+          : undefined,
     });
   }
 
@@ -288,8 +311,174 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     });
   }
 
+  // -------------------------------------------------------------------------
+  // Person write paths
+  //
+  // These act on enrolled biometric records, so every branch verifies the person
+  // exists first: a plausible-but-wrong personUuid would otherwise rename or
+  // delete someone else's face record with a success response either way.
+  // -------------------------------------------------------------------------
+
+  if (args.requestType === RequestType.CREATE_PERSON) {
+    if (!args.personName?.trim()) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: "personName is required for create-person",
+      });
+    }
+    const created = await createPerson(args.personName.trim(), requestModifiers, sessionId);
+    return createToolStructuredContent({
+      requestType: args.requestType,
+      created: { success: created.success, uuid: created.uuid },
+      warningMsg: created.warningMsg,
+      note: `Created the person "${args.personName.trim()}". They have no enrolled face images yet, so face recognition will NOT identify them until a photo is enrolled — that has to be done in the Rhombus Console.`,
+    });
+  }
+
+  if (args.requestType === RequestType.UPDATE_PERSON) {
+    if (!args.personUuid) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: "personUuid is required for update-person",
+      });
+    }
+    if (!args.personName?.trim() && !args.personEmail?.trim()) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error:
+          "update-person needs at least one of personName or personEmail — both were empty, so there is nothing to change",
+      });
+    }
+    const existing = await findPerson(args.personUuid, requestModifiers, sessionId);
+    if (!existing) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: `No registered person has the uuid "${args.personUuid}". Use get-registered-faces to see who is registered — do not guess a uuid.`,
+      });
+    }
+    const updated = await updatePerson(
+      args.personUuid,
+      {
+        name: args.personName?.trim() || undefined,
+        email: args.personEmail?.trim() || undefined,
+      },
+      requestModifiers,
+      sessionId
+    );
+    return createToolStructuredContent({
+      requestType: args.requestType,
+      updated: { success: updated.success, uuid: updated.uuid },
+      warningMsg: updated.warningMsg,
+      note:
+        `Updated ${existing.name ?? args.personUuid}${args.personName?.trim() ? ` — now named "${args.personName.trim()}"` : ""}. Their enrolled face images are unchanged, so recognition still matches the same face to this record.` +
+        // api2 accepts the email write but no read path — findPeopleByOrg,
+        // getPerson, or even the update response's own echo — ever returns it
+        // (verified against api2.itg 2026-08-05). Without this caveat the model
+        // would tell the user the email is saved and then fail to show it.
+        (args.personEmail?.trim()
+          ? " NOTE: the API does not return a person's email on any read path, so the stored email cannot be displayed or verified later."
+          : ""),
+    });
+  }
+
+  if (args.requestType === RequestType.DELETE_PERSON) {
+    if (!args.personUuid) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: "personUuid is required for delete-person",
+      });
+    }
+    const existing = await findPerson(args.personUuid, requestModifiers, sessionId);
+    if (!existing) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: `No registered person has the uuid "${args.personUuid}". Use get-registered-faces to see who is registered.`,
+      });
+    }
+    if (!args.confirmDelete) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        note:
+          `NOT DELETED — nothing was changed. Deleting "${existing.name ?? args.personUuid}" removes their enrolled face images and ` +
+          `cannot be undone: re-registering them needs new photos, and face alerts naming this person stop working. Past face events ` +
+          `stay in the history but will no longer be attributed to them. Confirm with the user, then call again with confirmDelete: true.`,
+      });
+    }
+    const deleted = await deletePerson(args.personUuid, requestModifiers, sessionId);
+    return createToolStructuredContent({
+      requestType: args.requestType,
+      deleted: { success: deleted.success, uuid: deleted.uuid },
+      warningMsg: deleted.warningMsg,
+      note: `Deleted the registered person "${existing.name ?? args.personUuid}" and their enrolled faces. Face recognition will no longer identify them.`,
+    });
+  }
+
+  if (
+    args.requestType === RequestType.ADD_PERSON_LABEL ||
+    args.requestType === RequestType.REMOVE_PERSON_LABEL
+  ) {
+    const removing = args.requestType === RequestType.REMOVE_PERSON_LABEL;
+    if (!args.personUuid || !args.personLabel?.trim()) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: `personUuid and personLabel are both required for ${args.requestType}`,
+      });
+    }
+    const existing = await findPerson(args.personUuid, requestModifiers, sessionId);
+    if (!existing) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: `No registered person has the uuid "${args.personUuid}". Use get-registered-faces to see who is registered.`,
+      });
+    }
+    const label = args.personLabel.trim();
+    const updated = await changePersonLabel(
+      args.personUuid,
+      label,
+      removing ? "remove" : "add",
+      requestModifiers,
+      sessionId
+    );
+    return createToolStructuredContent({
+      requestType: args.requestType,
+      updated: { success: updated.success, uuid: updated.uuid, label: updated.label },
+      warningMsg: updated.warningMsg,
+      note: `${removing ? "Removed" : "Added"} the label "${label}" ${removing ? "from" : "for"} ${existing.name ?? args.personUuid}. Camera policies that alert on person labels use these, so this can change which alerts fire.`,
+    });
+  }
+
+  if (args.requestType === RequestType.DELETE_FACE_MATCHMAKER) {
+    if (!args.faceId?.trim()) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        error: "faceId is required for delete-face-matchmaker",
+      });
+    }
+    if (!args.confirmDelete) {
+      return createToolStructuredContent({
+        requestType: args.requestType,
+        note:
+          `NOT DELETED — nothing was changed. Deleting enrolled face ${args.faceId.trim()} removes that face image from recognition and ` +
+          `cannot be undone; re-enrolling needs a new photo. The person record and any other enrolled faces they have are kept. ` +
+          `Confirm with the user, then call again with confirmDelete: true.`,
+      });
+    }
+    const deleted = await deleteFaceMatchmaker(
+      args.faceId.trim(),
+      requestModifiers,
+      sessionId
+    );
+    return createToolStructuredContent({
+      requestType: args.requestType,
+      deleted: { success: deleted.success, faceId: deleted.faceId },
+      warningMsg: deleted.warningMsg,
+      note: "Deleted that enrolled face image. The person record and their other enrolled faces are unchanged — recognition may still identify them from those.",
+    });
+  }
+
   return createToolStructuredContent({
     requestType: args.requestType,
+    error: `Invalid requestType "${args.requestType}". Valid values are: ${Object.values(RequestType).join(", ")}.`,
   });
 };
 
@@ -304,7 +493,7 @@ export function createTool(server: McpServer) {
         description: TOOL_DESCRIPTION,
         inputSchema: TOOL_ARGS,
         outputSchema: OUTPUT_SCHEMA.shape,
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: false, destructiveHint: true },
       },
       ["faceEventSummary"]
     ),

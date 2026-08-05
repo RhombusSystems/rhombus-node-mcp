@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { apiWarning, postApi, throwIfApiError } from "../network/network.js";
 import type {
 	GetFaceEventsArgs,
 	GetRegisteredFacesArgs,
@@ -140,7 +140,7 @@ export async function searchSimilarFaces(
 		modifiers: requestModifiers,
 		sessionId,
 	});
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 	return (res.faceEvents || []).map((event: any) => ({
 		uuid: event.uuid ?? undefined,
 		deviceUuid: event.deviceUuid ?? undefined,
@@ -165,7 +165,7 @@ export async function getFaceMatchmakers(
 		modifiers: requestModifiers,
 		sessionId,
 	});
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 	return (res.faceMatchmakers || []).map((m: any) => ({
 		uuid: m.uuid ?? undefined,
 		personUuid: m.personUuid ?? undefined,
@@ -196,7 +196,7 @@ export async function getFaceEventsByPerson(
 		modifiers: requestModifiers,
 		sessionId,
 	});
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	const faceEvents = (res.faceEvents || []).map((event) => ({
 		uuid: event.uuid ?? undefined,
@@ -211,4 +211,162 @@ export async function getFaceEventsByPerson(
 		faceEvents,
 		lastEvaluatedKey: res.lastEvaluatedKey,
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Person write paths
+// ---------------------------------------------------------------------------
+
+export async function findPerson(
+	personUuid: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<
+		schema["Facerecognition_person_FindPeopleByOrgWSResponse"]
+	>({
+		route: "/faceRecognition/person/findPeopleByOrg",
+		body: {},
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return res.people?.find(person => person?.uuid === personUuid) ?? undefined;
+}
+
+export async function createPerson(
+	name: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<schema["Facerecognition_person_CreatePersonWSResponse"]>({
+		route: "/faceRecognition/person/createPerson",
+		body: { name } satisfies schema["Facerecognition_person_CreatePersonWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return {
+		success: true,
+		uuid: res.person?.uuid ?? undefined,
+		warningMsg: apiWarning(res),
+	};
+}
+
+/**
+ * Selective person update.
+ *
+ * api2 marks which fields were deliberately set via `updatedSetMethodMap`
+ * rather than inferring it from presence — so a field omitted from that map is
+ * left alone, and a field IN the map with no value is cleared. Only the fields
+ * the caller actually changed are flagged.
+ *
+ * The keys are SETTER names (`setName`, `setEmail`), NOT field names. The spec
+ * declares the map as an open `{string: boolean}`, so nothing enforces this.
+ * Sending `{name: true}` returns `error: false` and bumps the record's
+ * `updatedOn` while leaving the name unchanged — a silent no-op that reports
+ * success. Verified against api2.itg on 2026-08-05; pinned by
+ * `test/api/faces-tool-api.test.ts`.
+ */
+export async function updatePerson(
+	personUuid: string,
+	changes: { name?: string; email?: string },
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+) {
+	const updatedSetMethodMap: Record<string, boolean> = {};
+	if (changes.name !== undefined) updatedSetMethodMap.setName = true;
+	if (changes.email !== undefined) updatedSetMethodMap.setEmail = true;
+
+	const res = await postApi<schema["Facerecognition_person_UpdatePersonWSResponse"]>({
+		route: "/faceRecognition/person/updatePerson",
+		body: {
+			personSelectiveUpdate: {
+				uuid: personUuid,
+				name: changes.name,
+				email: changes.email,
+				updatedSetMethodMap,
+			},
+		} as schema["Facerecognition_person_UpdatePersonWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return { success: true, uuid: personUuid, warningMsg: apiWarning(res) };
+}
+
+export async function deletePerson(
+	personUuid: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<schema["Facerecognition_person_DeletePersonWSResponse"]>({
+		route: "/faceRecognition/person/deletePerson",
+		body: {
+			personUuid,
+		} satisfies schema["Facerecognition_person_DeletePersonWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return { success: true, uuid: personUuid, warningMsg: apiWarning(res) };
+}
+
+export async function changePersonLabel(
+	personUuid: string,
+	label: string,
+	action: "add" | "remove",
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<schema["Facerecognition_person_AddPersonLabelWSResponse"]>({
+		route:
+			action === "add"
+				? "/faceRecognition/person/addPersonLabel"
+				: "/faceRecognition/person/removePersonLabel",
+		body: {
+			personUuid,
+			label,
+		} satisfies schema["Facerecognition_person_AddPersonLabelWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return { success: true, uuid: personUuid, label, warningMsg: apiWarning(res) };
+}
+
+/**
+ * Delete one enrolled face image. Keyed on `faceId`, NOT on a person uuid — a
+ * person can have several matchmakers, and deleting one only removes that
+ * enrolled image, leaving the person and their other faces intact.
+ */
+export async function deleteFaceMatchmaker(
+	faceId: string,
+	requestModifiers?: RequestModifiers,
+	sessionId?: string,
+) {
+	const res = await postApi<
+		schema["Facerecognition_matchmaker_DeleteFaceMatchmakerWSResponse"]
+	>({
+		route: "/faceRecognition/matchmaker/deleteFaceMatchmaker",
+		body: {
+			faceId,
+		} satisfies schema["Facerecognition_matchmaker_DeleteFaceMatchmakerWSRequest"],
+		modifiers: requestModifiers,
+		sessionId,
+	});
+
+	throwIfApiError(res);
+
+	return { success: true, faceId, warningMsg: apiWarning(res) };
 }

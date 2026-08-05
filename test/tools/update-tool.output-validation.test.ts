@@ -151,24 +151,34 @@ describe("update-tool — error paths survive output validation", () => {
     expect(result.isError).toBe(true);
   });
 
-  // "Coming soon" is an answer, not a transport failure: it must carry
-  // structuredContent to clear validation, but must NOT be flagged isError or
-  // the model narrates it as a broken tool.
-  it("returns the not-implemented message for other entity types without erroring", async () => {
-    const result = await callUpdateTool(withNulledArgs({ entityType: "badge-reader" }));
+  // ENTITY_TYPE used to advertise five types with no handler, each answering
+  // "not yet implemented. Coming soon!". The enum now lists only what works, so
+  // those values are rejected up front.
+  //
+  // This IS a -32602, but the input-validation kind, which is the opposite
+  // problem to the one this file is about: it enumerates the values that ARE
+  // accepted, so the model can correct itself. The failure mode being guarded
+  // against elsewhere here is an OUTPUT-validation -32602, which replaces a real
+  // message with an opaque protocol crash.
+  it.each([["badge-reader"], ["climate-sensor"], ["audio-gateway"]])(
+    "rejects the unimplemented entity type %s by naming the ones that work",
+    async unimplementedType => {
+      const result = await callUpdateTool(withNulledArgs({ entityType: unimplementedType }));
+
+      const text = textOf(result);
+      expect(text).toContain("camera");
+      expect(text).toContain("doorbell-camera");
+      expect(text).not.toContain("Coming soon");
+    }
+  );
+
+  it("accepts doorbell-camera, which now has a handler", async () => {
+    const result = await callUpdateTool(withNulledArgs({ entityType: "doorbell-camera" }));
 
     const text = textOf(result);
-    expect(text).not.toContain("-32602");
-    expect(text).toContain("not yet fully implemented");
-    expect(result.isError).toBeFalsy();
-  });
-
-  it("returns the entity-type form when no entityType is resolvable", async () => {
-    // `entityType` is required by the input schema, so the step-0 form is only
-    // reachable via an unhandled enum member — assert the shape directly.
-    const result = await callUpdateTool(withNulledArgs({ entityType: "climate-sensor" }));
-    expect(result.isError).toBeFalsy();
-    expect((result.structuredContent as { message?: string }).message).toContain("Climate sensor");
+    // Reaches the handler rather than being rejected by the input schema.
+    expect(text).not.toContain("Invalid option");
+    expect(text).toContain("cameraVideoSettings");
   });
 
   it("still applies a valid update and reports success", async () => {
@@ -205,6 +215,223 @@ describe("update-tool — error paths survive output validation", () => {
       ([arg]) => (arg as { route: string }).route === "/camera/updateFacetedConfig"
     );
     expect((sent?.[0] as { body: any }).body.configUpdate.deviceSettings).toEqual({
+      led_mode: "always_off",
+      led_stealth_mode: true,
+    });
+  });
+});
+
+const DOORBELL_UUID = "LEAIcNIVT3yAGjkD4mtbRw";
+
+/**
+ * Doorbell writes are verified against /doorbellcamera/getConfig, because the
+ * update response only echoes the caller's own input — before this read was
+ * wired up, a silent no-op was indistinguishable from a real write (gap 5 in
+ * docs/crud_missing_gaps.md). The mock flips the config it serves once
+ * updateConfig has been called, so the before/after reads see different states
+ * exactly like the live API.
+ */
+function mockDoorbellApi({
+  before,
+  after,
+}: {
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}) {
+  let updated = false;
+  vi.mocked(network.postApi).mockImplementation(async (call: unknown) => {
+    const { route } = call as { route: string };
+    if (route === "/doorbellcamera/getMinimalStateList") {
+      return { minimalStates: [{ uuid: DOORBELL_UUID, name: "Front Door" }] } as never;
+    }
+    if (route === "/doorbellcamera/updateConfig") {
+      updated = true;
+      return { error: false } as never;
+    }
+    if (route === "/doorbellcamera/getConfig") {
+      return { error: false, config: updated ? after : before } as never;
+    }
+    throw new Error(`unexpected route ${route}`);
+  });
+}
+
+describe("update-tool — doorbell writes are verified via getConfig", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows the settable subset of the current config when no settings are passed", async () => {
+    mockDoorbellApi({
+      before: {
+        img_sharpness: 6,
+        img_contrast: 64,
+        audio_record: true,
+        // internal fields must NOT leak into currentSettings — the full config
+        // has ~150 of them and none are settable through this tool
+        obj_ai_threshold: 0.5,
+        orgUuid: "someOrgUuid",
+      },
+      after: {},
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({ entityType: "doorbell-camera", entityUuid: DOORBELL_UUID })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as {
+      needUserInput?: boolean;
+      currentSettings?: { video?: Record<string, unknown>; audio?: Record<string, unknown> };
+    };
+    expect(structured.needUserInput).toBe(true);
+    expect(structured.currentSettings?.video).toEqual({ img_sharpness: 6, img_contrast: 64 });
+    expect(structured.currentSettings?.audio).toEqual({ audio_record: true });
+    expect(JSON.stringify(structured.currentSettings)).not.toContain("obj_ai_threshold");
+  });
+
+  it("reports a verified write, with the previous values, when the read-back matches", async () => {
+    mockDoorbellApi({
+      before: { img_contrast: 64 },
+      after: { img_contrast: 32 },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as {
+      success?: boolean;
+      message?: string;
+      previousSettings?: Record<string, unknown>;
+      settingsNotApplied?: unknown;
+    };
+    expect(structured.success).toBe(true);
+    expect(structured.message).toContain("verified");
+    expect(structured.previousSettings).toEqual({ img_contrast: 64 });
+    expect(structured.settingsNotApplied).toBeUndefined();
+  });
+
+  // The exact failure mode that motivated wiring up getConfig: api2 accepts the
+  // update, returns error:false, and changes nothing. Without the read-back the
+  // tool reported this as a success.
+  it("reports an error when the read-back shows the write was a silent no-op", async () => {
+    mockDoorbellApi({
+      before: { img_contrast: 64 },
+      after: { img_contrast: 64 },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBe(true);
+    const text = textOf(result);
+    expect(text).toContain("unchanged");
+    expect(text).toContain("64"); // the actual value
+    expect(text).toContain("32"); // the requested value
+    expect(text).toContain("Do not retry");
+  });
+
+  it("flags settings the doorbell config does not report instead of failing them", async () => {
+    // camera_name is settable through updateConfig but never appears in the
+    // getConfig response, so it lands in settingsNotVerified — not in
+    // settingsNotApplied, which would be a false alarm.
+    mockDoorbellApi({
+      before: { img_contrast: 64 },
+      after: { img_contrast: 32 },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        cameraDeviceSettings: JSON.stringify({ camera_name: "Renamed Doorbell" }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as {
+      success?: boolean;
+      message?: string;
+      settingsNotVerified?: string[];
+      settingsNotApplied?: unknown;
+    };
+    expect(structured.success).toBe(true);
+    expect(structured.settingsNotVerified).toEqual(["camera_name"]);
+    expect(structured.settingsNotApplied).toBeUndefined();
+    expect(structured.message).toContain("could not be verified");
+  });
+
+  it("still applies the write when the config read-back itself fails", async () => {
+    vi.mocked(network.postApi).mockImplementation(async (call: unknown) => {
+      const { route } = call as { route: string };
+      if (route === "/doorbellcamera/getMinimalStateList") {
+        return { minimalStates: [{ uuid: DOORBELL_UUID, name: "Front Door" }] } as never;
+      }
+      if (route === "/doorbellcamera/updateConfig") {
+        return { error: false } as never;
+      }
+      if (route === "/doorbellcamera/getConfig") {
+        return { error: true, errorMsg: "config service unavailable" } as never;
+      }
+      throw new Error(`unexpected route ${route}`);
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraVideoSettings: JSON.stringify({ img_contrast: 32 }),
+        step: "confirmation",
+      })
+    );
+
+    // A broken read path must not block the write the user asked for — but the
+    // result has to say the new value is unverified rather than claiming it.
+    expect(result.isError).toBeFalsy();
+    const structured = result.structuredContent as { success?: boolean; message?: string };
+    expect(structured.success).toBe(true);
+    expect(structured.message).toContain("could not be verified");
+    const updateCall = vi
+      .mocked(network.postApi)
+      .mock.calls.find(([arg]) => (arg as { route: string }).route === "/doorbellcamera/updateConfig");
+    expect(updateCall).toBeDefined();
+  });
+
+  it("normalizes ledMode into the flat doorbell configUpdate too", async () => {
+    mockDoorbellApi({
+      before: { led_stealth_mode: false },
+      after: { led_stealth_mode: true },
+    });
+
+    const result = await callUpdateTool(
+      withNulledArgs({
+        entityType: "doorbell-camera",
+        entityUuid: DOORBELL_UUID,
+        cameraDeviceSettings: JSON.stringify({ ledMode: "OFF", led_stealth_mode: "true" }),
+        step: "confirmation",
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const sent = vi.mocked(network.postApi).mock.calls.find(
+      ([arg]) => (arg as { route: string }).route === "/doorbellcamera/updateConfig"
+    );
+    expect((sent?.[0] as { body: any }).body.configUpdate).toEqual({
+      deviceUuid: DOORBELL_UUID,
       led_mode: "always_off",
       led_stealth_mode: true,
     });

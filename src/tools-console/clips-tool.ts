@@ -16,6 +16,7 @@ import {
 	getSharedClipGroups,
 	createClip,
 	deleteClip,
+	updateClip,
 } from "../api/clips-tool-api.js";
 
 const TOOL_NAME = "clips-tool";
@@ -72,6 +73,31 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 					sessionId,
 				),
 			);
+		}
+		case "updateClip": {
+			if (!args.clipUuid) {
+				throw new Error("clipUuid is required for 'updateClip' requestType");
+			}
+			if (!args.clipTitle?.trim() && !args.clipDescription?.trim()) {
+				throw new Error(
+					"'updateClip' needs at least one of clipTitle or clipDescription — both were empty, so there is nothing to change",
+				);
+			}
+			const { existingTitle, ...result } = await updateClip(
+				args.clipUuid,
+				{
+					title: args.clipTitle?.trim() || undefined,
+					description: args.clipDescription?.trim() || undefined,
+				},
+				requestModifiers,
+				sessionId,
+			);
+			return createToolStructuredContent<OutputSchema>({
+				...result,
+				note: result.updateResult
+					? `Renamed the clip${existingTitle ? ` "${existingTitle}"` : ""}${args.clipTitle?.trim() ? ` to "${args.clipTitle.trim()}"` : ""}. Fields you did not pass were left as they were.`
+					: undefined,
+			});
 		}
 		case "deleteClip": {
 			if (!args.clipUuid) {

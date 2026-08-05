@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { TOOL_ARGS, type ToolArgs } from "../types/time-conversion-tool-types.js";
 
 const TOOL_NAME = "time-conversion-tool";
@@ -51,8 +52,16 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         text: JSON.stringify(payload),
       },
     ],
+    structuredContent: payload,
   };
 };
+
+const CONVERSION_RESULT = z.object({
+  input: z.union([z.string(), z.number()]).optional().describe("The value as passed in"),
+  epoch: z.number().optional().describe("Epoch milliseconds (present when the input was ISO)"),
+  iso: z.string().optional().describe("ISO 8601 string (present when the input was an epoch)"),
+  error: z.string().optional().describe("Why this value could not be converted"),
+});
 
 export function createTool(server: McpServer) {
   server.registerTool(
@@ -61,6 +70,14 @@ export function createTool(server: McpServer) {
       title: "Time Conversion",
       description: TOOL_DESCRIPTION,
       inputSchema: TOOL_ARGS,
+      // Single-value calls keep their legacy flat shapes ({epoch} / {iso} /
+      // {error}); comma-separated batches return {results: [...]}.
+      outputSchema: {
+        epoch: z.number().optional(),
+        iso: z.string().optional(),
+        error: z.string().optional(),
+        results: z.array(CONVERSION_RESULT).optional(),
+      },
       annotations: { readOnlyHint: true },
     },
     TOOL_HANDLER

@@ -223,6 +223,60 @@ export function formatTimestamp(timestampMs: number, timeZone?: string): string 
     });
 }
 
+// ---------------------------------------------------------------------------
+// Weekly minute intervals
+// ---------------------------------------------------------------------------
+
+const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
+
+/**
+ * Rhombus weekly schedules store their windows as "minute of week" integers.
+ * Minute 0 is **Monday 00:00** — the order of `RhombusDayOfWeekEnum` in the
+ * api2 spec, which matches `java.time.DayOfWeek`.
+ */
+const WEEKDAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
+
+/** "27000" -> "Wednesday 18:00". */
+export function formatMinuteOfWeek(minuteOfWeek: number): string {
+  // Negative or past-end values are normalised rather than rejected: the caller
+  // is rendering whatever api2 stored, and a wrapped window is legitimate.
+  const normalized = ((Math.trunc(minuteOfWeek) % MINUTES_PER_WEEK) + MINUTES_PER_WEEK) %
+    MINUTES_PER_WEEK;
+  const day = WEEKDAY_NAMES[Math.floor(normalized / MINUTES_PER_DAY)];
+  const minuteOfDay = normalized % MINUTES_PER_DAY;
+  const hours = String(Math.floor(minuteOfDay / 60)).padStart(2, "0");
+  const minutes = String(minuteOfDay % 60).padStart(2, "0");
+  return `${day} ${hours}:${minutes}`;
+}
+
+/**
+ * Human-readable form of one weekly window, e.g. "Monday 09:00 – Monday 17:00".
+ *
+ * Tools should emit this ALONGSIDE the raw `minuteOfWeekStart`/`Stop` integers,
+ * never instead of them: a bare 27000 is unreadable to the model, but if the
+ * Monday-is-day-0 convention above is ever wrong the formatted string would let
+ * it state the wrong day with full confidence. Keeping both makes that
+ * checkable.
+ */
+export function describeWeeklyInterval(
+  minuteOfWeekStart: number | null | undefined,
+  minuteOfWeekStop: number | null | undefined
+): string | undefined {
+  if (typeof minuteOfWeekStart !== "number" || typeof minuteOfWeekStop !== "number") {
+    return undefined;
+  }
+  return `${formatMinuteOfWeek(minuteOfWeekStart)} – ${formatMinuteOfWeek(minuteOfWeekStop)}`;
+}
+
 /**
  * Formats a timestamp in milliseconds to an ISO 8601 string with timezone offset.
  * Format: "2025-04-21T10:57:00.000-07:00"

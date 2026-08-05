@@ -340,3 +340,68 @@ export type Video_GetExactFrameDataWSResponse = {
   frameData?: string | null;
   responseMessage?: string | null;
 };
+
+// Output schema — registered so the filtering proxy can project results and
+// generate the includeFields path catalog. All fields optional: which subset
+// appears depends on requestType. Every handler return must carry
+// structuredContent (or isError: true) once this is registered — the SDK
+// otherwise replaces the real message with an opaque -32602 (see CLAUDE.md).
+export const OUTPUT_SCHEMA = {
+  // asked for a camera without saying which
+  needUserInput: z.boolean().optional(),
+  commandForUser: z.string().optional(),
+
+  // requestType: "image"
+  success: z.boolean().optional(),
+  status: z.string().optional(),
+  cameraUuid: z.string().optional(),
+  timestampMs: z.number().optional(),
+  cropApplied: z
+    .object({
+      x: z.number().nullable().optional(),
+      y: z.number().nullable().optional(),
+      width: z.number().nullable().optional(),
+      height: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional()
+    .describe("The crop actually applied to the returned frame, if any"),
+
+  // requestType: "get-settings" — the faceted config is free-form (~150 fields
+  // per facet), so it is an open record; project with paths like
+  // "config.videoFacetSettings".
+  config: z.record(z.string(), z.unknown()).optional(),
+  daysInCloud: z.number().optional(),
+  daysOnCamera: z.number().optional(),
+  cloudArchiveDays: z.number().nullable().optional(),
+
+  // requestType: "get-media-uris" (subset of Camera_GetMediaUrisWSResponse)
+  lanCheckUrls: z.array(z.string().nullable()).nullable().optional(),
+  lanLiveH264Uris: z.array(z.string().nullable()).nullable().optional(),
+  lanLiveM3u8Uris: z.array(z.string().nullable()).nullable().optional(),
+  lanLiveMpdUris: z.array(z.string().nullable()).nullable().optional(),
+  lanLiveOpusUris: z.array(z.string().nullable()).nullable().optional(),
+  lanVodM3u8UrisTemplates: z.array(z.string().nullable()).nullable().optional(),
+  lanVodMpdUrisTemplates: z.array(z.string().nullable()).nullable().optional(),
+  wanLiveH264Uri: z.string().nullable().optional(),
+  wanLiveM3u8Uri: z.string().nullable().optional(),
+  wanLiveMpdUri: z.string().nullable().optional(),
+  wanLiveOpusUri: z.string().nullable().optional(),
+  wanVodH264UriTemplate: z.string().nullable().optional(),
+  wanVodM3u8UriTemplate: z.string().nullable().optional(),
+  wanVodMpdUriTemplate: z.string().nullable().optional(),
+
+  // requestType: "get-ai-thresholds" (Camera_GetCameraAIThresholdsWSResponse)
+  consecutiveHumanFilter: z.number().nullable().optional(),
+  consecutiveVehicleFilter: z.number().nullable().optional(),
+  faceConfidenceThreshold: z.number().nullable().optional(),
+  faceMatchConfidenceThreshold: z.number().nullable().optional(),
+  humanConfidenceThreshold: z.number().nullable().optional(),
+  lprConfidenceThreshold: z.number().nullable().optional(),
+  vehicleConfidenceThreshold: z.number().nullable().optional(),
+  maxEventDurationMs: z.number().nullable().optional(),
+
+  // api2's success-with-caveat channel; in ALWAYS_PROTECTED_FIELDS so a
+  // projection cannot strip it
+  warningMsg: z.string().nullable().optional(),
+};

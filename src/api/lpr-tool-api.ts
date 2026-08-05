@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type {
   SavedVehicle,
   VehicleEvent,
@@ -30,9 +30,7 @@ export async function getVehicleEvents(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.events?.map(
@@ -62,9 +60,7 @@ export async function getSavedVehicles(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.vehicles?.map(
@@ -91,9 +87,7 @@ export async function getVehicleLabels(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   const processedVehicleLabels: VehicleLabels = {};
 
@@ -122,7 +116,7 @@ export async function searchLicensePlates(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return (res.licensePlateEvents || []).map((event: any) => ({
     licensePlate: event.vehicleLicensePlate ?? undefined,
     deviceUuid: event.deviceUuid ?? undefined,
@@ -130,6 +124,15 @@ export async function searchLicensePlates(
   }));
 }
 
+/**
+ * Save (or overwrite) a vehicle. The plate is the key, so calling this for a
+ * plate that already exists replaces its name and description.
+ *
+ * NOTE the field-name asymmetry, which this used to get wrong: the REQUEST
+ * field is `vehicleLicensePlate` (`Vehicle_SaveVehicleWSRequest`) while the
+ * READ field is `licensePlate` (`VehicleV2Type`). Sending `licensePlate` here
+ * silently saved a vehicle with no plate attached.
+ */
 export async function saveVehicle(
   name: string,
   licensePlate: string,
@@ -139,10 +142,88 @@ export async function saveVehicle(
 ) {
   const res = await postApi<schema["Vehicle_SaveVehicleWSResponse"]>({
     route: "/vehicle/saveVehicle",
-    body: { name, licensePlate, description: description || "" },
+    body: {
+      name,
+      vehicleLicensePlate: licensePlate,
+      description: description || "",
+    } satisfies schema["Vehicle_SaveVehicleWSRequest"],
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
-  return { success: true };
+  throwIfApiError(res);
+  return { success: true, licensePlate, warningMsg: res.warningMsg ?? undefined };
+}
+
+export async function deleteVehicle(
+  licensePlate: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Vehicle_DeleteVehicleWSResponse"]>({
+    route: "/vehicle/deleteVehicle",
+    body: {
+      vehicleLicensePlate: licensePlate,
+    } satisfies schema["Vehicle_DeleteVehicleWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  return { success: true, licensePlate, warningMsg: res.warningMsg ?? undefined };
+}
+
+export async function addVehicleLabel(
+  licensePlate: string,
+  label: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Vehicle_AddVehicleLabelWSResponse"]>({
+    route: "/vehicle/addVehicleLabel",
+    body: {
+      vehicleLicensePlate: licensePlate,
+      label,
+    } satisfies schema["Vehicle_AddVehicleLabelWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  return { success: true, licensePlate, label, warningMsg: res.warningMsg ?? undefined };
+}
+
+export async function removeVehicleLabel(
+  licensePlate: string,
+  label: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Vehicle_RemoveVehicleLabelWSResponse"]>({
+    route: "/vehicle/removeVehicleLabel",
+    body: {
+      vehicleLicensePlate: licensePlate,
+      label,
+    } satisfies schema["Vehicle_RemoveVehicleLabelWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  return { success: true, licensePlate, label, warningMsg: res.warningMsg ?? undefined };
+}
+
+/** The raw saved vehicle, for the exists-checks the write paths need. */
+export async function findSavedVehicle(
+  licensePlate: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Vehicle_GetVehiclesWSResponse"]>({
+    route: "/vehicle/getVehicles",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  const normalized = licensePlate.trim().toUpperCase();
+  return res.vehicles?.find(
+    vehicle => vehicle?.licensePlate?.trim().toUpperCase() === normalized
+  );
 }

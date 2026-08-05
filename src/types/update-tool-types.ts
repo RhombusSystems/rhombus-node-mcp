@@ -1,15 +1,16 @@
 import { z } from "zod";
 
-// Define the entity types that can be updated
-export const ENTITY_TYPE = z.enum([
-  "camera",
-  "climate-sensor",
-  "door-controller",
-  "environmental-gateway",
-  "audio-gateway",
-  "doorbell-camera",
-  "badge-reader",
-]);
+/**
+ * The entity types this tool can actually update.
+ *
+ * Deliberately narrow. It previously listed climate-sensor, door-controller,
+ * environmental-gateway, audio-gateway and badge-reader, none of which had a
+ * handler — every one returned "not yet implemented. Coming soon!". Because the
+ * chatbot adapts MCP tools with `strict: false`, an enum is advisory: nothing
+ * stopped the model picking one of those, and each attempt burned a turn on a
+ * guaranteed dead end. Add a value here only once its handler exists.
+ */
+export const ENTITY_TYPE = z.enum(["camera", "doorbell-camera"]);
 export type EntityType = z.infer<typeof ENTITY_TYPE>;
 
 // Camera-specific update schemas
@@ -101,7 +102,11 @@ export const CameraDeviceSettings = z.object({
 
 // Input schema for the tool
 export const TOOL_ARGS = {
-  entityType: ENTITY_TYPE.describe("Type of entity to update"),
+  entityType: ENTITY_TYPE.describe(
+    "Type of entity to update. Only 'camera' and 'doorbell-camera' can be updated through this tool; " +
+      "for climate sensors, door controllers, environmental gateways, audio gateways and badge readers, tell the " +
+      "user the change has to be made in the Rhombus Console rather than attempting it here."
+  ),
   entityUuid: z
     .string()
     .nullable()
@@ -162,6 +167,11 @@ export const OUTPUT_SCHEMA = z.object({
   success: z.boolean().optional(),
   error: z.string().optional(),
   updatedSettings: z.any().optional(),
+  // Doorbell writes are verified by reading /doorbellcamera/getConfig back;
+  // these carry the before values and anything the read-back contradicted.
+  previousSettings: z.any().optional(),
+  settingsNotApplied: z.any().optional(),
+  settingsNotVerified: z.any().optional(),
 });
 
 // API payload types

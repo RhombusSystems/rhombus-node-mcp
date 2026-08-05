@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -26,9 +26,7 @@ export async function searchLicensePlates(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.vehicleEvents?.map((event: any) => ({
@@ -62,9 +60,7 @@ export async function searchObjectsByColor(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     (res as any).objects?.map((result: any) => ({
@@ -101,9 +97,7 @@ export async function searchObjectsByText(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.similarEmbeddings?.map((match: any) => ({
@@ -135,9 +129,7 @@ export async function searchMotionGrid(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     (res as any).timeUtcSecsList?.map((ts: number) => ({
