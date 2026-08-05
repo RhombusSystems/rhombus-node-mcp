@@ -504,11 +504,11 @@ describe("applyGroupBy", () => {
   });
 });
 
-describe("createFilteringProxy — missing structuredContent backstop", () => {
+describe("createFilteringProxy — tool result shape", () => {
   /**
-   * The failure this guards against is invisible at the handler level: the
-   * handler returns readable text and only the SDK's post-handler validation
-   * turns it into -32602. So drive it through the real SDK.
+   * These drive the REAL SDK on purpose. Whether a result survives
+   * `validateToolOutput` is invisible at the handler level — the handler returns
+   * readable text and only the SDK's post-handler validation can discard it.
    */
   async function callThroughProxy(result: unknown, opts: { outputSchema?: boolean } = {}) {
     const server = new McpServer({ name: "test", version: "0.0.0" });
@@ -536,15 +536,27 @@ describe("createFilteringProxy — missing structuredContent backstop", () => {
     }
   }
 
-  it("preserves the tool's message instead of letting the SDK emit -32602", async () => {
+  /**
+   * Pins the cost of NOT carrying structuredContent, so the next person to hit
+   * it recognises the symptom instead of rediscovering it in prod (it shipped
+   * there twice). The proxy used to paper over this by force-setting `isError`;
+   * that net was removed deliberately — it was unreachable (every tool with an
+   * outputSchema already returns structuredContent) and it could only ever flag
+   * the result as an error, which mislabels a legitimate text-only success like
+   * update-tool's `unsupportedResult`. The invariant is the tool's job:
+   * every return from a tool with an outputSchema carries structuredContent, or
+   * sets isError itself.
+   */
+  it("lets the SDK replace the message when a tool with an outputSchema omits structuredContent", async () => {
     const result = await callThroughProxy({
       content: [{ type: "text", text: "doorControllerUuid is required." }],
     });
 
     const text = (result.content as { text: string }[])[0].text;
-    expect(text).toBe("doorControllerUuid is required.");
-    expect(text).not.toContain("-32602");
     expect(result.isError).toBe(true);
+    expect(text).toContain("no structured content");
+    // The tool's own message is destroyed — this is the symptom to recognise.
+    expect(text).not.toContain("doorControllerUuid is required.");
   });
 
   it("leaves a well-formed result untouched", async () => {
@@ -563,8 +575,8 @@ describe("createFilteringProxy — missing structuredContent backstop", () => {
       { outputSchema: false }
     );
 
-    // No outputSchema means no validation to fail — flagging isError here would
-    // wrongly turn legitimate text results (the private MCP's pattern) into errors.
+    // No outputSchema means no validation to fail, so a text-only result is
+    // legitimate (the private MCP's pattern) and must not come back as an error.
     expect(result.isError).toBeFalsy();
   });
 });
