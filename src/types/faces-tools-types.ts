@@ -162,7 +162,10 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "A person's email address. Optional for 'update-person'; omit to leave it unchanged."
+      "A person's email address. Optional for 'update-person'; omit to leave it unchanged. " +
+        "CAVEAT: the Rhombus API never returns a person's email on any read path (verified " +
+        "2026-08-05), so a stored email cannot be displayed or verified afterwards — tell the " +
+        "user that if they ask to see it."
     ),
   personLabel: z
     .string()
@@ -239,6 +242,11 @@ export const OUTPUT_SCHEMA = z.object({
         z.object({
           createdOn: z.optional(z.number()),
           name: z.optional(z.string()),
+          email: z
+            .optional(z.string())
+            .describe(
+              "Currently always absent — api2 does not serialize Person.email on any read path (verified 2026-08-05). Mapped so it appears automatically if that changes."
+            ),
           orgUuid: z.optional(z.string()),
           updatedOn: z.optional(z.number()),
           uuid: z.optional(z.string()),

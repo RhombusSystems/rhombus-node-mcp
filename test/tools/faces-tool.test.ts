@@ -180,3 +180,38 @@ describe("faces-tool get-face-events", () => {
     });
   });
 });
+
+describe("faces-tool get-person-labels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function labelsArgs(): ToolArgs {
+    return {
+      ...makeArgs({}),
+      requestType: RequestType.GET_PERSON_LABELS,
+    } as ToolArgs;
+  }
+
+  // A bare {} is indistinguishable from a failed lookup (gap 8 in
+  // docs/crud_missing_gaps.md) — the empty result has to say what it means.
+  it("attaches a note when the org has no person labels", async () => {
+    vi.mocked(facesApi.getPersonLabels).mockResolvedValue({ labelsByPerson: {} } as never);
+
+    const output = await callTool(labelsArgs());
+
+    expect(output.getPersonLabelsResponse).toEqual({});
+    expect(output.note).toContain("no person labels");
+  });
+
+  it("attaches no note when labels exist", async () => {
+    vi.mocked(facesApi.getPersonLabels).mockResolvedValue({
+      labelsByPerson: { personA: ["contractor"] },
+    } as never);
+
+    const output = await callTool(labelsArgs());
+
+    expect(output.getPersonLabelsResponse).toEqual({ personA: ["contractor"] });
+    expect(output.note).toBeUndefined();
+  });
+});

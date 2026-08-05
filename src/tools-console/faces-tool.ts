@@ -234,6 +234,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         getSavedFacesResponse: peopleResponse.people.map(p => ({
           createdOn: p.createdOn ? parseInt(p.createdOn, 10) : undefined,
           name: p.name ?? undefined,
+          // As of 2026-08-05 api2 never serializes Person.email, so this is
+          // always undefined today — mapped anyway so it surfaces for free if
+          // the API starts returning it.
+          email: p.email ?? undefined,
           orgUuid: p.orgUuid ?? undefined,
           updatedOn: p.updatedOn ? parseInt(p.updatedOn, 10) : undefined,
           uuid: p.uuid ?? undefined,
@@ -262,6 +266,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
     return createToolStructuredContent({
       requestType: RequestType.GET_PERSON_LABELS,
       getPersonLabelsResponse: cleaned,
+      // A bare {} reads as "the lookup returned nothing" — say what the empty
+      // result actually means so the model doesn't have to interpret it.
+      note:
+        Object.keys(cleaned).length === 0
+          ? "This organization has no person labels at all: the query succeeded and every registered person currently has zero labels."
+          : undefined,
     });
   }
 
@@ -359,7 +369,15 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
       requestType: args.requestType,
       updated: { success: updated.success, uuid: updated.uuid },
       warningMsg: updated.warningMsg,
-      note: `Updated ${existing.name ?? args.personUuid}${args.personName?.trim() ? ` — now named "${args.personName.trim()}"` : ""}. Their enrolled face images are unchanged, so recognition still matches the same face to this record.`,
+      note:
+        `Updated ${existing.name ?? args.personUuid}${args.personName?.trim() ? ` — now named "${args.personName.trim()}"` : ""}. Their enrolled face images are unchanged, so recognition still matches the same face to this record.` +
+        // api2 accepts the email write but no read path — findPeopleByOrg,
+        // getPerson, or even the update response's own echo — ever returns it
+        // (verified against api2.itg 2026-08-05). Without this caveat the model
+        // would tell the user the email is saved and then fail to show it.
+        (args.personEmail?.trim()
+          ? " NOTE: the API does not return a person's email on any read path, so the stored email cannot be displayed or verified later."
+          : ""),
     });
   }
 
