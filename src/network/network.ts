@@ -115,6 +115,59 @@ function redactUrlForLog(url: string): string {
   return url.replace(/([?&]_rs=)[^&]+/g, "$1<redacted>");
 }
 
+// The `status` string on a failed result is read by tools and relayed to the
+// model almost verbatim, so it has to be a short, readable sentence. It used to
+// be `JSON.stringify({body: <the entire request payload>, error: <raw text>})`,
+// which buried the one useful line in a copy of the request — and collapsed to
+// the literally useless "Request Error: {}" whenever the thrown value was an
+// Error (JSON.stringify of an Error yields "{}").
+const API_ERROR_DETAIL_LIMIT = 400;
+
+function truncateDetail(text: string): string {
+  return text.length > API_ERROR_DETAIL_LIMIT
+    ? `${text.slice(0, API_ERROR_DETAIL_LIMIT)}…`
+    : text;
+}
+
+/** Pull the human-readable message out of an api2 error body (JSON or plain text). */
+function extractApiErrorDetail(responseText: string): string {
+  const text = responseText.trim();
+  if (!text) return "";
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object") {
+      for (const key of ["errorMsg", "message", "error", "status", "detail"]) {
+        const value = (parsed as Record<string, unknown>)[key];
+        if (typeof value === "string" && value.trim()) return truncateDetail(value.trim());
+      }
+    }
+  } catch {
+    // not JSON — fall through to the raw text
+  }
+  return truncateDetail(text);
+}
+
+function describeHttpFailure(status: number, responseText: string): string {
+  const detail = extractApiErrorDetail(responseText);
+  return detail
+    ? `HTTP ${status}: ${detail}`
+    : `HTTP ${status} from the Rhombus API (the response body carried no error message)`;
+}
+
+/** JSON.stringify(new Error(...)) === "{}", so unwrap thrown values by hand. */
+function describeThrown(error: unknown): string {
+  if (error instanceof Error) {
+    const cause = error.cause instanceof Error ? ` (cause: ${error.cause.message})` : "";
+    return `${error.name}: ${error.message}${cause}`;
+  }
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const serialized = JSON.stringify(error);
+    if (serialized && serialized !== "{}") return truncateDetail(serialized);
+  }
+  return String(error ?? "unknown error");
+}
+
 export async function postApi<T>({
   route,
   body,
@@ -150,7 +203,11 @@ export async function postApi<T>({
       body,
     });
     if (!response.ok) {
-      logger.debug(`❌ RESPONSE - ${response.ok} - ${response.status}`);
+      const responseText = await response.text().catch(() => "");
+      // The request body belongs in the log, not in the message the model reads.
+      logger.error(
+        `[POSTAPI] HTTP ${response.status} - ${redactUrlForLog(url)} - request: ${body} - response: ${truncateDetail(responseText)}`
+      );
       if (response.status === 401 || response.status === 403) {
         return {
           error: true,
@@ -158,11 +215,10 @@ export async function postApi<T>({
             "Sorry, I don't have permission to help with this request.  Consider upgrading my permissions by changing the role of the API Key I am using.",
         } as T & { error?: boolean; status?: string };
       }
-      throw {
-        body: JSON.parse(body),
-        error: await response.text(),
-      };
-      // throw new Error(`HTTP error! status: ${response.status}`);
+      return {
+        error: true,
+        status: describeHttpFailure(response.status, responseText),
+      } as T & { error?: boolean; status?: string };
     }
     const ret = await response.json();
     const jsonStr = JSON.stringify(ret);
@@ -170,11 +226,15 @@ export async function postApi<T>({
     logger.debug(`✅ RESPONSE - ${response.ok} - ${truncatedJson}`);
     return ret as T & { error?: boolean; status?: string };
   } catch (error) {
-    logger.error(`[POSTAPI] ERROR - ${JSON.stringify(error || {}, null, 4)}`);
+    logger.error(
+      `[POSTAPI] ERROR - ${redactUrlForLog(url)} - ${
+        error instanceof Error ? (error.stack ?? error.message) : describeThrown(error)
+      }`
+    );
 
     return {
       error: true,
-      status: `Request Error: ${JSON.stringify(error)}`,
+      status: `Request failed before a response was received: ${describeThrown(error)}`,
     } as T & { error?: boolean; status?: string };
   }
 }

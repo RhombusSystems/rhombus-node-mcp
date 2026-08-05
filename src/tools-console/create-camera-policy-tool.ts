@@ -2,7 +2,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { RequestModifiers } from "../util.js";
 import { createCameraPolicy } from "../api/create-camera-policy-tool-api.js";
-import { ApiPayloadSchema, OUTPUT_SCHEMA } from "../types/create-camera-policy-tool-types.js";
+import {
+  ApiPayloadSchema,
+  OUTPUT_SCHEMA,
+  SCHEDULE_CONFIGS_EXAMPLE,
+  SUGGESTED_CAMERA_ACTIVITIES,
+  isEmptyScheduleConfigs,
+  parseCameraUuids,
+  parseScheduleConfigs,
+} from "../types/create-camera-policy-tool-types.js";
 import { postApi } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 
@@ -13,6 +21,8 @@ A tool for creating a camera policy.
 Preferred (single call): pass name, description, orgUuid, scheduleConfigs, and cameraUuids together — the tool creates the policy, configures its schedule triggers, and assigns the cameras all in one call. Omit policyUuid; it is created for you.
 
 Legacy step-by-step: calling with only a subset of args advances one phase at a time (name/description/orgUuid to create → policyUuid+scheduleConfigs for schedules → policyUuid+cameraUuids for camera assignment).
+
+Errors are labelled: a "RETRYABLE" error means nothing was written and you should call again with corrected arguments; a "PARTIAL STATE" error means part of the policy now exists and you must stop and report it.
 `;
 
 // All args are optional: each step of the flow uses a different subset, and
@@ -25,11 +35,29 @@ const TOOL_ARGS = {
   orgUuid: z.string().optional().describe("Organization UUID (for creating policy)"),
 
   // Step 2: Schedule configuration
-  policyUuid: z.string().optional().describe("Policy UUID (for configuring schedules)"),
-  scheduleConfigs: z.string().optional().describe("JSON string of schedule configurations"),
+  policyUuid: z
+    .string()
+    .optional()
+    .describe(
+      "Policy UUID of an EXISTING policy (for configuring schedules or assigning cameras on an already-created policy). Omit it when creating a policy — including on a single full call that also passes scheduleConfigs and cameraUuids."
+    ),
+  scheduleConfigs: z
+    .string()
+    .optional()
+    .describe(
+      `JSON array string of schedule configurations: [{"scheduleUuid": <uuid>, "activities": [<activity>, ...]}]. ` +
+        `"activities" must be a real JSON array of activity strings, not a string containing an array, and each ` +
+        `value must be an API activity constant (e.g. ${SUGGESTED_CAMERA_ACTIVITIES.slice(0, 6).join(", ")}) — ` +
+        `never a display label like "Human Movement". Example: ${SCHEDULE_CONFIGS_EXAMPLE}`
+    ),
 
   // Step 3: Camera assignment
-  cameraUuids: z.string().optional().describe("Comma-separated camera UUIDs to assign policy to"),
+  cameraUuids: z
+    .string()
+    .optional()
+    .describe(
+      'Comma-separated camera UUIDs to assign policy to, e.g. "uuidA,uuidB". Camera uuids only — resolve names to uuids first.'
+    ),
   policyName: z.string().optional().describe("Policy name (for reference)"),
 } as const;
 
@@ -48,55 +76,99 @@ function errorResult(text: string) {
   };
 }
 
-// postApi returns {error: true, status: "..."} on 401/403 and domain errors
-// arrive as {error: true, errorMsg: "..."} — normalize both.
-function apiErrorText(result: { errorMsg?: string | null; status?: string | null }): string {
-  return result.errorMsg || result.status || "Unknown error";
+// Errors are labelled by whether anything was written, because the caller cannot
+// otherwise tell. The guided workflow says "on error, STOP and make no further
+// calls" — correct after a partial mutation (a retry would create a SECOND
+// policy) and wrong before one, where a corrected retry is free. Prod 2026-08-04:
+// a malformed `scheduleConfigs` was rejected before any write, the model stopped
+// and apologized, and the identical request succeeded when the user asked again.
+const RETRYABLE_PREFIX = "RETRYABLE — nothing was created or changed by this call.";
+const PARTIAL_PREFIX = "PARTIAL STATE — do NOT retry this call and do NOT create another policy.";
+const RETRY_INSTRUCTION =
+  "Fix the arguments named above, then call this tool ONCE more with corrected arguments. Do not tell the user the policy could not be created unless a corrected retry also fails.";
+
+function retryableError(detail: string) {
+  return errorResult(`${RETRYABLE_PREFIX} ${detail} ${RETRY_INSTRUCTION}`);
+}
+
+/** Retryable, but a policy from an earlier call already exists — don't re-create it. */
+function retryableStepError(detail: string, existingPolicyUuid: string) {
+  return errorResult(
+    `${RETRYABLE_PREFIX} Policy ${existingPolicyUuid} already exists from an earlier call — do NOT create another one. ${detail} ${RETRY_INSTRUCTION}`
+  );
+}
+
+function partialStateError(detail: string) {
+  return errorResult(`${PARTIAL_PREFIX} ${detail} Report exactly this state to the user.`);
+}
+
+// postApi returns {error: true, status: "..."} on transport/HTTP failures and
+// domain errors arrive as {error: true, errorMsg: "..."} — normalize both.
+function apiErrorText(result: {
+  errorMsg?: string | null;
+  status?: string | null;
+}): string {
+  return (
+    result.errorMsg?.trim() ||
+    result.status?.trim() ||
+    "the Rhombus API reported a failure without a message"
+  );
+}
+
+/** api2 can succeed while reporting a caveat; dropping it hides real problems. */
+function apiWarningSuffix(result: { warningMsg?: string | null }): string {
+  const warning = result.warningMsg?.trim();
+  return warning ? ` Note from the API: ${warning}` : "";
 }
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { name, description, orgUuid, policyUuid, scheduleConfigs, cameraUuids, policyName } = args;
+
+  // An empty list is how the legacy step-1 call spells "no schedules yet", so it
+  // must not select the schedule phase. Detected by parsing, not by comparing to
+  // the literal "[]" — "[ ]" and "\"[]\"" used to slip past that compare and
+  // fall through into policy creation, silently creating a DUPLICATE policy.
+  const hasScheduleConfigs = Boolean(
+    scheduleConfigs?.trim() && !isEmptyScheduleConfigs(scheduleConfigs)
+  );
+  const hasFullInputSet = Boolean(name?.trim() && hasScheduleConfigs && cameraUuids?.trim());
+
+  // A full input set PLUS a policyUuid is ambiguous: create everything, or treat
+  // the uuid as an existing policy? It used to silently fall through to
+  // camera-assignment-only and then report "setup completely finished" for a
+  // policy whose schedules were never configured.
+  if (hasFullInputSet && policyUuid?.trim()) {
+    return retryableError(
+      `Ambiguous arguments: name, scheduleConfigs, and cameraUuids were all provided (a full creation call) together with policyUuid "${policyUuid.trim()}". ` +
+        `To create a new policy, drop policyUuid. To modify the existing policy ${policyUuid.trim()}, drop name and send policyUuid with ONE of scheduleConfigs or cameraUuids.`
+    );
+  }
 
   // Full run: all inputs present and no pre-existing policyUuid — create the
   // policy, configure schedules, and assign cameras in ONE call. The guided
   // workflow collects everything before confirming, and executing across three
   // model round trips proved fragile: the model wobbles at each call boundary
   // (re-renders forms, splits args wrong), so the boundaries are removed.
-  if (
-    name?.trim() &&
-    scheduleConfigs?.trim() &&
-    scheduleConfigs.trim() !== "[]" &&
-    cameraUuids?.trim() &&
-    !policyUuid?.trim()
-  ) {
-    // Validate both structured inputs BEFORE any mutation.
-    let scheduledTriggers: Array<{ scheduleUuid: string; triggerSet: Array<{ activity: string }> }>;
-    try {
-      const configs = JSON.parse(scheduleConfigs) as Array<{
-        scheduleUuid: string;
-        activities: string[];
-      }>;
-      scheduledTriggers = configs.map(config => ({
-        scheduleUuid: config.scheduleUuid,
-        triggerSet: config.activities.map(activity => ({ activity })),
-      }));
-    } catch (error) {
-      return errorResult(
-        `scheduleConfigs is not valid JSON (${error instanceof Error ? error.message : "Unknown error"}). Nothing was created — fix scheduleConfigs and retry.`
-      );
+  if (hasFullInputSet) {
+    // Validate BOTH structured inputs BEFORE any mutation, so anything wrong
+    // with them is a clean retryable failure rather than a half-built policy.
+    const parsedConfigs = parseScheduleConfigs(scheduleConfigs!);
+    if (!parsedConfigs.ok) {
+      return retryableError(parsedConfigs.message);
     }
-    const cameraList = cameraUuids
-      .split(",")
-      .map((uuid: string) => uuid.trim())
-      .filter((uuid: string) => uuid);
-    if (scheduledTriggers.length === 0 || cameraList.length === 0) {
-      return errorResult(
-        `scheduleConfigs and cameraUuids must both be non-empty for a full-run call. Nothing was created.`
-      );
+    const parsedCameras = parseCameraUuids(cameraUuids!);
+    if (!parsedCameras.ok) {
+      return retryableError(parsedCameras.message);
     }
+    const scheduledTriggers = parsedConfigs.value.map(config => ({
+      scheduleUuid: config.scheduleUuid,
+      triggerSet: config.activities.map(activity => ({ activity })),
+    }));
+    const cameraList = parsedCameras.value;
 
     // Phase 1: create.
     let createdUuid: string;
+    let createWarning = "";
     try {
       const payload = ApiPayloadSchema.parse({
         policy: {
@@ -112,19 +184,16 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         extra.sessionId
       );
       if (result.error) {
-        return errorResult(
-          `Failed to create camera policy: ${apiErrorText(result)}. Nothing was created — report this failure to the user; do not claim any part succeeded.`
-        );
+        return retryableError(`Creating the policy failed: ${apiErrorText(result)}.`);
       }
       if (!result.policyUuid) {
-        return errorResult(
-          `Policy creation returned no policyUuid — treat this as a failure. Nothing was created — report this to the user.`
-        );
+        return retryableError("Creating the policy returned no policyUuid, so it did not succeed.");
       }
       createdUuid = result.policyUuid;
+      createWarning = apiWarningSuffix(result);
     } catch (error) {
-      return errorResult(
-        `Error creating camera policy: ${error instanceof Error ? error.message : "Unknown error"}. Nothing was created — report this failure to the user.`
+      return retryableError(
+        `Creating the policy failed: ${error instanceof Error ? error.message : "Unknown error"}.`
       );
     }
 
@@ -145,19 +214,25 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         sessionId: extra.sessionId,
       });
       if (result.error) {
-        return errorResult(
-          `Policy "${name}" was created (uuid ${createdUuid}) but configuring its schedules failed: ${apiErrorText(result)}. No cameras were assigned. Report exactly this partial state to the user.`
+        return partialStateError(
+          `Policy "${name}" was created (uuid ${createdUuid}) but configuring its schedules failed: ${apiErrorText(result)}. No cameras were assigned.`
         );
       }
+      createWarning += apiWarningSuffix(result);
     } catch (error) {
-      return errorResult(
-        `Policy "${name}" was created (uuid ${createdUuid}) but configuring its schedules failed: ${error instanceof Error ? error.message : "Unknown error"}. No cameras were assigned. Report exactly this partial state to the user.`
+      return partialStateError(
+        `Policy "${name}" was created (uuid ${createdUuid}) but configuring its schedules failed: ${error instanceof Error ? error.message : "Unknown error"}. No cameras were assigned.`
       );
     }
 
     // Phase 3: cameras.
     try {
-      const result = await postApi<{ error?: boolean; errorMsg?: string; status?: string }>({
+      const result = await postApi<{
+        error?: boolean;
+        errorMsg?: string;
+        status?: string;
+        warningMsg?: string;
+      }>({
         route: "/camera/updateDetailsBulkV2",
         body: {
           cameraBulkDetails: cameraList.map(cameraUuid => ({
@@ -170,19 +245,20 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         sessionId: extra.sessionId,
       });
       if (result?.error) {
-        return errorResult(
-          `Policy "${name}" was created with its schedules (uuid ${createdUuid}) but camera assignment failed: ${apiErrorText(result)}. Report exactly this partial state to the user.`
+        return partialStateError(
+          `Policy "${name}" was created with its schedules (uuid ${createdUuid}) but camera assignment failed: ${apiErrorText(result)}.`
         );
       }
+      createWarning += apiWarningSuffix(result);
     } catch (error) {
-      return errorResult(
-        `Policy "${name}" was created with its schedules (uuid ${createdUuid}) but camera assignment failed: ${error instanceof Error ? error.message : "Unknown error"}. Report exactly this partial state to the user.`
+      return partialStateError(
+        `Policy "${name}" was created with its schedules (uuid ${createdUuid}) but camera assignment failed: ${error instanceof Error ? error.message : "Unknown error"}.`
       );
     }
 
     const fullRunResponse = {
       needUserInput: false,
-      message: `Policy "${name}" created with ${scheduledTriggers.length} schedule trigger(s) and assigned to ${cameraList.length} camera(s).`,
+      message: `Policy "${name}" created with ${scheduledTriggers.length} schedule trigger(s) and assigned to ${cameraList.length} camera(s).${createWarning}`,
       policyUuid: createdUuid,
       policyName: name,
     };
@@ -190,7 +266,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       content: [
         {
           type: "text" as const,
-          text: `🎉 Camera policy setup completely finished!\n\n✅ Policy "${name}" created with ${scheduledTriggers.length} schedule trigger(s)\n✅ Assigned to ${cameraList.length} camera(s)\n✅ Policy is now fully active`,
+          text: `🎉 Camera policy setup completely finished!\n\n✅ Policy "${name}" created with ${scheduledTriggers.length} schedule trigger(s)\n✅ Assigned to ${cameraList.length} camera(s)\n✅ Policy is now fully active${createWarning}`,
         },
       ],
       structuredContent: fullRunResponse,
@@ -203,136 +279,150 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     // policyUuid: "" with policyUuidUpdated: true to every listed camera —
     // i.e. UNASSIGN their existing policies, not assign the new one.
     if (!policyUuid?.trim()) {
-      return errorResult(
-        `Cannot assign cameras: policyUuid is empty. The policy has not been created (or its creation failed). Either pass the full set (name, scheduleConfigs, cameraUuids) in one call to create everything at once, or create the policy first (name/description/orgUuid call) and pass the returned policyUuid.`
+      return retryableError(
+        `Cannot assign cameras: policyUuid is empty, so the policy has not been created yet. ` +
+          `Either pass the full set (name, scheduleConfigs, cameraUuids) in one call to create everything at once, or create the policy first (name/description/orgUuid call) and pass the returned policyUuid.`
       );
     }
-    try {
-      const cameraList = cameraUuids
-        .split(",")
-        .map((uuid: string) => uuid.trim())
-        .filter((uuid: string) => uuid);
 
-      if (cameraList.length > 0) {
-        const cameraPayload = {
+    const parsedCameras = parseCameraUuids(cameraUuids);
+    if (!parsedCameras.ok) {
+      // Previously an unusable cameraUuids string (e.g. ",") left this branch
+      // with no return at all and fell through into policy creation, creating a
+      // duplicate policy and reporting success.
+      return retryableStepError(parsedCameras.message, policyUuid.trim());
+    }
+    const cameraList = parsedCameras.value;
+
+    try {
+      const result = await postApi<{
+        error?: boolean;
+        errorMsg?: string;
+        status?: string;
+        warningMsg?: string;
+      }>({
+        route: "/camera/updateDetailsBulkV2",
+        body: {
           cameraBulkDetails: cameraList.map(cameraUuid => ({
             uuid: cameraUuid,
             policyUuid: policyUuid,
             policyUuidUpdated: true,
           })),
-        };
-
-        const result = await postApi<{ error?: boolean; errorMsg?: string; status?: string }>({
-          route: "/camera/updateDetailsBulkV2",
-          body: cameraPayload,
-          modifiers: extra._meta?.requestModifiers as RequestModifiers,
-          sessionId: extra.sessionId,
-        });
-        if (result?.error) {
-          return errorResult(
-            `Failed to assign policy to cameras: ${apiErrorText(result)}. The policy was NOT assigned — report this failure to the user; do not claim success.`
-          );
-        }
-        const jsonResultResponse = {
-          needUserInput: false,
-          message: `Excellent! Policy created and assigned to ${cameraList.length} camera(s)!`,
-          policyUuid,
-          policyName,
-        };
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `🎉 Camera policy setup completely finished!\n\n✅ Policy "${policyName?.trim() || policyUuid}" assigned to ${cameraList.length} camera(s)\n✅ Policy is now fully active\n\nYour cameras will now generate alerts according to the policy configuration.`,
-            },
-          ],
-          structuredContent: jsonResultResponse,
-        };
+        },
+        modifiers: extra._meta?.requestModifiers as RequestModifiers,
+        sessionId: extra.sessionId,
+      });
+      if (result?.error) {
+        // Assigning cameras is idempotent, so a corrected retry is safe — but
+        // the policy itself already exists and must not be created again.
+        return retryableStepError(
+          `Assigning the policy to the cameras failed: ${apiErrorText(result)}.`,
+          policyUuid
+        );
       }
+      const warning = apiWarningSuffix(result);
+      const jsonResultResponse = {
+        needUserInput: false,
+        message: `Policy "${policyName?.trim() || policyUuid}" assigned to ${cameraList.length} camera(s).${warning}`,
+        policyUuid,
+        policyName,
+      };
+      return {
+        content: [
+          {
+            type: "text" as const,
+            // Claims only what THIS call did: schedules may or may not have been
+            // configured by an earlier call, and this branch cannot know.
+            text: `✅ Policy "${policyName?.trim() || policyUuid}" assigned to ${cameraList.length} camera(s).${warning}`,
+          },
+        ],
+        structuredContent: jsonResultResponse,
+      };
     } catch (error) {
-      return errorResult(
-        `Failed to assign policy to cameras: ${error instanceof Error ? error.message : "Unknown error"}. The policy was NOT assigned — report this failure to the user; do not claim success.`
+      return retryableStepError(
+        `Assigning the policy to the cameras failed: ${error instanceof Error ? error.message : "Unknown error"}.`,
+        policyUuid
       );
     }
   }
 
   // Step 2: Schedule configuration (if scheduleConfigs provided and non-empty)
-  if (scheduleConfigs?.trim() && scheduleConfigs.trim() !== "[]") {
+  if (hasScheduleConfigs) {
     if (!policyUuid?.trim()) {
-      return errorResult(
-        `Cannot configure schedules: policyUuid is empty. Create the policy first (name/description/orgUuid call) and pass the returned policyUuid. Do NOT combine creation, schedule, and camera args in one call — the steps run one at a time.`
+      return retryableError(
+        `Cannot configure schedules: policyUuid is empty. Create the policy first (name/description/orgUuid call) and pass the returned policyUuid, or pass the full set (name, scheduleConfigs, cameraUuids) in one call to do everything at once.`
       );
     }
+
+    const parsedConfigs = parseScheduleConfigs(scheduleConfigs!);
+    if (!parsedConfigs.ok) {
+      return retryableStepError(parsedConfigs.message, policyUuid.trim());
+    }
+    const scheduledTriggers = parsedConfigs.value.map(config => ({
+      scheduleUuid: config.scheduleUuid,
+      triggerSet: config.activities.map(activity => ({ activity })),
+    }));
+
+    // /policy/updateCameraPolicy has REPLACE semantics: any field omitted
+    // from the policy object is NULLED on the stored policy. Sending only
+    // {uuid, scheduledTriggers} erases the name/description that step 1
+    // just set (observed in ITG: wizard-created policies with name: null,
+    // invisible in the Console). Always resend the identity fields.
+    const effectiveName = policyName?.trim() || name?.trim();
+    if (!effectiveName) {
+      return retryableStepError(
+        `Cannot configure schedules: policyName is required — updateCameraPolicy replaces the whole policy object, so omitting the name would erase it. Pass policyName (and description, if any) along with policyUuid and scheduleConfigs.`,
+        policyUuid.trim()
+      );
+    }
+
     try {
-      const configs = JSON.parse(scheduleConfigs) as Array<{
-        scheduleUuid: string;
-        activities: string[];
-      }>;
-
-      // Only proceed if we have actual schedule configurations
-      if (configs.length > 0) {
-        const scheduledTriggers = configs.map(config => ({
-          scheduleUuid: config.scheduleUuid,
-          triggerSet: config.activities.map(activity => ({ activity })),
-        }));
-
-        // /policy/updateCameraPolicy has REPLACE semantics: any field omitted
-        // from the policy object is NULLED on the stored policy. Sending only
-        // {uuid, scheduledTriggers} erases the name/description that step 1
-        // just set (observed in ITG: wizard-created policies with name: null,
-        // invisible in the Console). Always resend the identity fields.
-        const effectiveName = policyName?.trim() || name?.trim();
-        if (!effectiveName) {
-          return errorResult(
-            `Cannot configure schedules: policyName is required — updateCameraPolicy replaces the whole policy object, so omitting the name would erase it. Pass policyName (and description, if any) along with policyUuid and scheduleConfigs.`
-          );
-        }
-        const payload = {
+      const result = await postApi<schema["Policy_UpdateCameraPolicyWSResponse"]>({
+        route: "/policy/updateCameraPolicy",
+        body: {
           policy: {
             uuid: policyUuid,
             name: effectiveName,
             description: description?.trim() ? description : undefined,
             scheduledTriggers,
           },
-        };
+        },
+        modifiers: extra._meta?.requestModifiers as RequestModifiers,
+        sessionId: extra.sessionId,
+      });
 
-        const result = await postApi<schema["Policy_UpdateCameraPolicyWSResponse"]>({
-          route: "/policy/updateCameraPolicy",
-          body: payload,
-          modifiers: extra._meta?.requestModifiers as RequestModifiers,
-          sessionId: extra.sessionId,
-        });
-
-        if (result.error) {
-          return errorResult(
-            `Failed to configure policy schedules: ${apiErrorText(result)}. The schedules were NOT configured — report this failure to the user; do not claim success.`
-          );
-        }
-
-        // Neutral, fact-only message: imperative text like "Please select
-        // which cameras..." is an instruction the model follows over the
-        // workflow playbook (observed: it re-rendered the confirm form or
-        // stopped mid-execution to ask for cameras it already had).
-        const jsonResultResponse = {
-          needUserInput: false,
-          message: `Schedules configured for policy "${effectiveName}" (${policyUuid}).`,
-          policyUuid,
-          policyName,
-        };
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(jsonResultResponse),
-            },
-          ],
-          structuredContent: jsonResultResponse,
-        };
+      if (result.error) {
+        // Replacing the schedules is idempotent — safe to retry, as long as the
+        // policy is not created a second time.
+        return retryableStepError(
+          `Configuring the policy schedules failed: ${apiErrorText(result)}.`,
+          policyUuid
+        );
       }
-      // If configs.length === 0, fall through to policy creation
+
+      // Neutral, fact-only message: imperative text like "Please select
+      // which cameras..." is an instruction the model follows over the
+      // workflow playbook (observed: it re-rendered the confirm form or
+      // stopped mid-execution to ask for cameras it already had).
+      const jsonResultResponse = {
+        needUserInput: false,
+        message: `Schedules configured for policy "${effectiveName}" (${policyUuid}).${apiWarningSuffix(result)}`,
+        policyUuid,
+        policyName,
+      };
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(jsonResultResponse),
+          },
+        ],
+        structuredContent: jsonResultResponse,
+      };
     } catch (error) {
-      return errorResult(
-        `Error configuring schedules: ${error instanceof Error ? error.message : "Unknown error"}. The schedules were NOT configured — report this failure to the user; do not claim success.`
+      return retryableStepError(
+        `Configuring the policy schedules failed: ${error instanceof Error ? error.message : "Unknown error"}.`,
+        policyUuid
       );
     }
   }
@@ -356,14 +446,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       );
 
       if (result.error) {
-        return errorResult(
-          `Failed to create camera policy: ${apiErrorText(result)}. The policy was NOT created — report this failure to the user and stop the workflow; do not proceed to schedules or cameras.`
-        );
+        return retryableError(`Creating the policy failed: ${apiErrorText(result)}.`);
       }
       if (!result.policyUuid) {
-        return errorResult(
-          `Policy creation returned no policyUuid — treat this as a failure. Report it to the user and stop the workflow; do not proceed to schedules or cameras.`
-        );
+        return retryableError("Creating the policy returned no policyUuid, so it did not succeed.");
       }
       console.error(
         `[createCameraPolicyTool] -- Policy created. Got result ${JSON.stringify(result)}`
@@ -371,7 +457,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       // Neutral, fact-only message (see the schedule-step comment above).
       const jsonResultResponse = {
         needUserInput: false,
-        message: `Policy "${name}" created with UUID: ${result.policyUuid}`,
+        message: `Policy "${name}" created with UUID: ${result.policyUuid}${apiWarningSuffix(result)}`,
         policyUuid: result.policyUuid,
         policyName: name,
       };
@@ -385,8 +471,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         structuredContent: jsonResultResponse,
       };
     } catch (error) {
-      return errorResult(
-        `Error creating camera policy: ${error instanceof Error ? error.message : "Unknown error"}. The policy was NOT created — report this failure to the user and stop the workflow.`
+      return retryableError(
+        `Creating the policy failed: ${error instanceof Error ? error.message : "Unknown error"}.`
       );
     }
   }
