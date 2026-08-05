@@ -16,8 +16,11 @@ import { postApi } from "./network.js";
  *   auth context is present we bypass the cache entirely rather than share
  *   entries across unknown callers.
  * - The IN-FLIGHT promise is cached, so concurrent callers (Promise.all
- *   fan-outs) share one request. Rejections evict immediately — failures are
- *   never cached.
+ *   fan-outs) share one request. Failures are never cached: both a thrown
+ *   rejection AND an api2 in-band failure (`{error: true}` on HTTP 200 — see
+ *   apiFailureMessage) evict the entry. postApi resolves rather than throws on
+ *   those, so without the second check a single transient upstream error would
+ *   be replayed to every caller for the whole TTL.
  * - TTL is deliberately short: staleness after a mutation (e.g. a camera
  *   rename) is bounded at ORG_REFERENCE_TTL_MS.
  */
@@ -71,9 +74,12 @@ export function cachedPostApi<T>(
 
   const promise = postApi<T>(params);
   cache.set(key, { expiresAt: now + ttlMs, promise });
-  promise.catch(() => {
+  const evict = () => {
     if (cache.get(key)?.promise === promise) cache.delete(key);
-  });
+  };
+  promise.then(result => {
+    if (result && typeof result === "object" && (result as { error?: boolean }).error) evict();
+  }, evict);
   evictIfNeeded(now);
   return promise;
 }

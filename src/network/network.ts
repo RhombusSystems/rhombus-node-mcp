@@ -136,7 +136,10 @@ function extractApiErrorDetail(responseText: string): string {
   try {
     const parsed = JSON.parse(text);
     if (parsed && typeof parsed === "object") {
-      for (const key of ["errorMsg", "message", "error", "status", "detail"]) {
+      // `msg` is what api2's request deserializer returns on a malformed body
+      // (e.g. {"msg":"JSON doesn't match expected object structure"}); without
+      // it here the whole JSON blob got dumped into the model-facing message.
+      for (const key of ["errorMsg", "message", "msg", "error", "status", "detail"]) {
         const value = (parsed as Record<string, unknown>)[key];
         if (typeof value === "string" && value.trim()) return truncateDetail(value.trim());
       }
@@ -239,8 +242,55 @@ export async function postApi<T>({
   }
 }
 
-export function throwIfApiError(res: { error?: boolean; status?: string }) {
-  if (res.error) {
-    throw new Error(res.status ?? "API request failed.");
+/**
+ * api2 signals failure on TWO channels, and reading either one alone loses the
+ * message on the other:
+ *
+ *  - **Transport / HTTP** failures are synthesised by `postApi` above as
+ *    `{error: true, status: "<sentence>"}`. `status` is our field, not api2's.
+ *  - **Domain** failures come back on HTTP **200** with `{error: true,
+ *    errorMsg: "..."}` — api2's own in-band contract (734 response types in
+ *    `types/schema.ts` declare `error`, 732 declare `errorMsg`).
+ *
+ * So a handler that checks only `status` reports "API request failed." for every
+ * real api2 rejection ("that plate is already saved", "schedule not found"),
+ * leaving the model nothing to correct. Returns undefined when the call
+ * succeeded.
+ */
+export function apiFailureMessage(res: {
+  error?: boolean;
+  status?: string;
+  errorMsg?: string | null;
+}): string | undefined {
+  if (!res.error) return undefined;
+  const detail = res.status?.trim() || res.errorMsg?.trim();
+  return detail || "The Rhombus API rejected the request without giving a reason.";
+}
+
+/**
+ * api2's `warningMsg` — the "it worked, but" channel. A call can succeed while
+ * reporting that part of it did not apply, and that caveat has to reach the
+ * user.
+ *
+ * Takes `unknown` on purpose: `src/types/schema.ts` is generated, and several
+ * responses that carry `warningMsg` on the wire (and in the current
+ * assets/openapi.json) do not declare it in the generated type yet. Reading it
+ * structurally here keeps the caveat rather than dropping it to satisfy the
+ * compiler.
+ */
+export function apiWarning(res: unknown): string | undefined {
+  if (!res || typeof res !== "object") return undefined;
+  const warning = (res as { warningMsg?: unknown }).warningMsg;
+  return typeof warning === "string" && warning.trim() ? warning.trim() : undefined;
+}
+
+export function throwIfApiError(res: {
+  error?: boolean;
+  status?: string;
+  errorMsg?: string | null;
+}) {
+  const message = apiFailureMessage(res);
+  if (message) {
+    throw new Error(message);
   }
 }
