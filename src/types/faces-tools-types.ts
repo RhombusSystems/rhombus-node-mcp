@@ -10,6 +10,12 @@ export enum RequestType {
   SEARCH_SIMILAR_FACES = "search-similar-faces",
   GET_FACE_MATCHMAKERS = "get-face-matchmakers",
   GET_FACE_EVENTS_BY_PERSON = "get-face-events-by-person",
+  CREATE_PERSON = "create-person",
+  UPDATE_PERSON = "update-person",
+  DELETE_PERSON = "delete-person",
+  ADD_PERSON_LABEL = "add-person-label",
+  REMOVE_PERSON_LABEL = "remove-person-label",
+  DELETE_FACE_MATCHMAKER = "delete-face-matchmaker",
 }
 
 export const GetRegisteredFacesArgsSchema = z.object({
@@ -140,7 +146,40 @@ export const TOOL_ARGS = {
       "The timezone for formatting timestamps which should come from the location of the camera for the face event. This is necessary for the tool to produce accurate formatted timestamps."
     ),
   faceEventUuid: z.string().nullable().describe("UUID of a face event to search similar faces from. Required for 'search-similar-faces'."),
-  personUuid: z.string().nullable().describe("UUID of a person to get face events for. Required for 'get-face-events-by-person'."),
+  personUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "UUID of a person. Required for 'get-face-events-by-person', 'update-person', 'delete-person', 'add-person-label' and 'remove-person-label'. Get it from 'get-registered-faces' — do not guess one, because acting on the wrong person's biometric record is not visible in the response."
+    ),
+  personName: z
+    .string()
+    .nullable()
+    .describe(
+      "A person's name. Required for 'create-person'; for 'update-person' it is the new name (omit to leave it unchanged)."
+    ),
+  personEmail: z
+    .string()
+    .nullable()
+    .describe(
+      "A person's email address. Optional for 'update-person'; omit to leave it unchanged."
+    ),
+  personLabel: z
+    .string()
+    .nullable()
+    .describe("A single person label. Required for 'add-person-label' and 'remove-person-label'."),
+  faceId: z
+    .string()
+    .nullable()
+    .describe(
+      "The id of ONE enrolled face image (a 'face matchmaker'). Required for 'delete-face-matchmaker'. Get it from 'get-face-matchmakers'. A person can have several enrolled faces; deleting one leaves the person and their other faces in place."
+    ),
+  confirmDelete: z
+    .boolean()
+    .nullable()
+    .describe(
+      "Required to be true for 'delete-person' and 'delete-face-matchmaker'. Both destroy enrolled biometric data and cannot be undone — re-enrolling needs new photos. They refuse without explicit confirmation from the user."
+    ),
   includeFields: INCLUDE_FIELDS_ARG,
   filterBy: FILTER_BY_ARG,
 };
@@ -279,6 +318,30 @@ export const OUTPUT_SCHEMA = z.object({
       "Pre-computed roster of distinct people on this page of face events. Enumerate people from here instead of deduplicating getFaceEventsResponse by hand."
     ),
   lastEvaluatedKey: z.string().optional().describe("For paginated requests, this is the returned last evaluated key that can be passed back in on the next request to get the next page of results"),
+  created: z
+    .object({ success: z.boolean().optional(), uuid: z.string().optional() })
+    .optional()
+    .describe("Result of 'create-person'."),
+  updated: z
+    .object({
+      success: z.boolean().optional(),
+      uuid: z.string().optional(),
+      label: z.string().optional(),
+    })
+    .optional()
+    .describe("Result of 'update-person' or a person-label change."),
+  deleted: z
+    .object({
+      success: z.boolean().optional(),
+      uuid: z.string().optional(),
+      faceId: z.string().optional(),
+    })
+    .optional()
+    .describe("Result of 'delete-person' or 'delete-face-matchmaker'."),
+  warningMsg: z
+    .string()
+    .optional()
+    .describe("A warning from the Rhombus API — the call succeeded, but with a caveat."),
   note: z
     .string()
     .optional()
