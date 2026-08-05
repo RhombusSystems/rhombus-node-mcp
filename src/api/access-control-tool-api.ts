@@ -30,9 +30,7 @@ export async function unlockDoor(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return { success: true, doorUuid };
 }
@@ -48,9 +46,7 @@ export async function getAccessControlGroups(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     (res as any).groups?.map((group: any) => ({
@@ -75,9 +71,7 @@ export async function getCredentialsByUser(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.credentials?.map((cred: any) => ({
@@ -101,9 +95,7 @@ export async function getLockdownPlans(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.lockdownPlans?.map((plan: any) => ({
@@ -129,9 +121,7 @@ export async function activateLockdown(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return { success: true, locationUuid, action: "activated" };
 }
@@ -149,9 +139,7 @@ export async function deactivateLockdown(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return { success: true, locationUuid, action: "deactivated" };
 }
@@ -168,9 +156,7 @@ export async function getDoorScheduleExceptions(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.exceptions?.map((exc: any) => ({
@@ -202,9 +188,7 @@ export async function getAccessGrants(
         sessionId,
       });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   const filterNulls = (arr?: (string | null)[] | null): string[] =>
     arr?.filter((v): v is string => v !== null) ?? [];
@@ -282,9 +266,9 @@ export async function getRemoteUnlockUsers(
     }),
   ]);
 
-  if (permGroupsRes.error) throw new Error(JSON.stringify(permGroupsRes));
-  if (doorsRes.error) throw new Error(JSON.stringify(doorsRes));
-  if (usersRes.error) throw new Error(JSON.stringify(usersRes));
+  throwIfApiError(permGroupsRes);
+  throwIfApiError(doorsRes);
+  throwIfApiError(usersRes);
 
   const permissionGroups = permGroupsRes.permissionGroups ?? [];
   const groupMembership: Record<string, string[]> = {};

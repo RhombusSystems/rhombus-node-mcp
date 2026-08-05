@@ -14,9 +14,7 @@ export async function getDoorControllerRules(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.rules?.map((rule: any) => ({
@@ -41,9 +39,7 @@ export async function createDoorControllerRule(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return {
     uuid: (res as any).ruleUuid ?? undefined,
@@ -62,9 +58,7 @@ export async function getDoorPolicies(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.policies?.map((policy: any) => ({
@@ -88,9 +82,7 @@ export async function createDoorPolicy(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return {
     uuid: res.policyUuid ?? undefined,

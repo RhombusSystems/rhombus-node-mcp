@@ -30,9 +30,7 @@ export async function getVehicleEvents(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.events?.map(
@@ -62,9 +60,7 @@ export async function getSavedVehicles(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.vehicles?.map(
@@ -91,9 +87,7 @@ export async function getVehicleLabels(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   const processedVehicleLabels: VehicleLabels = {};
 
@@ -122,7 +116,7 @@ export async function searchLicensePlates(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return (res.licensePlateEvents || []).map((event: any) => ({
     licensePlate: event.vehicleLicensePlate ?? undefined,
     deviceUuid: event.deviceUuid ?? undefined,

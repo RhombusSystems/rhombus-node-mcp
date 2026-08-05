@@ -102,7 +102,7 @@ export async function getClipGroups(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return {
 		clipGroups: (res.clipGroups || []).map((group: any) => ({
@@ -124,7 +124,7 @@ export async function getSharedClipGroups(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return {
 		sharedClipGroups: (res.sharedClipGroups || []).map((group: any) => ({
@@ -156,7 +156,7 @@ export async function createClip(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return { spliceResult: { success: true, clipUuid: (res as any).clipUuid ?? undefined } };
 }
@@ -173,7 +173,7 @@ export async function deleteClip(
 		sessionId,
 	});
 
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	return { deleteResult: { success: true } };
 }

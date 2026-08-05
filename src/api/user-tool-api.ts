@@ -13,9 +13,7 @@ export async function listUsers(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.users?.map(user => ({
@@ -39,9 +37,7 @@ export async function findUserByEmail(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   const user = res.user;
   if (!user) return undefined;
@@ -70,9 +66,7 @@ export async function getPermissionsForCurrentUser(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return {
     role: (res as any).role ?? undefined,
@@ -138,9 +132,7 @@ export async function getPermissionGroups(
     sessionId,
   });
 
-  if (res.error) {
-    throw new Error(JSON.stringify(res));
-  }
+  throwIfApiError(res);
 
   return (
     res.permissionGroups?.map(group => ({

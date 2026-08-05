@@ -1,5 +1,5 @@
 import { getLogger } from "../logger.js";
-import { postApi } from "../network/network.js";
+import { postApi, throwIfApiError } from "../network/network.js";
 import type {
   CameraFullStateResponse,
   CameraStorageData,
@@ -231,7 +231,7 @@ export async function getCameraMediaUris(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return res;
 }
 
@@ -246,7 +246,7 @@ export async function getCameraAIThresholds(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(JSON.stringify(res));
+  throwIfApiError(res);
   return res;
 }
 

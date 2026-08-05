@@ -140,7 +140,7 @@ export async function searchSimilarFaces(
 		modifiers: requestModifiers,
 		sessionId,
 	});
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 	return (res.faceEvents || []).map((event: any) => ({
 		uuid: event.uuid ?? undefined,
 		deviceUuid: event.deviceUuid ?? undefined,
@@ -165,7 +165,7 @@ export async function getFaceMatchmakers(
 		modifiers: requestModifiers,
 		sessionId,
 	});
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 	return (res.faceMatchmakers || []).map((m: any) => ({
 		uuid: m.uuid ?? undefined,
 		personUuid: m.personUuid ?? undefined,
@@ -196,7 +196,7 @@ export async function getFaceEventsByPerson(
 		modifiers: requestModifiers,
 		sessionId,
 	});
-	if (res.error) throw new Error(JSON.stringify(res));
+	throwIfApiError(res);
 
 	const faceEvents = (res.faceEvents || []).map((event) => ({
 		uuid: event.uuid ?? undefined,
