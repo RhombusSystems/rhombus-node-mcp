@@ -19,6 +19,7 @@ The official Model Context Protocol (MCP) server for the [Rhombus](https://www.r
 - **Run locally**: `npm run start:stdio` or `npm run start:http`.
 - **Test**: `npm test` (vitest).
 - **Tools** live in `src/tools/` — one file per tool, registered via `src/tools/getTools.ts`. Follow the existing pattern (zod input schemas; `npm run generate-schemas` regenerates derived schemas).
+- **Tool descriptions are routing surfaces for guided workflows.** The Rhombus chatbot pairs this server's tools with playbook-driven workflows (defined in the sibling `rhombus-node-private-mcp` repo); a keyword-matched instruction in a tool description here can silently outcompete a workflow that covers the same request, and playbooks name this server's tools directly. Before editing a description's "when to use" language or renaming a tool, read `../docs/writing-workflows.md` (in the `rhombus-mind-root` superproject, when checked out side-by-side).
 - **Docker**: `npm run docker:build`.
 - **Telemetry** (optional): each tool invocation emits an `mcp.tool.call` OpenTelemetry span (`mcp.tool.name`, success, duration, arg keys — never arg values). Uses only `@opentelemetry/api`; spans export when a host process registers an SDK (Rhombus EB deploy loads `otel-init.mjs`). Wiring: `src/telemetry/tracingProxy.ts`; identity from cached `getCurrentUser` in `src/api/get-accessible-apps.ts`.
 
