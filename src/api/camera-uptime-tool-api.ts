@@ -1,6 +1,7 @@
 import { logger } from "../logger.js";
 import { postApi } from "../network/network.js";
 import { cachedPostApi } from "../network/org-reference-cache.js";
+import { UptimeSource } from "../types/camera-uptime-tool-types.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -10,11 +11,37 @@ interface CameraUptimeResult {
   cameraUuid: string;
   cameraName?: string;
   locationUuid?: string;
-  totalUptimeSeconds: number;
+  uptimeSource: UptimeSource;
   totalPeriodSeconds: number;
-  uptimePercentage: number;
-  outageCount: number;
-  longestOutageSeconds: number;
+  /*
+   * Omitted entirely when uptimeSource is UNAVAILABLE. A missing number is
+   * "we don't know"; emitting 0 here would be read as "down the whole time",
+   * which is the exact confusion this field exists to prevent.
+   */
+  totalUptimeSeconds?: number;
+  uptimePercentage?: number;
+  outageCount?: number;
+  longestOutageSeconds?: number;
+}
+
+/*
+ * Read the uptime source off a webservice response.
+ *
+ * A webservice that predates UptimeSourceEnum sends nothing here. Treat that
+ * as HARDWARE so behaviour against an older server is unchanged - only a
+ * server that explicitly says UNAVAILABLE makes us report "unknown".
+ */
+function readUptimeSource(value: unknown): UptimeSource {
+  switch (value) {
+    case UptimeSource.MEDIA_PRESENCE:
+      return UptimeSource.MEDIA_PRESENCE;
+    case UptimeSource.UNAVAILABLE:
+      return UptimeSource.UNAVAILABLE;
+    case UptimeSource.HARDWARE:
+      return UptimeSource.HARDWARE;
+    default:
+      return UptimeSource.HARDWARE;
+  }
 }
 
 function computeUptimeStats(
@@ -23,9 +50,15 @@ function computeUptimeStats(
   locationUuid: string | undefined,
   windows: UptimeWindow[],
   startTimeSec: number,
-  endTimeSec: number
+  endTimeSec: number,
+  uptimeSource: UptimeSource
 ): CameraUptimeResult {
   const totalPeriodSeconds = endTimeSec - startTimeSec;
+
+  if (uptimeSource === UptimeSource.UNAVAILABLE) {
+    return { cameraUuid, cameraName, locationUuid, uptimeSource, totalPeriodSeconds };
+  }
+
   let totalUptimeSeconds = 0;
 
   const sortedWindows = windows
@@ -67,6 +100,7 @@ function computeUptimeStats(
     cameraUuid,
     cameraName,
     locationUuid,
+    uptimeSource,
     totalUptimeSeconds,
     totalPeriodSeconds,
     uptimePercentage,
@@ -106,8 +140,16 @@ export async function getCameraUptime(
     undefined,
     (res.uptimeWindows ?? []) as UptimeWindow[],
     startTimeSec,
-    endTimeSec
+    endTimeSec,
+    // Cast until the generated schema carries uptimeSource; readUptimeSource
+    // validates whatever actually arrives.
+    readUptimeSource((res as { uptimeSource?: unknown }).uptimeSource)
   );
+}
+
+interface FleetUptimeEntry {
+  windows: UptimeWindow[];
+  uptimeSource: UptimeSource;
 }
 
 async function getFleetUptimeWindowsForOrg(
@@ -115,7 +157,7 @@ async function getFleetUptimeWindowsForOrg(
   endTimeSec: number,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-): Promise<Map<string, UptimeWindow[]> | null> {
+): Promise<Map<string, FleetUptimeEntry> | null> {
   const res = await postApi<schema["Common_devices_GetUptimeWindowsForOrgWSResponse"]>({
     route: "/camera/getUptimeWindowsForOrg",
     body: {
@@ -134,10 +176,13 @@ async function getFleetUptimeWindowsForOrg(
     return null;
   }
 
-  const windowsByCamera = new Map<string, UptimeWindow[]>();
+  const windowsByCamera = new Map<string, FleetUptimeEntry>();
   for (const entry of res.uptimeByDevice) {
     if (entry?.deviceUuid) {
-      windowsByCamera.set(entry.deviceUuid, entry.uptimeWindows ?? []);
+      windowsByCamera.set(entry.deviceUuid, {
+        windows: entry.uptimeWindows ?? [],
+        uptimeSource: readUptimeSource((entry as { uptimeSource?: unknown }).uptimeSource),
+      });
     }
   }
   return windowsByCamera;
@@ -148,7 +193,17 @@ export async function getFleetUptime(
   endTimeSec: number,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-): Promise<{ cameras: CameraUptimeResult[]; summary: { totalCameras: number; averageUptimePercentage: number; worstCamera?: string; worstUptimePercentage?: number } }> {
+): Promise<{
+  cameras: CameraUptimeResult[];
+  summary: {
+    totalCameras: number;
+    camerasWithKnownUptime: number;
+    camerasWithUnknownUptime: number;
+    averageUptimePercentage: number;
+    worstCamera?: string;
+    worstUptimePercentage?: number;
+  };
+}> {
   const cameraListRes = await cachedPostApi<any>({
     route: "/camera/getMinimalCameraStateList",
     body: {},
@@ -177,14 +232,24 @@ export async function getFleetUptime(
 
   if (batchWindows) {
     for (const cam of cameras) {
+      /*
+       * A camera the batch route said nothing about is unknown, not down -
+       * it never reached the uptime store at all.
+       */
+      const entry = batchWindows.get(cam.uuid) ?? {
+        windows: [],
+        uptimeSource: UptimeSource.UNAVAILABLE,
+      };
+
       uptimeResults.push(
         computeUptimeStats(
           cam.uuid,
           cam.name,
           cam.locationUuid,
-          batchWindows.get(cam.uuid) ?? [],
+          entry.windows,
           startTimeSec,
-          endTimeSec
+          endTimeSec,
+          entry.uptimeSource
         )
       );
     }
@@ -212,10 +277,23 @@ export async function getFleetUptime(
               cam.locationUuid,
               (res.uptimeWindows ?? []) as UptimeWindow[],
               startTimeSec,
-              endTimeSec
+              endTimeSec,
+              readUptimeSource((res as { uptimeSource?: unknown }).uptimeSource)
             );
           } catch {
-            return computeUptimeStats(cam.uuid, cam.name, cam.locationUuid, [], startTimeSec, endTimeSec);
+            /*
+             * The call failed, so we know nothing about this camera. Report
+             * that, rather than a fabricated 0%.
+             */
+            return computeUptimeStats(
+              cam.uuid,
+              cam.name,
+              cam.locationUuid,
+              [],
+              startTimeSec,
+              endTimeSec,
+              UptimeSource.UNAVAILABLE
+            );
           }
         })
       );
@@ -223,12 +301,28 @@ export async function getFleetUptime(
     }
   }
 
-  uptimeResults.sort((a, b) => a.uptimePercentage - b.uptimePercentage);
+  /*
+   * Known uptime first, worst first; cameras with no signal sort to the end so
+   * they never look like the worst performers.
+   */
+  uptimeResults.sort((a, b) => {
+    const aKnown = a.uptimePercentage != null;
+    const bKnown = b.uptimePercentage != null;
+    if (aKnown !== bKnown) {
+      return aKnown ? -1 : 1;
+    }
+    if (!aKnown) {
+      return 0;
+    }
+    return a.uptimePercentage! - b.uptimePercentage!;
+  });
+
+  const knownResults = uptimeResults.filter(r => r.uptimePercentage != null);
 
   const avgUptime =
-    uptimeResults.length > 0
+    knownResults.length > 0
       ? Math.round(
-          (uptimeResults.reduce((sum, r) => sum + r.uptimePercentage, 0) / uptimeResults.length) * 100
+          (knownResults.reduce((sum, r) => sum + r.uptimePercentage!, 0) / knownResults.length) * 100
         ) / 100
       : 0;
 
@@ -236,9 +330,11 @@ export async function getFleetUptime(
     cameras: uptimeResults,
     summary: {
       totalCameras: uptimeResults.length,
+      camerasWithKnownUptime: knownResults.length,
+      camerasWithUnknownUptime: uptimeResults.length - knownResults.length,
       averageUptimePercentage: avgUptime,
-      worstCamera: uptimeResults[0]?.cameraName,
-      worstUptimePercentage: uptimeResults[0]?.uptimePercentage,
+      worstCamera: knownResults[0]?.cameraName,
+      worstUptimePercentage: knownResults[0]?.uptimePercentage,
     },
   };
 }

@@ -18,6 +18,13 @@ It has the following modes of operation, determined by the "requestType" paramet
 - ${CameraUptimeRequestType.GET_FLEET_UPTIME}: Get uptime statistics for ALL cameras in the organization, sorted by worst uptime first. Includes a fleet-wide summary with averages. Requires startTimeSec and endTimeSec.
 
 startTimeSec and endTimeSec are UNIX timestamps in seconds.
+
+Every result carries "uptimeSource":
+- HARDWARE: real heartbeat uptime. The numbers mean what they say.
+- MEDIA_PRESENCE: inferred from recorded video, for 3rd party cameras that have no Rhombus hardware of their own. Treat it as an approximation and say so if you report it.
+- UNAVAILABLE: there is NO uptime signal for this camera. The uptime stats are omitted. Report it as "unknown" - never as down, offline, or 0% uptime, and do not count it as an outage.
+
+In get-fleet-uptime, the summary's averageUptimePercentage and worstCamera cover only cameras with known uptime; camerasWithUnknownUptime counts the rest.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
