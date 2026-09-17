@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { matchesEntityName } from "../utils/entity-name-match.js";
 import {
 	addLocationLabel,
 	createLocation,
@@ -23,7 +24,7 @@ import {
 
 const TOOL_NAME = "location-tool";
 const TOOL_DESCRIPTION = `This tool performs operations on locations.
-- '${LocationToolAction.GET}': Retrieves all locations with their address, timezone and labels. When generating reports with location details, use location names not uuids.
+- '${LocationToolAction.GET}': Retrieves locations with their address, timezone and labels. Pass locationName to search names ignoring case, spaces and punctuation ("iceblocks" matches "Ice Blocks - Headquarters"), or omit it to list all locations. All matches are returned; disambiguate when more than one location matches. When generating reports with location details, use location names not uuids.
 - '${LocationToolAction.CREATE}': Creates a new location with a name and optional address.
 - '${LocationToolAction.UPDATE}': Updates an existing location. Requires locationUuid plus at least one of locationName, locationAddress, postalCode, countryCode, timezoneId. Fields you omit are left unchanged.
 - '${LocationToolAction.DELETE}': Deletes a location. Requires locationUuid. Refuses by default — see confirmDelete.
@@ -37,13 +38,21 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 		switch (args.action) {
 			case LocationToolAction.GET: {
 				const { locations, warningMsg } = await getLocations(requestModifiers, sessionId);
+				const query = args.locationName?.trim();
+				const matches = query
+					? locations.filter(location => location.name && matchesEntityName(location.name, query))
+					: locations;
 				return createToolStructuredContent<OUTPUT_SCHEMA>({
-					locations,
+					locations: matches,
 					warningMsg,
 					note:
 						locations.length === 0
 							? "This organization has no locations configured, so the empty result is not a failed lookup."
-							: undefined,
+							: query && matches.length === 0
+								? `No locations matched "${query}". Retry 'get' with locationName omitted to inspect available names.`
+								: query && matches.length > 1
+									? `Multiple locations matched "${query}". Resolve the intended location before applying a location filter.`
+									: undefined,
 				});
 			}
 

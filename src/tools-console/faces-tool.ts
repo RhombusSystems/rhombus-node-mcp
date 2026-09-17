@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { isDeepStrictEqual } from "node:util";
 import {
   changePersonLabel,
   createPerson,
@@ -137,7 +138,31 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   if (args.requestType === RequestType.GET_FACE_EVENTS) {
-    const faceEventArgs = args.faceEventFilter as GetFaceEventsArgs;
+    // Accept the misplaced top-level filter seen in production without ever
+    // dropping its person/location/time constraints or silently broadening a query.
+    const nestedFilter = args.faceEventFilter?.searchFilter;
+    if (nestedFilter && args.searchFilter && !isDeepStrictEqual(nestedFilter, args.searchFilter)) {
+      return {
+        isError: true,
+        ...createToolStructuredContent({
+          requestType: args.requestType,
+          error: "Conflicting searchFilter and faceEventFilter.searchFilter. No search was performed. Retry once with the intended filter inside faceEventFilter.searchFilter only.",
+        }),
+      };
+    }
+    if (nestedFilter === undefined && args.searchFilter == null) {
+      return {
+        isError: true,
+        ...createToolStructuredContent({
+          requestType: args.requestType,
+          error: "get-face-events requires faceEventFilter.searchFilter. No search was performed. Retry once with {faceEventFilter: {pageRequest: null, searchFilter: {...}}}; use an explicit null searchFilter only for an unfiltered search.",
+        }),
+      };
+    }
+    const faceEventArgs: GetFaceEventsArgs = {
+      pageRequest: args.faceEventFilter?.pageRequest ?? null,
+      searchFilter: nestedFilter ?? args.searchFilter ?? null,
+    };
     let resolvedNamesOutput: Record<string, string | null> | undefined;
 
     const providedNames = faceEventArgs.searchFilter?.faceNames ?? [];

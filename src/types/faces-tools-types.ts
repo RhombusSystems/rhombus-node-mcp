@@ -136,9 +136,18 @@ export const TOOL_ARGS = {
 
 "get-person-labels" — a mapping of person UUIDs to their assigned labels across the org. Use it to discover what label groups exist; for a group question ("was anyone from Engineering seen today?") get the labels first, then query face events filtered by those personUuids or labels.`,
   ),
-  faceEventFilter: GetFaceEventsArgs,
-  // Only pageRequest and searchFilter live inside faceEventFilter. Everything
-  // below is a top-level sibling — nesting them under faceEventFilter is the
+  faceEventFilter: GetFaceEventsArgs.partial().nullish().describe(
+    "For get-face-events, put pageRequest and searchFilter inside this object: " +
+      "{pageRequest: {lastEvaluatedKey: null, maxPageSize: 200}, searchFilter: {...}}. " +
+      "Omit or pass null for get-registered-faces and other requests that do not search events."
+  ),
+  searchFilter: GetFaceEventsArgs.shape.searchFilter.nullish().describe(
+    "Compatibility alias for faceEventFilter.searchFilter. Prefer nesting searchFilter " +
+      "inside faceEventFilter; leave this null when using the nested form. " +
+      "If both filters are provided, they must be identical."
+  ),
+  // pageRequest and searchFilter belong inside faceEventFilter. Everything
+  // below is a top-level sibling — nesting these under faceEventFilter is the
   // most common way this tool gets called wrong and costs a rejected round trip.
   timeZone: z
     .string()

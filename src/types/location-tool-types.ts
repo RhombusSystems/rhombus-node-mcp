@@ -31,7 +31,7 @@ export const TOOL_ARGS = {
 		.string()
 		.nullable()
 		.describe(
-			"Name for the location. Required for 'create'; for 'update' it is the new name (omit to leave the name unchanged).",
+			"For 'get', optional name search ignoring case, spaces and punctuation (e.g. 'iceblocks' finds 'Ice Blocks - Headquarters'); omit to list all locations. Required for 'create'; for 'update' it is the new name (omit to leave the name unchanged).",
 		),
 	locationAddress: z
 		.string()

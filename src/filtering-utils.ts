@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { logger } from "./logger.js";
+import { matchesEntityName } from "./utils/entity-name-match.js";
 
 // ---------------------------------------------------------------------------
 // Shared tool arg schemas
@@ -38,6 +39,7 @@ export const FILTER_BY_ARG = z
 	.describe(
 		`Filter array items in the response by field values. All conditions are ANDed.
 Example: [{field: "vehicleLicensePlate", op: "=", value: "ABC123"}, {field: "confidence", op: ">", value: 0.8}]
+For name, locationName, deviceName, cameraName and doorName fields, 'contains' ignores capitalization, spacing and punctuation (e.g. 'iceblocks' matches 'Ice Blocks - Headquarters'). All matching candidates are returned; use '=' for exact comparisons.
 Use alongside includeFields to get only the specific records and fields you need.`,
 	);
 
@@ -280,6 +282,9 @@ function matchesCondition(item: any, condition: FilterCondition): boolean {
 		case "<=":
 			return Number(actual) <= Number(value);
 		case "contains":
+			if (["name", "locationName", "deviceName", "cameraName", "doorName"].includes(condition.field.split(".").at(-1) ?? "")) {
+				return matchesEntityName(String(actual), String(value));
+			}
 			return String(actual).toLowerCase().includes(String(value).toLowerCase());
 		default:
 			return false;
