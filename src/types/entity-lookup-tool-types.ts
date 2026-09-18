@@ -19,6 +19,7 @@ export const TOOL_ARGS = {
   tempUnit: z
     .nativeEnum(TempUnit)
     .nullable()
+    .default(null)
     .describe("The unit of temperature to return, if applicable. Default is Celsius."),
 };
 
