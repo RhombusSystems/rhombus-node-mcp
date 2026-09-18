@@ -1,7 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import path from "path";
 import { createTracingProxy } from "./telemetry/tracingProxy.js";
-import { resolveAccessibleApps } from "./api/get-accessible-apps.js";
+import {
+	resolveAccessibleApps,
+	resolveSessionIdentity,
+	type SessionIdentity,
+} from "./api/get-accessible-apps.js";
 import { logger } from "./logger.js";
 import { createFilteringProxy } from "./util.js";
 import getResources from "./resources/getResources.js";
@@ -52,6 +56,11 @@ export async function serverInit() {
  *
  * Otherwise (unresolved session, empty apps, or only other enums like
  * RHOMBUS_KEY), fall back to the permissive union of console + partner sets.
+ *
+ * Support-authority sessions (getCurrentUser with no `user`, or
+ * `sessionType === "SUPPORT"`) are resolved to exactly `[CONSOLE]` upstream in
+ * `resolveAccessibleApps`, so they take the console branch here and never the
+ * permissive union.
  */
 function pickToolsForSession(apps: RhombusAppEnum[] | null): ToolFactory[] {
 	if (apps !== null && apps.length > 0 && apps.includes(RhombusAppEnum.PARTNER)) {
@@ -71,7 +80,14 @@ function isNodeDevEnvironment(): boolean {
  * Human-readable caller + tool-set summary for dev logs (must stay aligned with
  * {@link pickToolsForSession}).
  */
-function describeCallerForDevLogs(apps: RhombusAppEnum[] | null): string {
+function describeCallerForDevLogs(
+	apps: RhombusAppEnum[] | null,
+	identity: SessionIdentity | null,
+): string {
+	if (identity?.sessionType === "SUPPORT") {
+		const who = [identity.name, identity.email].filter(Boolean).join(" ");
+		return `caller=support session (${who || "no name"}, id=${identity.userId ?? "?"}); tool sets=shared + console`;
+	}
 	if (apps === null) {
 		return "caller=unknown (no session or unresolved apps); tool sets=shared + console + partner (permissive)";
 	}
@@ -93,13 +109,14 @@ function describeCallerForDevLogs(apps: RhombusAppEnum[] | null): string {
 function logDevToolRegistration(
 	sessionId: string | undefined,
 	apps: RhombusAppEnum[] | null,
+	identity: SessionIdentity | null,
 	toolsToRegister: ToolFactory[],
 ): void {
 	if (!isNodeDevEnvironment()) return;
 
 	const names = toolsToRegister.map((t) => path.basename(t.name, ".js")).sort();
 	logger.info(
-		`[dev MCP tools] session=${sessionId ?? "(none)"} — ${describeCallerForDevLogs(apps)} — registering ${names.length} tools`,
+		`[dev MCP tools] session=${sessionId ?? "(none)"} — ${describeCallerForDevLogs(apps, identity)} — registering ${names.length} tools`,
 	);
 	logger.info(`[dev MCP tools] tool names: ${names.join(", ")}`);
 }
@@ -130,10 +147,13 @@ export default async function createServer({ sessionId }: { sessionId?: string }
 	logger.info(`📚 Registered ${resources.length} resources`);
 
 	const apps = await resolveAccessibleApps(sessionId);
+	// Same cached getCurrentUser payload — no second API call.
+	const identity = await resolveSessionIdentity(sessionId);
 	const toolsToRegister = pickToolsForSession(apps);
-	logDevToolRegistration(sessionId, apps, toolsToRegister);
+	logDevToolRegistration(sessionId, apps, identity, toolsToRegister);
+	const sessionKind = identity?.sessionType === "SUPPORT" ? " sessionType=SUPPORT" : "";
 	logger.info(
-		`🔒 Session ${sessionId ?? "(none)"}: apps=[${apps?.join(", ") ?? "unknown"}] — registering ${toolsToRegister.length} tools`,
+		`🔒 Session ${sessionId ?? "(none)"}:${sessionKind} apps=[${apps?.join(", ") ?? "unknown"}] — registering ${toolsToRegister.length} tools`,
 	);
 
 	// Tracing wraps every tool handler; filtering wraps on top so handlers are
