@@ -51,6 +51,11 @@ export function createTool(server: McpServer) {
           .describe(
             "The organization record: name, uuid, contact information, camera configuration defaults, org settings. Project with paths like \"org.name\", \"org.uuid\"."
           ),
+        cameraConfigDefaults: z.record(z.string(), z.unknown()).nullable().optional(),
+        cameraConfigOptions: z.record(z.string(), z.unknown()).nullable().optional(),
+        featureFlags: z.record(z.string(), z.string().nullable()).nullable().optional(),
+        error: z.boolean().nullable().optional(),
+        errorMsg: z.string().nullable().optional(),
         warningMsg: z.string().nullable().optional(),
       },
       annotations: { readOnlyHint: true },

@@ -47,6 +47,7 @@ async function callTool(
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   try {
+    if (name === "get-org-information") await client.listTools();
     return await client.callTool({
       name,
       arguments: opts.proxied
@@ -177,6 +178,22 @@ describe("get-org-information", () => {
     expect(structured.org?.name).toBe("Rhombus Client Console ITG");
     // the projection actually narrowed the record
     expect(structured.org?.sviEnabled).toBeUndefined();
+  });
+
+  it("accepts the complete getOrgV2 envelope without projection", async () => {
+    const response = {
+      org: { name: "Test organization", uuid: "test-org" },
+      cameraConfigDefaults: { CAMERA_R130: { humanDetection: true } },
+      cameraConfigOptions: { CAMERA_R130: [] },
+      featureFlags: { testFeature: "true" },
+      error: false,
+      errorMsg: null,
+      warningMsg: null,
+    };
+    vi.mocked(orgApi.getOrg).mockResolvedValue(response);
+    const result = await callTool(createOrgTool, "get-org-information", {});
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual(response);
   });
 
   it("turns an api failure into isError with the api's message", async () => {

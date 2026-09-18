@@ -556,7 +556,10 @@ export async function getAuditFeed(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const body = { startTimeMs, endTimeMs };
+  const body = {
+    timestampMsAfter: startTimeMs,
+    timestampMsBefore: endTimeMs,
+  } satisfies schema["Report_GetAuditFeedWSRequest"];
   const response = await postApi<schema["Report_GetAuditFeedWSResponse"]>({
     route: "/report/getAuditFeed",
     body,
@@ -567,7 +570,7 @@ export async function getAuditFeed(
   return {
     error: response.error ?? undefined,
     errorMsg: response.errorMsg ?? undefined,
-    auditEvents: (response.auditEvents || []).map((event: any) => ({
+    auditEvents: (response.auditEvents || []).map((event) => ({
       timestamp: event.timestamp != null ? String(event.timestamp) : undefined,
       action: event.action ?? undefined,
       displayText: event.displayText ?? undefined,

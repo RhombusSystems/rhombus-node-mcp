@@ -170,7 +170,7 @@ function filterByTrie(obj: any, trie: Trie): any {
 		const mapped = obj
 			.map((item) => filterByTrie(item, trie))
 			.filter((item) => item !== undefined);
-		return mapped.length > 0 ? mapped : undefined;
+		return obj.length === 0 || mapped.length > 0 ? mapped : undefined;
 	}
 
 	if (typeof obj === "object" && obj !== null) {
@@ -179,6 +179,22 @@ function filterByTrie(obj: any, trie: Trie): any {
 			if (key in obj) {
 				const child = filterByTrie(obj[key], trie[key]);
 				if (child !== undefined) result[key] = child;
+			}
+		}
+		for (const key of Object.keys(obj)) {
+			if (
+				key.endsWith("Grouped") ||
+				key === "groupByWarnings" ||
+				key === "filterByWarnings" ||
+				key === "error" ||
+				key === "errorMsg" ||
+				key === "warningMsg"
+			) {
+				if (obj[key] !== undefined) result[key] = obj[key];
+				const countKey = `${key.slice(0, -"Grouped".length)}Count`;
+				if (key.endsWith("Grouped") && typeof obj[countKey] === "number") {
+					result[countKey] = obj[countKey];
+				}
 			}
 		}
 		return Object.keys(result).length > 0 ? result : undefined;
@@ -231,7 +247,7 @@ export function filterIncludedFields(obj: any, fieldsToInclude: string[]): any {
 			}
 		}
 		for (const key of Object.keys(obj)) {
-			if (key.endsWith("Grouped") && !(key in projected)) {
+			if (key.endsWith("Grouped")) {
 				projected[key] = obj[key];
 				const countKey = `${key.slice(0, -"Grouped".length)}Count`;
 				if (typeof obj[countKey] === "number" && !(countKey in projected)) {
@@ -425,8 +441,7 @@ export function applyGroupBy(obj: any, groupByField: string): any {
 	const warnings: string[] = [];
 
 	const groupArray = (items: any[], arrayKey: string): boolean => {
-		if (items.length === 0) return false;
-		if (!items.some((item) => getNestedValue(item, field) !== undefined)) {
+		if (items.length > 0 && !items.some((item) => getNestedValue(item, field) !== undefined)) {
 			const available = [...new Set(items.slice(0, 50).flatMap((item) =>
 				item && typeof item === "object" ? Object.keys(item) : [],
 			))].sort();
@@ -477,6 +492,9 @@ export function applyGroupBy(obj: any, groupByField: string): any {
 		}
 	} else if (topKey in result && Array.isArray(result[topKey])) {
 		groupedAny = groupArray(result[topKey], topKey);
+	} else if (result[topKey] && typeof result[topKey] === "object" && field.includes(".")) {
+		result[topKey] = applyGroupBy(result[topKey], field);
+		groupedAny = true;
 	} else {
 		warnings.push(
 			`groupBy "${groupByField}" was IGNORED — the response has no array at "${topKey}".`,
@@ -591,11 +609,31 @@ export function deepOptionalizeSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
 	}
 
 	if (schema instanceof z.ZodObject) {
-		const relaxed: Record<string, z.ZodTypeAny> = {};
+		const relaxed: Record<string, z.ZodTypeAny> = {
+			filterByWarnings: z.array(z.string()).optional(),
+			groupByWarnings: z.array(z.string()).optional(),
+		};
 		for (const [key, value] of Object.entries(
 			schema.shape as Record<string, z.ZodTypeAny>,
 		)) {
 			relaxed[key] = optionalize(deepOptionalizeSchema(value));
+			let unwrapped = value;
+			while (
+				unwrapped instanceof z.ZodOptional ||
+				unwrapped instanceof z.ZodNullable ||
+				unwrapped instanceof z.ZodDefault
+			) {
+				unwrapped = unwrapped.unwrap() as z.ZodTypeAny;
+			}
+			if (unwrapped instanceof z.ZodArray) {
+				relaxed[`${key}Grouped`] = z.object({
+					by: z.string(),
+					total: z.number().int().nonnegative(),
+					groups: z.record(z.string(), z.number().int().nonnegative()),
+					omittedGroups: z.number().int().nonnegative().optional(),
+					note: z.string().optional(),
+				}).optional();
+			}
 		}
 		return withDescription(z.object(relaxed), schema);
 	}
@@ -654,13 +692,10 @@ function relaxOutputSchemaForProjection(outputSchema: unknown): unknown {
 			return deepOptionalizeSchema(outputSchema as z.ZodTypeAny);
 		}
 		if (outputSchema && typeof outputSchema === "object") {
-			const relaxed: Record<string, z.ZodTypeAny> = {};
-			for (const [key, value] of Object.entries(
-				outputSchema as Record<string, z.ZodTypeAny>,
-			)) {
-				relaxed[key] = optionalize(deepOptionalizeSchema(value));
-			}
-			return relaxed;
+			const relaxed = deepOptionalizeSchema(
+				z.object(outputSchema as Record<string, z.ZodTypeAny>),
+			);
+			return (relaxed as z.ZodObject).shape;
 		}
 	} catch {
 		// fall through
