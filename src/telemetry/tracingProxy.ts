@@ -53,6 +53,9 @@ async function attachSessionIdentity(span: Span, extra: unknown): Promise<void> 
     const identity = await resolveSessionIdentity(sessionId);
     if (identity?.userId) span.setAttribute("enduser.id", identity.userId);
     if (identity?.orgUuid) span.setAttribute("mcp.org.uuid", identity.orgUuid);
+    // "SUPPORT" for support-authority sessions (enduser.id is then the
+    // authorityUuid, or the fixed "support-session" marker).
+    if (identity?.sessionType) span.setAttribute("mcp.session.type", identity.sessionType);
   } catch (error) {
     logger.debug(`tracing: attachSessionIdentity failed: ${String(error)}`);
   }
