@@ -12,7 +12,16 @@ vi.mock("../src/network/network.js", async (original) => ({
   postApi: vi.fn(),
 }));
 const populated = [
-  { timestamp: "2026-09-18T20:00:00Z", action: "WEB_LOGIN", principalName: "Test User" },
+  {
+    timestamp: "2026-09-18T20:00:00Z",
+    action: "WEB_LOGIN",
+    displayText: "Login",
+    principalName: "Test User",
+    principalType: "USER",
+    principalUuid: "test-user",
+    targetName: "Console",
+    targetUuid: "test-target",
+  },
 ];
 
 async function callAudit(overrides: Record<string, unknown> = {}) {
@@ -25,7 +34,7 @@ async function callAudit(overrides: Record<string, unknown> = {}) {
     // listTools installs the SDK client's JSON-schema output validator, just as in production.
     await client.listTools();
     const args = Object.fromEntries(Object.keys(TOOL_ARGS.shape).map((key) => [key, null]));
-    return await client.callTool({
+    const result = await client.callTool({
       name: "report-tool",
       arguments: {
         ...args,
@@ -37,6 +46,9 @@ async function callAudit(overrides: Record<string, unknown> = {}) {
         ...overrides,
       },
     });
+    const text = result.content.find((item) => item.type === "text");
+    expect(text?.type === "text" ? JSON.parse(text.text) : undefined).toEqual(result.structuredContent);
+    return result;
   } finally {
     await client.close();
     await server.close();
@@ -97,4 +109,12 @@ it("keeps upstream retrieval errors distinct from a successful empty response", 
   });
   expect(result.structuredContent).toHaveProperty("auditFeedReport.error", true);
   expect(result.structuredContent).toHaveProperty("auditFeedReport.errorMsg", "unavailable");
+});
+
+it("projects audit text using the same advertised paths as structured output", async () => {
+  vi.mocked(network.postApi).mockResolvedValue({ auditEvents: populated } as never);
+  const result = await callAudit({ includeFields: ["auditFeedReport.auditEvents.action"] });
+  expect(result.structuredContent).toEqual({
+    auditFeedReport: { auditEvents: [{ action: "WEB_LOGIN" }] },
+  });
 });

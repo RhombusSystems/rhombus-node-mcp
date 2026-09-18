@@ -400,7 +400,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 			sessionId,
 		);
 		return {
-			content: [{ type: "text" as const, text: JSON.stringify(report) }],
+			content: [{ type: "text" as const, text: JSON.stringify({ auditFeedReport: report }) }],
 			structuredContent: { auditFeedReport: report },
 		};
 	}
