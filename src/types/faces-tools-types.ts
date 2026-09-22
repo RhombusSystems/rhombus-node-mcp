@@ -54,10 +54,13 @@ export const GetFaceEventsArgs = z.object({
         .describe(
           "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified. This is case-sensitive."
         ),
-      faceNames: z.array(z.string()).describe(
-        `Optional filter by a set of specific person names. Only face events associated with these names will be returned. An empty array will be the same as omitting the filter.
+      faceNames: z
+        .array(z.string())
+        .nullable()
+        .describe(
+          `Optional filter by a set of specific person names. Only face events associated with these names will be returned. null or an empty array is the same as omitting the filter.
           This is case-sensitive.`
-      ),
+        ),
       hasEmbedding: z
         .boolean()
         .nullable()
@@ -72,18 +75,21 @@ export const GetFaceEventsArgs = z.object({
         ),
       labels: z
         .array(z.string())
+        .nullable()
         .describe(
-          "Optional filter by a set of labels associated with the face event. An empty array will be the same as omitting the filter."
+          "Optional filter by a set of labels associated with the face event. null or an empty array is the same as omitting the filter."
         ),
       locationUuids: z
         .array(createUuidSchema())
+        .nullable()
         .describe(
-          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. An empty array will be the same as omitting the filter."
+          "Optional filter by a set of location UUIDs. Only face events from these locations will be returned. null or an empty array is the same as omitting the filter."
         ),
       personUuids: z
         .array(createUuidSchema())
+        .nullable()
         .describe(
-          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. An empty array will be the same as omitting the filter."
+          "Optional filter by a set of person UUIDs. Only face events associated with these specific people will be returned. null or an empty array is the same as omitting the filter."
         ),
       timestampFilter: z
         .object({
