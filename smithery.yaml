@@ -1,0 +1,31 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - rhombusApiKey
+    properties:
+      rhombusApiKey:
+        type: string
+        description: Rhombus API Key for authentication with the Rhombus server
+      serverUrl:
+        type: string
+        default: api2.rhombussystems.com
+        description: Optional Rhombus API server URL
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'node',
+      args: ['dist/index.js'],
+      env: {
+        RHOMBUS_API_KEY: config.rhombusApiKey,
+        RHOMBUS_API_SERVER: config.serverUrl
+      }
+    })
+  exampleConfig:
+    rhombusApiKey: YOUR_RHOMBUS_API_KEY
+    serverUrl: api2.rhombussystems.com

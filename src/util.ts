@@ -1,0 +1,301 @@
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+import fs from "fs";
+import path from "path";
+import { DateTime } from "luxon";
+import { filterIncludedFields, applyFilterBy, applyGroupBy, type FilterCondition } from "./filtering-utils.js";
+
+export { INCLUDE_FIELDS_ARG, FILTER_BY_ARG, GROUP_BY_ARG, filterIncludedFields, applyFilterBy, applyGroupBy, zodToDotNotationPaths, createFilteringProxy } from "./filtering-utils.js";
+// Re-exported separately as a type so per-file transpilers (tsx/esbuild) don't
+// emit a runtime import for it.
+export type { FilterCondition } from "./filtering-utils.js";
+
+export function generateRandomString(length: number): string {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
+
+export const RequestModifiers = z
+  .object({
+    headers: z.optional(z.record(z.string(), z.string())),
+    query: z.optional(z.record(z.string(), z.string())),
+  })
+  .optional();
+export type RequestModifiers = z.infer<typeof RequestModifiers>;
+
+export type ToolExtra = {
+  _meta?: {
+    requestModifiers?: RequestModifiers;
+  };
+  sessionId?: string;
+};
+
+export function extractFromToolExtra(_extra: unknown) {
+  const extra = _extra as ToolExtra;
+  return {
+    requestModifiers: extra._meta?.requestModifiers,
+    sessionId: extra.sessionId,
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// File utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Get all file paths in a directory in a directory
+ *
+ * i.e.
+ * foo:
+ *  - folder1:
+ *    - har
+ *    - gar
+ *  - bar
+ *  - lar
+ *
+ * returns: ["folder1/har", "folder1/gar", "bar", "lar"]
+ */
+export function getFilePathsInDirectory(dirPath: string): string[] {
+  const filePaths: string[] = [];
+
+  const fileNames = fs.readdirSync(dirPath);
+  for (const fileName of fileNames) {
+    const pathToAdd = path.join(dirPath, fileName);
+    const stats = fs.lstatSync(pathToAdd);
+    if (stats.isDirectory()) {
+      filePaths.push(...getFilePathsInDirectory(pathToAdd));
+    } else if (stats.isFile()) {
+      filePaths.push(pathToAdd);
+    }
+  }
+
+  return filePaths;
+}
+
+// ---------------------------------------------------------------------------
+// Tool content helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns an object in the form expected by `server.tool`, for the text-only
+ * results tools use to report a bad/missing argument.
+ *
+ * `isError` is REQUIRED here, not cosmetic. Every tool that calls this also
+ * registers an `outputSchema`, and the SDK's post-handler validation throws
+ * "MCP error -32602: ... no structured content was provided" for any result
+ * that lacks `structuredContent` — unless `isError` is set, which short-circuits
+ * that check (see validateToolOutput in @modelcontextprotocol/sdk server/mcp.js).
+ * Without it the -32602 REPLACES this text, so the model sees a protocol crash
+ * instead of "doorControllerUuid is required" and cannot correct its call.
+ */
+export function createToolTextContent(content: string): CallToolResult {
+  return {
+    isError: true,
+    content: [
+      {
+        type: "text",
+        text: content,
+      },
+    ],
+  };
+}
+
+/**
+ * Returns structured content expected by `server.tool`.
+ * Optionally applies programmatic field projection (includeFields) and
+ * row filtering (filterBy) before serialising.
+ *
+ * The generic type T allows for type safety. Set T to the output schema of the
+ * tool and your content will be type-checked.
+ *
+ * filterBy is applied first (prune rows), then includeFields (prune columns),
+ * which minimises output size optimally.
+ */
+export function createToolStructuredContent<
+  T extends { [key: string]: unknown } = { [key: string]: unknown },
+>(
+  content: T,
+  opts?: {
+    includeFields?: string[] | null;
+    filterBy?: FilterCondition[] | null;
+    groupBy?: string | null;
+  }
+): CallToolResult {
+  // biome-ignore lint/suspicious/noExplicitAny: intentional runtime manipulation
+  let result: any = content;
+  if (opts?.filterBy?.length) {
+    result = applyFilterBy(result, opts.filterBy) ?? result;
+  }
+  if (opts?.groupBy) {
+    result = applyGroupBy(result, opts.groupBy) ?? result;
+  }
+  if (opts?.includeFields?.length) {
+    result = filterIncludedFields(result, opts.includeFields) ?? result;
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(result),
+      },
+    ],
+    structuredContent: result,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// removeNullFields
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively removes fields with null values from a JavaScript object.
+ * If a nested object becomes empty after removing nulls, it will also be removed.
+ *
+ * @param {unknown} obj The object or array to clean.
+ * @returns {object | unknown[] | undefined} The cleaned object/array, or undefined if the input was null/undefined or an empty object/array resulted.
+ */
+export function removeNullFields(obj: unknown): object | unknown[] | undefined {
+  if (obj === null || obj === undefined) {
+    return undefined;
+  }
+
+  if (Array.isArray(obj)) {
+    const cleanedArray: unknown[] = [];
+    for (const item of obj) {
+      const cleanedItem = removeNullFields(item);
+      if (cleanedItem !== undefined) {
+        cleanedArray.push(cleanedItem);
+      }
+    }
+    return cleanedArray.length > 0 ? cleanedArray : undefined;
+  }
+
+  if (typeof obj !== "object") {
+    return obj as any; // Cast to any for primitive types
+  }
+
+  const cleanedObject: { [key: string]: unknown } = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = (obj as { [key: string]: unknown })[key];
+
+      if (value === null) {
+        continue;
+      }
+
+      if (typeof value === "object") {
+        const cleanedValue = removeNullFields(value);
+        if (cleanedValue !== undefined) {
+          cleanedObject[key] = cleanedValue;
+        }
+      } else {
+        cleanedObject[key] = value;
+      }
+    }
+  }
+
+  return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// formatTimestamp
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats a timestamp in milliseconds to a human-readable date string
+ * Format: "February 24, 2025 at 3:23 PM"
+ *
+ * @param timestampMs - Timestamp in milliseconds
+ * @param timeZone - Optional IANA timezone string (defaults to "America/Los_Angeles")
+ * @returns Formatted date string
+ */
+export function formatTimestamp(timestampMs: number, timeZone?: string): string {
+  return DateTime.fromMillis(timestampMs)
+    .setZone(timeZone || "America/Los_Angeles")
+    .toFormat("MMMM d, yyyy 'at' h:mm:ss a", {
+      locale: "en-US",
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Weekly minute intervals
+// ---------------------------------------------------------------------------
+
+const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
+
+/**
+ * Rhombus weekly schedules store their windows as "minute of week" integers.
+ * Minute 0 is **Monday 00:00** — the order of `RhombusDayOfWeekEnum` in the
+ * api2 spec, which matches `java.time.DayOfWeek`.
+ */
+const WEEKDAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
+
+/** "27000" -> "Wednesday 18:00". */
+export function formatMinuteOfWeek(minuteOfWeek: number): string {
+  // Negative or past-end values are normalised rather than rejected: the caller
+  // is rendering whatever api2 stored, and a wrapped window is legitimate.
+  const normalized = ((Math.trunc(minuteOfWeek) % MINUTES_PER_WEEK) + MINUTES_PER_WEEK) %
+    MINUTES_PER_WEEK;
+  const day = WEEKDAY_NAMES[Math.floor(normalized / MINUTES_PER_DAY)];
+  const minuteOfDay = normalized % MINUTES_PER_DAY;
+  const hours = String(Math.floor(minuteOfDay / 60)).padStart(2, "0");
+  const minutes = String(minuteOfDay % 60).padStart(2, "0");
+  return `${day} ${hours}:${minutes}`;
+}
+
+/**
+ * Human-readable form of one weekly window, e.g. "Monday 09:00 – Monday 17:00".
+ *
+ * Tools should emit this ALONGSIDE the raw `minuteOfWeekStart`/`Stop` integers,
+ * never instead of them: a bare 27000 is unreadable to the model, but if the
+ * Monday-is-day-0 convention above is ever wrong the formatted string would let
+ * it state the wrong day with full confidence. Keeping both makes that
+ * checkable.
+ */
+export function describeWeeklyInterval(
+  minuteOfWeekStart: number | null | undefined,
+  minuteOfWeekStop: number | null | undefined
+): string | undefined {
+  if (typeof minuteOfWeekStart !== "number" || typeof minuteOfWeekStop !== "number") {
+    return undefined;
+  }
+  return `${formatMinuteOfWeek(minuteOfWeekStart)} – ${formatMinuteOfWeek(minuteOfWeekStop)}`;
+}
+
+/**
+ * Formats a timestamp in milliseconds to an ISO 8601 string with timezone offset.
+ * Format: "2025-04-21T10:57:00.000-07:00"
+ *
+ * Use this when returning timestamps in tool output schemas so the offset is preserved
+ * (rather than the bare "Z" produced by Date.prototype.toISOString()).
+ *
+ * @param timestampMs - Timestamp in milliseconds
+ * @param timeZone - Optional IANA timezone string (defaults to "America/Los_Angeles")
+ * @returns ISO 8601 string with offset, or undefined if input is null/undefined
+ */
+export function formatIsoWithOffset(
+  timestampMs: number | null | undefined,
+  timeZone?: string
+): string | undefined {
+  if (timestampMs === null || timestampMs === undefined) return undefined;
+  return (
+    DateTime.fromMillis(timestampMs)
+      .setZone(timeZone || "America/Los_Angeles")
+      .toISO() ?? undefined
+  );
+}

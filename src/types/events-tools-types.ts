@@ -1,0 +1,499 @@
+import { z } from "zod";
+import { ISOTimestampFormatDescription } from "../utils/timestampInput.js";
+import { ComponentEventEnumType } from "./schema.js";
+import { CameraFootageEvent } from "../api/events-tool-api.js";
+import { TempUnit } from "../utils/temp.js";
+
+export enum EventsToolRequestType {
+  ACCESS_CONTROL = "access-control",
+  BRIVO_ACCESS_CONTROL = "brivo-access-control",
+  ENVIRONMENTAL_GATEWAY = "environmental-gateway",
+  CLIMATE_SENSOR = "climate-sensor",
+  COMPONENT_EVENTS = "component-events",
+  CAMERA = "camera",
+  BUTTON_PRESS = "button-press",
+  OCCUPANCY = "occupancy",
+  PROXIMITY = "proximity",
+  DOORBELL = "doorbell",
+}
+
+export const TOOL_ARGS = {
+  eventType: z
+    .nativeEnum(EventsToolRequestType)
+    .describe(
+      "The type of events to retrieve. Every mode takes startTime and endTime (ISO 8601); the per-mode UUID argument is named below and in that argument's own description.\n\n" +
+        "access-control: Access control events (arrivals, badge ins, credentials, unlocks) for the doors in accessControlledDoorUuids. Can return a lot of data — use a narrow time range. The returned `credSource` field says how the event was triggered: REMOTE = Rhombus Key app remote unlock; 'REMOTE (Admin)' = unlock via the Rhombus console or browser/mobile app; BLE_WAVE = user waved a hand over the reader; NFC = user tapped a badge or phone on the reader.\n" +
+        "brivo-access-control: Badge/credential events from Brivo-integrated doors. Does not require door UUIDs — automatically fetches the Brivo integration configuration to determine which locations have Brivo doors mapped. Returns integrationEnabled, brivoDoorsConfigured, the brivoDoors list (Brivo IDs, names, Rhombus location UUIDs), and credential-received events newest first. Events are fetched at the LOCATION level, so results may include events from all access-controlled doors at locations where Brivo is configured.\n" +
+        "environmental-gateway: Environmental gateway events (sensor readings and derived values) for deviceUuid.\n" +
+        "climate-sensor: Climate sensor events (temperature, humidity, air quality, vape/THC detection, battery) for sensorUuid. Cap the row count with limit (default 1000).\n" +
+        "component-events: All component event types for locationUuid — the most flexible option. Narrow it with componentEventTypes (see that argument for the full list; omit it for every type).\n" +
+        "camera: Footage seekpoints — the recording timeline's activity markers (MOTION_HUMAN = a person, MOTION = any motion, MOTION_CAR, faces, license plates, …, depending on the camera and its analytics) between startTime and endTime (endTime null = now; or `duration` seconds from startTime; at most 24 h per call). With cameraUuid: that camera's individual seekpoints, newest first, capped by limit (default 500), plus its activityCounts for the whole window. With cameraUuid null: SCANS EVERY CAMERA in the organization (or at locationUuid) and returns per-camera activity counts — use this for 'was there any activity / anyone / motion on any camera' questions; no camera lookup needed first.\n" +
+        "button-press: Button press events from the sensor in buttonSensorUuid.\n" +
+        "occupancy: Occupancy sensor events with people count, for occupancySensorUuid.\n" +
+        "proximity: Proximity tag events with RSSI readings, for proximityTagUuids.\n" +
+        "doorbell: Doorbell camera events for doorbellCameraUuid."
+    ),
+  startTime: z
+    .string()
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+    .describe(
+      "A timestamp representing when to start the search for access control events. Keep the window as narrow as the question allows (e.g. the last 24 hours) — access-control results are returned newest-first and capped at the newest 500 events per door, so an over-wide window only slows the search without returning more." +
+        ISOTimestampFormatDescription
+    ),
+  endTime: z
+    .string()
+    .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+    .nullable()
+    .describe(
+      "A timestamp representing when to end the search. null means now (the search runs from startTime up to the present)." +
+        ISOTimestampFormatDescription
+    ),
+  accessControlledDoorUuids: z
+    .array(z.string())
+    .nullable()
+    .describe(
+      "The UUIDs (array) of the access controlled doors. Required when eventType is 'access-control'."
+    ),
+  deviceUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "The UUID of the environmental gateway device. Required when eventType is 'environmental-gateway'  Can be obtained from the get-entity-tool for ENVIRONMENTAL_GATEWAY."
+    ),
+  sensorUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "The UUID of the climate sensor. Required when eventType is 'climate-sensor'. Can be obtained from the get-entity-tool for ENVIRONMENTAL_SENSOR."
+    ),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .describe(
+      "Maximum rows to return: climate events for 'climate-sensor' (default 1000), and individual seekpoints for 'camera' with a cameraUuid (default 500, newest first; activityCounts always cover the whole window). Pass null for other event types."
+    ),
+  locationUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "The UUID of the location. Required when eventType is 'component-events'. Must be a UUID returned by a " +
+        "prior tool call in this conversation (get-entity-tool for LOCATION, or the locationUuid on an " +
+        "access-control-door) — never guess or reuse a UUID from memory. Scoping to a location that has no " +
+        "access-controlled doors silently returns zero door events; to review door activity org-wide, query " +
+        "each location that actually has doors. For eventType 'camera' with cameraUuid null, optionally restricts " +
+        "the camera scan to this location."
+    ),
+  componentEventTypes: z
+    .array(z.nativeEnum(ComponentEventEnumType))
+    .nullable()
+    .describe(
+      "Array of component event types to filter by. Only applicable when eventType is 'component-events'. " +
+        "If empty or null, returns all event types. Valid values: " +
+        "DoorbellEvent, DoorReaderStateChangeEvent, DoorRelayStateChangeEvent, DoorPositionIndicatorStateChangeEvent, " +
+        "RequestToExitStateChangeEvent, CredentialReceivedEvent, ButtonEvent, GenericInputStateChangeEvent, " +
+        "GenericRelayStateChangeEvent, AccessControlUnitTamperEvent, AccessControlUnitLocationLockdownStateEvent, " +
+        "DoorLocationLockdownStateEvent, PanicButtonEvent, AccessControlUnitBatteryStateChangeEvent, " +
+        "WaveToUnlockIntentExpiredEvent, DoorStateChangeEvent, DoorAuthFirstInStateEvent, DoorScheduleFirstInStateEvent, " +
+        "AccessControlUnitDoorFirstInStateEvent, AperioDoorExtensionStateEvent, AperioGatewayStateEvent, " +
+        "AperioGatewayConnectionStateChangeEvent, AperioDtcEvent, AperioTamperStateEvent."
+    ),
+  timeZone: z
+    .string()
+    .nullable()
+    .describe(
+      "IANA timezone for the formatted timestamps in the result. Pass the location's or device's timezone when you know it; otherwise pass null and the organization's timezone (shared by most of its locations) is used. Do not pass 'UTC' unless the user asked for UTC. Formatted event timestamps come back in that zone, not necessarily UTC."
+    ),
+  cameraUuid: z
+    .string()
+    .nullable()
+    .describe(
+      "The camera's UUID, for one camera's individual seekpoints when eventType is 'camera' (from get-entity-tool for CAMERA). null scans every camera in the organization — or at locationUuid — and returns per-camera activity counts instead of individual seekpoints."
+    ),
+  duration: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .describe(
+      "Optional window length in seconds for eventType 'camera', counted from startTime. Prefer startTime + endTime — when both are given the window is derived from them and duration is not needed. Default 3600 (1 hour) when neither endTime nor duration is set; at most 86400 (24 h)."
+    ),
+  buttonSensorUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the button sensor. Required when eventType is 'button-press'."),
+  occupancySensorUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the occupancy sensor. Required when eventType is 'occupancy'."),
+  proximityTagUuids: z
+    .array(z.string())
+    .nullable()
+    .describe("Array of proximity tag UUIDs. Required when eventType is 'proximity'."),
+  doorbellCameraUuid: z
+    .string()
+    .nullable()
+    .describe("The UUID of the doorbell camera. Required when eventType is 'doorbell'."),
+  tempUnit: z
+    .nativeEnum(TempUnit)
+    .nullable()
+    .describe("The unit of temperature to return. Default is Celsius."),
+};
+
+const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
+export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+const StrippedEnvironmentalEvent = z.object({
+  timestampString: z.string().optional().describe("Human-readable formatted timestamp"),
+  temp: z.number().optional().describe("Temperature from CO2 sensor in Celsius"),
+  probeTemp: z.number().optional().describe("Temperature from probe sensor in Celsius"),
+  humidity: z.number().optional().describe("Relative humidity percentage"),
+  pm25: z.number().optional().describe("PM2.5 particulate matter reading"),
+  co2: z.number().optional().describe("CO2 concentration in PPM"),
+  vapeDetected: z.boolean().optional().describe("Whether vape was detected"),
+});
+
+const ClimateSensorEvent = z.object({
+  timestampString: z.string().optional().describe("Human-readable formatted timestamp"),
+  timestampMs: z.number().optional().describe("Timestamp in milliseconds"),
+  temp: z.number().optional().describe("Temperature reading in Celsius"),
+
+  probeTemp: z.number().optional().describe("Temperature from probe sensor"),
+
+  // probeTempC: z.number().optional().describe("Temperature from probe sensor in Celsius"),
+  humidity: z.number().optional().describe("Relative humidity percentage"),
+  pm25: z.number().optional().describe("PM2.5 particulate matter reading"),
+  co2: z.number().optional().describe("CO2 concentration in PPM"),
+  tvoc: z.number().optional().describe("Total Volatile Organic Compounds"),
+  iaq: z.number().optional().describe("Indoor Air Quality index"),
+  ethanol: z.number().optional().describe("Ethanol concentration"),
+  heatIndexDegF: z.number().optional().describe("Heat index in Fahrenheit"),
+  heatIndexRangeWarning: z.string().optional().describe("Heat index warning level"),
+  vapeSmokeDetected: z.boolean().optional().describe("Whether vape or smoke was detected"),
+  vapeSmokePercent: z.number().optional().describe("Vape/smoke confidence percentage"),
+  thcDetected: z.boolean().optional().describe("Whether THC was detected"),
+  thcPercent: z.number().optional().describe("THC confidence percentage"),
+  tampered: z.boolean().optional().describe("Whether the sensor was tampered with"),
+  batteryPercentage: z.number().optional().describe("Battery level percentage"),
+  locationUuid: z.string().optional().describe("Location UUID"),
+  orgUuid: z.string().optional().describe("Organization UUID"),
+});
+
+export const OUTPUT_SCHEMA = z.object({
+  eventType: z
+    .enum([
+      "access-control",
+      "brivo-access-control",
+      "environmental-gateway",
+      "climate-sensor",
+      "component-events",
+      "camera",
+      "button-press",
+      "occupancy",
+      "proximity",
+      "doorbell",
+    ])
+    .optional(),
+  brivoAccessControlEvents: z.optional(
+    z
+      .object({
+        integrationEnabled: z.boolean().describe("Whether the Brivo integration is enabled"),
+        brivoDoorsConfigured: z
+          .number()
+          .describe("Number of Brivo doors configured in the integration"),
+        brivoDoors: z
+          .array(
+            z.object({
+              brivoDoorId: z.string().describe("Brivo's door ID"),
+              doorName: z.string().optional().describe("Brivo door name"),
+              locationUuid: z.string().optional().describe("Rhombus location UUID for this door"),
+            })
+          )
+          .describe("List of Brivo doors configured in the integration"),
+        events: z
+          .array(
+            z.object({
+              authenticationResult: z
+                .string()
+                .optional()
+                .describe("The result of the authentication process"),
+              authorizationResult: z
+                .string()
+                .optional()
+                .describe("The result of the authorization process"),
+              doorUuid: z
+                .string()
+                .optional()
+                .describe("The Rhombus access controlled door UUID"),
+              locationUuid: z
+                .string()
+                .optional()
+                .describe("The Rhombus location UUID where the event occurred"),
+              user: z.string().optional().describe("Username of the person who triggered the event"),
+              credSource: z
+                .string()
+                .optional()
+                .describe("The source of the credential (e.g. WIEGAND, NFC, BLE_WAVE, REMOTE)"),
+              timestampMs: z
+                .number()
+                .optional()
+                .describe("Timestamp in milliseconds when the event occurred"),
+              datetime: z.string().optional().describe("Formatted datetime string of the event"),
+            })
+          )
+          .describe(
+            "Credential received events from locations that have Brivo doors configured, sorted by timestamp (newest first)"
+          ),
+      })
+      .nullable()
+      .describe(
+        "Brivo access control events. Fetches credential events from all locations that have Brivo doors configured in the integration."
+      )
+  ),
+  accessControlEvents: z.optional(
+    z
+      .array(
+        z.object({
+          authenticationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authentication process"),
+          authorizationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authorization process"),
+          doorUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the access controlled door"),
+          locationUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the location where the event occurred"),
+          user: z
+            .string()
+            .optional()
+            .describe("The username of the person who triggered the event"),
+          credSource: z
+            .string()
+            .optional()
+            .describe(
+              "The source of the credential. Is what generated the event. " +
+                "BLE_WAVE is a user badging in by physically waving their hand over the reader. " +
+                "NFC is a user badging in by tapping their badge or their phone on the reader. " +
+                "REMOTE is unlocking the door remotely through the Rhombus app."
+            ),
+          timestampMs: z
+            .number()
+            .optional()
+            .describe("Timestamp in milliseconds when the event occurred"),
+          datetime: z.string().optional().describe("Datetime string of when the event occurred"),
+        })
+      )
+      .nullable()
+      .describe(
+        "Access control events data including badge ins, credentials, arrivals, etc., sorted by timestamp (newest first)."
+      )
+  ),
+  environmentalGatewayEvents: z.optional(
+    z
+      .object({
+        events: z
+          .array(StrippedEnvironmentalEvent)
+          .optional()
+          .describe(
+            "An array where each object represents a single environmental event containing sensor readings and derived values"
+          ),
+        lastEvaluatedKey: z
+          .string()
+          .optional()
+          .describe("A key for pagination if more results are available"),
+      })
+      .nullable()
+      .describe("Environmental gateway events data including sensor readings and derived values")
+  ),
+  climateSensorEvents: z.optional(
+    z
+      .array(ClimateSensorEvent)
+      .nullable()
+      .describe(
+        "Climate sensor events data including temperature, humidity, air quality, and other readings"
+      )
+  ),
+  componentEvents: z.optional(
+    z
+      .array(
+        z.object({
+          eventType: z
+            .string()
+            .optional()
+            .describe(
+              "The type of component event (e.g., DoorbellEvent, CredentialReceivedEvent, etc.)"
+            ),
+          componentUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the component that generated the event"),
+          locationUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the location where the event occurred"),
+          orgUuid: z.string().optional().describe("The unique identifier for the organization"),
+          correlationId: z
+            .string()
+            .optional()
+            .describe("A correlation ID for tracking related events"),
+          ownerDeviceUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the device that owns this component"),
+          datetime: z
+            .string()
+            .optional()
+            .describe("Human-readable datetime string of when the event occurred"),
+          timestampMs: z
+            .number()
+            .optional()
+            .describe("Timestamp in milliseconds when the event occurred"),
+          uuid: z.string().optional().describe("The unique identifier for this specific event"),
+          // Event-specific fields
+          authenticationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authentication process (for credential events)"),
+          authorizationResult: z
+            .string()
+            .optional()
+            .describe("The result of the authorization process (for credential events)"),
+          user: z
+            .string()
+            .optional()
+            .describe("The username of the person who triggered the event (for credential events)"),
+          credSource: z
+            .string()
+            .optional()
+            .describe("The source of the credential (for credential events)"),
+          doorUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the door (for door-related events)"),
+          doorbellCameraUuid: z
+            .string()
+            .optional()
+            .describe("The unique identifier for the doorbell camera (for doorbell events)"),
+          previousState: z
+            .string()
+            .optional()
+            .describe("The previous state before the change (for state change events)"),
+          newState: z
+            .string()
+            .optional()
+            .describe("The new state after the change (for state change events)"),
+          reason: z.string().optional().describe("The reason for the state change or event"),
+          buttonState: z
+            .string()
+            .optional()
+            .describe("The state of the button (for button events)"),
+        })
+      )
+      .nullable()
+      .describe(
+        "Component events data for all types of access control events at a location, sorted by timestamp (newest first)"
+      )
+  ),
+  cameraActivityWindow: z
+    .object({
+      startTime: z.string(),
+      endTime: z.string(),
+      camerasQueried: z.number(),
+      camerasWithActivity: z.number(),
+      camerasWithErrors: z.number().optional(),
+      camerasNotQueried: z.number().optional().describe("Cameras beyond the per-call scan cap or time budget; their activity is unknown."),
+      activityTotals: z.record(z.string(), z.number()).describe("Sum of activityCounts over EVERY camera queried, listed or not."),
+    })
+    .optional()
+    .describe("The window that was scanned and the organization/location-level totals. Read this first: it covers every camera queried, while cameraActivity lists only the busiest."),
+  cameraActivity: z
+    .array(
+      z.object({
+        cameraUuid: z.string(),
+        cameraName: z.string().optional(),
+        locationUuid: z.string().optional(),
+        eventCount: z.number().describe("Seekpoints in the window, all activity types."),
+        activityCounts: z
+          .record(z.string(), z.number())
+          .describe("Seekpoint count per activity (MOTION_HUMAN = a person was seen, MOTION = any motion, MOTION_CAR, …)."),
+        firstEventTime: z.string().optional(),
+        lastEventTime: z.string().optional(),
+        error: z.string().optional().describe("This camera's query failed; its activity is unknown, not zero."),
+      })
+    )
+    .optional()
+    .describe(
+      `Per-camera roll-up of footage seekpoints in the window (eventType "${EventsToolRequestType.CAMERA}"): the busiest cameras with activity (up to a listing cap; see camerasWithActivityNotListed) plus any failed queries when cameraUuid is null, or the one camera otherwise. Counts cover ALL seekpoints in the window even when cameraEvents is capped.`
+    ),
+  camerasWithActivityNotListed: z
+    .number()
+    .optional()
+    .describe("Cameras that had activity but were left out of cameraActivity for size; their counts are still in cameraActivityWindow.activityTotals."),
+  camerasWithoutActivity: z
+    .array(z.string())
+    .optional()
+    .describe("Names of scanned cameras that recorded no seekpoints in the window (up to a listing cap; see camerasWithoutActivityNotListed)."),
+  camerasWithoutActivityNotListed: z
+    .number()
+    .optional()
+    .describe("Quiet cameras beyond the camerasWithoutActivity listing cap."),
+  cameraEvents: z
+    .array(CameraFootageEvent)
+    .optional()
+    .describe(
+      `Footage timeline seekpoints for the camera (all activity types returned in the window). Use with eventType "${EventsToolRequestType.CAMERA}".`
+    ),
+  buttonPressEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      sensorUuid: z.string().optional(),
+      buttonState: z.string().optional(),
+    }))
+    .optional()
+    .describe("Button press events"),
+  occupancyEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      sensorUuid: z.string().optional(),
+      count: z.number().optional(),
+    }))
+    .optional()
+    .describe("Occupancy sensor events"),
+  proximityEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      tagUuid: z.string().optional(),
+      rssi: z.number().optional(),
+    }))
+    .optional()
+    .describe("Proximity tag events"),
+  doorbellEvents: z
+    .array(z.object({
+      timestampMs: z.number().optional(),
+      datetime: z.string().optional(),
+      doorbellCameraUuid: z.string().optional(),
+      eventType: z.string().optional(),
+    }))
+    .optional()
+    .describe("Doorbell camera events"),
+  needUserInput: z.boolean().optional(),
+  commandForUser: z.string().optional(),
+  note: z
+    .string()
+    .optional()
+    .describe(
+      "Diagnostic note about why a result set may be empty or incomplete. Read it before concluding that no events occurred."
+    ),
+});
+export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

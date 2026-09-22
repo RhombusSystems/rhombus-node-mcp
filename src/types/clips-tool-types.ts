@@ -1,0 +1,144 @@
+import { z } from "zod";
+import { createUuidSchema } from "../types.js";
+import {
+	createEpochSchema,
+	ISOTimestampFormatDescription,
+} from "../utils/timestampInput.js";
+
+export const TOOL_ARGS = {
+	requestType: z
+		.enum(["saved", "expiringSoon", "sharedLiveStreams", "timelapseClips", "clipGroups", "sharedClips", "createClip", "updateClip", "deleteClip"])
+		.describe(
+			'The type of data to retrieve or action to perform. "saved" = regular saved clips; "expiringSoon" = clips nearing expiration; "sharedLiveStreams" = all shared live video streams; "timelapseClips" = all timelapse clips; "clipGroups" = clip groups in the org; "sharedClips" = shared clip groups; "createClip" = save a new clip from a camera (requires spliceRequest); "updateClip" = retitle or re-describe an existing saved clip (requires clipUuid plus clipTitle and/or clipDescription); "deleteClip" = permanently delete a saved clip (requires clipUuid; destructive).',
+		),
+	deviceUuidFilters: z
+		.array(createUuidSchema())
+		.nullable()
+		.describe(
+			"A list of UUIDs representing specific devices to filter clips by. Only clips emitted by these devices will be returned. Please truncate any facets, such as .v0. It is always 22 characters long.",
+		),
+	locationUuidFilters: z
+		.array(createUuidSchema())
+		.nullable()
+		.describe(
+			"A list of UUIDs representing specific locations to filter clips by. Only clips associated with these locations will be returned. Please truncate any facets, such as .v0. It is always 22 characters long.",
+		),
+	searchFilter: z
+		.string()
+		.nullable()
+		.describe("A simple string to search for within the names of the clips."),
+	timestampISOAfter: z
+		.string()
+		.datetime({
+			message: "Invalid datetime string. Expected ISO 8601 format.",
+			offset: true,
+		})
+		.nullable()
+		.describe(
+			"The start of the time range for which to retrieve clips. Only clips that occurred AFTER this timestamp will be returned. Required when requestType is saved or expiringSoon." +
+				ISOTimestampFormatDescription,
+		),
+	timestampISOBefore: z
+		.string()
+		.datetime({
+			message: "Invalid datetime string. Expected ISO 8601 format.",
+			offset: true,
+		})
+		.nullable()
+		.describe(
+			"The end of the time range for which to retrieve clips. Only clips that occurred BEFORE this timestamp will be returned. Required when requestType is saved or expiringSoon." +
+				ISOTimestampFormatDescription,
+		),
+	clipUuid: z
+		.string()
+		.nullable()
+		.describe("UUID of a saved clip. Required for 'deleteClip' and 'updateClip'."),
+	clipTitle: z
+		.string()
+		.nullable()
+		.describe(
+			"Only for 'updateClip': a new title for the clip. Omit to leave the title unchanged.",
+		),
+	clipDescription: z
+		.string()
+		.nullable()
+		.describe(
+			"Only for 'updateClip': a new description for the clip. Omit to leave the description unchanged.",
+		),
+	spliceRequest: z.object({
+		cameraUuid: z.string().describe("Camera UUID to create clip from"),
+		startTimeMs: z.number().describe("Start time in milliseconds"),
+		endTimeMs: z.number().describe("End time in milliseconds"),
+	}).nullable().describe("Required for 'createClip'. Specifies the camera and time range for the new clip."),
+};
+
+const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
+export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
+
+export const ApiPayloadSchema = TOOL_ARGS_SCHEMA.transform((args) => {
+	if (
+		args.requestType === "sharedLiveStreams" ||
+		args.requestType === "timelapseClips" ||
+		args.requestType === "clipGroups" ||
+		args.requestType === "sharedClips" ||
+		args.requestType === "createClip" ||
+		args.requestType === "updateClip" ||
+		args.requestType === "deleteClip"
+	) {
+		return {};
+	}
+	const { timestampISOAfter, timestampISOBefore, ...rest } = args;
+	if (timestampISOAfter == null || timestampISOBefore == null) {
+		throw new Error(
+			"timestampISOAfter and timestampISOBefore are required when requestType is saved or expiringSoon",
+		);
+	}
+	const timestampMsAfter = createEpochSchema().parse(timestampISOAfter);
+	const timestampMsBefore = createEpochSchema().parse(timestampISOBefore);
+
+	return {
+		...rest,
+		timestampMsAfter,
+		timestampMsBefore,
+	};
+});
+export type ApiPayload = z.infer<typeof ApiPayloadSchema>;
+
+export const OUTPUT_SCHEMA = z.object({
+	error: z.optional(z.string()),
+
+	// set these as z.any() to prevent us from over-loading the context with tool
+	savedClips: z.array(z.any()).optional(),
+	expiringClips: z.array(z.any()).optional(),
+	sharedLiveVideoStreams: z.array(z.any()).optional(),
+	timelapseClips: z.array(z.any()).optional(),
+	clipGroups: z.array(z.object({
+		uuid: z.string().optional(),
+		name: z.string().optional(),
+		clipCount: z.number().optional(),
+	})).optional().describe("List of clip groups/folders"),
+	sharedClipGroups: z.array(z.object({
+		uuid: z.string().optional(),
+		name: z.string().optional(),
+	})).optional().describe("List of shared clip groups"),
+	spliceResult: z.object({
+		success: z.boolean().optional(),
+		clipUuid: z.string().optional(),
+	}).optional().describe("Result of creating a new clip"),
+	deleteResult: z.object({
+		success: z.boolean().optional(),
+	}).optional().describe("Result of deleting a clip"),
+	updateResult: z.object({
+		success: z.boolean().optional(),
+		clipUuid: z.string().optional(),
+	}).optional().describe("Result of updating a clip's title or description"),
+	note: z
+		.string()
+		.optional()
+		.describe("A caveat about this result that the user needs to be told."),
+	warningMsg: z
+		.string()
+		.optional()
+		.describe("A warning from the Rhombus API — the call succeeded, but with a caveat."),
+});
+export type OutputSchema = z.infer<typeof OUTPUT_SCHEMA>;

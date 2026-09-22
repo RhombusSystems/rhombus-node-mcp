@@ -1,0 +1,1001 @@
+import z from "zod";
+import { FIVE_SECONDS_MS, THREE_HOURS_MS } from "../constants.js";
+import { logger } from "../logger.js";
+import { postApi } from "../network/network.js";
+import { getAccessControlledDoors } from "./get-entity-tool-api.js";
+import type { schema } from "../types/schema.js";
+import { formatTimestamp, type RequestModifiers } from "../util.js";
+import { tempFunc, TempUnit } from "../utils/temp.js";
+
+// Type definitions
+/** One entry from the camera VOD footage seekpoint index (many activity types). */
+export const CameraFootageEvent = z.object({
+  activity: z
+    .string()
+    .describe(
+      "Activity type on the recording timeline (e.g. MOTION_HUMAN, MOTION_CAR, LICENSEPLATE_IDENTIFIED—exact set depends on the camera and analytics)."
+    ),
+  timestamp: z.number().describe("Unix timestamp in milliseconds."),
+  id: z.number().optional().describe("Seekpoint id when the API provides one."),
+  licensePlate: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "Plate text on this seekpoint when present. For org LPR saved vehicles, labels, and plate search APIs, use lpr-tool."
+    ),
+  vehicleName: z.string().nullable().optional().describe("Vehicle display name on this seekpoint when present."),
+  faceNames: z.string().nullable().optional().describe("Face names on this seekpoint when present."),
+});
+export type CameraFootageEvent = z.infer<typeof CameraFootageEvent>;
+
+type MappedEnvironmentalEvent = {
+  timestampString?: string;
+  temp?: number | null;
+  probeTemp?: number | null;
+  humidity?: number | null;
+  pm25?: number | null;
+  co2?: number | null;
+  vapeDetected?: boolean | null;
+};
+
+type MappedClimateEvent = {
+  timestampString?: string;
+  timestampMs?: number | null;
+  temp?: number | null;
+  probeTempC?: number | null;
+  humidity?: number | null;
+  pm25?: number | null;
+  co2?: number | null;
+  tvoc?: number | null;
+  iaq?: number | null;
+  ethanol?: number | null;
+  heatIndexDegF?: number | null;
+  heatIndexRangeWarning?: string | null;
+  vapeSmokeDetected?: boolean | null;
+  vapeSmokePercent?: number | null;
+  thcDetected?: boolean | null;
+  thcPercent?: number | null;
+  tampered?: boolean | null;
+  batteryPercentage?: number | null;
+  locationUuid?: string | null;
+  orgUuid?: string | null;
+};
+
+type MappedAccessControlEvent = {
+  authenticationResult?: string | null;
+  authorizationResult?: string | null;
+  doorUuid?: string | null;
+  locationUuid?: string | null;
+  user?: string | null;
+  credSource?: string | null;
+  timestampMs?: number | null;
+  datetime?: string;
+};
+
+const ACCESS_CONTROL_EVENT_BATCH_SIZE = 1000;
+const ACCESS_CONTROL_EVENT_TYPE_FILTER =
+  ["CredentialReceivedEvent"] as NonNullable<
+    schema["Component_FindComponentEventsByAccessControlledDoorWSRequest"]["typeFilter"]
+  >;
+
+function mapAccessControlEvent(
+  credEvent: schema["CredentialReceivedEventType"],
+  timeZone: string
+): MappedAccessControlEvent {
+  return {
+    authenticationResult: credEvent?.authenticationResult,
+    authorizationResult: credEvent?.authorizationResult,
+    doorUuid: credEvent?.componentCompositeUuid,
+    locationUuid: credEvent?.locationUuid,
+    user: (credEvent?.originator as { username?: string } | undefined)?.username,
+    credSource: credEvent?.credSource,
+    timestampMs: credEvent?.timestampMs,
+    datetime: credEvent?.timestampMs ? formatTimestamp(credEvent.timestampMs, timeZone) : undefined,
+  };
+}
+
+// Newest-N cap per door: the pagination loop below walks backwards through a
+// door's history and would otherwise fetch every event in a wide time window.
+const MAX_ACCESS_CONTROL_EVENTS_PER_DOOR = 500;
+// Defensive default window when no startTime reaches this layer.
+const DEFAULT_ACCESS_CONTROL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+async function getAccessControlEventsForDoor(
+  doorUuid: string,
+  startTimeArg: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<MappedAccessControlEvent[]> {
+  const startTime = startTimeArg ?? Date.now() - DEFAULT_ACCESS_CONTROL_WINDOW_MS;
+  const allEvents: MappedAccessControlEvent[] = [];
+  let createdBeforeMs = endTime;
+
+  while (true) {
+    const body: schema["Component_FindComponentEventsByAccessControlledDoorWSRequest"] = {
+      accessControlledDoorUuid: doorUuid,
+      ...(startTime !== undefined ? { createdAfterMs: startTime } : {}),
+      ...(createdBeforeMs !== undefined ? { createdBeforeMs } : {}),
+      limit: ACCESS_CONTROL_EVENT_BATCH_SIZE,
+      typeFilter: ACCESS_CONTROL_EVENT_TYPE_FILTER,
+    };
+
+    const response = await postApi<schema["Component_FindComponentEventsByAccessControlledDoorWSResponse"]>(
+      {
+        route: "/component/findComponentEventsByAccessControlledDoor",
+        body,
+        modifiers: requestModifiers,
+        sessionId,
+      }
+    );
+
+    const componentEvents = response.componentEvents || [];
+    if (componentEvents.length === 0) {
+      break;
+    }
+
+    const mappedEvents = componentEvents
+      .map((credEvent: schema["CredentialReceivedEventType"]) =>
+        mapAccessControlEvent(credEvent, timeZone)
+      )
+      .filter(Boolean);
+    allEvents.push(...mappedEvents);
+
+    if (allEvents.length >= MAX_ACCESS_CONTROL_EVENTS_PER_DOOR) {
+      logger.info(
+        `access-control events for door ${doorUuid} capped at newest ${MAX_ACCESS_CONTROL_EVENTS_PER_DOOR}`
+      );
+      break;
+    }
+
+    if (componentEvents.length < ACCESS_CONTROL_EVENT_BATCH_SIZE) {
+      break;
+    }
+
+    const oldestTimestamp = componentEvents.reduce<number | null>((oldest, event) => {
+      const ts = event?.timestampMs;
+      if (typeof ts !== "number") {
+        return oldest;
+      }
+      if (oldest === null || ts < oldest) {
+        return ts;
+      }
+      return oldest;
+    }, null);
+
+    if (oldestTimestamp === null) {
+      break;
+    }
+
+    // createdBeforeMs is exclusive. Moving the window to the oldest seen timestamp
+    // prevents duplicate pages and keeps fetching older events until the range is exhausted.
+    if (createdBeforeMs !== undefined && oldestTimestamp >= createdBeforeMs) {
+      break;
+    }
+    if (startTime !== undefined && oldestTimestamp <= startTime) {
+      break;
+    }
+    createdBeforeMs = oldestTimestamp;
+  }
+
+  // Pages accumulate newest → oldest, so slicing keeps the newest events.
+  return allEvents.slice(0, MAX_ACCESS_CONTROL_EVENTS_PER_DOOR);
+}
+
+/** Substrings marking a component event type that only an access-controlled door emits. */
+const DOOR_RELATED_COMPONENT_EVENT_MARKERS = [
+  "Door",
+  "Credential",
+  "RequestToExit",
+  "AccessControlUnit",
+  "Aperio",
+];
+
+function isDoorRelatedComponentEventQuery(eventTypes: string[]): boolean {
+  // No filter means "all types", which includes the door ones.
+  if (eventTypes.length === 0) return true;
+  return eventTypes.some(t => DOOR_RELATED_COMPONENT_EVENT_MARKERS.some(marker => t.includes(marker)));
+}
+
+/**
+ * Explains an empty component-events result when the caller scoped it to a location
+ * that has no access-controlled doors.
+ *
+ * Without this the tool returns a bare `{componentEvents: []}` and the model reports
+ * "no door activity" — which is what happened in prod when it queried a real but
+ * doorless location while 42 doors sat at seven other locations. The door list is a
+ * cached call, and this only runs on the empty-result path, so it costs nothing on
+ * the hot path.
+ */
+export async function describeEmptyComponentEventResult(
+  locationUuid: string,
+  eventTypes: string[],
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<string | undefined> {
+  if (!isDoorRelatedComponentEventQuery(eventTypes)) return undefined;
+
+  let doors: { locationUuid?: string | null }[];
+  try {
+    const response = await getAccessControlledDoors(requestModifiers, sessionId);
+    doors = response.accessControlledDoors ?? [];
+  } catch (error) {
+    logger.debug(`Could not load doors to annotate empty component-events result: ${error}`);
+    return undefined;
+  }
+
+  if (doors.some(door => door.locationUuid === locationUuid)) return undefined;
+
+  const doorsPerLocation = new Map<string, number>();
+  for (const door of doors) {
+    if (door.locationUuid) {
+      doorsPerLocation.set(door.locationUuid, (doorsPerLocation.get(door.locationUuid) ?? 0) + 1);
+    }
+  }
+
+  if (doorsPerLocation.size === 0) {
+    return (
+      `No component events were returned, and this organization has no access-controlled doors at any location. ` +
+      `Do not report this as "no door activity" without saying that no doors are configured.`
+    );
+  }
+
+  const MAX_LISTED_LOCATIONS = 20;
+  const listed = [...doorsPerLocation.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_LISTED_LOCATIONS)
+    .map(([uuid, count]) => `${uuid} (${count})`)
+    .join(", ");
+  const omitted = doorsPerLocation.size - Math.min(doorsPerLocation.size, MAX_LISTED_LOCATIONS);
+
+  return (
+    `Location ${locationUuid} has no access-controlled doors, so this query could not return door events — ` +
+    `the empty result does not mean there was no door activity. Doors exist at these locations ` +
+    `(locationUuid and door count): ${listed}${omitted > 0 ? `, and ${omitted} more` : ""}. ` +
+    `Re-run this query for those locations before answering.`
+  );
+}
+
+export async function getBrivoAccessControlEvents(
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  // Step 1: fetch Brivo integration config to get configured doors and their location UUIDs
+  const integrationResponse = await postApi<schema["Integration_GetOrgIntegrationsV2WSResponse"]>({
+    route: "/integrations/accessControl/getBrivoIntegrationV2",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const brivoSettings = integrationResponse.orgIntegrationV2 as schema["BrivoType"] | null | undefined;
+  const integrationEnabled = brivoSettings?.enabled ?? false;
+  const doorInfoMap = brivoSettings?.doorInfoMap ?? {};
+
+  const brivoDoors = Object.entries(doorInfoMap)
+    .filter(([, info]) => info != null)
+    .map(([brivoDoorId, info]) => ({
+      brivoDoorId,
+      doorName: info!.doorName ?? undefined,
+      locationUuid: info!.locationUuid ?? undefined,
+    }));
+
+  if (brivoDoors.length === 0) {
+    return {
+      integrationEnabled,
+      brivoDoorsConfigured: 0,
+      brivoDoors: [],
+      events: [],
+    };
+  }
+
+  // Step 2: collect unique location UUIDs from configured Brivo doors
+  const locationUuids = [...new Set(brivoDoors.map(d => d.locationUuid).filter((id): id is string => !!id))];
+
+  // Step 3: query CredentialReceivedEvents for each location
+  const MAX_LIMIT = 1000;
+  const allEvents: MappedAccessControlEvent[] = [];
+
+  await Promise.all(
+    locationUuids.map(async locationUuid => {
+      const body: schema["Component_FindComponentEventsByLocationWSRequest"] = {
+        locationUuid,
+        typeFilter: ["CredentialReceivedEvent"] as any,
+        ...(startTime ? { createdAfterMs: startTime } : {}),
+        ...(endTime ? { createdBeforeMs: endTime } : {}),
+        limit: MAX_LIMIT,
+      };
+
+      const response = await postApi<schema["Component_FindComponentEventsByLocationWSResponse"]>({
+        route: "/component/findComponentEventsByLocation",
+        body,
+        modifiers: requestModifiers,
+        sessionId,
+      });
+
+      const mapped = (response.componentEvents || []).map(event =>
+        mapAccessControlEvent(event as schema["CredentialReceivedEventType"], timeZone)
+      );
+      allEvents.push(...mapped);
+    })
+  );
+
+  allEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+
+  return {
+    integrationEnabled,
+    brivoDoorsConfigured: brivoDoors.length,
+    brivoDoors,
+    events: allEvents.map(e => ({
+      authenticationResult: e.authenticationResult ?? undefined,
+      authorizationResult: e.authorizationResult ?? undefined,
+      doorUuid: e.doorUuid ?? undefined,
+      locationUuid: e.locationUuid ?? undefined,
+      user: e.user ?? undefined,
+      credSource: e.credSource ?? undefined,
+      timestampMs: e.timestampMs ?? undefined,
+      datetime: e.datetime,
+    })),
+  };
+}
+
+export async function getFaceEvents(
+  _locationUuid: string | null | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const nowMs = Date.now();
+  const rangeStartMs = nowMs - THREE_HOURS_MS;
+  const rangeEndMs = nowMs - FIVE_SECONDS_MS;
+  const body = {
+    pageRequest: {
+      lastEvaluatedKey: undefined,
+      maxPageSize: 75,
+    },
+    searchFilter: {
+      deviceUuids: [],
+      faceNames: [],
+      labels: [],
+      locationUuids: [],
+      personUuids: [],
+      timestampFilter: {
+        rangeStart: rangeStartMs,
+        rangeEnd: rangeEndMs,
+      },
+    },
+  };
+  const response = await postApi<schema["Facerecognition_faceevent_FindFaceEventsByOrgWSResponse"]>(
+    {
+      route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    }
+  ).then(response => {
+    return {
+      faceEvents: (response.faceEvents || []).map(event => ({
+        ...event,
+        eventTimestamp: event.eventTimestamp
+          ? formatTimestamp(event.eventTimestamp, timeZone)
+          : undefined,
+      })),
+    };
+  });
+  return response;
+}
+
+export async function getAccessControlEvents(
+  doorUuids: string[],
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const responses = await Promise.all(
+    doorUuids.map(doorUuid =>
+      getAccessControlEventsForDoor(
+        doorUuid,
+        startTime,
+        endTime,
+        timeZone,
+        requestModifiers,
+        sessionId
+      )
+    )
+  );
+
+  // Flatten all componentEvents into a single array
+  const accessControlEvents = responses.flatMap(events => events);
+  accessControlEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+  logger.debug(`componentEvents: ${accessControlEvents.length} access-control events`);
+  return accessControlEvents;
+}
+
+export async function getCameraFootageSeekpointEvents(
+  cameraUuid: string,
+  duration: number,
+  startTime: number,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body = {
+    cameraUuid,
+    duration,
+    startTime: Math.round(startTime / 1000),
+  };
+  const response = await postApi<schema["Camera_GetFootageSeekpointsV2WSResponse"]>({
+    route: "/camera/getFootageSeekpointsV2",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  // postApi reports HTTP and transport failures as {error: true, status}
+  // rather than throwing; an unread camera must not look like a quiet one.
+  if (!response || (response as { error?: boolean }).error) {
+    const detail =
+      (response as { status?: string; errorMsg?: string } | undefined)?.status ??
+      (response as { errorMsg?: string } | undefined)?.errorMsg ??
+      "request failed";
+    throw new Error(`getFootageSeekpointsV2 failed for camera ${cameraUuid}: ${detail}`);
+  }
+
+  const seekPoints = response.footageSeekPoints ?? [];
+  const seen = new Set<string>();
+  const cameraFootageEvents: CameraFootageEvent[] = [];
+
+  for (const point of seekPoints) {
+    if (typeof point.ts !== "number" || point.a == null) {
+      continue;
+    }
+    const idPart = point.id != null ? String(point.id) : "noid";
+    const dedupeKey = `${idPart}_${point.ts}_${point.a}`;
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
+    seen.add(dedupeKey);
+    cameraFootageEvents.push({
+      activity: String(point.a),
+      timestamp: point.ts,
+      ...(point.id != null ? { id: point.id } : {}),
+      ...(point.lp !== undefined ? { licensePlate: point.lp } : {}),
+      ...(point.vn !== undefined ? { vehicleName: point.vn } : {}),
+      ...(point.fn !== undefined ? { faceNames: point.fn } : {}),
+    });
+  }
+
+  cameraFootageEvents.sort((a, b) => b.timestamp - a.timestamp);
+
+  return { cameraUuid, cameraFootageEvents };
+}
+
+
+// ---------------------------------------------------------------------------
+// eventType "camera": window resolution, per-camera roll-ups, org-wide scan
+// limits. Observed with a small model asked "Was there any human activity in
+// any of the cameras this morning?": it requested camera events from 00:00 to
+// now with no cameraUuid and got "Which camera are you asking about?"; and a
+// single-camera call ignored endTime, so "this morning" became one hour from
+// midnight.
+// ---------------------------------------------------------------------------
+
+/** Default seekpoint window when neither endTime nor duration is given. */
+export const CAMERA_WINDOW_DEFAULT_SEC = 3_600;
+/** Longest window one call will scan; longer ranges belong to report-tool. */
+export const CAMERA_WINDOW_MAX_SEC = 24 * 3_600;
+/** Newest individual seekpoints returned for one camera unless `limit` says otherwise. */
+export const CAMERA_EVENTS_DEFAULT_LIMIT = 500;
+/** Most cameras one org/location scan queries (connected first). */
+export const CAMERA_SCAN_MAX_CAMERAS = 200;
+/** Cameras queried in parallel during a scan (a worker pool, not lock-step batches). */
+export const CAMERA_SCAN_CONCURRENCY = 10;
+/**
+ * Longest one camera's query may take during a scan before it is written off as
+ * unknown. Very dense cameras (100k+ seekpoints in a 9.5 h window) took 20–30 s
+ * each and one response overran Node's string limit; without a per-camera cap
+ * they starved the rest of the fleet of the budget.
+ */
+export const CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS = 15_000;
+/** Wall-clock budget for a scan; cameras not reached are reported, not guessed. */
+export const CAMERA_SCAN_TIME_BUDGET_MS = 40_000;
+/**
+ * Listing caps for a scan's result. A full scan of ~200 cameras was 35 KB, past
+ * the point where clients summarize or truncate large tool outputs (and a
+ * truncated list lost the totals). Totals live in cameraActivityWindow
+ * (emitted first), so the busiest CAMERA_SCAN_MAX_LISTED cameras are enough
+ * detail.
+ */
+export const CAMERA_SCAN_MAX_LISTED = 40;
+export const CAMERA_SCAN_MAX_QUIET_LISTED = 40;
+
+export type CameraWindow = {
+  /** epoch ms the window starts at */
+  startMs: number;
+  /** window length in seconds, at most CAMERA_WINDOW_MAX_SEC */
+  durationSec: number;
+  /** set when the requested range was capped */
+  note?: string;
+};
+
+/**
+ * The seekpoint window for eventType "camera" from the tool's time arguments.
+ *
+ *   startTime + endTime      → that range (endTime null = now)
+ *   startTime + duration     → duration seconds from startTime (duration wins over endTime)
+ *   endTime only             → the default window ending at endTime
+ *   nothing                  → the default window ending now
+ *
+ * Longer than CAMERA_WINDOW_MAX_SEC is capped from startTime, with a note.
+ */
+export function resolveCameraWindow(params: {
+  startTime?: string | null;
+  endTime?: string | null;
+  duration?: number | null;
+  /** injectable clock for tests */
+  nowMs?: number;
+}): CameraWindow {
+  const now = params.nowMs ?? Date.now();
+  const startMs = params.startTime ? new Date(params.startTime).getTime() : undefined;
+  const endMs = params.endTime ? new Date(params.endTime).getTime() : undefined;
+  let start: number;
+  let durationSec: number;
+  if (params.duration && params.duration > 0) {
+    durationSec = Math.round(params.duration);
+    start = startMs ?? (endMs ?? now) - durationSec * 1000;
+  } else if (startMs !== undefined) {
+    const end = endMs ?? now;
+    start = startMs;
+    durationSec =
+      end > startMs ? Math.max(1, Math.round((end - startMs) / 1000)) : CAMERA_WINDOW_DEFAULT_SEC;
+  } else {
+    durationSec = CAMERA_WINDOW_DEFAULT_SEC;
+    start = (endMs ?? now) - durationSec * 1000;
+  }
+  if (durationSec > CAMERA_WINDOW_MAX_SEC) {
+    const capped = CAMERA_WINDOW_MAX_SEC;
+    return {
+      startMs: start,
+      durationSec: capped,
+      note: `The requested range (${Math.round(durationSec / 3600)} h) exceeds the 24 h a camera seekpoint query covers; only the first 24 h from startTime (${new Date(start).toISOString()}) were scanned. Query later windows separately, or use report-tool for aggregates over longer ranges.`,
+    };
+  }
+  return { startMs: start, durationSec };
+}
+
+export type CameraActivitySummary = {
+  cameraUuid: string;
+  cameraName?: string;
+  locationUuid?: string;
+  /** seekpoints in the window, all activity types */
+  eventCount: number;
+  /** seekpoint count per activity string (MOTION_HUMAN, MOTION, MOTION_CAR, …) */
+  activityCounts: Record<string, number>;
+  firstEventTime?: string;
+  lastEventTime?: string;
+  /** set when this camera's query failed; its counts are then unknown, not zero */
+  error?: string;
+};
+
+/** Roll one camera's seekpoints up into counts per activity plus the window's first/last times. */
+export function summarizeCameraFootageEvents(
+  camera: { uuid: string; name?: string; locationUuid?: string },
+  events: ReadonlyArray<CameraFootageEvent>,
+  timeZone?: string
+): CameraActivitySummary {
+  const activityCounts: Record<string, number> = {};
+  let first: number | undefined;
+  let last: number | undefined;
+  for (const event of events) {
+    activityCounts[event.activity] = (activityCounts[event.activity] ?? 0) + 1;
+    if (first === undefined || event.timestamp < first) first = event.timestamp;
+    if (last === undefined || event.timestamp > last) last = event.timestamp;
+  }
+  return {
+    cameraUuid: camera.uuid,
+    ...(camera.name ? { cameraName: camera.name } : {}),
+    ...(camera.locationUuid ? { locationUuid: camera.locationUuid } : {}),
+    eventCount: events.length,
+    activityCounts,
+    ...(first !== undefined && last !== undefined
+      ? {
+          firstEventTime: formatTimestamp(first, timeZone),
+          lastEventTime: formatTimestamp(last, timeZone),
+        }
+      : {}),
+  };
+}
+
+/** Sum per-camera activity counts into one map. */
+export function totalActivityCounts(
+  summaries: ReadonlyArray<CameraActivitySummary>
+): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const summary of summaries) {
+    for (const [activity, count] of Object.entries(summary.activityCounts)) {
+      totals[activity] = (totals[activity] ?? 0) + count;
+    }
+  }
+  return totals;
+}
+
+const EVENT_COUNT_MAX_PER_RESPONSE = 2000;
+
+export async function getEventsForEnvironmentalGateway(
+  deviceUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  tempUnit: TempUnit | null | undefined,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  let allEvents: MappedEnvironmentalEvent[] = [];
+  let hasMore = true;
+  let lastEvaluatedKey: string | undefined = undefined;
+
+  while (hasMore) {
+    const body: schema["Climate_GetEventsForEnvironmentalGatewayWSRequest"] = {
+      deviceUuid,
+      ...(startTime ? { createdAfterMs: startTime } : {}),
+      ...(endTime ? { createdBeforeMs: endTime } : {}),
+      maxPageSize: EVENT_COUNT_MAX_PER_RESPONSE,
+      ...(lastEvaluatedKey ? { lastEvaluatedKey } : {}),
+    };
+
+    const response = await postApi<schema["Climate_GetEventsForEnvironmentalGatewayWSResponse"]>({
+      route: "/climate/getEventsForEnvironmentalGateway",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    }).then(response => {
+      const tempFunc =
+        tempUnit === TempUnit.FAHRENHEIT
+          ? (temp: number) => (temp * 9) / 5 + 32
+          : (temp: number) => temp;
+
+      return {
+        events: (response.events || []).map(event => ({
+          timestampString: event.timestampMs
+            ? formatTimestamp(event.timestampMs, timeZone)
+            : undefined,
+          temp: tempFunc(event.co2Sense?.tempC ?? 0),
+          probeTemp: tempFunc(event.tempProbe?.tempC ?? 0),
+          humidity: event.co2Sense?.relHumid,
+          pm25: event.pmSense?.pm2p5,
+          co2: event.co2Sense?.co2Ppm,
+          vapeDetected: event.derivedValues?.vapeDetected,
+        })),
+        lastEvaluatedKey: response.lastEvaluatedKey,
+      };
+    });
+
+    // Accumulate the events
+    if (response.events) {
+      allEvents.push(...response.events);
+    }
+
+    // Check if we should continue pagination
+    if (
+      response.events &&
+      response.events.length === EVENT_COUNT_MAX_PER_RESPONSE &&
+      response.lastEvaluatedKey &&
+      response.lastEvaluatedKey !== null
+    ) {
+      // Update the lastEvaluatedKey for the next iteration
+      lastEvaluatedKey = response.lastEvaluatedKey;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return {
+    events: allEvents,
+    lastEvaluatedKey: undefined, // Don't return lastEvaluatedKey since we've fetched all pages
+  };
+}
+
+export async function getClimateEventsForSensor(
+  sensorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  limit: number | null | undefined,
+  timeZone: string,
+  tempUnit: TempUnit | null | undefined,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  let allClimateEvents: MappedClimateEvent[] = [];
+  let hasMore = true;
+  let remainingLimit = limit || 1000; // Default to 1000 if no limit specified
+
+  while (hasMore && allClimateEvents.length < remainingLimit) {
+    const currentBatchSize = Math.min(100, remainingLimit - allClimateEvents.length); // Max 100 per request
+
+    const body: schema["Climate_GetClimateEventsForSensorWSRequest"] = {
+      sensorUuid,
+      ...(startTime ? { createdAfterMs: startTime } : {}),
+      ...(endTime ? { createdBeforeMs: endTime } : {}),
+      limit: currentBatchSize,
+    };
+
+    const response = await postApi<schema["Climate_GetClimateEventsForSensorWSResponse"]>({
+      route: "/climate/getClimateEventsForSensor",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (response?.climateEvents) {
+      // Map the climate events to include formatted timestamp and relevant fields
+      const mappedEvents = response.climateEvents.map(event => ({
+        timestampString: event.timestampMs
+          ? formatTimestamp(event.timestampMs, timeZone)
+          : undefined,
+        timestampMs: event.timestampMs,
+        temp: event.temp,
+        probeTemp: tempFunc(event.probeTempC ?? 0, tempUnit),
+        // probeTempC: event.probeTempC,
+        // probeTempF: event.probeTempC ? (event.probeTempC * 9) / 5 + 32 : undefined,
+        humidity: event.humidity,
+        pm25: event.pm25,
+        co2: event.co2,
+        tvoc: event.tvoc,
+        iaq: event.iaq,
+        ethanol: event.ethanol,
+        heatIndexDegF: event.heatIndexDegF,
+        heatIndexRangeWarning: event.heatIndexRangeWarning,
+        vapeSmokeDetected: event.vapeSmokeDetected,
+        vapeSmokePercent: event.vapeSmokePercent,
+        thcDetected: event.thcDetected,
+        thcPercent: event.thcPercent,
+        tampered: event.tampered,
+        batteryPercentage: event.batteryPercentage,
+        locationUuid: event.locationUuid,
+        orgUuid: event.orgUuid,
+      }));
+
+      allClimateEvents.push(...mappedEvents);
+
+      // Check if we got a full batch and haven't reached the limit
+      if (
+        response.climateEvents.length === currentBatchSize &&
+        allClimateEvents.length < remainingLimit
+      ) {
+        // Prepare for the next batch by updating the endTime to the oldest event's timestamp
+        if (mappedEvents.length > 0) {
+          const oldestEventTimestamp = mappedEvents[mappedEvents.length - 1].timestampMs;
+          if (oldestEventTimestamp) {
+            endTime = oldestEventTimestamp - 1; // Subtract 1ms to avoid duplicates
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  // Trim to the requested limit if we got more than needed
+  if (limit && allClimateEvents.length > limit) {
+    allClimateEvents = allClimateEvents.slice(0, limit);
+  }
+
+  return allClimateEvents;
+}
+
+export async function getComponentEventsByLocation(
+  locationUuid: string,
+  eventTypes: string[], // Still accept string[] for flexibility
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const MAX_LIMIT = 1000; // API limit for component events
+  const body: schema["Component_FindComponentEventsByLocationWSRequest"] = {
+    locationUuid,
+    typeFilter: eventTypes.length > 0 ? (eventTypes as any) : undefined, // API accepts string array
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+    limit: MAX_LIMIT,
+  };
+
+  const response = await postApi<schema["Component_FindComponentEventsByLocationWSResponse"]>({
+    route: "/component/findComponentEventsByLocation",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const events = (response.componentEvents || []).map(event => {
+    // Map different event types to a common structure
+    const baseEvent = {
+      eventType: event.type,
+      componentUuid: event.componentUuid,
+      locationUuid: event.locationUuid,
+      orgUuid: event.orgUuid,
+      correlationId: event.correlationId,
+      ownerDeviceUuid: event.ownerDeviceUuid,
+      datetime: event.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+      timestampMs: event.timestampMs,
+      uuid: event.uuid,
+    };
+
+    // Add event-specific fields based on type
+    if (event.type === "CredentialReceivedEvent") {
+      const credEvent = event as any;
+      return {
+        ...baseEvent,
+        authenticationResult: credEvent?.authenticationResult,
+        authorizationResult: credEvent?.authorizationResult,
+        user: credEvent?.originator?.username,
+        credSource: credEvent?.credSource,
+        doorUuid: credEvent?.componentCompositeUuid,
+      };
+    } else if (event.type === "DoorbellEvent") {
+      return {
+        ...baseEvent,
+        doorbellCameraUuid: event.componentUuid,
+      };
+    } else if (event.type === "DoorStateChangeEvent") {
+      const doorEvent = event as any;
+      return {
+        ...baseEvent,
+        previousState: doorEvent?.previousState,
+        newState: doorEvent?.newState,
+        reason: doorEvent?.reason,
+      };
+    } else if (event.type === "ButtonEvent" || event.type === "PanicButtonEvent") {
+      const buttonEvent = event as any;
+      return {
+        ...baseEvent,
+        buttonState: buttonEvent?.buttonState,
+      };
+    }
+
+    // For other event types, return the base event
+    return baseEvent;
+  });
+
+  // Sort events by timestamp (newest first)
+  events.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+
+  logger.debug(`componentEvents: ${events.length} events`);
+  return events;
+}
+
+export async function getButtonPressEvents(
+  sensorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body: schema["Button_GetButtonPressEventsForSensorWSRequest"] = {
+    sensorUuid,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+  };
+
+  const response = await postApi<schema["Button_GetButtonPressEventsForSensorWSResponse"]>({
+    route: "/button/getButtonPressEventsForSensor",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return (response.events || []).map(event => ({
+    timestampMs: event?.timestampMs ?? undefined,
+    datetime: event?.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+    sensorUuid: event?.componentUuid ?? undefined,
+    buttonState: event?.buttonPress ?? undefined,
+  }));
+}
+
+export async function getOccupancyEvents(
+  sensorUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body = {
+    sensorUuid,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+  };
+
+  const response = await postApi<any>({
+    route: "/occupancy/getOccupancyEventsForSensor",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return ((response.occupancyEvents || response.events || []) as any[]).map(event => ({
+    timestampMs: event.timestampMs ?? undefined,
+    datetime: event.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+    sensorUuid: event.sensorUuid ?? event.componentUuid ?? undefined,
+    count: event.count ?? undefined,
+  }));
+}
+
+export async function getProximityEvents(
+  tagUuids: string[],
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const allEvents: { timestampMs?: number; datetime?: string; tagUuid?: string; rssi?: number }[] = [];
+
+  for (const tagUuid of tagUuids) {
+    const body: schema["Proximity_GetProximityEventsForTagWSRequest"] = {
+      tagUuid,
+      ...(startTime ? { createdAfterMs: startTime } : {}),
+      ...(endTime ? { createdBeforeMs: endTime } : {}),
+    };
+
+    const response = await postApi<schema["Proximity_GetProximityEventsForTagWSResponse"]>({
+      route: "/proximity/getProximityEventsForTag",
+      body,
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    const mapped = (response.proximityEvents || []).map(event => ({
+      timestampMs: event.startTimeMs ?? undefined,
+      datetime: event.startTimeMs ? formatTimestamp(event.startTimeMs, timeZone) : undefined,
+      tagUuid: event.bleDeviceUuid ?? undefined,
+      rssi: event.bleRssi ?? undefined,
+    }));
+    allEvents.push(...mapped);
+  }
+
+  return allEvents;
+}
+
+export async function getDoorbellEvents(
+  doorbellCameraUuid: string,
+  startTime: number | undefined,
+  endTime: number | undefined,
+  timeZone: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const body: schema["Doorbellcamera_FindComponentEventsForDoorbellCameraWSRequest"] = {
+    doorbellCameraUuid,
+    limit: 100,
+    ...(startTime ? { createdAfterMs: startTime } : {}),
+    ...(endTime ? { createdBeforeMs: endTime } : {}),
+  };
+
+  const response = await postApi<schema["Doorbellcamera_FindComponentEventsForDoorbellCameraWSResponse"]>({
+    route: "/doorbellcamera/findComponentEventsForDoorbellCamera",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  return (response.componentEvents || []).map(event => ({
+    timestampMs: event.timestampMs ?? undefined,
+    datetime: event.timestampMs ? formatTimestamp(event.timestampMs, timeZone) : undefined,
+    doorbellCameraUuid: event.componentUuid ?? undefined,
+    eventType: event.type ?? undefined,
+  }));
+}

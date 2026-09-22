@@ -1,0 +1,284 @@
+import { getLogger } from "../logger.js";
+import { postApi, throwIfApiError } from "../network/network.js";
+import type {
+  CameraFullStateResponse,
+  CameraStorageData,
+  ExternalUpdateableFacetedUserConfig,
+  PresenceWindowsResponse,
+  TimeWindowSeconds,
+  Video_GetExactFrameDataWSResponse,
+} from "../types/camera-tool-types.js";
+import type { schema } from "../types/schema.js";
+import { removeNullFields, type RequestModifiers } from "../util.js";
+
+const logger = getLogger("camera-tool");
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Crop region expressed in percentages (0-100) of the frame. */
+export type CropPercent = {
+  x?: number | null;
+  y?: number | null;
+  width?: number | null;
+  height?: number | null;
+};
+
+export type GetImageOptions = {
+  crop?: CropPercent | null;
+  downscaleFactor?: number | null;
+};
+
+/** Convert a 0-100 percentage to permyriad (0-10000), clamped to the valid range. */
+function pctToPermyriad(pct: number): number {
+  return Math.round(Math.max(0, Math.min(100, pct)) * 100);
+}
+
+export async function getImageForCameraAtTime(
+  cameraUuid: string,
+  timestampMs: number,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string,
+  options?: GetImageOptions
+): Promise<
+  | {
+      success: true;
+      status: string;
+      imageType: "base64";
+      imageData: string;
+      crop: { x: number; y: number; width: number; height: number } | null;
+    }
+  | {
+      success: false;
+      status: string;
+      message?: string;
+    }
+> {
+  // biome-ignore lint/suspicious/noExplicitAny: request body is a loose JSON shape
+  const body: Record<string, any> = {
+    cameraUuid,
+    timestampMs,
+    downscaleFactor: options?.downscaleFactor ?? 10,
+    jpgQuality: 70,
+  };
+
+  const crop = options?.crop;
+  const hasCrop =
+    crop != null &&
+    (crop.x != null || crop.y != null || crop.width != null || crop.height != null);
+  const resolvedCrop = hasCrop
+    ? {
+        x: crop!.x ?? 0,
+        y: crop!.y ?? 0,
+        width: crop!.width ?? 100,
+        height: crop!.height ?? 100,
+      }
+    : null;
+  if (resolvedCrop) {
+    body.permyriadCropX = pctToPermyriad(resolvedCrop.x);
+    body.permyriadCropY = pctToPermyriad(resolvedCrop.y);
+    body.permyriadCropWidth = pctToPermyriad(resolvedCrop.width);
+    body.permyriadCropHeight = pctToPermyriad(resolvedCrop.height);
+  }
+
+  logger.debug(
+    `Getting exact frame data for UUID: ${cameraUuid} at timestampMs: ${timestampMs}` +
+      (hasCrop ? ` (cropped)` : ``)
+  );
+
+  const res = await postApi<Video_GetExactFrameDataWSResponse>({
+    route: "/video/getExactFrameData",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (res.error || !res.frameData) {
+    logger.error(
+      `getExactFrameData failed: ${JSON.stringify({ error: res.error, errorMsg: res.errorMsg, status: res.status, hasFrameData: !!res.frameData })}`
+    );
+    return {
+      success: false,
+      status: "failed to fetch image",
+      // Prefer a structured business error from the endpoint, then any transport-level
+      // status set by postApi (e.g. permission/HTTP errors), and only fall back to the
+      // no-VOD explanation when no error detail is available.
+      message:
+        res.errorMsg ??
+        res.status ??
+        "Camera snapshot unavailable: this camera may have no recorded video (VOD) at the requested time. " +
+          "It may not have any footage stored, or the requested timestamp may be outside its retention window.",
+    };
+  }
+
+  return {
+    success: true,
+    status: "successfully fetched image",
+    imageType: "base64",
+    imageData: res.frameData,
+    crop: resolvedCrop,
+  };
+}
+
+async function getCameraStorageData(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<CameraStorageData> {
+  // First, get the camera's full state to determine the time range and cloud archive days
+  const stateResponse = await postApi<CameraFullStateResponse>({
+    route: "/camera/getFullCameraState",
+    body: {
+      cameraUuid: cameraUuid,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const cloudArchiveDays =
+    (stateResponse.fullCameraState?.onCloudState?.cloud_archive_days as
+      | number
+      | null
+      | undefined) ?? null;
+
+  // Get the oldest segment time (in seconds) to use as start time
+  const oldestSegmentSecs = stateResponse.fullCameraState?.onCameraState?.oldest_segment_secs ?? 0;
+
+  const endTimeSec = Math.floor(Date.now() / 1000);
+  const startTimeSec = oldestSegmentSecs || 0;
+  const durationSec = endTimeSec - startTimeSec;
+
+  const presenceResponse = await postApi<PresenceWindowsResponse>({
+    route: "/camera/getPresenceWindows",
+    body: {
+      cameraUuid: cameraUuid,
+      startTimeSec: startTimeSec,
+      durationSec: durationSec,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  const calculateTotalDays = (timeWindows: TimeWindowSeconds[] | null | undefined): number => {
+    if (!timeWindows || timeWindows.length === 0) {
+      return 0;
+    }
+
+    let totalMilliseconds = 0;
+
+    timeWindows.forEach(window => {
+      if (window.startSeconds && window.durationSeconds) {
+        const durationMs = window.durationSeconds * 1000;
+        totalMilliseconds += durationMs;
+      }
+    });
+
+    return Math.floor(totalMilliseconds / MILLISECONDS_PER_DAY);
+  };
+
+  const presenceWindows = presenceResponse.presenceWindows;
+
+  const daysOnCamera = calculateTotalDays(presenceWindows?.VideoLocal);
+  const daysInCloud = calculateTotalDays(presenceWindows?.VideoCloud);
+
+  return {
+    daysInCloud,
+    daysOnCamera,
+    cloudArchiveDays,
+  };
+}
+
+export async function getCameraSettings(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<any>({
+    route: "/camera/getFacetedConfig",
+    body: {
+      deviceUuid: cameraUuid,
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (res.error) {
+    return {
+      success: false,
+      status: "failed to fetch camera settings",
+    };
+  }
+
+  const storageData = await getCameraStorageData(cameraUuid, requestModifiers, sessionId);
+
+  return {
+    success: true,
+    config: res.config,
+    daysInCloud: storageData.daysInCloud,
+    daysOnCamera: storageData.daysOnCamera,
+    cloudArchiveDays: storageData.cloudArchiveDays,
+    status: "fetched camera settings",
+  };
+}
+
+export async function getCameraMediaUris(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Camera_GetMediaUrisWSResponse"]>({
+    route: "/camera/getCameraMediaUris",
+    body: { deviceUuid: cameraUuid },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  return res;
+}
+
+export async function getCameraAIThresholds(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  const res = await postApi<schema["Camera_GetCameraAIThresholdsWSResponse"]>({
+    route: "/camera/getCameraAIThresholds",
+    body: { deviceUuid: cameraUuid },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  return res;
+}
+
+export async function updateCameraSettings(
+  cameraUuid: string,
+  update: ExternalUpdateableFacetedUserConfig,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+) {
+  // remove any "null" values
+  const res = await postApi<any>({
+    route: "/camera/updateFacetedConfig",
+    body: {
+      configUpdate: {
+        deviceUuid: cameraUuid,
+        ...removeNullFields(update),
+      },
+    },
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  if (res.error) {
+    return {
+      success: false,
+      status: "failed to update camera settings",
+    };
+  }
+
+  return {
+    success: true,
+    config: res.config,
+    status: "updated camera settings",
+  };
+}
