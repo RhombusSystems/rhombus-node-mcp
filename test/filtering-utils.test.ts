@@ -427,6 +427,79 @@ describe("applyFilterBy — phantom fields and count sync", () => {
 // 36 vs 37 offline at a location, tallied from 63 in-context rows).
 // ---------------------------------------------------------------------------
 
+describe("applyFilterBy — boolean fields vs string spellings", () => {
+  // 2026-09-22, ITG Gemma 4 12B via MIND: get-entity-tool cameras with
+  // filterBy [{field: "connected", op: "=", value: "true"}] -> 0 of 129
+  // connected cameras, because `true == "true"` is false in JavaScript.
+  const cameras = [
+    { uuid: "cam-1", name: "Front Door", connected: true },
+    { uuid: "cam-2", name: "Loading Dock", connected: false },
+    { uuid: "cam-3", name: "Lobby", connected: true },
+  ];
+
+  it('matches a boolean field against the string "true"', () => {
+    const result = applyFilterBy({ cameras, camerasCount: 3 }, [
+      { field: "connected", op: "=", value: "true" },
+    ]);
+    expect(result.cameras.map((c: any) => c.uuid)).toEqual(["cam-1", "cam-3"]);
+    expect(result.camerasCount).toBe(2);
+    expect(result.filterByWarnings).toBeUndefined();
+  });
+
+  it('matches a boolean field against the string "false" (any case, padded)', () => {
+    const result = applyFilterBy({ cameras }, [
+      { field: "connected", op: "=", value: " False " },
+    ]);
+    expect(result.cameras.map((c: any) => c.uuid)).toEqual(["cam-2"]);
+  });
+
+  it("still matches a real boolean value", () => {
+    const result = applyFilterBy({ cameras }, [
+      { field: "connected", op: "=", value: false },
+    ]);
+    expect(result.cameras.map((c: any) => c.uuid)).toEqual(["cam-2"]);
+  });
+
+  it('"!=" is the exact complement for the string spelling too', () => {
+    const result = applyFilterBy({ cameras }, [
+      { field: "connected", op: "!=", value: "true" },
+    ]);
+    expect(result.cameras.map((c: any) => c.uuid)).toEqual(["cam-2"]);
+  });
+
+  it("a boolean field against a non-boolean string matches nothing (no coercion surprises)", () => {
+    const result = applyFilterBy({ cameras }, [
+      { field: "connected", op: "=", value: "yes" },
+    ]);
+    expect(result.cameras).toEqual([]);
+    expect(result.camerasCount).toBeUndefined();
+  });
+
+  it("a boolean filter value against a string field reads the string as a boolean", () => {
+    const rows = [
+      { id: 1, flag: "true" },
+      { id: 2, flag: "false" },
+      { id: 3, flag: "maybe" },
+    ];
+    const result = applyFilterBy({ rows }, [{ field: "flag", op: "=", value: true }]);
+    expect(result.rows.map((r: any) => r.id)).toEqual([1]);
+  });
+
+  it("numbers keep the loose equality they had: 5 matches \"5\"", () => {
+    const rows = [{ id: 1, n: 5 }, { id: 2, n: 7 }];
+    const result = applyFilterBy({ rows }, [{ field: "n", op: "=", value: "5" }]);
+    expect(result.rows.map((r: any) => r.id)).toEqual([1]);
+    const ne = applyFilterBy({ rows }, [{ field: "n", op: "!=", value: "5" }]);
+    expect(ne.rows.map((r: any) => r.id)).toEqual([2]);
+  });
+
+  it("strings keep exact equality: no boolean reading is applied to string/string", () => {
+    const rows = [{ id: 1, status: "TRUE" }, { id: 2, status: "true" }];
+    const result = applyFilterBy({ rows }, [{ field: "status", op: "=", value: "true" }]);
+    expect(result.rows.map((r: any) => r.id)).toEqual([2]);
+  });
+});
+
 describe("applyGroupBy", () => {
   const cams = [
     { uuid: "c1", locationUuid: "loc-a", connected: false },
