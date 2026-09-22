@@ -101,8 +101,9 @@ export const TOOL_ARGS = {
     ),
   timeZone: z
     .string()
+    .nullable()
     .describe(
-      "The timezone of the requested locations or devices. This is necessary for the tool to produce accurate formatted timestamps. Formatted event timestamps come back in the device / sensor / location timezone, not necessarily UTC."
+      "IANA timezone for the formatted timestamps in the result. Pass the location's or device's timezone when you know it; otherwise pass null and the organization's timezone (shared by most of its locations) is used. Do not pass 'UTC' unless the user asked for UTC. Formatted event timestamps come back in that zone, not necessarily UTC."
     ),
   cameraUuid: z
     .string()
@@ -401,6 +402,18 @@ export const OUTPUT_SCHEMA = z.object({
         "Component events data for all types of access control events at a location, sorted by timestamp (newest first)"
       )
   ),
+  cameraActivityWindow: z
+    .object({
+      startTime: z.string(),
+      endTime: z.string(),
+      camerasQueried: z.number(),
+      camerasWithActivity: z.number(),
+      camerasWithErrors: z.number().optional(),
+      camerasNotQueried: z.number().optional().describe("Cameras beyond the per-call scan cap or time budget; their activity is unknown."),
+      activityTotals: z.record(z.string(), z.number()).describe("Sum of activityCounts over EVERY camera queried, listed or not."),
+    })
+    .optional()
+    .describe("The window that was scanned and the organization/location-level totals. Read this first: it covers every camera queried, while cameraActivity lists only the busiest."),
   cameraActivity: z
     .array(
       z.object({
@@ -418,24 +431,20 @@ export const OUTPUT_SCHEMA = z.object({
     )
     .optional()
     .describe(
-      `Per-camera roll-up of footage seekpoints in the window (eventType "${EventsToolRequestType.CAMERA}"): every camera scanned when cameraUuid is null (cameras with activity, busiest first), or the one camera otherwise. Counts cover ALL seekpoints in the window even when cameraEvents is capped.`
+      `Per-camera roll-up of footage seekpoints in the window (eventType "${EventsToolRequestType.CAMERA}"): the busiest cameras with activity (up to a listing cap; see camerasWithActivityNotListed) plus any failed queries when cameraUuid is null, or the one camera otherwise. Counts cover ALL seekpoints in the window even when cameraEvents is capped.`
     ),
+  camerasWithActivityNotListed: z
+    .number()
+    .optional()
+    .describe("Cameras that had activity but were left out of cameraActivity for size; their counts are still in cameraActivityWindow.activityTotals."),
   camerasWithoutActivity: z
     .array(z.string())
     .optional()
-    .describe("Names of scanned cameras that recorded no seekpoints in the window."),
-  cameraActivityWindow: z
-    .object({
-      startTime: z.string(),
-      endTime: z.string(),
-      camerasQueried: z.number(),
-      camerasWithActivity: z.number(),
-      camerasWithErrors: z.number().optional(),
-      camerasNotQueried: z.number().optional().describe("Cameras beyond the per-call scan cap or time budget; their activity is unknown."),
-      activityTotals: z.record(z.string(), z.number()).describe("Sum of activityCounts over every camera queried."),
-    })
+    .describe("Names of scanned cameras that recorded no seekpoints in the window (up to a listing cap; see camerasWithoutActivityNotListed)."),
+  camerasWithoutActivityNotListed: z
+    .number()
     .optional()
-    .describe("The window that was scanned and the organization/location-level totals."),
+    .describe("Quiet cameras beyond the camerasWithoutActivity listing cap."),
   cameraEvents: z
     .array(CameraFootageEvent)
     .optional()

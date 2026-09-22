@@ -10,7 +10,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "Optional IANA timezone string (e.g., 'America/Los_Angeles', 'UTC'). Will default to system timezone if not provided."
+      "IANA timezone to resolve the description in (e.g. 'America/Los_Angeles'). Pass the relevant location's timezone when you know it, or one the user stated; otherwise pass null and the organization's timezone (shared by most of its locations) is used. Do not pass 'UTC' unless the user asked for UTC."
     ),
 };
 

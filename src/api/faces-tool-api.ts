@@ -40,7 +40,7 @@ export async function getFaceEvents(
 
 	if (filteredArgs.searchFilter) {
 		// The array filters are nullable in the tool schema (null or [] = "no filter" — small
-		// models omit them and MIND fills required-nullable properties with null); the
+		// models omit them and clients fill required-nullable properties with null); the
 		// webservice wants them absent, not null or empty.
 		for (const key of ["faceNames", "labels", "locationUuids", "personUuids"] as const) {
 			const value = filteredArgs.searchFilter[key];

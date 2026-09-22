@@ -282,8 +282,8 @@ function getNestedValue(obj: any, fieldPath: string): any {
  * (the JSON-schema union does allow strings), and JavaScript's loose equality
  * never matches a boolean against those — `true == "true"` is false — so
  * `{field: "connected", op: "=", value: "true"}` used to empty every camera
- * list it touched (MIND on the ITG Gemma 4 host, 2026-09-22: 129 connected
- * cameras -> `{"cameras":[],"camerasCount":0}` -> "no cameras online").
+ * list it touched (every connected camera filtered out ->
+ * `{"cameras":[],"camerasCount":0}` -> "no cameras online").
  */
 function asBoolean(v: unknown): boolean | null {
 	if (typeof v === "boolean") return v;

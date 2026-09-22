@@ -428,9 +428,9 @@ describe("applyFilterBy — phantom fields and count sync", () => {
 // ---------------------------------------------------------------------------
 
 describe("applyFilterBy — boolean fields vs string spellings", () => {
-  // 2026-09-22, ITG Gemma 4 12B via MIND: get-entity-tool cameras with
-  // filterBy [{field: "connected", op: "=", value: "true"}] -> 0 of 129
-  // connected cameras, because `true == "true"` is false in JavaScript.
+  // get-entity-tool cameras with filterBy [{field: "connected", op: "=",
+  // value: "true"}] returned 0 of the connected cameras, because
+  // `true == "true"` is false in JavaScript.
   const cameras = [
     { uuid: "cam-1", name: "Front Door", connected: true },
     { uuid: "cam-2", name: "Loading Dock", connected: false },

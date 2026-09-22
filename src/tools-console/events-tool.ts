@@ -13,6 +13,8 @@ import {
   CAMERA_EVENTS_DEFAULT_LIMIT,
   CAMERA_SCAN_CONCURRENCY,
   CAMERA_SCAN_MAX_CAMERAS,
+  CAMERA_SCAN_MAX_LISTED,
+  CAMERA_SCAN_MAX_QUIET_LISTED,
   CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS,
   CAMERA_SCAN_TIME_BUDGET_MS,
   type CameraActivitySummary,
@@ -23,6 +25,7 @@ import {
   getDoorbellEvents,
 } from "../api/events-tool-api.js";
 import { getCameraList } from "../api/get-entity-tool-api.js";
+import { resolveOrgTimeZone } from "../utils/org-timezone.js";
 import {
   EventsToolRequestType,
   OUTPUT_SCHEMA,
@@ -163,7 +166,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     startTime,
     endTime,
     limit,
-    timeZone,
+    timeZone: requestedTimeZone,
     tempUnit,
     cameraUuid,
     duration,
@@ -174,6 +177,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   } = args;
 
   logger.debug(`eventType: ${eventType}`);
+  // null timeZone = the organization's (resolveOrgTimeZone), never a guessed "UTC".
+  const timeZone =
+    requestedTimeZone ??
+    (await resolveOrgTimeZone(extra?._meta?.requestModifiers as RequestModifiers, extra?.sessionId));
 
   switch (eventType) {
     case EventsToolRequestType.BRIVO_ACCESS_CONTROL: {
@@ -310,14 +317,14 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         ].filter((n): n is string => !!n);
         return createToolStructuredContent<OUTPUT_SCHEMA>({
           eventType: "camera",
-          cameraEvents: shown,
-          cameraActivity: [summary],
           cameraActivityWindow: {
             ...windowOut,
             camerasQueried: 1,
             camerasWithActivity: all.length > 0 ? 1 : 0,
             activityTotals: summary.activityCounts,
           },
+          cameraActivity: [summary],
+          cameraEvents: shown,
           ...(notes.length ? { note: notes.join(" ") } : {}),
         });
       }
@@ -331,8 +338,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       if (scoped.length === 0) {
         return createToolStructuredContent<OUTPUT_SCHEMA>({
           eventType: "camera",
-          cameraActivity: [],
           cameraActivityWindow: { ...windowOut, camerasQueried: 0, camerasWithActivity: 0, activityTotals: {} },
+          cameraActivity: [],
           note: locationUuid
             ? `No cameras are assigned to location ${locationUuid}; nothing was scanned.`
             : "This organization has no cameras assigned to a location; nothing was scanned.",
@@ -349,6 +356,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         .filter(s => s.eventCount === 0 && !s.error)
         .map(s => s.cameraName ?? s.cameraUuid);
       const notQueried = scoped.length - queried.length + scan.skipped;
+      // Listing caps keep the result below the size at which clients summarize
+      // or truncate tool output; the totals (emitted FIRST, so a truncated
+      // result still carries them) cover every camera queried.
+      const listed = withActivity.slice(0, CAMERA_SCAN_MAX_LISTED);
+      const activeNotListed = withActivity.length - listed.length;
+      const quietListed = quiet.slice(0, CAMERA_SCAN_MAX_QUIET_LISTED);
+      const quietNotListed = quiet.length - quietListed.length;
       const notes = [
         window.note,
         notQueried > 0
@@ -357,12 +371,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         failed.length > 0
           ? `${failed.length} camera queries failed (see error on those entries); their activity is unknown, not zero.`
           : undefined,
+        activeNotListed > 0
+          ? `cameraActivity lists the ${listed.length} busiest of ${withActivity.length} cameras with activity; cameraActivityWindow.activityTotals covers all ${withActivity.length}.`
+          : undefined,
         "Per-camera roll-up; pass a cameraUuid for that camera's individual seekpoints.",
       ].filter((n): n is string => !!n);
       return createToolStructuredContent<OUTPUT_SCHEMA>({
         eventType: "camera",
-        cameraActivity: [...withActivity, ...failed],
-        camerasWithoutActivity: quiet,
         cameraActivityWindow: {
           ...windowOut,
           camerasQueried: scan.summaries.length,
@@ -371,6 +386,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           ...(notQueried > 0 ? { camerasNotQueried: notQueried } : {}),
           activityTotals: totalActivityCounts(withActivity),
         },
+        cameraActivity: [...listed, ...failed],
+        ...(activeNotListed > 0 ? { camerasWithActivityNotListed: activeNotListed } : {}),
+        camerasWithoutActivity: quietListed,
+        ...(quietNotListed > 0 ? { camerasWithoutActivityNotListed: quietNotListed } : {}),
         note: notes.join(" "),
       });
     }

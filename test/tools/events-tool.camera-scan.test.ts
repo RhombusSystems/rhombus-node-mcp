@@ -7,8 +7,11 @@ import { createTool } from "../../src/tools-console/events-tool.js";
 import { createFilteringProxy } from "../../src/filtering-utils.js";
 import * as eventsApi from "../../src/api/events-tool-api.js";
 import * as entityApi from "../../src/api/get-entity-tool-api.js";
+import * as locationApi from "../../src/api/location-tool-api.js";
 import {
   CAMERA_SCAN_MAX_CAMERAS,
+  CAMERA_SCAN_MAX_LISTED,
+  CAMERA_SCAN_MAX_QUIET_LISTED,
   CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS,
   CAMERA_WINDOW_DEFAULT_SEC,
   CAMERA_WINDOW_MAX_SEC,
@@ -24,8 +27,12 @@ vi.mock("../../src/api/get-entity-tool-api.js", async importOriginal => {
   const actual = await importOriginal<typeof entityApi>();
   return { ...actual, getCameraList: vi.fn() };
 });
+vi.mock("../../src/api/location-tool-api.js", async importOriginal => {
+  const actual = await importOriginal<typeof locationApi>();
+  return { ...actual, getLocations: vi.fn() };
+});
 
-// 2026-09-22 00:00 PT → 09:30 PT: "this morning" on the ITG audit question.
+// 00:00 PT → 09:30 PT: a "this morning" window.
 const START = "2026-09-22T00:00:00.000-07:00";
 const END = "2026-09-22T09:30:00.000-07:00";
 const START_MS = new Date(START).getTime();
@@ -272,6 +279,94 @@ describe("events-tool camera — org-wide scan when no cameraUuid is given", () 
   });
 });
 
+describe("events-tool camera — result size and ordering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(eventsApi.getCameraFootageSeekpointEvents).mockImplementation(async (cameraUuid: string) =>
+      seekpoints(cameraUuid, { MOTION_HUMAN: 1 + (Number(cameraUuid.slice(4)) % 7) })
+    );
+  });
+
+  it("emits the totals before the per-camera list, so a truncated result still carries them", async () => {
+    vi.mocked(entityApi.getCameraList).mockResolvedValue({ cameras: CAMERAS } as never);
+    const { text } = await callEventsTool(withNulledArgs({}));
+    const keys = Object.keys(JSON.parse(text));
+    expect(keys.indexOf("cameraActivityWindow")).toBeLessThan(keys.indexOf("cameraActivity"));
+    expect(keys[0]).toBe("eventType");
+    expect(keys[1]).toBe("cameraActivityWindow");
+  });
+
+  it("lists only the busiest CAMERA_SCAN_MAX_LISTED active cameras and counts the rest; totals cover everyone", async () => {
+    const active = CAMERA_SCAN_MAX_LISTED + 25;
+    const quiet = CAMERA_SCAN_MAX_QUIET_LISTED + 10;
+    const many = [
+      ...Array.from({ length: active }, (_, i) => ({ uuid: `cam-${i}`, name: `Busy ${i}`, locationUuid: "loc", connectionStatus: "GREEN" })),
+      ...Array.from({ length: quiet }, (_, i) => ({ uuid: `quiet-${i}`, name: `Quiet ${i}`, locationUuid: "loc", connectionStatus: "GREEN" })),
+    ];
+    vi.mocked(entityApi.getCameraList).mockResolvedValue({ cameras: many } as never);
+    vi.mocked(eventsApi.getCameraFootageSeekpointEvents).mockImplementation(async (cameraUuid: string) =>
+      cameraUuid.startsWith("quiet") ? seekpoints(cameraUuid, {}) : seekpoints(cameraUuid, { MOTION_HUMAN: 1 + (Number(cameraUuid.slice(4)) % 7) })
+    );
+    const { result, payload, text } = await callEventsTool(withNulledArgs({}));
+    expect(result.isError).toBeFalsy();
+    expect(payload.cameraActivity).toHaveLength(CAMERA_SCAN_MAX_LISTED);
+    // busiest first: the first listed has the most events
+    const counts = payload.cameraActivity.map((c: any) => c.eventCount);
+    expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+    expect(payload.camerasWithActivityNotListed).toBe(25);
+    expect(payload.camerasWithoutActivity).toHaveLength(CAMERA_SCAN_MAX_QUIET_LISTED);
+    expect(payload.camerasWithoutActivityNotListed).toBe(10);
+    expect(payload.cameraActivityWindow.camerasQueried).toBe(active + quiet);
+    expect(payload.cameraActivityWindow.camerasWithActivity).toBe(active);
+    // totals = sum over ALL active cameras, not just the listed ones
+    const expectedTotal = Array.from({ length: active }, (_, i) => 1 + (i % 7)).reduce((a, b) => a + b, 0);
+    expect(payload.cameraActivityWindow.activityTotals).toEqual({ MOTION_HUMAN: expectedTotal });
+    expect(payload.note).toContain(`lists the ${CAMERA_SCAN_MAX_LISTED} busiest of ${active} cameras with activity`);
+    // and the whole thing stays well under the size at which clients truncate tool output
+    expect(text.length).toBeLessThan(20_000);
+  });
+});
+
+describe("events-tool camera — timezone defaults to the organization's locations", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(entityApi.getCameraList).mockResolvedValue({ cameras: CAMERAS } as never);
+    vi.mocked(eventsApi.getCameraFootageSeekpointEvents).mockImplementation(
+      async (cameraUuid: string) => FOOTAGE[cameraUuid] ?? seekpoints(cameraUuid, {})
+    );
+  });
+
+  it("timeZone null → the zone most of the org's locations use", async () => {
+    vi.mocked(locationApi.getLocations).mockResolvedValue({
+      locations: [
+        { uuid: "l1", name: "HQ", timezone: "America/New_York" },
+        { uuid: "l2", name: "Annex", timezone: "America/New_York" },
+        { uuid: "l3", name: "West", timezone: "America/Los_Angeles" },
+        { uuid: "l4", name: "No tz" },
+      ],
+    } as never);
+    const { result, payload } = await callEventsTool(withNulledArgs({ timeZone: null }));
+    expect(result.isError).toBeFalsy();
+    // 00:00 PT = 03:00 ET
+    expect(payload.cameraActivityWindow.startTime).toBe("September 22, 2026 at 3:00:00 AM");
+    expect(payload.cameraActivityWindow.endTime).toBe("September 22, 2026 at 12:30:00 PM");
+    expect(vi.mocked(locationApi.getLocations)).toHaveBeenCalledTimes(1);
+  });
+
+  it("an explicit timeZone is used as given; locations are not consulted", async () => {
+    const { payload } = await callEventsTool(withNulledArgs({ timeZone: "America/Los_Angeles" }));
+    expect(payload.cameraActivityWindow.startTime).toBe("September 22, 2026 at 12:00:00 AM");
+    expect(vi.mocked(locationApi.getLocations)).not.toHaveBeenCalled();
+  });
+
+  it("locations unavailable → the default zone, not an error", async () => {
+    vi.mocked(locationApi.getLocations).mockRejectedValue(new Error("403"));
+    const { result, payload } = await callEventsTool(withNulledArgs({ timeZone: null }));
+    expect(result.isError).toBeFalsy();
+    expect(payload.cameraActivityWindow.startTime).toBe("September 22, 2026 at 12:00:00 AM");
+  });
+});
+
 describe("events-tool camera — scan pool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -289,7 +384,7 @@ describe("events-tool camera — scan pool", () => {
       vi.mocked(entityApi.getCameraList).mockResolvedValue({ cameras: many } as never);
       vi.mocked(eventsApi.getCameraFootageSeekpointEvents).mockImplementation((cameraUuid: string) =>
         cameraUuid === "cam-0"
-          ? new Promise(() => {}) // never resolves — a 127k-seekpoint stress camera
+          ? new Promise(() => {}) // never resolves — an extremely dense camera
           : Promise.resolve(seekpoints(cameraUuid, { MOTION_HUMAN: 1 }))
       );
       const pending = callEventsTool(withNulledArgs({}));

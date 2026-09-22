@@ -478,11 +478,11 @@ export async function getCameraFootageSeekpointEvents(
 
 // ---------------------------------------------------------------------------
 // eventType "camera": window resolution, per-camera roll-ups, org-wide scan
-// limits. MIND on the ITG Gemma 4 12B host, 2026-09-22, "Was there any human
-// activity in any of the cameras this morning?": the model asked for camera
-// events from 00:00 to now with no cameraUuid and got "Which camera are you
-// asking about?"; and a single-camera call ignored endTime, so "this morning"
-// became one hour from midnight.
+// limits. Observed with a small model asked "Was there any human activity in
+// any of the cameras this morning?": it requested camera events from 00:00 to
+// now with no cameraUuid and got "Which camera are you asking about?"; and a
+// single-camera call ignored endTime, so "this morning" became one hour from
+// midnight.
 // ---------------------------------------------------------------------------
 
 /** Default seekpoint window when neither endTime nor duration is given. */
@@ -497,13 +497,22 @@ export const CAMERA_SCAN_MAX_CAMERAS = 200;
 export const CAMERA_SCAN_CONCURRENCY = 10;
 /**
  * Longest one camera's query may take during a scan before it is written off as
- * unknown. ITG 2026-09-22: stress-test cameras with 115k–127k seekpoints in a
- * 9.5 h window took 20–30 s each and one response overran Node's string limit;
- * without a per-camera cap they starved the other 170 cameras of the budget.
+ * unknown. Very dense cameras (100k+ seekpoints in a 9.5 h window) took 20–30 s
+ * each and one response overran Node's string limit; without a per-camera cap
+ * they starved the rest of the fleet of the budget.
  */
 export const CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS = 15_000;
 /** Wall-clock budget for a scan; cameras not reached are reported, not guessed. */
 export const CAMERA_SCAN_TIME_BUDGET_MS = 40_000;
+/**
+ * Listing caps for a scan's result. A full scan of ~200 cameras was 35 KB, past
+ * the point where clients summarize or truncate large tool outputs (and a
+ * truncated list lost the totals). Totals live in cameraActivityWindow
+ * (emitted first), so the busiest CAMERA_SCAN_MAX_LISTED cameras are enough
+ * detail.
+ */
+export const CAMERA_SCAN_MAX_LISTED = 40;
+export const CAMERA_SCAN_MAX_QUIET_LISTED = 40;
 
 export type CameraWindow = {
   /** epoch ms the window starts at */
