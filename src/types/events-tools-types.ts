@@ -43,8 +43,9 @@ export const TOOL_ARGS = {
   endTime: z
     .string()
     .datetime({ message: "Invalid datetime string. Expected ISO 8601 format.", offset: true })
+    .nullable()
     .describe(
-      "A timestamp representing when to end the search for access control events." +
+      "A timestamp representing when to end the search. null means now (the search runs from startTime up to the present)." +
         ISOTimestampFormatDescription
     ),
   accessControlledDoorUuids: z
