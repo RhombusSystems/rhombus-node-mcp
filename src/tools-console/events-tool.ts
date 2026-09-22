@@ -7,18 +7,29 @@ import {
   getComponentEventsByLocation,
   describeEmptyComponentEventResult,
   getCameraFootageSeekpointEvents,
+  resolveCameraWindow,
+  summarizeCameraFootageEvents,
+  totalActivityCounts,
+  CAMERA_EVENTS_DEFAULT_LIMIT,
+  CAMERA_SCAN_CONCURRENCY,
+  CAMERA_SCAN_MAX_CAMERAS,
+  CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS,
+  CAMERA_SCAN_TIME_BUDGET_MS,
+  type CameraActivitySummary,
+  type CameraWindow,
   getButtonPressEvents,
   getOccupancyEvents,
   getProximityEvents,
   getDoorbellEvents,
 } from "../api/events-tool-api.js";
+import { getCameraList } from "../api/get-entity-tool-api.js";
 import {
   EventsToolRequestType,
   OUTPUT_SCHEMA,
   TOOL_ARGS,
   type ToolArgs,
 } from "../types/events-tools-types.js";
-import { createToolStructuredContent, type RequestModifiers } from "../util.js";
+import { createToolStructuredContent, formatTimestamp, type RequestModifiers } from "../util.js";
 import { getLogger } from "../logger.js";
 import { TempUnit } from "../utils/temp.js";
 
@@ -43,6 +54,103 @@ Use it when the user asks for specific events: unlocks, badge ins, credentials, 
 
 Result sets can be large: keep time ranges narrow. Per-mode required arguments, field semantics, and the full component-event-type list are documented on the input parameters.
 `;
+
+type MinimalCamera = {
+  uuid: string;
+  name?: string;
+  locationUuid?: string;
+  connectionStatus?: string;
+};
+
+/** Connected cameras first (they are the ones with footage), then by name. */
+function connectedFirst(a: MinimalCamera, b: MinimalCamera): number {
+  const ac = a.connectionStatus === "GREEN" ? 0 : 1;
+  const bc = b.connectionStatus === "GREEN" ? 0 : 1;
+  if (ac !== bc) return ac - bc;
+  return (a.name ?? "").localeCompare(b.name ?? "");
+}
+
+/** Reject after `ms` — the underlying request is left to finish on its own. */
+function withTimeout<T>(promise: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${what} timed out after ${Math.round(ms / 1000)} s`)),
+      ms
+    );
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+/**
+ * Query each camera's seekpoints for the window through a pool of
+ * CAMERA_SCAN_CONCURRENCY workers and roll them up. A camera whose query fails
+ * or exceeds CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS gets an `error` entry (unknown ≠
+ * zero) — so a few very dense cameras cannot starve the rest. Workers stop
+ * taking cameras once CAMERA_SCAN_TIME_BUDGET_MS is spent; `skipped` counts the
+ * cameras never reached.
+ */
+async function scanCameraActivity(
+  cameras: ReadonlyArray<MinimalCamera>,
+  window: CameraWindow,
+  timeZone: string | undefined,
+  modifiers: RequestModifiers | undefined,
+  sessionId: string | undefined
+): Promise<{ summaries: CameraActivitySummary[]; skipped: number }> {
+  const summaries: CameraActivitySummary[] = [];
+  const queue = [...cameras];
+  const deadline = Date.now() + CAMERA_SCAN_TIME_BUDGET_MS;
+  const failed = (camera: MinimalCamera, message: string): CameraActivitySummary => ({
+    cameraUuid: camera.uuid,
+    ...(camera.name ? { cameraName: camera.name } : {}),
+    ...(camera.locationUuid ? { locationUuid: camera.locationUuid } : {}),
+    eventCount: 0,
+    activityCounts: {},
+    error: message,
+  });
+  const worker = async () => {
+    while (queue.length > 0 && Date.now() < deadline) {
+      const camera = queue.shift();
+      if (!camera) break;
+      try {
+        const result = await withTimeout(
+          getCameraFootageSeekpointEvents(
+            camera.uuid,
+            window.durationSec,
+            window.startMs,
+            modifiers,
+            sessionId
+          ),
+          Math.min(CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS, Math.max(1, deadline - Date.now())),
+          `seekpoints for camera ${camera.uuid}`
+        );
+        summaries.push(summarizeCameraFootageEvents(camera, result.cameraFootageEvents, timeZone));
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        logger.warn(`camera scan: ${camera.uuid} failed: ${message}`);
+        summaries.push(failed(camera, message));
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CAMERA_SCAN_CONCURRENCY, cameras.length) }, worker)
+  );
+  const skipped = queue.length;
+  if (skipped > 0) {
+    logger.warn(
+      `camera scan: time budget spent after ${summaries.length} of ${cameras.length} cameras; ${skipped} not queried`
+    );
+  }
+  return { summaries, skipped };
+}
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const {
@@ -175,23 +283,96 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       }
     }
     case EventsToolRequestType.CAMERA: {
-      if (!cameraUuid) {
-        return createToolStructuredContent({
-          needUserInput: true,
-          commandForUser: "Which camera are you asking about?",
-        });
-      } else {
+      const window = resolveCameraWindow({ startTime, endTime, duration });
+      const modifiers = extra._meta?.requestModifiers as RequestModifiers;
+      const windowOut = {
+        startTime: formatTimestamp(window.startMs, timeZone),
+        endTime: formatTimestamp(window.startMs + window.durationSec * 1000, timeZone),
+      };
+      if (cameraUuid) {
         const events = await getCameraFootageSeekpointEvents(
           cameraUuid,
-          duration ?? 3600,
-          startTime ? new Date(startTime).getTime() : Date.now() - 3600000,
-          extra._meta?.requestModifiers as RequestModifiers,
+          window.durationSec,
+          window.startMs,
+          modifiers,
           extra.sessionId
         );
-        return createToolStructuredContent<OUTPUT_SCHEMA>(
-          { eventType: "camera", cameraEvents: events.cameraFootageEvents }
-        );
+        // newest first (getCameraFootageSeekpointEvents sorts descending)
+        const all = events.cameraFootageEvents;
+        const cap = limit ?? CAMERA_EVENTS_DEFAULT_LIMIT;
+        const shown = all.slice(0, cap);
+        const summary = summarizeCameraFootageEvents({ uuid: cameraUuid }, all, timeZone);
+        const notes = [
+          window.note,
+          all.length > shown.length
+            ? `${all.length} seekpoints in the window; only the newest ${shown.length} are listed in cameraEvents (raise limit for more). cameraActivity counts cover all ${all.length}.`
+            : undefined,
+        ].filter((n): n is string => !!n);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          eventType: "camera",
+          cameraEvents: shown,
+          cameraActivity: [summary],
+          cameraActivityWindow: {
+            ...windowOut,
+            camerasQueried: 1,
+            camerasWithActivity: all.length > 0 ? 1 : 0,
+            activityTotals: summary.activityCounts,
+          },
+          ...(notes.length ? { note: notes.join(" ") } : {}),
+        });
       }
+      // No camera named: scan the organization (or the location) and return
+      // per-camera counts. Was "Which camera are you asking about?", which
+      // turned "any activity on any camera?" into a clarification.
+      const { cameras } = (await getCameraList(modifiers, extra.sessionId)) as {
+        cameras: MinimalCamera[];
+      };
+      const scoped = locationUuid ? cameras.filter(c => c.locationUuid === locationUuid) : cameras;
+      if (scoped.length === 0) {
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          eventType: "camera",
+          cameraActivity: [],
+          cameraActivityWindow: { ...windowOut, camerasQueried: 0, camerasWithActivity: 0, activityTotals: {} },
+          note: locationUuid
+            ? `No cameras are assigned to location ${locationUuid}; nothing was scanned.`
+            : "This organization has no cameras assigned to a location; nothing was scanned.",
+        });
+      }
+      const ordered = [...scoped].sort(connectedFirst);
+      const queried = ordered.slice(0, CAMERA_SCAN_MAX_CAMERAS);
+      const scan = await scanCameraActivity(queried, window, timeZone, modifiers, extra.sessionId);
+      const withActivity = scan.summaries
+        .filter(s => s.eventCount > 0)
+        .sort((a, b) => b.eventCount - a.eventCount);
+      const failed = scan.summaries.filter(s => s.error);
+      const quiet = scan.summaries
+        .filter(s => s.eventCount === 0 && !s.error)
+        .map(s => s.cameraName ?? s.cameraUuid);
+      const notQueried = scoped.length - queried.length + scan.skipped;
+      const notes = [
+        window.note,
+        notQueried > 0
+          ? `${notQueried} of ${scoped.length} cameras were not scanned (per-call cap ${CAMERA_SCAN_MAX_CAMERAS} / time budget); their activity is unknown, not zero.`
+          : undefined,
+        failed.length > 0
+          ? `${failed.length} camera queries failed (see error on those entries); their activity is unknown, not zero.`
+          : undefined,
+        "Per-camera roll-up; pass a cameraUuid for that camera's individual seekpoints.",
+      ].filter((n): n is string => !!n);
+      return createToolStructuredContent<OUTPUT_SCHEMA>({
+        eventType: "camera",
+        cameraActivity: [...withActivity, ...failed],
+        camerasWithoutActivity: quiet,
+        cameraActivityWindow: {
+          ...windowOut,
+          camerasQueried: scan.summaries.length,
+          camerasWithActivity: withActivity.length,
+          ...(failed.length ? { camerasWithErrors: failed.length } : {}),
+          ...(notQueried > 0 ? { camerasNotQueried: notQueried } : {}),
+          activityTotals: totalActivityCounts(withActivity),
+        },
+        note: notes.join(" "),
+      });
     }
     case EventsToolRequestType.BUTTON_PRESS: {
       const bSensorUuid = args.buttonSensorUuid;

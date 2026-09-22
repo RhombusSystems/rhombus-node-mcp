@@ -27,7 +27,7 @@ export const TOOL_ARGS = {
         "environmental-gateway: Environmental gateway events (sensor readings and derived values) for deviceUuid.\n" +
         "climate-sensor: Climate sensor events (temperature, humidity, air quality, vape/THC detection, battery) for sensorUuid. Cap the row count with limit (default 1000).\n" +
         "component-events: All component event types for locationUuid — the most flexible option. Narrow it with componentEventTypes (see that argument for the full list; omit it for every type).\n" +
-        "camera: Footage seekpoints for cameraUuid over a window of `duration` seconds starting at startTime — all timeline activity types that camera recorded (human motion, vehicle motion, etc., depending on device/analytics), each with an activity string and timestamp; plate/vehicle/face fields appear when the API provides them. For org LPR saved vehicles, labels, and plate search APIs, use lpr-tool.\n" +
+        "camera: Footage seekpoints — the recording timeline's activity markers (MOTION_HUMAN = a person, MOTION = any motion, MOTION_CAR, faces, license plates, …, depending on the camera and its analytics) between startTime and endTime (endTime null = now; or `duration` seconds from startTime; at most 24 h per call). With cameraUuid: that camera's individual seekpoints, newest first, capped by limit (default 500), plus its activityCounts for the whole window. With cameraUuid null: SCANS EVERY CAMERA in the organization (or at locationUuid) and returns per-camera activity counts — use this for 'was there any activity / anyone / motion on any camera' questions; no camera lookup needed first.\n" +
         "button-press: Button press events from the sensor in buttonSensorUuid.\n" +
         "occupancy: Occupancy sensor events with people count, for occupancySensorUuid.\n" +
         "proximity: Proximity tag events with RSSI readings, for proximityTagUuids.\n" +
@@ -72,7 +72,7 @@ export const TOOL_ARGS = {
     .positive()
     .nullable()
     .describe(
-      "Maximum number of climate events to return. Only applicable when eventType is 'climate-sensor'. Default is 1000. Pass null for other event types."
+      "Maximum rows to return: climate events for 'climate-sensor' (default 1000), and individual seekpoints for 'camera' with a cameraUuid (default 500, newest first; activityCounts always cover the whole window). Pass null for other event types."
     ),
   locationUuid: z
     .string()
@@ -82,7 +82,8 @@ export const TOOL_ARGS = {
         "prior tool call in this conversation (get-entity-tool for LOCATION, or the locationUuid on an " +
         "access-control-door) — never guess or reuse a UUID from memory. Scoping to a location that has no " +
         "access-controlled doors silently returns zero door events; to review door activity org-wide, query " +
-        "each location that actually has doors."
+        "each location that actually has doors. For eventType 'camera' with cameraUuid null, optionally restricts " +
+        "the camera scan to this location."
     ),
   componentEventTypes: z
     .array(z.nativeEnum(ComponentEventEnumType))
@@ -107,7 +108,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "The unique identifier for the camera. Required when eventType is 'camera'. Can be obtained from the get-entity-tool for CAMERA."
+      "The camera's UUID, for one camera's individual seekpoints when eventType is 'camera' (from get-entity-tool for CAMERA). null scans every camera in the organization — or at locationUuid — and returns per-camera activity counts instead of individual seekpoints."
     ),
   duration: z
     .number()
@@ -115,7 +116,7 @@ export const TOOL_ARGS = {
     .positive()
     .nullable()
     .describe(
-      "Duration in seconds to search footage seekpoints. Required when eventType is 'camera'. Default is 3600 (1 hour)."
+      "Optional window length in seconds for eventType 'camera', counted from startTime. Prefer startTime + endTime — when both are given the window is derived from them and duration is not needed. Default 3600 (1 hour) when neither endTime nor duration is set; at most 86400 (24 h)."
     ),
   buttonSensorUuid: z
     .string()
@@ -400,6 +401,41 @@ export const OUTPUT_SCHEMA = z.object({
         "Component events data for all types of access control events at a location, sorted by timestamp (newest first)"
       )
   ),
+  cameraActivity: z
+    .array(
+      z.object({
+        cameraUuid: z.string(),
+        cameraName: z.string().optional(),
+        locationUuid: z.string().optional(),
+        eventCount: z.number().describe("Seekpoints in the window, all activity types."),
+        activityCounts: z
+          .record(z.string(), z.number())
+          .describe("Seekpoint count per activity (MOTION_HUMAN = a person was seen, MOTION = any motion, MOTION_CAR, …)."),
+        firstEventTime: z.string().optional(),
+        lastEventTime: z.string().optional(),
+        error: z.string().optional().describe("This camera's query failed; its activity is unknown, not zero."),
+      })
+    )
+    .optional()
+    .describe(
+      `Per-camera roll-up of footage seekpoints in the window (eventType "${EventsToolRequestType.CAMERA}"): every camera scanned when cameraUuid is null (cameras with activity, busiest first), or the one camera otherwise. Counts cover ALL seekpoints in the window even when cameraEvents is capped.`
+    ),
+  camerasWithoutActivity: z
+    .array(z.string())
+    .optional()
+    .describe("Names of scanned cameras that recorded no seekpoints in the window."),
+  cameraActivityWindow: z
+    .object({
+      startTime: z.string(),
+      endTime: z.string(),
+      camerasQueried: z.number(),
+      camerasWithActivity: z.number(),
+      camerasWithErrors: z.number().optional(),
+      camerasNotQueried: z.number().optional().describe("Cameras beyond the per-call scan cap or time budget; their activity is unknown."),
+      activityTotals: z.record(z.string(), z.number()).describe("Sum of activityCounts over every camera queried."),
+    })
+    .optional()
+    .describe("The window that was scanned and the organization/location-level totals."),
   cameraEvents: z
     .array(CameraFootageEvent)
     .optional()
