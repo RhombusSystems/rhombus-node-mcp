@@ -39,19 +39,14 @@ export async function getFaceEvents(
 	}
 
 	if (filteredArgs.searchFilter) {
-		if (
-			filteredArgs.searchFilter.faceNames &&
-			filteredArgs.searchFilter.faceNames.length === 0
-		) {
-			// @ts-expect-error - we can break typing
-			delete filteredArgs.searchFilter.faceNames;
-		}
-		if (
-			filteredArgs.searchFilter.labels &&
-			filteredArgs.searchFilter.labels.length === 0
-		) {
-			// @ts-expect-error - we can break typing
-			delete filteredArgs.searchFilter.labels;
+		// The array filters are nullable in the tool schema (null or [] = "no filter" — small
+		// models omit them and MIND fills required-nullable properties with null); the
+		// webservice wants them absent, not null or empty.
+		for (const key of ["faceNames", "labels", "locationUuids", "personUuids"] as const) {
+			const value = filteredArgs.searchFilter[key];
+			if (value === null || (Array.isArray(value) && value.length === 0)) {
+				delete filteredArgs.searchFilter[key];
+			}
 		}
 		if (filteredArgs.searchFilter.hasEmbedding === false) {
 			delete filteredArgs.searchFilter.hasEmbedding;
