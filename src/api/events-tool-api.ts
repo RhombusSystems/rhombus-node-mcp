@@ -436,6 +436,15 @@ export async function getCameraFootageSeekpointEvents(
     modifiers: requestModifiers,
     sessionId,
   });
+  // postApi reports HTTP and transport failures as {error: true, status}
+  // rather than throwing; an unread camera must not look like a quiet one.
+  if (!response || (response as { error?: boolean }).error) {
+    const detail =
+      (response as { status?: string; errorMsg?: string } | undefined)?.status ??
+      (response as { errorMsg?: string } | undefined)?.errorMsg ??
+      "request failed";
+    throw new Error(`getFootageSeekpointsV2 failed for camera ${cameraUuid}: ${detail}`);
+  }
 
   const seekPoints = response.footageSeekPoints ?? [];
   const seen = new Set<string>();
@@ -464,6 +473,146 @@ export async function getCameraFootageSeekpointEvents(
   cameraFootageEvents.sort((a, b) => b.timestamp - a.timestamp);
 
   return { cameraUuid, cameraFootageEvents };
+}
+
+
+// ---------------------------------------------------------------------------
+// eventType "camera": window resolution, per-camera roll-ups, org-wide scan
+// limits. MIND on the ITG Gemma 4 12B host, 2026-09-22, "Was there any human
+// activity in any of the cameras this morning?": the model asked for camera
+// events from 00:00 to now with no cameraUuid and got "Which camera are you
+// asking about?"; and a single-camera call ignored endTime, so "this morning"
+// became one hour from midnight.
+// ---------------------------------------------------------------------------
+
+/** Default seekpoint window when neither endTime nor duration is given. */
+export const CAMERA_WINDOW_DEFAULT_SEC = 3_600;
+/** Longest window one call will scan; longer ranges belong to report-tool. */
+export const CAMERA_WINDOW_MAX_SEC = 24 * 3_600;
+/** Newest individual seekpoints returned for one camera unless `limit` says otherwise. */
+export const CAMERA_EVENTS_DEFAULT_LIMIT = 500;
+/** Most cameras one org/location scan queries (connected first). */
+export const CAMERA_SCAN_MAX_CAMERAS = 200;
+/** Cameras queried in parallel during a scan (a worker pool, not lock-step batches). */
+export const CAMERA_SCAN_CONCURRENCY = 10;
+/**
+ * Longest one camera's query may take during a scan before it is written off as
+ * unknown. ITG 2026-09-22: stress-test cameras with 115k–127k seekpoints in a
+ * 9.5 h window took 20–30 s each and one response overran Node's string limit;
+ * without a per-camera cap they starved the other 170 cameras of the budget.
+ */
+export const CAMERA_SCAN_PER_CAMERA_TIMEOUT_MS = 15_000;
+/** Wall-clock budget for a scan; cameras not reached are reported, not guessed. */
+export const CAMERA_SCAN_TIME_BUDGET_MS = 40_000;
+
+export type CameraWindow = {
+  /** epoch ms the window starts at */
+  startMs: number;
+  /** window length in seconds, at most CAMERA_WINDOW_MAX_SEC */
+  durationSec: number;
+  /** set when the requested range was capped */
+  note?: string;
+};
+
+/**
+ * The seekpoint window for eventType "camera" from the tool's time arguments.
+ *
+ *   startTime + endTime      → that range (endTime null = now)
+ *   startTime + duration     → duration seconds from startTime (duration wins over endTime)
+ *   endTime only             → the default window ending at endTime
+ *   nothing                  → the default window ending now
+ *
+ * Longer than CAMERA_WINDOW_MAX_SEC is capped from startTime, with a note.
+ */
+export function resolveCameraWindow(params: {
+  startTime?: string | null;
+  endTime?: string | null;
+  duration?: number | null;
+  /** injectable clock for tests */
+  nowMs?: number;
+}): CameraWindow {
+  const now = params.nowMs ?? Date.now();
+  const startMs = params.startTime ? new Date(params.startTime).getTime() : undefined;
+  const endMs = params.endTime ? new Date(params.endTime).getTime() : undefined;
+  let start: number;
+  let durationSec: number;
+  if (params.duration && params.duration > 0) {
+    durationSec = Math.round(params.duration);
+    start = startMs ?? (endMs ?? now) - durationSec * 1000;
+  } else if (startMs !== undefined) {
+    const end = endMs ?? now;
+    start = startMs;
+    durationSec =
+      end > startMs ? Math.max(1, Math.round((end - startMs) / 1000)) : CAMERA_WINDOW_DEFAULT_SEC;
+  } else {
+    durationSec = CAMERA_WINDOW_DEFAULT_SEC;
+    start = (endMs ?? now) - durationSec * 1000;
+  }
+  if (durationSec > CAMERA_WINDOW_MAX_SEC) {
+    const capped = CAMERA_WINDOW_MAX_SEC;
+    return {
+      startMs: start,
+      durationSec: capped,
+      note: `The requested range (${Math.round(durationSec / 3600)} h) exceeds the 24 h a camera seekpoint query covers; only the first 24 h from startTime (${new Date(start).toISOString()}) were scanned. Query later windows separately, or use report-tool for aggregates over longer ranges.`,
+    };
+  }
+  return { startMs: start, durationSec };
+}
+
+export type CameraActivitySummary = {
+  cameraUuid: string;
+  cameraName?: string;
+  locationUuid?: string;
+  /** seekpoints in the window, all activity types */
+  eventCount: number;
+  /** seekpoint count per activity string (MOTION_HUMAN, MOTION, MOTION_CAR, …) */
+  activityCounts: Record<string, number>;
+  firstEventTime?: string;
+  lastEventTime?: string;
+  /** set when this camera's query failed; its counts are then unknown, not zero */
+  error?: string;
+};
+
+/** Roll one camera's seekpoints up into counts per activity plus the window's first/last times. */
+export function summarizeCameraFootageEvents(
+  camera: { uuid: string; name?: string; locationUuid?: string },
+  events: ReadonlyArray<CameraFootageEvent>,
+  timeZone?: string
+): CameraActivitySummary {
+  const activityCounts: Record<string, number> = {};
+  let first: number | undefined;
+  let last: number | undefined;
+  for (const event of events) {
+    activityCounts[event.activity] = (activityCounts[event.activity] ?? 0) + 1;
+    if (first === undefined || event.timestamp < first) first = event.timestamp;
+    if (last === undefined || event.timestamp > last) last = event.timestamp;
+  }
+  return {
+    cameraUuid: camera.uuid,
+    ...(camera.name ? { cameraName: camera.name } : {}),
+    ...(camera.locationUuid ? { locationUuid: camera.locationUuid } : {}),
+    eventCount: events.length,
+    activityCounts,
+    ...(first !== undefined && last !== undefined
+      ? {
+          firstEventTime: formatTimestamp(first, timeZone),
+          lastEventTime: formatTimestamp(last, timeZone),
+        }
+      : {}),
+  };
+}
+
+/** Sum per-camera activity counts into one map. */
+export function totalActivityCounts(
+  summaries: ReadonlyArray<CameraActivitySummary>
+): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const summary of summaries) {
+    for (const [activity, count] of Object.entries(summary.activityCounts)) {
+      totals[activity] = (totals[activity] ?? 0) + count;
+    }
+  }
+  return totals;
 }
 
 const EVENT_COUNT_MAX_PER_RESPONSE = 2000;

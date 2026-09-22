@@ -276,6 +276,46 @@ function getNestedValue(obj: any, fieldPath: string): any {
 	return current;
 }
 
+/**
+ * Boolean reading of a filter operand, or null when it has none.
+ * Models routinely send boolean-typed fields as the strings "true"/"false"
+ * (the JSON-schema union does allow strings), and JavaScript's loose equality
+ * never matches a boolean against those — `true == "true"` is false — so
+ * `{field: "connected", op: "=", value: "true"}` used to empty every camera
+ * list it touched (MIND on the ITG Gemma 4 host, 2026-09-22: 129 connected
+ * cameras -> `{"cameras":[],"camerasCount":0}` -> "no cameras online").
+ */
+function asBoolean(v: unknown): boolean | null {
+	if (typeof v === "boolean") return v;
+	if (typeof v === "string") {
+		const s = v.trim().toLowerCase();
+		if (s === "true") return true;
+		if (s === "false") return false;
+		return null;
+	}
+	if (typeof v === "number") {
+		if (v === 1) return true;
+		if (v === 0) return false;
+	}
+	return null;
+}
+
+/**
+ * Equality for `=` / `!=`: when either side is a boolean, both are read as
+ * booleans (see asBoolean) — a side with no boolean reading is simply unequal.
+ * Otherwise the pre-existing loose equality, so numbers still match their
+ * string spellings ("5" = 5) and strings compare exactly.
+ */
+function looselyEqual(actual: unknown, value: string | number | boolean): boolean {
+	if (typeof actual === "boolean" || typeof value === "boolean") {
+		const a = asBoolean(actual);
+		const b = asBoolean(value);
+		return a !== null && b !== null && a === b;
+	}
+	// biome-ignore lint/suspicious/noDoubleEquals: intentional loose equality for mixed string/number comparisons
+	return actual == value;
+}
+
 function matchesCondition(item: any, condition: FilterCondition): boolean {
 	const actual = getNestedValue(item, condition.field);
 	const { op, value } = condition;
@@ -284,11 +324,9 @@ function matchesCondition(item: any, condition: FilterCondition): boolean {
 
 	switch (op) {
 		case "=":
-			// biome-ignore lint/suspicious/noDoubleEquals: intentional loose equality for mixed string/number comparisons
-			return actual == value;
+			return looselyEqual(actual, value);
 		case "!=":
-			// biome-ignore lint/suspicious/noDoubleEquals: intentional loose equality for mixed string/number comparisons
-			return actual != value;
+			return !looselyEqual(actual, value);
 		case ">":
 			return Number(actual) > Number(value);
 		case ">=":
