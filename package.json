@@ -1,6 +1,6 @@
 {
   "name": "rhombus-node-mcp",
-  "version": "0.1.59",
+  "version": "0.1.60",
   "description": "MCP server for Rhombus API",
   "keywords": [
     "ai",
