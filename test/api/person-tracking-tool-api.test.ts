@@ -5,6 +5,7 @@ import * as elements from "../../src/api/elements-tool-api.js";
 import * as netbox from "../../src/api/netbox-tool-api.js";
 import * as entity from "../../src/api/get-entity-tool-api.js";
 import * as reid from "../../src/api/reid-tool-api.js";
+import * as rhombus from "../../src/api/rhombus-badge-events-api.js";
 import { getPersonTrack } from "../../src/api/person-tracking-tool-api.js";
 
 vi.mock("../../src/api/onguard-tool-api.js");
@@ -12,6 +13,7 @@ vi.mock("../../src/api/elements-tool-api.js");
 vi.mock("../../src/api/netbox-tool-api.js");
 vi.mock("../../src/api/get-entity-tool-api.js");
 vi.mock("../../src/api/reid-tool-api.js");
+vi.mock("../../src/api/rhombus-badge-events-api.js");
 
 const TZ = "America/Los_Angeles";
 
@@ -21,6 +23,7 @@ beforeEach(() => {
   vi.mocked(onguard.searchOnGuardEvents).mockResolvedValue({ events: [] } as never);
   vi.mocked(elements.searchElementsEvents).mockResolvedValue({ events: [] } as never);
   vi.mocked(netbox.searchNetboxEvents).mockResolvedValue({ events: [] } as never);
+  vi.mocked(rhombus.searchRhombusBadgeEvents).mockResolvedValue({ events: [], matchedUsers: [] });
   vi.mocked(entity.getCameraList).mockResolvedValue({ cameras: [] } as never);
   vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([] as never);
   vi.mocked(reid.searchReidentificationMatchesByEmbedding).mockResolvedValue([] as never);
@@ -114,5 +117,78 @@ describe("getPersonTrack (re-id grounded by access control)", () => {
     expect(res.count).toBe(0);
     expect(res.note).toMatch(/no person re-identification embedding/i);
     expect(reid.searchReidentificationMatchesByEmbedding).not.toHaveBeenCalled();
+  });
+
+  // Regression: "Where did Forrest Battles go after he badged in?" — native Rhombus badge-ins were
+  // never searched, so the tool said "no badge-in event in OnGuard, Elements, or NetBox".
+  it("anchors on a native Rhombus door badge-in, using the door's associated camera and location", async () => {
+    vi.mocked(rhombus.searchRhombusBadgeEvents).mockResolvedValue({
+      matchedUsers: ["Forrest Battles"],
+      events: [
+        {
+          timestampMs: 1000, datetime: "denied-time", cardholderName: "Forrest Battles", userUuid: "u1",
+          doorUuid: "door1", doorName: "Front Door", locationUuid: "locHQ", cameraUuids: ["camFront"], granted: false,
+        },
+        {
+          timestampMs: 2000, datetime: "badge-time", cardholderName: "Forrest Battles", userUuid: "u1",
+          doorUuid: "door1", doorName: "Front Door", locationUuid: "locHQ", cameraUuids: ["camFront", "camLobby"], granted: true,
+        },
+      ],
+    });
+    vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([
+      { deviceUuid: "camLobby", timestamp: 2003, embedding: [0.3], embeddingId: "e" },
+    ] as never);
+    vi.mocked(reid.searchReidentificationMatchesByEmbedding).mockResolvedValue([
+      { deviceUuid: "camLobby", timestamp: 2003, distance: 0 },
+      { deviceUuid: "camOffice", timestamp: 4000, distance: 0.1 },
+    ] as never);
+
+    const res = await getPersonTrack({ personQuery: "Forrest Battles", afterMs: 0, beforeMs: 10000 }, TZ);
+
+    expect(rhombus.searchRhombusBadgeEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ personQuery: "Forrest Battles", afterMs: 0, beforeMs: 10000 }),
+      TZ, undefined, undefined
+    );
+    // the granted tap anchors, not the earlier denied one
+    expect(res.anchor).toMatchObject({ integration: "Rhombus", deviceUuid: "camFront", area: "Front Door", doorUuid: "door1", timestampMs: 2000 });
+    expect(res.resolvedPerson).toEqual({ name: "Forrest Battles" });
+    // every camera on the door is searched for the seed; the door's location is used directly
+    expect(vi.mocked(reid.listReidentificationEmbeddings).mock.calls[0][0]).toMatchObject({
+      deviceUuids: ["camFront", "camLobby"], locationUuid: "locHQ",
+    });
+    expect(entity.getCameraList).not.toHaveBeenCalled();
+    expect(res.path).toEqual(["camLobby", "camOffice"]);
+    expect(res.badgeEvents).toHaveLength(2);
+    expect(res.sourcesChecked).toEqual(["Rhombus", "OnGuard", "Elements", "NetBox"]);
+  });
+
+  it("reports native badge events (not 'no badge events') when the door has no associated camera", async () => {
+    vi.mocked(rhombus.searchRhombusBadgeEvents).mockResolvedValue({
+      matchedUsers: ["Forrest Battles"],
+      events: [
+        {
+          timestampMs: 2000, datetime: "badge-time", cardholderName: "Forrest Battles", userUuid: "u1",
+          doorUuid: "door1", doorName: "Side Door", cameraUuids: [], granted: true,
+        },
+      ],
+    });
+
+    const res = await getPersonTrack({ personQuery: "Forrest Battles" }, TZ);
+
+    expect(res.count).toBe(0);
+    expect(res.note).toMatch(/Found 1 badge event/);
+    expect(res.note).toMatch(/do NOT say the person has no badge events/);
+    expect(res.badgeEvents?.[0]).toMatchObject({ integration: "Rhombus", area: "Side Door", granted: true });
+    expect(reid.listReidentificationEmbeddings).not.toHaveBeenCalled();
+  });
+
+  it("names a failed badge source as unknown instead of reporting zero taps", async () => {
+    vi.mocked(rhombus.searchRhombusBadgeEvents).mockRejectedValue(new Error("HTTP 500"));
+
+    const res = await getPersonTrack({ personQuery: "Forrest Battles" }, TZ);
+
+    expect(res.sourcesChecked).toEqual(["OnGuard", "Elements", "NetBox"]);
+    expect(res.sourceErrors).toEqual([{ source: "Rhombus", error: "HTTP 500" }]);
+    expect(res.note).toMatch(/could NOT be checked \(unknown, not zero\): Rhombus \(HTTP 500\)/);
   });
 });

@@ -4,6 +4,7 @@ import { getCameraList } from "./get-entity-tool-api.js";
 import { searchNetboxEvents } from "./netbox-tool-api.js";
 import { searchOnGuardEvents } from "./onguard-tool-api.js";
 import { listReidentificationEmbeddings, searchReidentificationMatchesByEmbedding } from "./reid-tool-api.js";
+import { searchRhombusBadgeEvents } from "./rhombus-badge-events-api.js";
 import { formatTimestamp, type RequestModifiers } from "../util.js";
 
 export interface GetPersonTrackArgs {
@@ -18,15 +19,35 @@ export interface GetPersonTrackArgs {
 
 const DEFAULT_BADGE_MATCH_WINDOW_S = 30;
 const DEFAULT_TRACK_FORWARD_MS = 6 * 60 * 60 * 1000; // track 6h forward from the badge tap if no endTime
+const MAX_BADGE_EVENTS_OUT = 25;
 
 /** RUUID without any `.vN` facet suffix, so a badge event's camera matches the camera-state list. */
 function stripFacet(uuid?: string): string {
   return (uuid ?? "").split(".")[0];
 }
 
+type BadgeSource = "Rhombus" | "OnGuard" | "Elements" | "NetBox";
+
+/** One badge tap from any source, normalized for anchoring. */
+type BadgeTap = {
+  integration: BadgeSource;
+  timestampMs: number;
+  datetime?: string;
+  cardholderName?: string;
+  /** Cameras that can see the tap, primary first. Empty = can't anchor re-id on it. */
+  cameraUuids: string[];
+  /** Rhombus door location — saves a camera-list lookup. */
+  locationUuid?: string;
+  area?: string;
+  doorUuid?: string;
+  /** False only for a tap we know was denied. */
+  granted: boolean;
+};
+
 /**
  * Reconstructs where a named person went, grounded in access control + person re-identification:
- *   1. find the person's badge tap(s) (OnGuard / Elements / NetBox) → a camera + time we KNOW is them,
+ *   1. find the person's badge tap(s) (native Rhombus doors / OnGuard / Elements / NetBox) → a camera
+ *      + time we KNOW is them,
  *   2. pull the re-id embedding recorded on that camera nearest the badge time (the person at the door),
  *   3. re-id-search that embedding across cameras over the window → their cross-camera movement track.
  *
@@ -38,7 +59,8 @@ export async function getPersonTrack(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  // 1. Anchor on access-control events. Check all three badge integrations; an org may use any.
+  // 1. Anchor on access-control events. Check native Rhombus doors and all three vendor
+  // integrations; an org may use any of them. A failed source is reported, never read as "no taps".
   const badgeArgs = {
     cardholderQuery: args.personQuery,
     locationUuids: args.locationUuids,
@@ -46,13 +68,16 @@ export async function getPersonTrack(
     beforeMs: args.beforeMs,
     limit: args.limit ?? 200,
   };
-  const empty = { events: [] as Array<Record<string, unknown>> };
-  const [og, el, nb] = await Promise.all([
-    searchOnGuardEvents(badgeArgs, timeZone, requestModifiers, sessionId).catch(() => empty),
-    searchElementsEvents(badgeArgs, timeZone, requestModifiers, sessionId).catch(() => empty),
-    searchNetboxEvents(badgeArgs, timeZone, requestModifiers, sessionId).catch(() => empty),
-  ]);
-  type BadgeEvent = {
+  const sourceErrors: Array<{ source: BadgeSource; error: string }> = [];
+  const settle = async <T>(source: BadgeSource, p: Promise<T>): Promise<T | undefined> => {
+    try {
+      return await p;
+    } catch (e) {
+      sourceErrors.push({ source, error: e instanceof Error ? e.message : String(e) });
+      return undefined;
+    }
+  };
+  type VendorEvent = {
     deviceUuid?: string;
     timestampMs?: number;
     datetime?: string;
@@ -60,52 +85,126 @@ export async function getPersonTrack(
     areaEntering?: string;
     areaExiting?: string;
   };
-  const badgeEvents = [
-    ...(og.events as BadgeEvent[]).map((e) => ({ ...e, integration: "OnGuard" })),
-    ...(el.events as BadgeEvent[]).map((e) => ({ ...e, integration: "Elements" })),
-    ...(nb.events as BadgeEvent[]).map((e) => ({ ...e, integration: "NetBox" })),
-  ]
-    .filter((e) => e.deviceUuid && e.timestampMs != null)
-    .sort((a, b) => (a.timestampMs ?? 0) - (b.timestampMs ?? 0));
+  const vendorTaps = (source: BadgeSource, res?: { events: unknown[] }): BadgeTap[] =>
+    ((res?.events ?? []) as VendorEvent[])
+      .filter((e) => e.timestampMs != null)
+      .map((e) => ({
+        integration: source,
+        timestampMs: e.timestampMs as number,
+        datetime: e.datetime,
+        cardholderName: e.cardholderName,
+        cameraUuids: e.deviceUuid ? [e.deviceUuid] : [],
+        area: e.areaEntering ?? e.areaExiting,
+        granted: true,
+      }));
 
-  if (badgeEvents.length === 0) {
+  const [rh, og, el, nb] = await Promise.all([
+    settle(
+      "Rhombus",
+      searchRhombusBadgeEvents(
+        { personQuery: args.personQuery, afterMs: args.afterMs, beforeMs: args.beforeMs, locationUuids: args.locationUuids, limit: args.limit ?? 200 },
+        timeZone,
+        requestModifiers,
+        sessionId
+      )
+    ),
+    settle("OnGuard", searchOnGuardEvents(badgeArgs, timeZone, requestModifiers, sessionId)),
+    settle("Elements", searchElementsEvents(badgeArgs, timeZone, requestModifiers, sessionId)),
+    settle("NetBox", searchNetboxEvents(badgeArgs, timeZone, requestModifiers, sessionId)),
+  ]);
+
+  const allTaps: BadgeTap[] = [
+    ...(rh?.events ?? []).map((e) => ({
+      integration: "Rhombus" as const,
+      timestampMs: e.timestampMs,
+      datetime: e.datetime,
+      cardholderName: e.cardholderName,
+      cameraUuids: e.cameraUuids,
+      locationUuid: e.locationUuid,
+      area: e.doorName,
+      doorUuid: e.doorUuid,
+      granted: e.granted,
+    })),
+    ...vendorTaps("OnGuard", og),
+    ...vendorTaps("Elements", el),
+    ...vendorTaps("NetBox", nb),
+  ].sort((a, b) => a.timestampMs - b.timestampMs);
+
+  const sourcesChecked: BadgeSource[] = (["Rhombus", "OnGuard", "Elements", "NetBox"] as const).filter(
+    (s) => !sourceErrors.some((e) => e.source === s)
+  );
+  const badgeEvents = allTaps.slice(0, MAX_BADGE_EVENTS_OUT).map((t) => ({
+    integration: t.integration,
+    datetime: t.datetime,
+    timestampMs: t.timestampMs,
+    cardholderName: t.cardholderName,
+    area: t.area,
+    doorUuid: t.doorUuid,
+    cameraUuid: t.cameraUuids[0],
+    granted: t.granted,
+  }));
+  const context = { badgeEvents, sourcesChecked, ...(sourceErrors.length ? { sourceErrors } : {}) };
+  const failedNote = sourceErrors.length
+    ? ` These sources could NOT be checked (unknown, not zero): ${sourceErrors.map((e) => `${e.source} (${e.error})`).join("; ")}.`
+    : "";
+
+  if (allTaps.length === 0) {
     return {
       sightings: [],
       path: [],
       count: 0,
-      note: `No access-control (badge) events found for "${args.personQuery}" in the window — can't anchor a re-id track. Try a wider time range, or confirm the name as it appears on the badge.`,
+      ...context,
+      note: `No access-control (badge) events found for "${args.personQuery}" in the window. Checked: ${sourcesChecked.join(", ") || "none"}.${failedNote} Try a wider time range, or confirm the name as it appears on the badge / Rhombus user.`,
     };
   }
 
-  // Earliest badge tap in the window — track forward from there.
-  const anchor = badgeEvents[0];
+  // Earliest granted tap with a camera — track forward from there. A denied tap is still the
+  // person at the door, so fall back to it before giving up.
+  const anchorable = allTaps.filter((t) => t.cameraUuids.length > 0);
+  const anchor = anchorable.find((t) => t.granted) ?? anchorable[0];
+  if (!anchor) {
+    const first = allTaps[0];
+    return {
+      resolvedPerson: first.cardholderName ? { name: first.cardholderName } : undefined,
+      sightings: [],
+      path: [],
+      count: 0,
+      ...context,
+      note: `Found ${allTaps.length} badge event(s) for ${first.cardholderName ?? `"${args.personQuery}"`} (first at ${first.area ?? "an unnamed door"}, ${first.datetime}), but none of those doors has an associated camera, so no re-id track can be built. Report the badge events themselves (badgeEvents) — do NOT say the person has no badge events.${failedNote}`,
+    };
+  }
+
   const resolvedPerson = anchor.cardholderName ? { name: anchor.cardholderName } : undefined;
+  const anchorCamera = anchor.cameraUuids[0];
   const anchorOut = {
-    deviceUuid: anchor.deviceUuid,
+    deviceUuid: anchorCamera,
     timestampMs: anchor.timestampMs,
     datetime: anchor.datetime,
     integration: anchor.integration,
-    area: anchor.areaEntering ?? anchor.areaExiting,
+    area: anchor.area,
+    doorUuid: anchor.doorUuid,
   };
 
   // 2. Resolve the badge camera's location (re-id list is scoped by location).
-  let anchorLocationUuid: string | undefined;
-  try {
-    const { cameras } = await getCameraList(requestModifiers, sessionId);
-    const dev = stripFacet(anchor.deviceUuid);
-    anchorLocationUuid = (cameras as Array<{ uuid?: string; locationUuid?: string }>).find(
-      (c) => stripFacet(c.uuid) === dev
-    )?.locationUuid;
-  } catch {
-    // best-effort; the re-id list can still run device-scoped without a location
+  let anchorLocationUuid = anchor.locationUuid;
+  if (!anchorLocationUuid) {
+    try {
+      const { cameras } = await getCameraList(requestModifiers, sessionId);
+      const dev = stripFacet(anchorCamera);
+      anchorLocationUuid = (cameras as Array<{ uuid?: string; locationUuid?: string }>).find(
+        (c) => stripFacet(c.uuid) === dev
+      )?.locationUuid;
+    } catch {
+      // best-effort; the re-id list can still run device-scoped without a location
+    }
   }
 
   // 3. Ground the re-id embedding: the person detected on that camera nearest the badge tap.
   const winMs = (args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S) * 1000;
-  const anchorMs = anchor.timestampMs as number;
+  const anchorMs = anchor.timestampMs;
   const embeddings = await listReidentificationEmbeddings(
     {
-      deviceUuids: [anchor.deviceUuid as string],
+      deviceUuids: anchor.cameraUuids,
       locationUuid: anchorLocationUuid,
       startTimestampMs: anchorMs - winMs,
       endTimestampMs: anchorMs + winMs,
@@ -122,7 +221,8 @@ export async function getPersonTrack(
       sightings: [],
       path: [],
       count: 0,
-      note: `Found ${anchor.cardholderName ?? "the person"}'s badge tap at ${anchor.datetime}, but no person re-identification embedding was recorded on that camera within ±${args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S}s — can't build a re-id track. (Re-id needs human-detection coverage on the door camera.)`,
+      ...context,
+      note: `Found ${anchor.cardholderName ?? "the person"}'s badge tap at ${anchor.datetime}, but no person re-identification embedding was recorded on the door camera within ±${args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S}s — can't build a re-id track. (Re-id needs human-detection coverage on the door camera.) Report the badge events themselves (badgeEvents).`,
     };
   }
 
@@ -137,7 +237,8 @@ export async function getPersonTrack(
       sightings: [],
       path: [],
       count: 0,
-      note: "The re-id detection at the door had no embedding vector; can't search for matches.",
+      ...context,
+      note: "The re-id detection at the door had no embedding vector; can't search for matches. Report the badge events themselves (badgeEvents).",
     };
   }
 
@@ -197,5 +298,6 @@ export async function getPersonTrack(
     path,
     lastKnownSighting: sightings[sightings.length - 1],
     count: sightings.length,
+    ...context,
   };
 }

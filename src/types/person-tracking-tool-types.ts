@@ -75,8 +75,12 @@ const AnchorSchema = z
     deviceUuid: z.string().optional().describe("The door camera where the badge tap happened."),
     timestampMs: z.number().optional(),
     datetime: z.string().optional(),
-    integration: z.string().optional().describe("Which badge system the tap came from (OnGuard / Elements / NetBox)."),
-    area: z.string().optional(),
+    integration: z
+      .string()
+      .optional()
+      .describe("Which badge system the tap came from (Rhombus = native Rhombus door, OnGuard / Elements / NetBox)."),
+    area: z.string().optional().describe("Door name (Rhombus) or area entered (vendor integrations)."),
+    doorUuid: z.string().optional().describe("The Rhombus access-controlled door, for native Rhombus taps."),
   })
   .describe("The access-control badge tap used to ground the re-id track (the known identity moment).");
 
@@ -96,7 +100,33 @@ export const OUTPUT_SCHEMA = z.object({
     .describe("Camera UUIDs the person was re-identified at, in order (consecutive repeats collapsed)."),
   lastKnownSighting: SightingSchema.optional().describe("The most recent re-id sighting — last-known location."),
   count: z.number().optional().describe("Number of re-id sightings returned."),
-  note: z.string().optional().describe("Set when the track couldn't be built (no badge tap, or no re-id at the door)."),
+  badgeEvents: z
+    .array(
+      z.object({
+        integration: z.string().optional(),
+        datetime: z.string().optional(),
+        timestampMs: z.number().optional(),
+        cardholderName: z.string().optional(),
+        area: z.string().optional().describe("Door name (Rhombus) or area entered (vendor integrations)."),
+        doorUuid: z.string().optional(),
+        cameraUuid: z.string().optional().describe("A camera that sees this door, when one is known."),
+        granted: z.boolean().optional().describe("False when the door denied the credential."),
+      })
+    )
+    .optional()
+    .describe("The person's badge taps across all sources, oldest first (capped at 25)."),
+  sourcesChecked: z
+    .array(z.string())
+    .optional()
+    .describe("Badge sources that answered (Rhombus, OnGuard, Elements, NetBox)."),
+  sourceErrors: z
+    .array(z.object({ source: z.string(), error: z.string() }))
+    .optional()
+    .describe("Badge sources that failed — their events are UNKNOWN, not zero."),
+  note: z
+    .string()
+    .optional()
+    .describe("Set when the track couldn't be built (no badge tap, door without a camera, or no re-id at the door)."),
   error: z.string().optional(),
 });
 export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;

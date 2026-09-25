@@ -11,8 +11,9 @@ Reconstructs where a named person went across cameras, e.g. "show me where Brand
 "track Eve through the building yesterday". Identity is grounded in ACCESS CONTROL and the track uses
 person RE-IDENTIFICATION (appearance), NOT face recognition:
 
-1. Finds the person's badge tap(s) (OnGuard / Elements / NetBox) in the window — a camera + time we KNOW
-   is them. (Pass the name as it appears on the badge.)
+1. Finds the person's badge tap(s) in the window — a camera + time we KNOW is them. It searches EVERY badge
+   source itself: native Rhombus access-controlled doors (by Rhombus user name) and the OnGuard / Elements /
+   NetBox integrations. Do not pre-check or restrict to one vendor. (Pass the person's name.)
 2. Pulls the person re-id embedding recorded on that door camera nearest the badge tap (the person at the
    door).
 3. Re-id-searches that appearance across all cameras over the window to reconstruct their movement.
@@ -22,7 +23,11 @@ Returns:
 - sightings: chronological re-id hits, each with deviceUuid (camera), timestampMs/datetime, distance
   (LOWER = closer appearance match), a thumbnail, clipHint/stillHint, and gapToNextSeconds.
 - path (camera sequence) and lastKnownSighting (last-known location).
-- note: set when no badge tap was found, or no re-id embedding existed on the door camera.
+- badgeEvents: the person's badge taps from all sources (door/area, time, integration, granted) and
+  sourcesChecked / sourceErrors. These stand on their own: when the re-id track can't be built, still answer
+  with the doors the person badged at. A source in sourceErrors is UNKNOWN, not "no events".
+- note: set when no badge tap was found, the door has no camera, or no re-id embedding existed on the door
+  camera.
 
 Resolve relative times like "yesterday" to ISO 8601 first (use time-tool), then pass
 startTime/endTime. Re-id depends on human-detection coverage, so treat the track as investigative, not proof.
