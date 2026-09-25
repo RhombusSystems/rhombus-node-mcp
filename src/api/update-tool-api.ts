@@ -176,7 +176,7 @@ async function getOrgCameraConfigOptions(
   }
 }
 
-async function getCameraFacetedConfig(
+export async function getCameraFacetedConfig(
   cameraUuid: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
@@ -205,6 +205,52 @@ async function getCameraFacetedConfig(
     return {
       success: true,
       config: result.config,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+/**
+ * A camera's firmware version, from the same minimal state list the Console
+ * reads it from. Privacy regions need it: firmware at or after
+ * PRIVACY_POLYGON_MINIMUM_VERSION reads `privacy_window_polygons`, older
+ * firmware only `privacy_windows`.
+ */
+export async function getCameraFirmwareVersion(
+  cameraUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string; firmwareVersion?: string; name?: string }> {
+  try {
+    const result = await postApi<schema["Camera_GetMinimalCameraStateListWSResponse"]>({
+      route: "/camera/getMinimalCameraStateList",
+      body: {},
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return {
+        success: false,
+        error: apiFailureMessage(result) ?? "Failed to list cameras",
+      };
+    }
+
+    const camera = result.cameraStates?.find(state => state?.uuid === cameraUuid);
+    if (!camera) {
+      return {
+        success: false,
+        error: `No camera in this organization has the uuid "${cameraUuid}". Use get-entity-tool to list cameras — do not guess a uuid.`,
+      };
+    }
+    return {
+      success: true,
+      firmwareVersion: camera.firmwareVersion ?? undefined,
+      name: camera.name ?? undefined,
     };
   } catch (error) {
     return {

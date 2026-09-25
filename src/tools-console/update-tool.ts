@@ -9,7 +9,17 @@ import {
   updateDoorbellCameraConfig,
   getDoorbellCameraDetails,
   getDoorbellCameraConfig,
+  getCameraFacetedConfig,
+  getCameraFirmwareVersion,
 } from "../api/update-tool-api.js";
+import {
+  buildPrivacyRegionUpdate,
+  countPrivacyRegions,
+  describePrivacyRegions,
+  supportsPrivacyPolygons,
+  type PrivacyRegionConfig,
+  type PrivacyRegionUpdate,
+} from "../api/privacy-region-geometry.js";
 import {
   OUTPUT_SCHEMA,
   TOOL_ARGS,
@@ -19,6 +29,7 @@ import {
   CameraAudioSettings,
   CameraDeviceSettings,
   parseFacetedUuid,
+  PrivacyRegionsSpec,
 } from "../types/update-tool-types.js";
 import type { RequestModifiers } from "../util.js";
 import { logger } from "../logger.js";
@@ -29,6 +40,8 @@ const TOOL_DESCRIPTION = `
 Updates configuration settings for Rhombus cameras and doorbell cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, timezone, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
 
 MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
+
+PRIVACY REGIONS (blacked-out areas of the image) are set with the privacyRegions parameter — add, replace or clear rectangles given as percentages of the image. They are NOT a video setting: privacy fields inside cameraVideoSettings are rejected.
 
 Exact field names, LED rules, example payloads and faceted-UUID handling are documented on the parameters. The tool shows current settings before applying updates.
 `;
@@ -116,9 +129,51 @@ function parseSettingsBlock<T extends z.ZodType>(
   }
 
   normalize?.(parsed as Record<string, unknown>);
+
+  // zod objects STRIP unknown keys, so an unrecognised field used to vanish and
+  // the call "succeeded" with nothing in it. That is how privacy_windows inside
+  // cameraVideoSettings became an empty updateFacetedConfig that api2 accepted,
+  // audited, and ignored (2026-09-25). Reject instead, naming the fields.
+  if (schema instanceof z.ZodObject) {
+    const known = new Set(Object.keys(schema.shape));
+    const unknown = Object.keys(parsed as Record<string, unknown>).filter(key => !known.has(key));
+    if (unknown.length > 0) {
+      const privacyHint = unknown.some(key => /privacy/i.test(key))
+        ? " Privacy regions are not a video setting — call this tool with the privacyRegions parameter instead."
+        : "";
+      return {
+        ok: false,
+        message: `Invalid ${label}: unsupported field(s) ${unknown.join(", ")}. Supported fields: ${[
+          ...known,
+        ].join(", ")}.${privacyHint} No settings were changed.`,
+      };
+    }
+  }
+
   const result = schema.safeParse(parsed);
   if (!result.success) {
     return { ok: false, message: describeSettingsIssues(label, result.error, parsed) };
+  }
+  return { ok: true, value: result.data };
+}
+
+function parsePrivacyRegions(
+  raw: string
+): { ok: true; value: PrivacyRegionsSpec } | { ok: false; message: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return {
+      ok: false,
+      message: `Invalid privacyRegions: not valid JSON (${
+        error instanceof Error ? error.message : "parse error"
+      }). Pass e.g. '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'. No settings were changed.`,
+    };
+  }
+  const result = PrivacyRegionsSpec.safeParse(parsed);
+  if (!result.success) {
+    return { ok: false, message: describeSettingsIssues("privacyRegions", result.error, parsed) };
   }
   return { ok: true, value: result.data };
 }
@@ -130,8 +185,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     cameraVideoSettings,
     cameraAudioSettings,
     cameraDeviceSettings,
+    privacyRegions,
     step,
   } = args;
+  const hasPrivacyRegions = Boolean(privacyRegions && privacyRegions.trim());
 
   // Handle camera updates
   if (entityType === "camera") {
@@ -140,7 +197,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       entityUuid &&
       ((cameraVideoSettings && cameraVideoSettings.trim()) ||
         (cameraAudioSettings && cameraAudioSettings.trim()) ||
-        (cameraDeviceSettings && cameraDeviceSettings.trim()))
+        (cameraDeviceSettings && cameraDeviceSettings.trim()) ||
+        hasPrivacyRegions)
     ) {
       try {
         // Parse the faceted UUID to extract base UUID and facet
@@ -162,9 +220,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           if (!video.ok) {
             return errorResult(video.message);
           }
-          updatePayload.configUpdate.videoFacetSettings = {
-            [facet]: cleanUpdatePayload(video.value),
-          };
+          const cleanedVideo = cleanUpdatePayload(video.value);
+          if (Object.keys(cleanedVideo).length > 0) {
+            updatePayload.configUpdate.videoFacetSettings = { [facet]: cleanedVideo };
+          }
         }
 
         // Parse and add audio settings
@@ -177,9 +236,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           if (!audio.ok) {
             return errorResult(audio.message);
           }
-          updatePayload.configUpdate.audioFacetSettings = {
-            [facet]: cleanUpdatePayload(audio.value),
-          };
+          const cleanedAudio = cleanUpdatePayload(audio.value);
+          if (Object.keys(cleanedAudio).length > 0) {
+            updatePayload.configUpdate.audioFacetSettings = { [facet]: cleanedAudio };
+          }
         }
 
         // Parse and add device settings
@@ -215,7 +275,79 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           const cleaned = cleanUpdatePayload(device.value);
           logger.debug("[update-tool] Cleaned device settings:", cleaned);
 
-          updatePayload.configUpdate.deviceSettings = cleaned;
+          if (Object.keys(cleaned).length > 0) {
+            updatePayload.configUpdate.deviceSettings = cleaned;
+          }
+        }
+
+        // Privacy regions: read the facet's current config (rotation, PTZ,
+        // existing regions) and the firmware version, then build the same
+        // update the Console's Privacy tab sends.
+        let privacy:
+          | {
+              spec: PrivacyRegionsSpec;
+              polygons: boolean;
+              update: PrivacyRegionUpdate;
+              expectedCount: number;
+              cameraName?: string;
+            }
+          | undefined;
+        if (hasPrivacyRegions) {
+          const parsedPrivacy = parsePrivacyRegions(privacyRegions as string);
+          if (!parsedPrivacy.ok) {
+            return errorResult(parsedPrivacy.message);
+          }
+
+          const [firmware, current] = await Promise.all([
+            getCameraFirmwareVersion(
+              baseUuid,
+              extra._meta?.requestModifiers as RequestModifiers,
+              extra.sessionId
+            ),
+            getCameraFacetedConfig(
+              baseUuid,
+              extra._meta?.requestModifiers as RequestModifiers,
+              extra.sessionId
+            ),
+          ]);
+          if (!firmware.success) {
+            return errorResult(firmware.error ?? "Could not look up the camera.");
+          }
+          const facetConfig = current.config?.videoFacetSettings?.[facet] as
+            | PrivacyRegionConfig
+            | undefined;
+          if (!current.success || !facetConfig) {
+            return errorResult(
+              `Could not read the camera's current privacy regions (${
+                current.error ?? `no video facet "${facet}"`
+              }), so nothing was changed.`
+            );
+          }
+
+          const polygons = supportsPrivacyPolygons(firmware.firmwareVersion);
+          const update = buildPrivacyRegionUpdate(
+            parsedPrivacy.value.mode,
+            (parsedPrivacy.value.regions ?? []) as Parameters<typeof buildPrivacyRegionUpdate>[1],
+            facetConfig,
+            polygons
+          );
+          privacy = {
+            spec: parsedPrivacy.value,
+            polygons,
+            update,
+            expectedCount: (update.privacy_window_polygons ?? update.privacy_windows ?? []).length,
+            cameraName: firmware.name,
+          };
+          updatePayload.configUpdate.videoFacetSettings = {
+            [facet]: { ...(updatePayload.configUpdate.videoFacetSettings?.[facet] ?? {}), ...update },
+          };
+        }
+
+        const { deviceUuid: _deviceUuid, ...requestedSettings } = updatePayload.configUpdate;
+        if (Object.keys(requestedSettings).length === 0) {
+          return errorResult(
+            "No camera settings were recognised in the provided values, so nothing was changed."
+          );
         }
 
         // Validate the full payload
@@ -251,13 +383,59 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         // Format the updated settings for display
         const formattedSettings = formatCameraSettings(validatedPayload.configUpdate);
 
+        // updateFacetedConfig answers success even for a write that changes
+        // nothing, so privacy regions are confirmed by reading the config back.
+        let privacySection = "";
+        let privacyRegionsInEffect: ReturnType<typeof describePrivacyRegions> | undefined;
+        if (privacy) {
+          const after = await getCameraFacetedConfig(
+            baseUuid,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
+          );
+          const afterFacet = after.config?.videoFacetSettings?.[facet] as
+            | PrivacyRegionConfig
+            | undefined;
+          if (!after.success || !afterFacet) {
+            privacySection = `**Privacy regions:** the update was accepted, but the config read-back failed (${
+              after.error ?? "no facet in response"
+            }), so the result could not be verified.`;
+          } else {
+            const actualCount = countPrivacyRegions(afterFacet, privacy.polygons);
+            if (actualCount !== privacy.expectedCount) {
+              return errorResult(
+                `The API accepted the privacy-region update for camera "${
+                  privacy.cameraName ?? baseUuid
+                }", but reading the config back shows ${actualCount} privacy region(s) where ${
+                  privacy.expectedCount
+                } were expected. Do not retry with the same arguments — tell the user the privacy region did not take effect and suggest drawing it in the Console's Privacy tab.`
+              );
+            }
+            privacyRegionsInEffect = describePrivacyRegions(afterFacet, privacy.polygons);
+            privacySection =
+              `**Privacy regions (verified by reading the camera config back): ${actualCount} in effect**` +
+              (privacyRegionsInEffect.length > 0
+                ? "\n" +
+                  privacyRegionsInEffect
+                    .map(
+                      r =>
+                        `• left ${r.leftPercent}%, top ${r.topPercent}%, width ${r.widthPercent}%, height ${r.heightPercent}%`
+                    )
+                    .join("\n")
+                : "");
+          }
+        }
+
         const jsonResultResponse = {
           needUserInput: false,
           success: true,
-          message: `✅ Camera settings updated successfully!\n\n${formattedSettings}`,
+          message: `✅ Camera settings updated successfully!\n\n${[formattedSettings, privacySection]
+            .filter(Boolean)
+            .join("\n\n")}`,
           entityType: "camera",
           entityUuid,
           updatedSettings: validatedPayload.configUpdate,
+          ...(privacyRegionsInEffect ? { privacyRegions: privacyRegionsInEffect } : {}),
         };
 
         return {
@@ -367,6 +545,11 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   // faceted video/audio/device split. Validation reuses the camera schemas, so
   // the documented ranges apply identically.
   if (entityType === "doorbell-camera") {
+    if (hasPrivacyRegions) {
+      return errorResult(
+        "Privacy regions cannot be set on doorbell cameras through this tool. Tell the user to draw them in the Console instead. No settings were changed."
+      );
+    }
     if (!entityUuid) {
       return errorResult(
         "To update a doorbell camera, pass entityUuid plus at least one of cameraVideoSettings, cameraAudioSettings or cameraDeviceSettings. Use get-entity-tool with entityType doorbell-camera to find the uuid."

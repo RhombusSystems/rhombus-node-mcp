@@ -100,6 +100,41 @@ export const CameraDeviceSettings = z.object({
     .describe("Enable stealth mode to turn off LED completely - set to true to turn LED off"),
 });
 
+// Privacy regions — blacked-out rectangles on live and recorded video. The
+// geometry (rotation, PTZ, permyriad units, polygon vs legacy window by
+// firmware) lives in api/privacy-region-geometry.ts.
+const percent = (label: string) =>
+  z.number().min(0).max(100).describe(`${label}, as a percentage (0 to 100) of the image as shown in the Console`);
+
+export const PrivacyRegionRect = z
+  .object({
+    leftPercent: percent("Distance from the left edge of the image to the region's left edge"),
+    topPercent: percent("Distance from the top edge of the image to the region's top edge"),
+    widthPercent: percent("Region width"),
+    heightPercent: percent("Region height"),
+  })
+  .strict()
+  .refine(r => r.widthPercent > 0 && r.heightPercent > 0, {
+    message: "widthPercent and heightPercent must both be greater than 0",
+  })
+  .refine(r => r.leftPercent + r.widthPercent <= 100.001 && r.topPercent + r.heightPercent <= 100.001, {
+    message: "the region must fit inside the image (leftPercent + widthPercent and topPercent + heightPercent must be at most 100)",
+  });
+
+export const PrivacyRegionsSpec = z
+  .object({
+    mode: z
+      .enum(["add", "replace", "clear"])
+      .describe('"add" keeps the regions already on the camera, "replace" removes them first, "clear" removes all regions'),
+    regions: z.array(PrivacyRegionRect).optional(),
+  })
+  .strict()
+  .refine(spec => spec.mode === "clear" || (spec.regions?.length ?? 0) > 0, {
+    message: 'regions must contain at least one rectangle unless mode is "clear"',
+    path: ["regions"],
+  });
+export type PrivacyRegionsSpec = z.infer<typeof PrivacyRegionsSpec>;
+
 // Input schema for the tool
 export const TOOL_ARGS = {
   entityType: ENTITY_TYPE.describe(
@@ -145,6 +180,16 @@ export const TOOL_ARGS = {
       `JSON string of device settings to update for camera (name, timezone, LED). camera_name / camera_timezone: strings · led_intensity: 0 to 100 · led_mode: one of "auto", "always_on", "always_off" · led_stealth_mode: boolean. LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'.`,
     ),
 
+  // Optional (unlike its siblings) so callers built before this field existed
+  // keep validating.
+  privacyRegions: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      `JSON string that adds, replaces or clears PRIVACY REGIONS on a camera (areas blacked out in live and recorded video). This is the ONLY way to change privacy regions — never put privacy fields in cameraVideoSettings. Coordinates are PERCENTAGES (0 to 100) of the image as the user sees it in the Console, measured from the top-left corner; the tool converts them for the camera's rotation and firmware. Shape: {"mode": "add" | "replace" | "clear", "regions": [{"leftPercent": n, "topPercent": n, "widthPercent": n, "heightPercent": n}]}. "add" keeps existing regions (default choice), "replace" removes existing regions first, "clear" removes all regions (omit "regions"). Example — cover the left quarter of the top half: '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'. The tool reads the camera config back and reports the regions now in effect. Cameras only (not doorbell cameras).`,
+    ),
+
   // Step tracking for multi-step updates
   step: z
     .enum(["entity-selection", "settings-configuration", "confirmation"])
@@ -172,6 +217,9 @@ export const OUTPUT_SCHEMA = z.object({
   previousSettings: z.any().optional(),
   settingsNotApplied: z.any().optional(),
   settingsNotVerified: z.any().optional(),
+  // Privacy-region writes: the regions in effect after the read-back, in the
+  // same percent units the caller used.
+  privacyRegions: z.any().optional(),
 });
 
 // API payload types
@@ -202,6 +250,23 @@ export const UpdateCameraConfigPayload = z.object({
           night_img_contrast: z.number().nullable().optional(),
           night_img_saturation: z.number().nullable().optional(),
           night_img_sharpness: z.number().nullable().optional(),
+          // Sent only by the privacyRegions path; null is meaningful here (the
+          // Console nulls the field the camera's firmware does not read).
+          privacy_windows: z
+            .array(
+              z.object({
+                x: z.number().int(),
+                y: z.number().int(),
+                w: z.number().int(),
+                h: z.number().int(),
+              })
+            )
+            .nullable()
+            .optional(),
+          privacy_window_polygons: z
+            .array(z.object({ coordinates: z.array(z.object({ x: z.number(), y: z.number() })) }))
+            .nullable()
+            .optional(),
         })
       )
       .optional(),
