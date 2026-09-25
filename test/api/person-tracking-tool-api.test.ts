@@ -191,4 +191,52 @@ describe("getPersonTrack (re-id grounded by access control)", () => {
     expect(res.sourceErrors).toEqual([{ source: "Rhombus", error: "HTTP 500" }]);
     expect(res.note).toMatch(/could NOT be checked \(unknown, not zero\): Rhombus \(HTTP 500\)/);
   });
+
+  // Regression: prod 1.1.83 found Forrest's native badge-in, then every call failed with
+  // "searchReidentificationMatchesByEmbedding failed" — the video-search service requires a
+  // locationUuid and the tool only forwarded args.locationUuids (null from the model).
+  it("scopes the re-id search to the badge door's location when no locationUuids were given", async () => {
+    vi.mocked(rhombus.searchRhombusBadgeEvents).mockResolvedValue({
+      matchedUsers: ["Forrest Battles"],
+      events: [
+        {
+          timestampMs: 2000, datetime: "t", cardholderName: "Forrest Battles", userUuid: "u1",
+          doorUuid: "door1", doorName: "Lobby Entry", locationUuid: "locHQ", cameraUuids: ["camLobby"], granted: true,
+        },
+      ],
+    });
+    vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([
+      { deviceUuid: "camLobby", timestamp: 2001, embedding: [0.3], embeddingId: "e" },
+    ] as never);
+
+    await getPersonTrack({ personQuery: "Forrest Battles", afterMs: 0, beforeMs: 10000, locationUuids: undefined }, TZ);
+
+    expect(vi.mocked(reid.searchReidentificationMatchesByEmbedding).mock.calls[0][0].locationUuid).toBe("locHQ");
+  });
+
+  it("keeps the anchor and badge events when the re-id search fails", async () => {
+    vi.mocked(rhombus.searchRhombusBadgeEvents).mockResolvedValue({
+      matchedUsers: ["Forrest Battles"],
+      events: [
+        {
+          timestampMs: 2000, datetime: "10:21 AM", cardholderName: "Forrest Battles", userUuid: "u1",
+          doorUuid: "door1", doorName: "Lobby Entry", locationUuid: "locHQ", cameraUuids: ["camLobby"], granted: true,
+        },
+      ],
+    });
+    vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([
+      { deviceUuid: "camLobby", timestamp: 2001, embedding: [0.3], embeddingId: "e" },
+    ] as never);
+    vi.mocked(reid.searchReidentificationMatchesByEmbedding).mockRejectedValue(
+      new Error("searchReidentificationMatchesByEmbedding failed: HTTP 400")
+    );
+
+    const res = await getPersonTrack({ personQuery: "Forrest Battles" }, TZ);
+
+    expect(res).not.toHaveProperty("error");
+    expect(res.anchor).toMatchObject({ integration: "Rhombus", area: "Lobby Entry" });
+    expect(res.badgeEvents).toHaveLength(1);
+    expect(res.note).toMatch(/re-id search across cameras failed \(searchReidentificationMatchesByEmbedding failed: HTTP 400\)/);
+    expect(res.note).toMatch(/do NOT say the person has no badge events/);
+  });
 });

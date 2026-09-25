@@ -1,4 +1,4 @@
-import { postApi } from "../network/network.js";
+import { apiFailureMessage, postApi } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
@@ -54,7 +54,8 @@ export async function listReidentificationEmbeddings(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(res.errorMsg ?? "listReidentificationEmbeddings failed");
+  // postApi puts HTTP failure detail in `status`, not `errorMsg` — keep it so the cause is visible.
+  if (res.error) throw new Error(`listReidentificationEmbeddings failed: ${apiFailureMessage(res)}`);
   return (res.embeddings ?? []).map(mapEmbedding);
 }
 
@@ -94,7 +95,7 @@ export async function searchReidentificationMatchesByEmbedding(
     modifiers: requestModifiers,
     sessionId,
   });
-  if (res.error) throw new Error(res.errorMsg ?? "searchReidentificationMatchesByEmbedding failed");
+  if (res.error) throw new Error(`searchReidentificationMatchesByEmbedding failed: ${apiFailureMessage(res)}`);
   return (res.matches ?? []).map((m) => ({
     ...mapEmbedding(m.embedding ?? {}),
     distance: m.distance ?? undefined,

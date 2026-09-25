@@ -202,17 +202,39 @@ export async function getPersonTrack(
   // 3. Ground the re-id embedding: the person detected on that camera nearest the badge tap.
   const winMs = (args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S) * 1000;
   const anchorMs = anchor.timestampMs;
-  const embeddings = await listReidentificationEmbeddings(
-    {
-      deviceUuids: anchor.cameraUuids,
-      locationUuid: anchorLocationUuid,
-      startTimestampMs: anchorMs - winMs,
-      endTimestampMs: anchorMs + winMs,
-      limit: 100,
-    },
-    requestModifiers,
-    sessionId
-  );
+  // Re-id search is location-scoped server-side (the video-search service rejects a null
+  // locationUuid), so a track needs the badge door's location when the caller gave none.
+  const trackLocationUuid = args.locationUuids?.[0] ?? anchorLocationUuid;
+  // The badge taps are already confirmed; a re-id failure must not hide them.
+  const reidFailed = (step: string, e: unknown) => ({
+    resolvedPerson,
+    anchor: anchorOut,
+    sightings: [],
+    path: [],
+    count: 0,
+    ...context,
+    note: `Found ${anchor.cardholderName ?? "the person"}'s badge tap at ${anchor.area ?? "the door"} (${anchor.datetime}), but the re-id ${step} failed (${e instanceof Error ? e.message : String(e)}), so no cross-camera track could be built. Report the badge events themselves (badgeEvents) — do NOT say the person has no badge events.`,
+  });
+  if (!trackLocationUuid) {
+    return reidFailed("lookup", new Error("the badge door's location could not be resolved"));
+  }
+
+  let embeddings: Awaited<ReturnType<typeof listReidentificationEmbeddings>>;
+  try {
+    embeddings = await listReidentificationEmbeddings(
+      {
+        deviceUuids: anchor.cameraUuids,
+        locationUuid: trackLocationUuid,
+        startTimestampMs: anchorMs - winMs,
+        endTimestampMs: anchorMs + winMs,
+        limit: 100,
+      },
+      requestModifiers,
+      sessionId
+    );
+  } catch (e) {
+    return reidFailed("embedding lookup at the door", e);
+  }
 
   if (embeddings.length === 0) {
     return {
@@ -245,17 +267,22 @@ export async function getPersonTrack(
   // 4. Re-id search that appearance across cameras over the window.
   const searchStart = args.afterMs ?? anchorMs;
   const searchEnd = args.beforeMs ?? anchorMs + DEFAULT_TRACK_FORWARD_MS;
-  const matches = await searchReidentificationMatchesByEmbedding(
-    {
-      searchEmbedding: seed.embedding,
-      locationUuid: args.locationUuids?.[0],
-      startTimestampMs: searchStart,
-      endTimestampMs: searchEnd,
-      limit: args.limit ?? 200,
-    },
-    requestModifiers,
-    sessionId
-  );
+  let matches: Awaited<ReturnType<typeof searchReidentificationMatchesByEmbedding>>;
+  try {
+    matches = await searchReidentificationMatchesByEmbedding(
+      {
+        searchEmbedding: seed.embedding,
+        locationUuid: trackLocationUuid,
+        startTimestampMs: searchStart,
+        endTimestampMs: searchEnd,
+        limit: args.limit ?? 200,
+      },
+      requestModifiers,
+      sessionId
+    );
+  } catch (e) {
+    return reidFailed("search across cameras", e);
+  }
 
   // 5. Build the chronological track with media hints.
   const ordered = matches
