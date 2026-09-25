@@ -51,24 +51,37 @@ const StillHintSchema = z
   .object({ deviceUuid: z.string(), timestampMs: z.number() })
   .describe("Pass to camera-tool (requestType image) to get a still of this sighting.");
 
-export const SightingSchema = z.object({
-  timestampMs: z.number().optional(),
-  datetime: z.string().optional().describe("Human-readable sighting time in the requested timezone."),
-  deviceUuid: z.string().optional().describe("The camera that re-identified the person."),
-  locationUuid: z.string().optional(),
-  distance: z
-    .number()
+export const RouteStopSchema = z.object({
+  kind: z.enum(["badge", "camera"]).describe('"badge" = the badge tap that started the track; "camera" = a re-id visit.'),
+  cameraUuid: z.string().optional().describe("The camera (for the badge stop: the door camera)."),
+  cameraName: z.string().optional(),
+  deviceType: z
+    .enum(["camera", "doorbell-camera"])
     .optional()
-    .describe("Re-id match distance to the door embedding — LOWER means a closer appearance match."),
-  stableTrackId: z.number().optional().describe("Per-camera track-consolidation id for this detection."),
-  thumbnailUri: z.string().optional().describe("Thumbnail of the detected person."),
+    .describe('"doorbell-camera" = a DR40 video intercom (still has video, like a camera).'),
+  locationUuid: z.string().optional(),
+  doorUuid: z.string().optional().describe("Badge stop only: the Rhombus access-controlled door."),
+  doorName: z.string().optional().describe("Badge stop only: door name (Rhombus) or area entered (vendor)."),
+  integration: z.string().optional().describe("Badge stop only: Rhombus / OnGuard / Elements / NetBox."),
+  timestampMs: z.number().describe("Arrival — the badge tap, or the visit's first sighting."),
+  datetime: z.string().optional().describe("Arrival, human-readable in the requested timezone."),
+  endTimestampMs: z.number().optional().describe("The visit's last sighting (unset for a single sighting)."),
+  endDatetime: z.string().optional(),
+  sightingCount: z.number().optional().describe("Re-id sightings merged into this visit."),
+  thumbnailUri: z.string().optional().describe("Best-matching re-id crop of the person for this visit."),
   clipHint: ClipHintSchema.optional(),
   stillHint: StillHintSchema.optional(),
-  gapToNextSeconds: z
-    .number()
-    .optional()
-    .describe("Seconds until the next sighting — large gaps mean the person was unobserved between cameras."),
 });
+
+const RouteSchema = z
+  .object({
+    stops: z.array(RouteStopSchema).describe("The badge tap, then each camera visit, in chronological order."),
+    totalStops: z.number().describe("Stops before sampling (badge tap included)."),
+    truncated: z.boolean().describe("True when the visits were sampled down to fit the cap (first and last kept)."),
+  })
+  .describe(
+    "The person's route after the badge tap. Consecutive sightings on one camera are one stop; at most 20 stops."
+  );
 
 const AnchorSchema = z
   .object({
@@ -90,16 +103,9 @@ export const OUTPUT_SCHEMA = z.object({
     .optional()
     .describe("The person resolved from the badge record."),
   anchor: AnchorSchema.optional(),
-  sightings: z
-    .array(SightingSchema)
-    .optional()
-    .describe("Re-id sightings of the person across cameras, in chronological order (oldest first)."),
-  path: z
-    .array(z.string())
-    .optional()
-    .describe("Camera UUIDs the person was re-identified at, in order (consecutive repeats collapsed)."),
-  lastKnownSighting: SightingSchema.optional().describe("The most recent re-id sighting — last-known location."),
-  count: z.number().optional().describe("Number of re-id sightings returned."),
+  route: RouteSchema.optional(),
+  lastKnownLocation: RouteStopSchema.optional().describe("The last camera stop — last-known location."),
+  count: z.number().optional().describe("Re-id sightings behind the track (before merging into stops)."),
   badgeEvents: z
     .array(
       z.object({

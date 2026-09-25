@@ -20,22 +20,26 @@ person RE-IDENTIFICATION (appearance), NOT face recognition:
 
 Returns:
 - resolvedPerson and "anchor" (the badge tap that grounded the track: door camera, time, integration).
-- sightings: chronological re-id hits, each with deviceUuid (camera), timestampMs/datetime, distance
-  (LOWER = closer appearance match), a thumbnail, clipHint/stillHint, and gapToNextSeconds.
-- path (camera sequence) and lastKnownSighting (last-known location).
+- route: the person's path AFTER the badge tap — stops[0] is the badge tap (kind "badge"), then each camera
+  visit (kind "camera") in chronological order, with cameraName, arrival datetime, endDatetime (last sighting
+  of that visit), sightingCount, clipHint and stillHint. Consecutive sightings on one camera are one stop; at
+  most 20 stops (truncated=true when longer routes were sampled, first and last kept; totalStops = full count).
+- lastKnownLocation: the last camera stop. count: re-id sightings behind the route.
 - badgeEvents: the person's badge taps from all sources (door/area, time, integration, granted) and
   sourcesChecked / sourceErrors. These stand on their own: when the re-id track can't be built, still answer
   with the doors the person badged at. A source in sourceErrors is UNKNOWN, not "no events".
-- note: set when no badge tap was found, the door has no camera, or no re-id embedding existed on the door
-  camera.
+- note: set when no badge tap was found, the door has no camera, or the re-id step failed.
 
-Resolve relative times like "yesterday" to ISO 8601 first (use time-tool), then pass
-startTime/endTime. Re-id depends on human-detection coverage, so treat the track as investigative, not proof.
-
-IMPORTANT — to show the movement visually: for each sighting (or the key transitions), call the camera-tool
-(requestType "image", cameraUuid = sighting.deviceUuid, timestampISO = the sighting's time as ISO 8601 — convert sighting.timestampMs via time-conversion-tool) for a still, and/or
-the clips-tool (requestType "createClip", using sighting.clipHint) for video. Issue those per-sighting media
-calls in PARALLEL, then present the track as a chronological narrative.
+HOW TO ANSWER:
+- Give the FULL route in order: the badge tap, then EVERY stop in route.stops as a numbered list,
+  "cameraName — datetime" (add "until endDatetime" when set). Do not summarize it to the last sighting or
+  skip stops. If truncated, say it shows N of totalStops stops.
+- In Rhombus MIND the route is also rendered automatically as a clickable timeline (each stop opens that
+  camera at that time), so do NOT add a list component of the route's cameras there.
+- Resolve relative times like "yesterday" to ISO 8601 first (use time-tool), then pass startTime/endTime.
+- Re-id is appearance-based and depends on human-detection coverage: call the track investigative, not proof.
+- Only fetch stills (camera-tool requestType "image" with a stop's stillHint) or clips (clips-tool
+  "createClip" with a stop's clipHint) when the user asks to see footage; issue those calls in PARALLEL.
 `;
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {

@@ -25,6 +25,7 @@ beforeEach(() => {
   vi.mocked(netbox.searchNetboxEvents).mockResolvedValue({ events: [] } as never);
   vi.mocked(rhombus.searchRhombusBadgeEvents).mockResolvedValue({ events: [], matchedUsers: [] });
   vi.mocked(entity.getCameraList).mockResolvedValue({ cameras: [] } as never);
+  vi.mocked(entity.getDoorbellCameras).mockResolvedValue({ doorbellCameras: [] } as never);
   vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([] as never);
   vi.mocked(reid.searchReidentificationMatchesByEmbedding).mockResolvedValue([] as never);
 });
@@ -43,7 +44,11 @@ describe("getPersonTrack (re-id grounded by access control)", () => {
       ],
     } as never);
     vi.mocked(entity.getCameraList).mockResolvedValue({
-      cameras: [{ uuid: "camDoor", locationUuid: "loc1" }],
+      cameras: [
+        { uuid: "camDoor", locationUuid: "loc1", name: "Warehouse Door" },
+        { uuid: "camHall", locationUuid: "loc1", name: "Hallway" },
+        { uuid: "camExit", locationUuid: "loc1", name: "Exit" },
+      ],
     } as never);
     vi.mocked(reid.listReidentificationEmbeddings).mockResolvedValue([
       { deviceUuid: "camDoor", timestamp: 5000, embedding: [0.9, 0.9], embeddingId: "far" },
@@ -68,12 +73,17 @@ describe("getPersonTrack (re-id grounded by access control)", () => {
     const seedArg = vi.mocked(reid.searchReidentificationMatchesByEmbedding).mock.calls[0][0];
     expect(seedArg.searchEmbedding).toEqual([0.1, 0.2]);
 
-    // chronological track, collapsed path, last-known
-    expect(res.sightings.map((s) => s.timestampMs)).toEqual([1005, 3000, 6000]);
-    expect(res.path).toEqual(["camDoor", "camHall", "camExit"]);
-    expect(res.lastKnownSighting?.deviceUuid).toBe("camExit");
-    expect(res.sightings[0].clipHint).toEqual({ deviceUuid: "camDoor", startTimeMs: 1005 - 10000, endTimeMs: 1005 + 10000 });
-    expect(res.sightings[0].distance).toBe(0.0);
+    // the route: badge tap, then each camera visit in order, named; last-known = last visit
+    expect(res.route?.stops.map((s) => [s.kind, s.cameraName, s.timestampMs])).toEqual([
+      ["badge", "Warehouse Door", 1000],
+      ["camera", "Warehouse Door", 1005],
+      ["camera", "Hallway", 3000],
+      ["camera", "Exit", 6000],
+    ]);
+    expect(res.route?.stops[0]).toMatchObject({ doorName: "Warehouse Entry", integration: "Elements" });
+    expect(res.route?.stops[1].clipHint).toEqual({ deviceUuid: "camDoor", startTimeMs: 1005 - 10000, endTimeMs: 1005 + 10000 });
+    expect(res.route?.truncated).toBe(false);
+    expect(res.lastKnownLocation?.cameraUuid).toBe("camExit");
     expect(res.count).toBe(3);
   });
 
@@ -99,7 +109,7 @@ describe("getPersonTrack (re-id grounded by access control)", () => {
   it("returns a note (not an error) when the person has no badge taps in the window", async () => {
     const res = await getPersonTrack({ personQuery: "Nobody", afterMs: 0, beforeMs: 100 }, TZ);
     expect(res.count).toBe(0);
-    expect(res.sightings).toEqual([]);
+    expect(res.route).toBeUndefined();
     expect(res.note).toMatch(/No access-control/i);
     expect(reid.searchReidentificationMatchesByEmbedding).not.toHaveBeenCalled();
   });
@@ -156,8 +166,7 @@ describe("getPersonTrack (re-id grounded by access control)", () => {
     expect(vi.mocked(reid.listReidentificationEmbeddings).mock.calls[0][0]).toMatchObject({
       deviceUuids: ["camFront", "camLobby"], locationUuid: "locHQ",
     });
-    expect(entity.getCameraList).not.toHaveBeenCalled();
-    expect(res.path).toEqual(["camLobby", "camOffice"]);
+    expect(res.route?.stops.map((s) => s.cameraUuid)).toEqual(["camFront", "camLobby", "camOffice"]);
     expect(res.badgeEvents).toHaveLength(2);
     expect(res.sourcesChecked).toEqual(["Rhombus", "OnGuard", "Elements", "NetBox"]);
   });

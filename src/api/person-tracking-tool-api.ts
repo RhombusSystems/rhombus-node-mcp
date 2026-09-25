@@ -1,11 +1,11 @@
-import { buildMediaHints } from "./badge-correlation.js";
 import { searchElementsEvents } from "./elements-tool-api.js";
-import { getCameraList } from "./get-entity-tool-api.js";
+import { getCameraList, getDoorbellCameras } from "./get-entity-tool-api.js";
 import { searchNetboxEvents } from "./netbox-tool-api.js";
 import { searchOnGuardEvents } from "./onguard-tool-api.js";
+import { buildPersonRoute, type RouteCamera, stripFacet } from "./person-route.js";
 import { listReidentificationEmbeddings, searchReidentificationMatchesByEmbedding } from "./reid-tool-api.js";
 import { searchRhombusBadgeEvents } from "./rhombus-badge-events-api.js";
-import { formatTimestamp, type RequestModifiers } from "../util.js";
+import type { RequestModifiers } from "../util.js";
 
 export interface GetPersonTrackArgs {
   personQuery: string;
@@ -20,11 +20,6 @@ export interface GetPersonTrackArgs {
 const DEFAULT_BADGE_MATCH_WINDOW_S = 30;
 const DEFAULT_TRACK_FORWARD_MS = 6 * 60 * 60 * 1000; // track 6h forward from the badge tap if no endTime
 const MAX_BADGE_EVENTS_OUT = 25;
-
-/** RUUID without any `.vN` facet suffix, so a badge event's camera matches the camera-state list. */
-function stripFacet(uuid?: string): string {
-  return (uuid ?? "").split(".")[0];
-}
 
 type BadgeSource = "Rhombus" | "OnGuard" | "Elements" | "NetBox";
 
@@ -150,8 +145,6 @@ export async function getPersonTrack(
 
   if (allTaps.length === 0) {
     return {
-      sightings: [],
-      path: [],
       count: 0,
       ...context,
       note: `No access-control (badge) events found for "${args.personQuery}" in the window. Checked: ${sourcesChecked.join(", ") || "none"}.${failedNote} Try a wider time range, or confirm the name as it appears on the badge / Rhombus user.`,
@@ -166,8 +159,6 @@ export async function getPersonTrack(
     const first = allTaps[0];
     return {
       resolvedPerson: first.cardholderName ? { name: first.cardholderName } : undefined,
-      sightings: [],
-      path: [],
       count: 0,
       ...context,
       note: `Found ${allTaps.length} badge event(s) for ${first.cardholderName ?? `"${args.personQuery}"`} (first at ${first.area ?? "an unnamed door"}, ${first.datetime}), but none of those doors has an associated camera, so no re-id track can be built. Report the badge events themselves (badgeEvents) — do NOT say the person has no badge events.${failedNote}`,
@@ -209,8 +200,6 @@ export async function getPersonTrack(
   const reidFailed = (step: string, e: unknown) => ({
     resolvedPerson,
     anchor: anchorOut,
-    sightings: [],
-    path: [],
     count: 0,
     ...context,
     note: `Found ${anchor.cardholderName ?? "the person"}'s badge tap at ${anchor.area ?? "the door"} (${anchor.datetime}), but the re-id ${step} failed (${e instanceof Error ? e.message : String(e)}), so no cross-camera track could be built. Report the badge events themselves (badgeEvents) — do NOT say the person has no badge events.`,
@@ -240,8 +229,6 @@ export async function getPersonTrack(
     return {
       resolvedPerson,
       anchor: anchorOut,
-      sightings: [],
-      path: [],
       count: 0,
       ...context,
       note: `Found ${anchor.cardholderName ?? "the person"}'s badge tap at ${anchor.datetime}, but no person re-identification embedding was recorded on the door camera within ±${args.badgeMatchWindowSeconds ?? DEFAULT_BADGE_MATCH_WINDOW_S}s — can't build a re-id track. (Re-id needs human-detection coverage on the door camera.) Report the badge events themselves (badgeEvents).`,
@@ -256,8 +243,6 @@ export async function getPersonTrack(
     return {
       resolvedPerson,
       anchor: anchorOut,
-      sightings: [],
-      path: [],
       count: 0,
       ...context,
       note: "The re-id detection at the door had no embedding vector; can't search for matches. Report the badge events themselves (badgeEvents).",
@@ -289,42 +274,49 @@ export async function getPersonTrack(
     .filter((m) => m.timestamp != null)
     .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
 
-  const sightings = ordered.map((m, i) => {
-    const next = ordered[i + 1];
-    const gapToNextSeconds =
-      next?.timestamp != null && m.timestamp != null
-        ? Math.round((next.timestamp - m.timestamp) / 1000)
-        : undefined;
-    const { clipHint, stillHint } = buildMediaHints(
-      { deviceUuid: m.deviceUuid, timestampMs: m.timestamp },
-      args.clipPaddingSeconds
-    );
-    return {
-      timestampMs: m.timestamp,
-      datetime: m.timestamp != null ? formatTimestamp(m.timestamp, timeZone) : undefined,
+  // 5. The route: the badge tap, then each camera visit in order, named, capped at MAX_ROUTE_STOPS.
+  // Door cameras are often DR40 intercoms, which the camera list does not include.
+  const routeCameras = new Map<string, RouteCamera>();
+  const [cameraList, doorbellList] = await Promise.all([
+    getCameraList(requestModifiers, sessionId).catch(() => ({ cameras: [] })),
+    getDoorbellCameras(requestModifiers, sessionId).catch(() => ({ doorbellCameras: [] })),
+  ]);
+  for (const c of cameraList.cameras as Array<{ uuid?: string; name?: string }>) {
+    if (c.uuid) routeCameras.set(stripFacet(c.uuid), { name: c.name, deviceType: "camera" });
+  }
+  for (const d of doorbellList.doorbellCameras as Array<{ uuid?: string; name?: string }>) {
+    if (d.uuid) routeCameras.set(stripFacet(d.uuid), { name: d.name, deviceType: "doorbell-camera" });
+  }
+  const route = buildPersonRoute({
+    badge: {
+      timestampMs: anchorMs,
+      datetime: anchor.datetime,
+      cameraUuid: anchorCamera,
+      doorUuid: anchor.doorUuid,
+      area: anchor.area,
+      locationUuid: trackLocationUuid,
+      integration: anchor.integration,
+    },
+    sightings: ordered.map((m) => ({
       deviceUuid: m.deviceUuid,
+      timestampMs: m.timestamp,
       locationUuid: m.locationUuid,
       distance: m.distance,
-      stableTrackId: m.stableTrackId,
       thumbnailUri: m.thumbnailUri,
-      clipHint,
-      stillHint,
-      gapToNextSeconds,
-    };
+    })),
+    cameras: routeCameras,
+    timeZone,
+    clipPaddingSeconds: args.clipPaddingSeconds,
+    badgeLeadMs: winMs,
   });
-
-  const path: string[] = [];
-  for (const s of sightings) {
-    if (s.deviceUuid && s.deviceUuid !== path[path.length - 1]) path.push(s.deviceUuid);
-  }
+  const lastStop = route.stops[route.stops.length - 1];
 
   return {
     resolvedPerson,
     anchor: anchorOut,
-    sightings,
-    path,
-    lastKnownSighting: sightings[sightings.length - 1],
-    count: sightings.length,
+    route,
+    lastKnownLocation: lastStop.kind === "camera" ? lastStop : undefined,
+    count: ordered.length,
     ...context,
   };
 }
