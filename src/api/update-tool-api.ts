@@ -224,7 +224,13 @@ export async function getCameraFirmwareVersion(
   cameraUuid: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-): Promise<{ success: boolean; error?: string; firmwareVersion?: string; name?: string }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  firmwareVersion?: string;
+  name?: string;
+  hwVariation?: string;
+}> {
   try {
     const result = await postApi<schema["Camera_GetMinimalCameraStateListWSResponse"]>({
       route: "/camera/getMinimalCameraStateList",
@@ -251,6 +257,7 @@ export async function getCameraFirmwareVersion(
       success: true,
       firmwareVersion: camera.firmwareVersion ?? undefined,
       name: camera.name ?? undefined,
+      hwVariation: camera.hwVariation ?? undefined,
     };
   } catch (error) {
     return {

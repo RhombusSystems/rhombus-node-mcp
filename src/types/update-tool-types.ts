@@ -100,7 +100,8 @@ export const CameraDeviceSettings = z.object({
     .describe("Enable stealth mode to turn off LED completely - set to true to turn LED off"),
 });
 
-// Privacy regions — blacked-out rectangles on live and recorded video. The
+// Privacy regions — blacked-out areas (rectangles or polygons) on live and
+// recorded video. The
 // geometry (rotation, PTZ, permyriad units, polygon vs legacy window by
 // firmware) lives in api/privacy-region-geometry.ts.
 const percent = (label: string) =>
@@ -121,16 +122,39 @@ export const PrivacyRegionRect = z
     message: "the region must fit inside the image (leftPercent + widthPercent and topPercent + heightPercent must be at most 100)",
   });
 
+// Any simple polygon, vertices in drawing order. Shape rules the Console's
+// editor enforces (no self-intersection, non-zero area, rectangles only on old
+// firmware, R1/R2 coverage cap) need the camera, so they run in the handler via
+// validatePrivacyShapes.
+export const PrivacyRegionPolygon = z
+  .object({
+    points: z
+      .array(
+        z
+          .object({
+            xPercent: percent("Vertex distance from the left edge of the image"),
+            yPercent: percent("Vertex distance from the top edge of the image"),
+          })
+          .strict()
+      )
+      .min(3)
+      .max(64)
+      .describe("The polygon's vertices in order around its outline (3 to 64 points)"),
+  })
+  .strict();
+
+export const PrivacyRegionShape = z.union([PrivacyRegionRect, PrivacyRegionPolygon]);
+
 export const PrivacyRegionsSpec = z
   .object({
     mode: z
       .enum(["add", "replace", "clear"])
       .describe('"add" keeps the regions already on the camera, "replace" removes them first, "clear" removes all regions'),
-    regions: z.array(PrivacyRegionRect).optional(),
+    regions: z.array(PrivacyRegionShape).optional(),
   })
   .strict()
   .refine(spec => spec.mode === "clear" || (spec.regions?.length ?? 0) > 0, {
-    message: 'regions must contain at least one rectangle unless mode is "clear"',
+    message: 'regions must contain at least one shape unless mode is "clear"',
     path: ["regions"],
   });
 export type PrivacyRegionsSpec = z.infer<typeof PrivacyRegionsSpec>;
@@ -187,7 +211,7 @@ export const TOOL_ARGS = {
     .nullable()
     .optional()
     .describe(
-      `JSON string that adds, replaces or clears PRIVACY REGIONS on a camera (areas blacked out in live and recorded video). This is the ONLY way to change privacy regions — never put privacy fields in cameraVideoSettings. Coordinates are PERCENTAGES (0 to 100) of the image as the user sees it in the Console, measured from the top-left corner; the tool converts them for the camera's rotation and firmware. Shape: {"mode": "add" | "replace" | "clear", "regions": [{"leftPercent": n, "topPercent": n, "widthPercent": n, "heightPercent": n}]}. "add" keeps existing regions (default choice), "replace" removes existing regions first, "clear" removes all regions (omit "regions"). Example — cover the left quarter of the top half: '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'. The tool reads the camera config back and reports the regions now in effect. Cameras only (not doorbell cameras).`,
+      `JSON string that adds, replaces or clears PRIVACY REGIONS on a camera (areas blacked out in live and recorded video). This is the ONLY way to change privacy regions — never put privacy fields in cameraVideoSettings. Coordinates are PERCENTAGES (0 to 100) of the image as the user sees it in the Console, measured from the top-left corner; the tool converts them for the camera's rotation and firmware. Shape: {"mode": "add" | "replace" | "clear", "regions": [...]}, where each region is EITHER a rectangle {"leftPercent": n, "topPercent": n, "widthPercent": n, "heightPercent": n} OR a polygon {"points": [{"xPercent": n, "yPercent": n}, ...]} with 3 to 64 vertices listed in order around the outline (any simple shape: triangle, slanted quadrilateral, an outline that follows a window or doorway at an angle; edges must not cross). Use a polygon whenever the area is not an upright rectangle — do not approximate a slanted area with a bounding rectangle. Cameras on firmware older than 2025_0626 accept rectangles only; the tool says so if a polygon is sent to one. "add" keeps existing regions (default choice), "replace" removes existing regions first, "clear" removes all regions (omit "regions"). Examples — the left quarter of the top half: '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'; a slanted quadrilateral: '{"mode": "add", "regions": [{"points": [{"xPercent": 10, "yPercent": 5}, {"xPercent": 40, "yPercent": 15}, {"xPercent": 35, "yPercent": 60}, {"xPercent": 5, "yPercent": 50}]}]}'. The tool reads the camera config back and reports the regions now in effect. Cameras only (not doorbell cameras).`,
     ),
 
   // Step tracking for multi-step updates

@@ -17,6 +17,7 @@ import {
   countPrivacyRegions,
   describePrivacyRegions,
   supportsPrivacyPolygons,
+  validatePrivacyShapes,
   type PrivacyRegionConfig,
   type PrivacyRegionUpdate,
 } from "../api/privacy-region-geometry.js";
@@ -41,7 +42,7 @@ Updates configuration settings for Rhombus cameras and doorbell cameras: video s
 
 MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
 
-PRIVACY REGIONS (blacked-out areas of the image) are set with the privacyRegions parameter — add, replace or clear rectangles given as percentages of the image. They are NOT a video setting: privacy fields inside cameraVideoSettings are rejected.
+PRIVACY REGIONS (blacked-out areas of the image) are set with the privacyRegions parameter — add, replace or clear rectangles or polygons (any simple shape, e.g. a slanted outline) given as percentages of the image. They are NOT a video setting: privacy fields inside cameraVideoSettings are rejected.
 
 Exact field names, LED rules, example payloads and faceted-UUID handling are documented on the parameters. The tool shows current settings before applying updates.
 `;
@@ -325,9 +326,19 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           }
 
           const polygons = supportsPrivacyPolygons(firmware.firmwareVersion);
+          const shapes = (parsedPrivacy.value.regions ?? []) as Parameters<
+            typeof buildPrivacyRegionUpdate
+          >[1];
+          const shapeError =
+            parsedPrivacy.value.mode === "clear"
+              ? null
+              : validatePrivacyShapes(shapes, { polygons, hwVariation: firmware.hwVariation });
+          if (shapeError) {
+            return errorResult(`Invalid privacyRegions: ${shapeError} No settings were changed.`);
+          }
           const update = buildPrivacyRegionUpdate(
             parsedPrivacy.value.mode,
-            (parsedPrivacy.value.regions ?? []) as Parameters<typeof buildPrivacyRegionUpdate>[1],
+            shapes,
             facetConfig,
             polygons
           );
@@ -417,9 +428,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
               (privacyRegionsInEffect.length > 0
                 ? "\n" +
                   privacyRegionsInEffect
-                    .map(
-                      r =>
-                        `• left ${r.leftPercent}%, top ${r.topPercent}%, width ${r.widthPercent}%, height ${r.heightPercent}%`
+                    .map(r =>
+                      r.shape === "rectangle"
+                        ? `• rectangle: left ${r.leftPercent}%, top ${r.topPercent}%, width ${r.widthPercent}%, height ${r.heightPercent}%`
+                        : `• polygon, ${r.points.length} points: ${r.points
+                            .map(pt => `(${pt.xPercent}%, ${pt.yPercent}%)`)
+                            .join(" → ")}`
                     )
                     .join("\n")
                 : "");
