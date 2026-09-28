@@ -42,7 +42,7 @@ This tool manages Rhombus access control operations including door unlocking, ac
 
 It has the following modes of operation, determined by the "requestType" parameter:
 - ${AccessControlRequestType.UNLOCK_DOOR}: Remotely unlock an access controlled door. Requires doorUuid.
-- ${AccessControlRequestType.GET_USER_DOOR_ACCESS}: The request for "can <person> badge in / open the doors at <location>", "does <person> have access to all doors", "why can't <person> get in". Requires userUuid; optional locationUuid. Resolves direct grants, access control group membership, door labels, revocations and schedules, plus the person's credentials, into a per-door answer. Use it instead of joining get-access-grants yourself.
+- ${AccessControlRequestType.GET_USER_DOOR_ACCESS}: The request for "can <person> badge in / open the doors at <location>", "does <person> have access to all doors", "why can't <person> get in". Requires userUuid; optional locationUuid. Resolves direct grants, access control group membership, door labels, revocations, schedules, active lockdowns, first-in rules, and whether each door's readers can read the person's active credentials, into a per-door answer. Use it instead of joining get-access-grants yourself.
 - ${AccessControlRequestType.GET_GROUPS}: List all access control groups in the organization, with their member user UUIDs.
 - ${AccessControlRequestType.GET_CREDENTIALS_BY_USER}: List all access control credentials for a specific user. Requires userUuid.
 - ${AccessControlRequestType.GET_LOCKDOWN_PLANS}: List all lockdown plans in the organization.

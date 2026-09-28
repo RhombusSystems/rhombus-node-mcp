@@ -176,11 +176,19 @@ export const USER_DOOR_ACCESS_SCHEMA = z.object({
       accessNow: z.number().optional(),
       scheduledNotNow: z.number().optional(),
       revoked: z.number().optional(),
+      lockdown: z.number().optional(),
+      firstInRequired: z.number().optional(),
+      credentialNotAccepted: z.number().optional(),
+      noUsableCredential: z.number().optional(),
       noAccess: z.number().optional(),
       unknown: z.number().optional(),
       usableCredentials: z.number().optional(),
     })
     .optional(),
+  account: z
+    .object({ found: z.boolean().optional(), status: z.string().optional(), deleted: z.boolean().optional() })
+    .optional()
+    .describe("The person's user account. Its status does not affect badge access; a deleted user's credentials are revoked."),
   groups: z
     .array(z.object({ uuid: z.string().optional(), name: z.string().optional() }))
     .optional()
@@ -207,9 +215,15 @@ export const USER_DOOR_ACCESS_SCHEMA = z.object({
           .string()
           .optional()
           .describe(
-            "yes = can open it now; scheduled-not-now = has access, but only during a schedule that is not active now; revoked = a revocation blocks it now; no = nothing gives access; unknown = could not be verified (see reason)."
+            "yes = can badge in now; scheduled-not-now = has access, but only during a schedule that is not active now; revoked = a revocation blocks it now; lockdown = an active lockdown admits only its plan's people; first-in-required = denied until someone on the first-in rule badges in; credential-not-accepted = has access, but none of their active credentials can be read by this door's readers; no-usable-credential = has access, but no ACTIVE credential; no = nothing gives access; unknown = could not be verified (see reason)."
           ),
         reason: z.string().optional(),
+        lockdown: z.string().optional().describe("How an active lockdown affects this door."),
+        firstIn: z.string().optional().describe("How a first-in rule affects this door for this person."),
+        credentialFit: z
+          .string()
+          .optional()
+          .describe("Whether this door's readers can read the person's active credential types."),
         grants: z.array(ACCESS_CONDITION_SCHEMA).optional(),
         revocations: z.array(ACCESS_CONDITION_SCHEMA).optional(),
       })

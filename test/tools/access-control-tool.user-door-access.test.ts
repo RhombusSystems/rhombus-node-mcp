@@ -18,6 +18,8 @@ const GROUP = "grpStaffAbCdEfGhIjKlM";
 const LOCATION = "locHqAbCdEfGhIjKlMnOp";
 const LOBBY = "dorLobbyAbCdEfGhIjKlM";
 const SERVER = "dorServerAbCdEfGhIjKl";
+const CONTROLLER = "dcuAbCdEfGhIjKlMnOpQr";
+const READER = "rdrAbCdEfGhIjKlMnOpQr";
 
 const NULL_ARGS = {
 	includeFields: null,
@@ -61,8 +63,8 @@ function mockRoutes(overrides: Record<string, unknown> = {}) {
 	const table: Record<string, unknown> = {
 		"/component/findAccessControlledDoors": {
 			accessControlledDoors: [
-				{ uuid: LOBBY, name: "Lobby Entry", locationUuid: LOCATION },
-				{ uuid: SERVER, name: "Server Room", locationUuid: LOCATION },
+				{ uuid: LOBBY, name: "Lobby Entry", locationUuid: LOCATION, ownerDeviceUuid: CONTROLLER, readerComponents: [{ componentUuid: READER }] },
+				{ uuid: SERVER, name: "Server Room", locationUuid: LOCATION, ownerDeviceUuid: CONTROLLER, readerComponents: [{ componentUuid: READER }] },
 			],
 		},
 		"/accesscontrol/findLocationAccessGrantsByOrg": {
@@ -93,6 +95,15 @@ function mockRoutes(overrides: Record<string, unknown> = {}) {
 			],
 		},
 		"/location/getLocationsV2": { locations: [{ uuid: LOCATION, name: "Main Office", tz: "America/Los_Angeles" }] },
+		"/component/findComponentsByOwnerDevice": {
+			components: [
+				{ uuid: READER, type: "RhombusOsdpDoorReader", readerType: "rhombus_osdp", name: "Lobby reader" },
+				{ uuid: "rlyAbCdEfGhIjKlMnOpQr", type: "IntegratedDoorRelay" },
+			],
+		},
+		"/accesscontrol/lockdownPlan/findLocationLockdownStates": { states: [] },
+		"/accesscontrol/firstIn/findLocationFirstInSettingsByOrg": { settingsList: [] },
+		"/user/findUser": { user: { uuid: USER, status: "JOINED", deleted: false } },
 		...overrides,
 	};
 	vi.mocked(network.postApi).mockImplementation((async ({ route }: { route: string }) => {
@@ -103,7 +114,9 @@ function mockRoutes(overrides: Record<string, unknown> = {}) {
 
 type Structured = {
 	userDoorAccess?: {
-		doors?: { doorName?: string; access?: string; grants?: { via?: string; groupName?: string }[] }[];
+		doors?: { doorName?: string; access?: string; grants?: { via?: string; groupName?: string }[]; credentialFit?: string; lockdown?: string; firstIn?: string }[];
+		account?: { found?: boolean; status?: string };
+		notChecked?: string[];
 		credentials?: { credentialType?: string; effectiveStatus?: string }[];
 		summary?: { accessNow?: number; noAccess?: number; usableCredentials?: number };
 		inputsUnavailable?: { input?: string }[];
@@ -135,7 +148,59 @@ describe("access-control-tool get-user-door-access", () => {
 			expect.objectContaining({ credentialType: "PIN_CODE", effectiveStatus: "EXPIRED" }),
 		]);
 		expect(structured.userDoorAccess?.summary).toMatchObject({ accessNow: 1, noAccess: 1, usableCredentials: 1 });
+		expect(structured.userDoorAccess?.doors?.[0].credentialFit).toContain("RHOMBUS_SECURE_CSN");
+		expect(structured.userDoorAccess?.account).toMatchObject({ found: true, status: "JOINED" });
+		expect(structured.userDoorAccess?.notChecked).toBeUndefined();
 		expect(structured.note).toContain("No access: Server Room.");
+		expect(structured.note).toContain("No lockdown is active.");
+		expect(structured.note).toContain("Account status does not affect badge access.");
+	});
+
+	it("makes no follow-up calls on the common path — one round, one reader lookup per controller", async () => {
+		mockRoutes();
+
+		await callTool({ requestType: "get-user-door-access", userUuid: USER, locationUuid: LOCATION });
+		const routes = vi.mocked(network.postApi).mock.calls.map(call => call[0].route);
+
+		expect(routes.filter(r => r === "/component/findComponentsByOwnerDevice")).toHaveLength(1);
+		expect(routes).not.toContain("/accesscontrol/lockdownPlan/getLockdownPlan");
+		expect(routes).not.toContain("/component/findAccessControlledDoorShadowsByLocation");
+	});
+
+	it("applies an active lockdown and a first-in rule, reading their details only then", async () => {
+		mockRoutes({
+			"/accesscontrol/lockdownPlan/findLocationLockdownStates": {
+				states: [
+					{ locationUuid: "locOtherAbCdEfGhIjKlM", state: "LOCKED_DOWN", activeLockdownPlans: [{ lockdownPlanUuid: "plnOther" }] },
+				],
+			},
+			"/accesscontrol/firstIn/findLocationFirstInSettingsByOrg": {
+				settingsList: [
+					{
+						settingsUuid: "fisA",
+						name: "Managers first",
+						doorUuids: [LOBBY],
+						userUuids: ["usrManagerAbCdEfGhIjK"],
+						groupUuids: [],
+						doorAuthRequirementEnabled: true,
+						doorAuthFirstInState: { state: "SATISFIED", requestedAtMillis: 1 },
+					},
+				],
+			},
+			"/component/findAccessControlledDoorShadowsByLocation": {
+				shadows: [{ componentCompositeUuid: LOBBY, authFirstIn: { state: "REQUIRED" } }],
+			},
+		});
+
+		const result = await callTool({ requestType: "get-user-door-access", userUuid: USER, locationUuid: LOCATION });
+		const structured = result.structuredContent as Structured;
+		const routes = vi.mocked(network.postApi).mock.calls.map(call => call[0].route);
+
+		// The live controller state (REQUIRED) wins over the stale cloud setting.
+		expect(structured.userDoorAccess?.doors?.[0]).toMatchObject({ doorName: "Lobby Entry", access: "first-in-required" });
+		// A lockdown at another location is out of scope: no plan lookup.
+		expect(routes).not.toContain("/accesscontrol/lockdownPlan/getLockdownPlan");
+		expect(routes).toContain("/component/findAccessControlledDoorShadowsByLocation");
 	});
 
 	it("keeps answering when one input fails, and reports the gap", async () => {

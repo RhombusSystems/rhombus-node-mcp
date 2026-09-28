@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
 	isScheduleActive,
+	readerFit,
 	resolveUserDoorAccess,
+	type DoorInfo,
+	type LockdownPlanInfo,
+	type ReaderInfo,
 	type ScheduleInfo,
 	type UserDoorAccessInputs,
 } from "../../src/api/user-door-access-api.js";
@@ -134,7 +138,7 @@ describe("resolveUserDoorAccess", () => {
 		});
 		const lobby = result.userDoorAccess.doors?.[0];
 		expect(lobby?.grants?.[0]).toMatchObject({ via: "group", groupName: "All Staff", schedule: "always" });
-		expect(result.note).toContain("cover all 4 door(s) at Main Office");
+		expect(result.note).toContain("can badge into all 4 door(s) at Main Office right now");
 		// The other location's door is out of scope.
 		expect(result.userDoorAccess.summary?.doors).toBe(4);
 	});
@@ -292,5 +296,217 @@ describe("resolveUserDoorAccess", () => {
 		);
 
 		expect(accessByDoor(result)["Lobby Entry"]).toBe("no");
+	});
+});
+
+const STAFF_GRANT = {
+	uuid: "gntStaff",
+	name: "Staff Doors",
+	locationUuid: LOCATION,
+	userUuids: [],
+	groupUuids: [GROUP_STAFF],
+	doorUuids: [LOBBY, SERVER, IDF, SWAG],
+};
+const FAR_FUTURE = 4_102_444_800_000; // 2100 — later than every cloud state below
+
+function plan(overrides: Partial<LockdownPlanInfo> = {}): LockdownPlanInfo {
+	return {
+		uuid: "plnA",
+		name: "Full Lockdown",
+		defaultLockdownState: "LOCKED_DOWN",
+		doorLockdownStateMap: {},
+		userUuids: [],
+		groupUuids: [],
+		testUserAccessOverride: false,
+		...overrides,
+	};
+}
+
+function door(overrides: Partial<DoorInfo> = {}): DoorInfo {
+	return { uuid: "dor", name: "Door", locationUuid: LOCATION, readerComponentUuids: ["rdr"], ...overrides };
+}
+function reader(kind: ReaderInfo["kind"], overrides: Partial<ReaderInfo> = {}): ReaderInfo {
+	return { uuid: "rdr", kind, ...overrides };
+}
+
+describe("readerFit", () => {
+	it("reads a mobile credential on a Rhombus reader, and not on a Wiegand reader", () => {
+		expect(readerFit("RHOMBUS_SECURE_MOBILE", reader("rhombus"), door())).toBe("yes");
+		expect(readerFit("RHOMBUS_SECURE_MOBILE", reader("wiegand"), door({ nfcSecureDowngradeEnabled: false }))).toBe("no");
+		// Secure downgrade does not help a phone: it presents no fixed card number.
+		expect(readerFit("RHOMBUS_SECURE_MOBILE", reader("osdp"), door({ nfcSecureDowngradeEnabled: null }))).toBe("no");
+	});
+
+	it("still reads a mobile credential by NFC tap when wave-to-unlock is off at the reader", () => {
+		expect(readerFit("RHOMBUS_SECURE_MOBILE", reader("rhombus", { disableWaveToUnlock: true }), door())).toBe("yes");
+		expect(
+			readerFit("RHOMBUS_SECURE_MOBILE", reader("rhombus", { disableWaveToUnlock: true, disableCardReader: true }), door()),
+		).toBe("no");
+	});
+
+	it("reads Wiegand formats on third-party readers only", () => {
+		expect(readerFit("WIEGAND_H10301", reader("wiegand"), door())).toBe("yes");
+		expect(readerFit("HID_CORP1000_STD_35", reader("osdp"), door())).toBe("yes");
+		expect(readerFit("WIEGAND_H10301", reader("rhombus"), door())).toBe("no");
+	});
+
+	it("reads a Rhombus Secure card on a third-party reader only with secure downgrade", () => {
+		expect(readerFit("RHOMBUS_SECURE_CSN", reader("osdp"), door({ nfcSecureDowngradeEnabled: true }))).toBe("yes");
+		expect(readerFit("RHOMBUS_SECURE_CSN", reader("osdp"), door({ nfcSecureDowngradeEnabled: false }))).toBe("no");
+		// null = the org default applies, which the API does not expose.
+		expect(readerFit("RHOMBUS_SECURE_CSN", reader("osdp"), door({ nfcSecureDowngradeEnabled: null }))).toBe("maybe");
+	});
+
+	it("respects the reader's card and keypad switches", () => {
+		expect(readerFit("STANDARD_CSN", reader("rhombus", { disableCardReader: true }), door())).toBe("no");
+		expect(readerFit("PIN_CODE", reader("osdp", { disableKeypad: true }), door())).toBe("no");
+		expect(readerFit("PIN_CODE", reader("rhombus"), door())).toBe("no");
+	});
+
+	it("never reads the types the firmware has no parser for", () => {
+		expect(readerFit("CUSTOM", reader("osdp"), door())).toBe("no");
+	});
+});
+
+describe("resolveUserDoorAccess — lockdown, first-in, credentials, account", () => {
+	it("blocks a normally-allowed person during a lockdown they are not on", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				lockdown: ok({ active: [{ locationUuid: LOCATION, followingTestPlan: false, plans: [plan({ doorLockdownStateMap: { [LOBBY]: "ACCESS_CONTROLLED" } })] }] }),
+			}),
+		);
+
+		expect(accessByDoor(result)).toMatchObject({ "Server Room": "lockdown", "Lobby Entry": "yes" });
+		expect(result.userDoorAccess.doors?.find(d => d.doorName === "Server Room")?.lockdown).toContain("Full Lockdown");
+		expect(result.note).toContain("Blocked by an active lockdown: IDF Closet, Server Room, Supply Room.");
+	});
+
+	it("lets a person on the lockdown plan in, even without a grant", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				lockdown: ok({ active: [{ locationUuid: LOCATION, followingTestPlan: false, plans: [plan({ groupUuids: [GROUP_STAFF] })] }] }),
+			}),
+		);
+
+		expect(accessByDoor(result)["Server Room"]).toBe("yes");
+	});
+
+	it("ignores a lockdown test that leaves user access alone", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				lockdown: ok({ active: [{ locationUuid: LOCATION, followingTestPlan: true, plans: [plan()] }] }),
+			}),
+		);
+
+		expect(accessByDoor(result)["Server Room"]).toBe("yes");
+		expect(result.userDoorAccess.doors?.find(d => d.doorName === "Server Room")?.lockdown).toContain("test");
+	});
+
+	it("denies a person the first-in rule does not list while it is REQUIRED", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				firstIn: ok({
+					rules: [{ name: "Managers first", doorUuids: [LOBBY], userUuids: [OTHER_USER], groupUuids: [], cloudState: { state: "REQUIRED", requestedAtMillis: 1 } }],
+					liveState: ok(new Map()),
+				}),
+			}),
+		);
+
+		const lobby = result.userDoorAccess.doors?.find(d => d.doorName === "Lobby Entry");
+		expect(lobby?.access).toBe("first-in-required");
+		expect(lobby?.firstIn).toContain("Managers first");
+	});
+
+	it("trusts the door controller's live first-in state over the cloud setting", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				firstIn: ok({
+					rules: [{ name: "Managers first", doorUuids: [LOBBY], userUuids: [OTHER_USER], groupUuids: [], cloudState: { state: "REQUIRED", requestedAtMillis: FAR_FUTURE } }],
+					liveState: ok(new Map([[LOBBY, "SATISFIED"]])),
+				}),
+			}),
+		);
+
+		expect(accessByDoor(result)["Lobby Entry"]).toBe("yes");
+	});
+
+	it("lets a person on the first-in rule in — their badge satisfies it", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				firstIn: ok({
+					rules: [{ name: "Managers first", doorUuids: [LOBBY], userUuids: [], groupUuids: [GROUP_STAFF], cloudState: { state: "REQUIRED" } }],
+					liveState: ok(new Map()),
+				}),
+			}),
+		);
+
+		expect(accessByDoor(result)["Lobby Entry"]).toBe("yes");
+	});
+
+	it("flags doors whose readers cannot read any of the person's active credentials", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				doors: doors.map(d =>
+					d.uuid === SERVER ? { ...d, readerComponentUuids: ["rdrWiegand"], nfcSecureDowngradeEnabled: false } : { ...d, readerComponentUuids: ["rdrRhombus"] },
+				),
+				readers: ok({
+					readers: new Map([
+						["rdrWiegand", { uuid: "rdrWiegand", kind: "wiegand" as const }],
+						["rdrRhombus", { uuid: "rdrRhombus", kind: "rhombus" as const }],
+					]),
+				}),
+				credentials: ok([{ uuid: "c1", credentialType: "RHOMBUS_SECURE_MOBILE", status: "ACTIVE", effectiveStatus: "ACTIVE" }]),
+			}),
+		);
+
+		const server = result.userDoorAccess.doors?.find(d => d.doorName === "Server Room");
+		expect(server?.access).toBe("credential-not-accepted");
+		expect(server?.credentialFit).toContain("Wiegand reader");
+		expect(server?.credentialFit).toContain("needs a card or PIN");
+		expect(accessByDoor(result)["Lobby Entry"]).toBe("yes");
+	});
+
+	it("skips the reader check for a door whose reader list the API did not return", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				doors: doors.map(d => ({ ...d, readerComponentUuids: undefined })),
+				readers: ok({ readers: new Map() }),
+			}),
+		);
+
+		expect(accessByDoor(result)["Lobby Entry"]).toBe("yes");
+	});
+
+	it("marks access as unusable when the person has no active credential", () => {
+		const result = resolveUserDoorAccess(
+			inputs({ grants: [STAFF_GRANT], credentials: ok([{ uuid: "c1", status: "SUSPENDED", effectiveStatus: "SUSPENDED" }]) }),
+		);
+
+		expect(accessByDoor(result)["Lobby Entry"]).toBe("no-usable-credential");
+	});
+
+	it("reports the account and states that its status does not gate badges", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				account: ok({ found: true, status: "PENDING", deleted: false }),
+				lockdown: ok({ active: [] }),
+				firstIn: ok({ rules: [], liveState: ok(new Map()) }),
+				readers: ok({ readers: new Map() }),
+				credentials: ok([{ uuid: "c1", credentialType: "RHOMBUS_SECURE_MOBILE", status: "ACTIVE", effectiveStatus: "ACTIVE" }]),
+			}),
+		);
+
+		expect(result.note).toContain("PENDING");
+		expect(result.note).toContain("Rhombus Key app");
+		expect(result.note).toContain("No lockdown is active.");
+		expect(result.note).not.toContain("Not checked");
 	});
 });
