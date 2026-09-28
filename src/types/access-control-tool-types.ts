@@ -198,6 +198,10 @@ export const USER_DOOR_ACCESS_SCHEMA = z.object({
       z.object({
         uuid: z.string().optional(),
         credentialType: z.string().optional(),
+        label: z
+          .string()
+          .optional()
+          .describe("Human name of the credential type. Use this when talking to the user, not credentialType."),
         effectiveStatus: z.string().optional(),
         validFrom: z.string().optional(),
         validUntil: z.string().optional(),
@@ -269,6 +273,10 @@ export const OUTPUT_SCHEMA = z.object({
         uuid: z.string().optional(),
         userUuid: z.string().optional(),
         credentialType: z.string().optional(),
+        credentialTypeLabel: z
+          .string()
+          .optional()
+          .describe("Human name of the credential type. Use this when talking to the user, not credentialType."),
         status: z.string().optional().describe("Stored workflow status."),
         effectiveStatus: z
           .string()

@@ -148,7 +148,7 @@ describe("access-control-tool get-user-door-access", () => {
 			expect.objectContaining({ credentialType: "PIN_CODE", effectiveStatus: "EXPIRED" }),
 		]);
 		expect(structured.userDoorAccess?.summary).toMatchObject({ accessNow: 1, noAccess: 1, usableCredentials: 1 });
-		expect(structured.userDoorAccess?.doors?.[0].credentialFit).toContain("RHOMBUS_SECURE_CSN");
+		expect(structured.userDoorAccess?.doors?.[0].credentialFit).toBe("Accepts: Rhombus Secure card.");
 		expect(structured.userDoorAccess?.account).toMatchObject({ found: true, status: "JOINED" });
 		expect(structured.userDoorAccess?.notChecked).toBeUndefined();
 		expect(structured.note).toContain("No access: Server Room.");

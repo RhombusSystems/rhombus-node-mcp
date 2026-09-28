@@ -159,6 +159,47 @@ export async function getAccessControlGroupUuidsForUser(
 }
 
 /**
+ * Human names for credential types and states. The raw enum values reach the
+ * user otherwise, and the Console's markdown turns their underscores into
+ * italics ("RHOMBUS_SECURE_MOBILE" renders as "RHOMBUS*SECURE*MOBILE").
+ */
+const CREDENTIAL_TYPE_LABELS: Record<string, string> = {
+  STANDARD_CSN: "standard card (CSN)",
+  RHOMBUS_SECURE_CSN: "Rhombus Secure card",
+  RHOMBUS_SECURE_MOBILE: "Rhombus mobile credential",
+  PIN_CODE: "PIN code",
+  WIEGAND_H10301: "Wiegand card (H10301)",
+  WIEGAND_H10302: "Wiegand card (H10302)",
+  WIEGAND_H10304: "Wiegand card (H10304)",
+  WIEGAND_D10202: "Wiegand card (D10202)",
+  WIEGAND_64BIT_RAW: "Wiegand card (64-bit)",
+  HID_CORP1000_STD_35: "HID Corporate 1000 card (35-bit)",
+  HID_CORP1000_STD_48: "HID Corporate 1000 card (48-bit)",
+  QR_CODE_STATIC: "QR code",
+  CUSTOM: "custom credential",
+  APPLE_WALLET_DESFIRE: "Apple Wallet credential",
+};
+
+export function credentialTypeLabel(type: string | undefined | null): string {
+  if (!type) return "credential of unknown type";
+  return CREDENTIAL_TYPE_LABELS[type] ?? type.toLowerCase().replace(/_/g, " ");
+}
+
+const CREDENTIAL_STATUS_LABELS: Record<CredentialEffectiveStatus, string> = {
+  ACTIVE: "active",
+  NOT_YET_VALID: "not yet valid",
+  EXPIRED: "expired",
+  SUSPENDED: "suspended",
+  REVOKED: "revoked",
+  UNASSIGNED: "unassigned",
+  UNKNOWN: "unknown status",
+};
+
+export function credentialStatusLabel(status: string | undefined | null): string {
+  return CREDENTIAL_STATUS_LABELS[status as CredentialEffectiveStatus] ?? (status ? status.toLowerCase().replace(/_/g, " ") : "unknown status");
+}
+
+/**
  * The credential's effective state, in the order the Console derives it
  * (`getCredentialStatus`). Door controllers only receive ACTIVE credentials
  * inside their date window, so only "ACTIVE" here opens a door.
@@ -221,6 +262,7 @@ export async function getCredentialsByUser(
               // The API field is `type`; this used to read a non-existent
               // `credentialType` and was always empty.
               credentialType: cred.type ?? undefined,
+              credentialTypeLabel: credentialTypeLabel(cred.type),
               status: cred.workflowStatus ?? undefined,
               effectiveStatus: effectiveCredentialStatus(cred, now),
               validFrom: epochSecToIso(cred.startDateEpochSecInclusive),

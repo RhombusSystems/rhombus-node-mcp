@@ -283,7 +283,7 @@ describe("resolveUserDoorAccess", () => {
 		);
 
 		expect(result.userDoorAccess.summary?.usableCredentials).toBe(0);
-		expect(result.note).toContain("None of the person's 2 credential(s) is usable (SUSPENDED, EXPIRED)");
+		expect(result.note).toContain("None of the person's 2 credential(s) is usable (suspended, expired)");
 	});
 
 	it("skips guest-pass grants, which carry passes rather than people", () => {
@@ -469,6 +469,7 @@ describe("resolveUserDoorAccess — lockdown, first-in, credentials, account", (
 		expect(server?.access).toBe("credential-not-accepted");
 		expect(server?.credentialFit).toContain("Wiegand reader");
 		expect(server?.credentialFit).toContain("needs a card or PIN");
+		expect(server?.credentialFit).toContain("Rhombus mobile credential");
 		expect(accessByDoor(result)["Lobby Entry"]).toBe("yes");
 	});
 
@@ -508,5 +509,34 @@ describe("resolveUserDoorAccess — lockdown, first-in, credentials, account", (
 		expect(result.note).toContain("Rhombus Key app");
 		expect(result.note).toContain("No lockdown is active.");
 		expect(result.note).not.toContain("Not checked");
+	});
+});
+
+describe("user-facing text", () => {
+	it("never carries a raw enum name — the Console's markdown italicises underscores", () => {
+		const result = resolveUserDoorAccess(
+			inputs({
+				grants: [STAFF_GRANT],
+				doors: doors.map(d => (d.uuid === SERVER ? { ...d, readerComponentUuids: ["rdrWiegand"] } : { ...d, readerComponentUuids: ["rdrRhombus"] })),
+				readers: ok({
+					readers: new Map([
+						["rdrWiegand", { uuid: "rdrWiegand", kind: "wiegand" as const }],
+						["rdrRhombus", { uuid: "rdrRhombus", kind: "rhombus" as const }],
+					]),
+				}),
+				credentials: ok([
+					{ uuid: "c1", credentialType: "RHOMBUS_SECURE_MOBILE", status: "ACTIVE", effectiveStatus: "ACTIVE" },
+					{ uuid: "c2", credentialType: "HID_CORP1000_STD_35", status: "ACTIVE", effectiveStatus: "NOT_YET_VALID" },
+				]),
+				account: ok({ found: true, status: "PENDING" }),
+			}),
+		);
+
+		const texts = [
+			result.note,
+			...(result.userDoorAccess.doors ?? []).flatMap(d => [d.reason, d.credentialFit, d.lockdown, d.firstIn]),
+		].filter((t): t is string => !!t);
+		for (const text of texts) expect(text).not.toMatch(/[A-Z0-9]+_[A-Z0-9_]+/);
+		expect(result.userDoorAccess.credentials?.[0].label).toBe("Rhombus mobile credential");
 	});
 });

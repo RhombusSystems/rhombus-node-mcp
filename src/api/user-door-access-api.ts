@@ -12,6 +12,8 @@ import type { RequestModifiers } from "../util.js";
 import {
   getAccessControlGroupUuidsForUser,
   getAccessControlGroups,
+  credentialStatusLabel,
+  credentialTypeLabel,
   getAccessGrants,
   getCredentialsByUser,
   getLockdownPlan,
@@ -624,29 +626,28 @@ export function resolveUserDoorAccess(input: UserDoorAccessInputs): {
           };
         } else {
           const perCred = usable.map(c => ({
-            type: c.credentialType ?? "unknown type",
+            type: c.credentialType,
             fit: best(doorReaders.map(r => readerFit(c.credentialType, r, door))),
           }));
           const fit = best(perCred.map(p => p.fit));
           const readerKinds = [...new Set(doorReaders.map(r => READER_LABEL[r.kind]))].join(", ");
-          const accepted = perCred.filter(p => p.fit === "yes").map(p => p.type);
+          const labels = (types: (string | undefined)[]) => [...new Set(types.map(credentialTypeLabel))].join(", ");
           if (fit === "no") {
-            const types = [...new Set(perCred.map(p => p.type))];
-            const mobileOnly = types.every(t => t === "RHOMBUS_SECURE_MOBILE");
+            const mobileOnly = perCred.every(p => p.type === "RHOMBUS_SECURE_MOBILE");
             result = {
               ...result,
               ...(result.access === "yes" ? { access: "credential-not-accepted" } : {}),
               credentialFit:
-                `None of the person's active credentials (${types.join(", ")}) can be read by this door's ${readerKinds}.` +
+                `None of the person's active credentials (${labels(perCred.map(p => p.type))}) can be read by this door's ${readerKinds}.` +
                 (mobileOnly ? " Phones only work on Rhombus readers; this door needs a card or PIN credential." : ""),
             };
           } else if (fit === "maybe") {
             result = {
               ...result,
-              credentialFit: `Whether this door's ${readerKinds} reads the person's credentials (${[...new Set(perCred.map(p => p.type))].join(", ")}) depends on reader hardware or settings the API does not show.`,
+              credentialFit: `Whether this door's ${readerKinds} reads the person's credentials (${labels(perCred.map(p => p.type))}) depends on reader hardware or settings the API does not show.`,
             };
           } else {
-            result = { ...result, credentialFit: `Accepts: ${[...new Set(accepted)].join(", ")}.` };
+            result = { ...result, credentialFit: `Accepts: ${labels(perCred.filter(p => p.fit === "yes").map(p => p.type))}.` };
           }
         }
       }
@@ -693,6 +694,7 @@ export function resolveUserDoorAccess(input: UserDoorAccessInputs): {
     credentials: credentials?.map(c => ({
       uuid: c.uuid,
       credentialType: c.credentialType,
+      label: credentialTypeLabel(c.credentialType),
       effectiveStatus: c.effectiveStatus,
       validFrom: c.validFrom,
       validUntil: c.validUntil,
@@ -756,10 +758,10 @@ function buildNote(
     parts.push(
       credentials.length === 0
         ? "The person has NO credential, so no badge will open any of these doors until one is assigned."
-        : `None of the person's ${credentials.length} credential(s) is usable (${credentials.map(c => c.effectiveStatus).join(", ")}), so no badge will open any door until one is active.`
+        : `None of the person's ${credentials.length} credential(s) is usable (${credentials.map(c => credentialStatusLabel(c.effectiveStatus)).join(", ")}), so no badge will open any door until one is active.`
     );
   } else {
-    const types = [...new Set(credentials.filter(c => c.effectiveStatus === "ACTIVE").map(c => c.credentialType ?? "unknown type"))];
+    const types = [...new Set(credentials.filter(c => c.effectiveStatus === "ACTIVE").map(c => credentialTypeLabel(c.credentialType)))];
     parts.push(`${usableCredentials} of ${credentials.length} credential(s) are active (${types.join(", ")}).`);
   }
   if (account && !account.found) {
