@@ -34,6 +34,12 @@ export enum AccessControlRequestType {
   UPDATE_ACCESS_GRANT = "update-access-grant",
   DELETE_ACCESS_GRANT = "delete-access-grant",
   GET_REMOTE_UNLOCK_USERS = "get-remote-unlock-users",
+  /**
+   * Per-door answer to "can this person badge in": direct grants, access
+   * control group membership, door labels, revocations and schedules, plus the
+   * person's credentials. Read-only.
+   */
+  GET_USER_DOOR_ACCESS = "get-user-door-access",
 }
 
 export const TOOL_ARGS = {
@@ -45,11 +51,11 @@ export const TOOL_ARGS = {
   userUuid: z
     .string()
     .nullable()
-    .describe("The UUID of the user. Required for 'get-credentials-by-user'."),
+    .describe("The UUID of the user. Required for 'get-credentials-by-user' and 'get-user-door-access'."),
   locationUuid: z
     .string()
     .nullable()
-    .describe("The UUID of the location. Required for 'activate-lockdown', 'deactivate-lockdown', 'get-door-schedules', and 'get-remote-unlock-users'. Optional for 'get-access-grants' to filter by location."),
+    .describe("The UUID of the location. Required for 'activate-lockdown', 'deactivate-lockdown', 'get-door-schedules', and 'get-remote-unlock-users'. Optional for 'get-access-grants' and 'get-user-door-access' to limit the result to one location."),
   lockdownPlanUuid: z
     .string()
     .nullable()
@@ -138,6 +144,86 @@ export const TOOL_ARGS = {
 const TOOL_ARGS_SCHEMA = z.object(TOOL_ARGS);
 export type ToolArgs = z.infer<typeof TOOL_ARGS_SCHEMA>;
 
+const ACCESS_CONDITION_SCHEMA = z.object({
+  name: z.string().optional(),
+  uuid: z.string().optional(),
+  via: z
+    .string()
+    .optional()
+    .describe("'user' = the person is named on it directly; 'group' = through an access control group (see groupName)."),
+  groupName: z.string().optional(),
+  viaLabel: z
+    .string()
+    .optional()
+    .describe("Set when it covers this door through a door label rather than by naming the door."),
+  schedule: z.string().optional().describe("'always', or the name of the schedule that limits it."),
+  activeNow: z.boolean().optional(),
+  problem: z
+    .string()
+    .optional()
+    .describe("Why door controllers ignore this grant or revocation. When set, it has no effect."),
+});
+
+export const USER_DOOR_ACCESS_SCHEMA = z.object({
+  userUuid: z.string().optional(),
+  location: z
+    .object({ uuid: z.string().optional(), name: z.string().optional(), timezone: z.string().optional() })
+    .optional(),
+  evaluatedAt: z.string().optional(),
+  summary: z
+    .object({
+      doors: z.number().optional(),
+      accessNow: z.number().optional(),
+      scheduledNotNow: z.number().optional(),
+      revoked: z.number().optional(),
+      noAccess: z.number().optional(),
+      unknown: z.number().optional(),
+      usableCredentials: z.number().optional(),
+    })
+    .optional(),
+  groups: z
+    .array(z.object({ uuid: z.string().optional(), name: z.string().optional() }))
+    .optional()
+    .describe("The person's access control groups."),
+  credentials: z
+    .array(
+      z.object({
+        uuid: z.string().optional(),
+        credentialType: z.string().optional(),
+        effectiveStatus: z.string().optional(),
+        validFrom: z.string().optional(),
+        validUntil: z.string().optional(),
+        lastUsedAt: z.string().optional(),
+      })
+    )
+    .optional(),
+  doors: z
+    .array(
+      z.object({
+        doorUuid: z.string().optional(),
+        doorName: z.string().optional(),
+        locationName: z.string().optional(),
+        access: z
+          .string()
+          .optional()
+          .describe(
+            "yes = can open it now; scheduled-not-now = has access, but only during a schedule that is not active now; revoked = a revocation blocks it now; no = nothing gives access; unknown = could not be verified (see reason)."
+          ),
+        reason: z.string().optional(),
+        grants: z.array(ACCESS_CONDITION_SCHEMA).optional(),
+        revocations: z.array(ACCESS_CONDITION_SCHEMA).optional(),
+      })
+    )
+    .optional(),
+  inputsUnavailable: z
+    .array(z.object({ input: z.string().optional(), error: z.string().optional() }))
+    .optional()
+    .describe("Data that could not be read. Anything that depends on it is reported as unknown, never as no access."),
+  notChecked: z.array(z.string()).optional(),
+});
+export type UserDoorAccess = z.infer<typeof USER_DOOR_ACCESS_SCHEMA>;
+export type AccessCondition = z.infer<typeof ACCESS_CONDITION_SCHEMA>;
+
 export const OUTPUT_SCHEMA = z.object({
   unlockResult: z
     .object({
@@ -153,7 +239,12 @@ export const OUTPUT_SCHEMA = z.object({
         name: z.string().optional(),
         description: z.string().optional(),
         orgUuid: z.string().optional(),
-        userUuids: z.array(z.string()).optional(),
+        userUuids: z.array(z.string()).optional().describe("Member user UUIDs."),
+        memberCount: z.number().optional(),
+        membersError: z
+          .string()
+          .optional()
+          .describe("Set when this group's members could not be read — its membership is UNKNOWN, not empty."),
       })
     )
     .optional()
@@ -164,7 +255,16 @@ export const OUTPUT_SCHEMA = z.object({
         uuid: z.string().optional(),
         userUuid: z.string().optional(),
         credentialType: z.string().optional(),
-        status: z.string().optional(),
+        status: z.string().optional().describe("Stored workflow status."),
+        effectiveStatus: z
+          .string()
+          .optional()
+          .describe(
+            "What the credential does right now: ACTIVE (opens doors), NOT_YET_VALID, EXPIRED, SUSPENDED, REVOKED, UNASSIGNED or UNKNOWN. Only ACTIVE credentials reach door controllers — report this, not 'status'."
+          ),
+        validFrom: z.string().optional(),
+        validUntil: z.string().optional(),
+        lastUsedAt: z.string().optional(),
         note: z.string().optional(),
       })
     )
@@ -211,11 +311,17 @@ export const OUTPUT_SCHEMA = z.object({
         userUuids: z.array(z.string()).optional(),
         groupUuids: z.array(z.string()).optional(),
         doorUuids: z.array(z.string()).optional(),
+        doorLabels: z
+          .array(z.string())
+          .optional()
+          .describe("Door labels: the grant also covers every door that carries one of these labels."),
+        elevatorLandingUuids: z.array(z.string()).optional(),
+        mode: z.string().optional(),
         scheduleUuid: z.string().optional(),
       })
     )
     .optional()
-    .describe("List of location access grants. Each grant contains userUuids and groupUuids that have access to the doorUuids in the grant."),
+    .describe("List of location access grants. userUuids are only the DIRECTLY assigned users; members of groupUuids also have access, and doorLabels add doors. To answer whether a person can open doors, use get-user-door-access."),
   remoteUnlockUsers: z
     .object({
       doors: z.array(z.string()).optional().describe("Names of doors with remote unlock enabled at this location."),
@@ -232,6 +338,9 @@ export const OUTPUT_SCHEMA = z.object({
     })
     .optional()
     .describe("Users who can remotely unlock doors at a location, grouped by permission group. Always present the COMPLETE list of all users to the end user."),
+  userDoorAccess: USER_DOOR_ACCESS_SCHEMA.optional().describe(
+    "Per-door badge access for one person. Report doors by name, grouped by access value."
+  ),
   created: z
     .object({
       success: z.boolean().optional(),
@@ -287,4 +396,13 @@ export type OUTPUT_SCHEMA = z.infer<typeof OUTPUT_SCHEMA>;
  */
 export type AccessControlGroup = NonNullable<OUTPUT_SCHEMA["accessControlGroups"]>[number];
 export type AccessGrant = NonNullable<OUTPUT_SCHEMA["accessGrants"]>[number];
+export type AccessControlCredential = NonNullable<OUTPUT_SCHEMA["credentials"]>[number];
+export type CredentialEffectiveStatus =
+  | "ACTIVE"
+  | "NOT_YET_VALID"
+  | "EXPIRED"
+  | "SUSPENDED"
+  | "REVOKED"
+  | "UNASSIGNED"
+  | "UNKNOWN";
 export type LockdownPlanSummary = NonNullable<OUTPUT_SCHEMA["lockdownPlans"]>[number];

@@ -20,7 +20,9 @@ import {
   writeAccessGrant,
   deleteAccessGrant,
   getRemoteUnlockUsers,
+  getAccessControlGroupMembers,
 } from "../api/access-control-tool-api.js";
+import { getUserDoorAccess } from "../api/user-door-access-api.js";
 import {
   AccessControlRequestType,
   OUTPUT_SCHEMA,
@@ -40,13 +42,14 @@ This tool manages Rhombus access control operations including door unlocking, ac
 
 It has the following modes of operation, determined by the "requestType" parameter:
 - ${AccessControlRequestType.UNLOCK_DOOR}: Remotely unlock an access controlled door. Requires doorUuid.
-- ${AccessControlRequestType.GET_GROUPS}: List all access control groups in the organization.
+- ${AccessControlRequestType.GET_USER_DOOR_ACCESS}: The request for "can <person> badge in / open the doors at <location>", "does <person> have access to all doors", "why can't <person> get in". Requires userUuid; optional locationUuid. Resolves direct grants, access control group membership, door labels, revocations and schedules, plus the person's credentials, into a per-door answer. Use it instead of joining get-access-grants yourself.
+- ${AccessControlRequestType.GET_GROUPS}: List all access control groups in the organization, with their member user UUIDs.
 - ${AccessControlRequestType.GET_CREDENTIALS_BY_USER}: List all access control credentials for a specific user. Requires userUuid.
 - ${AccessControlRequestType.GET_LOCKDOWN_PLANS}: List all lockdown plans in the organization.
 - ${AccessControlRequestType.ACTIVATE_LOCKDOWN}: Activate a lockdown plan at a location. Requires locationUuid and lockdownPlanUuid.
 - ${AccessControlRequestType.DEACTIVATE_LOCKDOWN}: Deactivate a lockdown plan at a location. Requires locationUuid and lockdownPlanUuid.
 - ${AccessControlRequestType.GET_DOOR_SCHEDULES}: Get door schedule EXCEPTIONS for a location (despite the name, this does not list schedules). Requires locationUuid. For anything more than a location-scoped list use door-schedule-exception-tool; for the schedules themselves use schedule-tool.
-- ${AccessControlRequestType.GET_ACCESS_GRANTS}: List location access grants (physical badge/card access). Optionally accepts locationUuid to filter by location. Each grant includes userUuids (directly assigned users), groupUuids (assigned access control groups), and doorUuids (the doors this grant provides access to).
+- ${AccessControlRequestType.GET_ACCESS_GRANTS}: List location access grants (physical badge/card access). Optionally accepts locationUuid to filter by location. Each grant includes userUuids (directly assigned users only), groupUuids (assigned access control groups), doorUuids and doorLabels (the doors this grant provides access to). A person missing from userUuids can still have access through a group — for a person's access use get-user-door-access.
 - ${AccessControlRequestType.GET_REMOTE_UNLOCK_USERS}: Get all users who have permission to remotely unlock doors at a location. Requires locationUuid. Returns a list of doors with remote unlock enabled and the users who can unlock each door, based on their permission group roles. This is the correct tool for questions about remote unlock permissions.
 
 Write operations — every one of these changes who can physically open a door:
@@ -88,8 +91,31 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         return createToolStructuredContent<OUTPUT_SCHEMA>({ unlockResult });
       }
       case AccessControlRequestType.GET_GROUPS: {
-        const accessControlGroups = await getAccessControlGroups(requestModifiers, sessionId);
-        return createToolStructuredContent<OUTPUT_SCHEMA>({ accessControlGroups });
+        const accessControlGroups = await getAccessControlGroups(requestModifiers, sessionId, {
+          withMembers: true,
+        });
+        const unreadable = accessControlGroups.filter(group => group.membersError).length;
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          accessControlGroups,
+          note:
+            unreadable > 0
+              ? `The members of ${unreadable} group(s) could not be read (see membersError). Their membership is unknown — do not report them as empty.`
+              : undefined,
+        });
+      }
+      case AccessControlRequestType.GET_USER_DOOR_ACCESS: {
+        if (!args.userUuid) {
+          return createToolTextContent(
+            "userUuid is required for get-user-door-access. Resolve the person's name or email to a UUID with user-tool first."
+          );
+        }
+        const { userDoorAccess, note } = await getUserDoorAccess(
+          args.userUuid,
+          args.locationUuid,
+          requestModifiers,
+          sessionId
+        );
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ userDoorAccess, note });
       }
       case AccessControlRequestType.GET_CREDENTIALS_BY_USER: {
         if (!args.userUuid) {
@@ -214,13 +240,27 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
           );
         }
         if (!args.confirmDelete) {
-          const memberCount = existing.userUuids?.length ?? 0;
+          // The group list carries no members; read them so the warning names
+          // the real blast radius instead of "0 member(s)".
+          const members = await getAccessControlGroupMembers(
+            args.groupUuid,
+            requestModifiers,
+            sessionId
+          ).catch(() => undefined);
+          const affected =
+            members === undefined
+              ? "its members (they could not be read)"
+              : `its ${members.length} member(s)`;
           return createToolStructuredContent<OUTPUT_SCHEMA>({
-            accessControlGroups: [existing],
+            accessControlGroups: [
+              members === undefined
+                ? existing
+                : { ...existing, userUuids: members, memberCount: members.length },
+            ],
             note:
               `NOT DELETED — nothing was changed. Deleting the group "${existing.name ?? args.groupUuid}" removes it from every access ` +
-              `grant that uses it, so its ${memberCount} member(s) lose whatever door access the group provided. Tell the user which ` +
-              `people are affected, then call this tool again with confirmDelete: true.`,
+              `grant that uses it, so ${affected} lose whatever door access the group provided. Resolve the member UUIDs to names ` +
+              `with user-tool, tell the user which people are affected, then call this tool again with confirmDelete: true.`,
           });
         }
         const deleted = await deleteAccessControlGroup(
@@ -430,7 +470,12 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         const nextDoors = args.doorUuids ?? existing.doorUuids ?? [];
         const nextUsers = args.userUuids ?? existing.userUuids ?? [];
         const nextGroups = args.groupUuids ?? existing.groupUuids ?? [];
-        if (nextDoors.length === 0) {
+        // Not settable through this tool, but updateAccessGrant replaces the
+        // whole grant: leaving them out used to strip a grant's door labels
+        // and elevator landings on every edit.
+        const keptLabels = existing.doorLabels ?? [];
+        const keptLandings = existing.elevatorLandingUuids ?? [];
+        if (nextDoors.length === 0 && keptLabels.length === 0 && keptLandings.length === 0) {
           return createToolTextContent(
             "RETRYABLE — nothing was changed. The update would leave the grant with no doors, which gives nobody access. Pass the full set of doors the grant should cover, or use delete-access-grant."
           );
@@ -447,6 +492,8 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
             name: args.accessGrantName?.trim() || existing.name,
             locationUuid: args.locationUuid ?? existing.locationUuid,
             accessControlledDoorUuids: nextDoors,
+            doorLabelIds: keptLabels,
+            accessControlledElevatorLandingUuids: keptLandings,
             userUuids: nextUsers,
             groupUuids: nextGroups,
             scheduleUuid: args.scheduleUuid ?? existing.scheduleUuid ?? undefined,

@@ -68,11 +68,19 @@ function resultText(result: Awaited<ReturnType<typeof callTool>>): string {
 	return (result.content as { text: string }[])[0].text;
 }
 
+// The real findAccessControlGroupsByOrg shape: OrgGroupType has NO member
+// field. Members come from findAllUsersForAccessControlGroup.
 const GROUP = {
 	uuid: GROUP_UUID,
 	name: "Night Shift",
 	description: "After-hours staff",
-	userUuids: [USER_A, USER_B],
+	type: "RHOMBUS_ACCESS_CONTROL",
+};
+const GROUP_MEMBERS = {
+	groupMembers: [
+		{ groupUuid: GROUP_UUID, userUuid: USER_A, type: "RHOMBUS_ACCESS_CONTROL" },
+		{ groupUuid: GROUP_UUID, userUuid: USER_B, type: "RHOMBUS_ACCESS_CONTROL" },
+	],
 };
 
 const GRANT = {
@@ -88,6 +96,7 @@ const GRANT = {
 function mockRoutes(overrides: Record<string, unknown> = {}) {
 	const table: Record<string, unknown> = {
 		"/accesscontrol/findAccessControlGroupsByOrg": { groups: [GROUP] },
+		"/accesscontrol/findAllUsersForAccessControlGroup": GROUP_MEMBERS,
 		"/accesscontrol/findLocationAccessGrantsByOrg": { accessGrants: [GRANT] },
 		"/accesscontrol/lockdownPlan/findLockdownPlans": {
 			lockdownPlans: [{ uuid: PLAN_UUID, name: "Full Lockdown", locationUuid: LOCATION_UUID }],
@@ -129,6 +138,81 @@ describe("access-control-tool write paths", () => {
 		expect(structured.note).toContain("NOT DELETED");
 		expect(structured.note).toContain("2 member(s)");
 		expect(callsTo("/accesscontrol/deleteAccessControlGroup")).toHaveLength(0);
+	});
+
+	it("does not claim a group is empty when its members cannot be read", async () => {
+		mockRoutes({
+			"/accesscontrol/findAllUsersForAccessControlGroup": { error: true, status: "Sorry, I don't have permission" },
+		});
+
+		const result = await callTool(
+			withNulledArgs({ requestType: "delete-group", groupUuid: GROUP_UUID }),
+		);
+		const structured = result.structuredContent as { note?: string };
+		expect(structured.note).toContain("NOT DELETED");
+		expect(structured.note).not.toContain("0 member(s)");
+		expect(structured.note).toContain("could not be read");
+	});
+
+	it("lists each group's members from findAllUsersForAccessControlGroup", async () => {
+		mockRoutes();
+
+		const result = await callTool(withNulledArgs({ requestType: "get-groups" }));
+		const structured = result.structuredContent as {
+			accessControlGroups?: { uuid?: string; userUuids?: string[]; memberCount?: number }[];
+		};
+		expect(structured.accessControlGroups?.[0]).toMatchObject({
+			uuid: GROUP_UUID,
+			userUuids: [USER_A, USER_B],
+			memberCount: 2,
+		});
+		expect(callsTo("/accesscontrol/findAllUsersForAccessControlGroup")[0][0].body).toEqual({
+			groupUuid: GROUP_UUID,
+		});
+	});
+
+	it("marks a group whose members cannot be read instead of listing it as empty", async () => {
+		mockRoutes({
+			"/accesscontrol/findAllUsersForAccessControlGroup": { error: true, status: "HTTP 500" },
+		});
+
+		const result = await callTool(withNulledArgs({ requestType: "get-groups" }));
+		const structured = result.structuredContent as {
+			accessControlGroups?: { userUuids?: string[]; membersError?: string }[];
+			note?: string;
+		};
+		expect(structured.accessControlGroups?.[0].userUuids).toBeUndefined();
+		expect(structured.accessControlGroups?.[0].membersError).toContain("HTTP 500");
+		expect(structured.note).toContain("unknown");
+	});
+
+	it("keeps a grant's door labels and elevator landings when an update changes something else", async () => {
+		mockRoutes({
+			"/accesscontrol/findLocationAccessGrantsByOrg": {
+				accessGrants: [
+					{
+						...GRANT,
+						doorLabelIds: ["Lobby"],
+						accessControlledElevatorLandingUuids: ["lnd1AbCdEfGhIjKlMnOpQ"],
+					},
+				],
+			},
+		});
+
+		await callTool(
+			withNulledArgs({
+				requestType: "update-access-grant",
+				accessGrantUuid: GRANT_UUID,
+				accessGrantName: "Warehouse Access (renamed)",
+			}),
+		);
+
+		const body = callsTo("/accesscontrol/updateAccessGrant")[0][0].body as {
+			accessGrant: { doorLabelIds: string[]; accessControlledElevatorLandingUuids: string[] };
+		};
+		// updateAccessGrant replaces the whole grant: omitting these strips them.
+		expect(body.accessGrant.doorLabelIds).toEqual(["Lobby"]);
+		expect(body.accessGrant.accessControlledElevatorLandingUuids).toEqual(["lnd1AbCdEfGhIjKlMnOpQ"]);
 	});
 
 	it("steers a credential delete towards the reversible suspend", async () => {

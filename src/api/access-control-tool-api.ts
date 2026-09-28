@@ -2,8 +2,10 @@ import { apiWarning, postApi, throwIfApiError } from "../network/network.js";
 import { cachedPostApi } from "../network/org-reference-cache.js";
 import type { schema } from "../types/schema.js";
 import type {
+  AccessControlCredential,
   AccessControlGroup,
   AccessGrant,
+  CredentialEffectiveStatus,
   LockdownPlanSummary,
 } from "../types/access-control-tool-types.js";
 import type { RequestModifiers } from "../util.js";
@@ -35,9 +37,17 @@ export async function unlockDoor(
   return { success: true, doorUuid };
 }
 
+/**
+ * `findAccessControlGroupsByOrg` returns the groups only — `OrgGroupType` has
+ * no member field, so reading `userUuids` off it always produced `[]` and every
+ * group looked empty. Members come from `findAllUsersForAccessControlGroup`,
+ * one call per group, so they are fetched only when the caller needs them
+ * (`withMembers`); the write paths only need to know the group exists.
+ */
 export async function getAccessControlGroups(
   requestModifiers?: RequestModifiers,
-  sessionId?: string
+  sessionId?: string,
+  options: { withMembers?: boolean } = {}
 ): Promise<AccessControlGroup[]> {
   const res = await postApi<schema["Group_FindOrgGroupsByOrgWSResponse"]>({
     route: "/accesscontrol/findAccessControlGroupsByOrg",
@@ -48,22 +58,149 @@ export async function getAccessControlGroups(
 
   throwIfApiError(res);
 
-  return (
-    (res as any).groups?.map((group: any) => ({
-      uuid: group.uuid ?? undefined,
-      name: group.name ?? undefined,
-      description: group.description ?? undefined,
-      orgUuid: group.orgUuid ?? undefined,
-      userUuids: group.userUuids?.filter((u: any): u is string => u !== null) ?? [],
-    })) ?? []
-  );
+  const groups: AccessControlGroup[] =
+    res.groups?.flatMap(group =>
+      group
+        ? [
+            {
+              uuid: group.uuid ?? undefined,
+              name: group.name ?? undefined,
+              description: group.description ?? undefined,
+              orgUuid: group.orgUuid ?? undefined,
+            },
+          ]
+        : []
+    ) ?? [];
+
+  if (!options.withMembers) return groups;
+
+  return mapWithConcurrency(groups, GROUP_MEMBER_FETCH_CONCURRENCY, async group => {
+    if (!group.uuid) return group;
+    try {
+      const userUuids = await getAccessControlGroupMembers(group.uuid, requestModifiers, sessionId);
+      return { ...group, userUuids, memberCount: userUuids.length };
+    } catch (error) {
+      // One unreadable group must not blank the whole list — and must not read
+      // as "0 members" either.
+      return {
+        ...group,
+        membersError: error instanceof Error ? error.message : "Could not read this group's members.",
+      };
+    }
+  });
+}
+
+const GROUP_MEMBER_FETCH_CONCURRENCY = 8;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/** User UUIDs of one access control group's members. */
+export async function getAccessControlGroupMembers(
+  groupUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<string[]> {
+  const res = await postApi<schema["Group_FindAllUsersForOrgGroupWSResponse"]>({
+    route: "/accesscontrol/findAllUsersForAccessControlGroup",
+    body: { groupUuid } satisfies schema["Group_FindAllUsersForOrgGroupWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return [
+    ...new Set(
+      res.groupMembers?.flatMap(member => (member?.userUuid ? [member.userUuid] : [])) ?? []
+    ),
+  ];
+}
+
+/** UUIDs of the access control groups one user is a member of. */
+export async function getAccessControlGroupUuidsForUser(
+  userUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<string[]> {
+  const res = await postApi<schema["Group_FindOrgGroupMembershipsByUserWSResponse"]>({
+    route: "/accesscontrol/findAccessControlGroupMembershipsByUser",
+    body: { userUuid } satisfies schema["Group_FindOrgGroupMembershipsByUserWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  return [
+    ...new Set(
+      res.userGroupMemberships?.flatMap(membership =>
+        membership?.groupUuid &&
+        (!membership.type || membership.type === "RHOMBUS_ACCESS_CONTROL")
+          ? [membership.groupUuid]
+          : []
+      ) ?? []
+    ),
+  ];
+}
+
+/**
+ * The credential's effective state, in the order the Console derives it
+ * (`getCredentialStatus`). Door controllers only receive ACTIVE credentials
+ * inside their date window, so only "ACTIVE" here opens a door.
+ */
+export function effectiveCredentialStatus(
+  cred: {
+    workflowStatus?: string | null;
+    startDateEpochSecInclusive?: number | null;
+    endDateEpochSecExclusive?: number | null;
+  },
+  nowMs: number
+): CredentialEffectiveStatus {
+  const nowSec = nowMs / 1000;
+  switch (cred.workflowStatus) {
+    case "SUSPENDED":
+      return "SUSPENDED";
+    case "UNASSIGNED":
+      return "UNASSIGNED";
+    case "REVOKED":
+      return "REVOKED";
+    case "ACTIVE":
+      if (cred.startDateEpochSecInclusive != null && nowSec < cred.startDateEpochSecInclusive) {
+        return "NOT_YET_VALID";
+      }
+      if (cred.endDateEpochSecExclusive != null && nowSec >= cred.endDateEpochSecExclusive) {
+        return "EXPIRED";
+      }
+      return "ACTIVE";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+function epochSecToIso(value: number | null | undefined): string | undefined {
+  return value != null ? new Date(value * 1000).toISOString() : undefined;
 }
 
 export async function getCredentialsByUser(
   userUuid: string,
   requestModifiers?: RequestModifiers,
   sessionId?: string
-) {
+): Promise<AccessControlCredential[]> {
   const res = await postApi<schema["Accesscontrol_credentials_FindAccessControlCredentialByUserWSResponse"]>({
     route: "/accesscontrol/findAccessControlCredentialByUser",
     body: { userUuid } satisfies schema["Accesscontrol_credentials_FindAccessControlCredentialByUserWSRequest"],
@@ -73,14 +210,30 @@ export async function getCredentialsByUser(
 
   throwIfApiError(res);
 
+  const now = Date.now();
   return (
-    res.credentials?.map((cred: any) => ({
-      uuid: cred.uuid ?? undefined,
-      userUuid: cred.userUuid ?? undefined,
-      credentialType: cred.credentialType ?? undefined,
-      status: cred.workflowStatus ?? undefined,
-      note: cred.note ?? undefined,
-    })) ?? []
+    res.credentials?.flatMap(cred =>
+      cred
+        ? [
+            {
+              uuid: cred.uuid ?? undefined,
+              userUuid: cred.userUuid ?? undefined,
+              // The API field is `type`; this used to read a non-existent
+              // `credentialType` and was always empty.
+              credentialType: cred.type ?? undefined,
+              status: cred.workflowStatus ?? undefined,
+              effectiveStatus: effectiveCredentialStatus(cred, now),
+              validFrom: epochSecToIso(cred.startDateEpochSecInclusive),
+              validUntil: epochSecToIso(cred.endDateEpochSecExclusive),
+              lastUsedAt:
+                cred.lastUsedAtMillis != null
+                  ? new Date(cred.lastUsedAtMillis).toISOString()
+                  : undefined,
+              note: cred.note ?? undefined,
+            },
+          ]
+        : []
+    ) ?? []
   );
 }
 
@@ -194,15 +347,27 @@ export async function getAccessGrants(
     arr?.filter((v): v is string => v !== null) ?? [];
 
   return (
-    (res as any).accessGrants?.map((grant: any) => ({
-      uuid: grant.uuid ?? undefined,
-      name: grant.name ?? undefined,
-      locationUuid: grant.locationUuid ?? undefined,
-      userUuids: filterNulls(grant.userUuids),
-      groupUuids: filterNulls(grant.groupUuids),
-      doorUuids: filterNulls(grant.accessControlledDoorUuids),
-      scheduleUuid: grant.scheduleUuid ?? undefined,
-    })) ?? []
+    res.accessGrants?.flatMap(grant =>
+      grant
+        ? [
+            {
+              uuid: grant.uuid ?? undefined,
+              name: grant.name ?? undefined,
+              locationUuid: grant.locationUuid ?? undefined,
+              userUuids: filterNulls(grant.userUuids),
+              groupUuids: filterNulls(grant.groupUuids),
+              doorUuids: filterNulls(grant.accessControlledDoorUuids),
+              // A grant also reaches every door carrying one of these labels,
+              // and elevator landings. update-access-grant must send both
+              // back, because updateAccessGrant replaces the whole grant.
+              doorLabels: filterNulls(grant.doorLabelIds),
+              elevatorLandingUuids: filterNulls(grant.accessControlledElevatorLandingUuids),
+              mode: grant.mode ?? undefined,
+              scheduleUuid: grant.scheduleUuid ?? undefined,
+            },
+          ]
+        : []
+    ) ?? []
   );
 }
 
