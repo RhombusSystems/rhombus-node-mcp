@@ -22,7 +22,7 @@ import {
   getRemoteUnlockUsers,
   getAccessControlGroupMembers,
 } from "../api/access-control-tool-api.js";
-import { getUserDoorAccess } from "../api/user-door-access-api.js";
+import { getUserDoorAccess, listDoorLabels } from "../api/user-door-access-api.js";
 import {
   AccessControlRequestType,
   OUTPUT_SCHEMA,
@@ -50,6 +50,7 @@ It has the following modes of operation, determined by the "requestType" paramet
 - ${AccessControlRequestType.DEACTIVATE_LOCKDOWN}: Deactivate a lockdown plan at a location. Requires locationUuid and lockdownPlanUuid.
 - ${AccessControlRequestType.GET_DOOR_SCHEDULES}: Get door schedule EXCEPTIONS for a location (despite the name, this does not list schedules). Requires locationUuid. For anything more than a location-scoped list use door-schedule-exception-tool; for the schedules themselves use schedule-tool.
 - ${AccessControlRequestType.GET_ACCESS_GRANTS}: List location access grants (physical badge/card access). Optionally accepts locationUuid to filter by location. Each grant includes userUuids (directly assigned users only), groupUuids (assigned access control groups), doorUuids and doorLabels (the doors this grant provides access to). A person missing from userUuids can still have access through a group — for a person's access use get-user-door-access.
+- ${AccessControlRequestType.GET_DOOR_LABELS}: List door labels with the doors each one covers (uuid, name, location). Optional locationUuid keeps only that location's doors and drops labels with none there. A label is org-wide and stands for every door carrying it, so check what it covers before choosing one for someone.
 - ${AccessControlRequestType.GET_REMOTE_UNLOCK_USERS}: Get all users who have permission to remotely unlock doors at a location. Requires locationUuid. Returns a list of doors with remote unlock enabled and the users who can unlock each door, based on their permission group roles. This is the correct tool for questions about remote unlock permissions.
 
 Write operations — every one of these changes who can physically open a door:
@@ -89,6 +90,10 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         }
         const unlockResult = await unlockDoor(args.doorUuid, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ unlockResult });
+      }
+      case AccessControlRequestType.GET_DOOR_LABELS: {
+        const doorLabels = await listDoorLabels(args.locationUuid, requestModifiers, sessionId);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ doorLabels });
       }
       case AccessControlRequestType.GET_GROUPS: {
         const accessControlGroups = await getAccessControlGroups(requestModifiers, sessionId, {

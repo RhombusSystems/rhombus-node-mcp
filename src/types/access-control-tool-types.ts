@@ -30,6 +30,7 @@ export enum AccessControlRequestType {
    */
   GET_DOOR_SCHEDULES = "get-door-schedules",
   GET_ACCESS_GRANTS = "get-access-grants",
+  GET_DOOR_LABELS = "get-door-labels",
   CREATE_ACCESS_GRANT = "create-access-grant",
   UPDATE_ACCESS_GRANT = "update-access-grant",
   DELETE_ACCESS_GRANT = "delete-access-grant",
@@ -55,7 +56,7 @@ export const TOOL_ARGS = {
   locationUuid: z
     .string()
     .nullable()
-    .describe("The UUID of the location. Required for 'activate-lockdown', 'deactivate-lockdown', 'get-door-schedules', and 'get-remote-unlock-users'. Optional for 'get-access-grants' and 'get-user-door-access' to limit the result to one location."),
+    .describe("The UUID of the location. Required for 'activate-lockdown', 'deactivate-lockdown', 'get-door-schedules', and 'get-remote-unlock-users'. Optional for 'get-access-grants', 'get-user-door-access' and 'get-door-labels' to limit the result to one location."),
   lockdownPlanUuid: z
     .string()
     .nullable()
@@ -250,6 +251,22 @@ export const OUTPUT_SCHEMA = z.object({
     })
     .optional()
     .describe("Result of unlocking a door"),
+  doorLabels: z
+    .array(
+      z.object({
+        label: z.string(),
+        doorCount: z.number(),
+        doors: z.array(
+          z.object({
+            doorUuid: z.string(),
+            doorName: z.string().optional(),
+            locationUuid: z.string().optional(),
+          })
+        ),
+      })
+    )
+    .optional()
+    .describe("Door labels, each with the access controlled doors that carry it"),
   accessControlGroups: z
     .array(
       z.object({
