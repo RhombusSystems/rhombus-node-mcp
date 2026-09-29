@@ -137,17 +137,26 @@ describe("access-control-tool get-door-labels", () => {
 		]);
 	});
 
-	it("keeps a labelled door that is missing from the door list, by uuid only", async () => {
+	// A labelled door missing from the door list has been deleted; its label entry
+	// is stale, so it counts toward nothing.
+	it("leaves out a labelled door that is no longer in the door list", async () => {
 		mockRoutes({
 			"/component/getAccessControlledDoorLabelsForOrg": {
-				accessControlledDoorLabels: { dorGoneAbCdEfGhIjKlMn: ["Lobby"] },
+				accessControlledDoorLabels: {
+					[LOBBY]: ["Lobby"],
+					dorGoneAbCdEfGhIjKlMn: ["Lobby", "Retired"],
+				},
 			},
 		});
 
 		const structured = (await callTool({ requestType: "get-door-labels" })).structuredContent as Structured;
 
 		expect(structured.doorLabels).toEqual([
-			{ label: "Lobby", doorCount: 1, doors: [{ doorUuid: "dorGoneAbCdEfGhIjKlMn" }] },
+			{
+				label: "Lobby",
+				doorCount: 1,
+				doors: [{ doorUuid: LOBBY, doorName: "Lobby Entry", locationUuid: HQ }],
+			},
 		]);
 	});
 

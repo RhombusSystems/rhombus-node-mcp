@@ -857,9 +857,10 @@ export type DoorLabelWithDoors = {
  * endpoint is keyed the other way (door → labels, see getDoorLabels) because the
  * access check asks it per door; a caller choosing a label asks what it covers.
  *
- * With a location, only that location's doors count, so a label with no door
- * there is left out: labels are org-wide, and "which labels apply here" is the
- * usual question.
+ * A labelled door missing from the door list has been deleted, so it is left
+ * out, and a label left with no doors is dropped. With a location, only that
+ * location's doors count, so a label with no door there is left out too: labels
+ * are org-wide, and "which labels apply here" is the usual question.
  */
 export async function listDoorLabels(
   locationUuid: string | null | undefined,
@@ -875,11 +876,12 @@ export async function listDoorLabels(
   const doorsByLabel = new Map<string, DoorLabelWithDoors["doors"]>();
   for (const [doorUuid, labels] of labelsByDoor) {
     const door = doorsByUuid.get(doorUuid);
-    if (locationUuid && door?.locationUuid !== locationUuid) continue;
+    if (!door) continue;
+    if (locationUuid && door.locationUuid !== locationUuid) continue;
     const entry = {
       doorUuid,
-      ...(door?.name ? { doorName: door.name } : {}),
-      ...(door?.locationUuid ? { locationUuid: door.locationUuid } : {}),
+      ...(door.name ? { doorName: door.name } : {}),
+      ...(door.locationUuid ? { locationUuid: door.locationUuid } : {}),
     };
     for (const label of labels) doorsByLabel.set(label, [...(doorsByLabel.get(label) ?? []), entry]);
   }
