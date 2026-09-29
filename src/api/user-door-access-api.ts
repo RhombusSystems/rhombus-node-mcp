@@ -830,6 +830,67 @@ export async function getAccessRevocations(
   );
 }
 
+/**
+ * Every access controlled door. Same route + body as get-entity-tool, so it shares
+ * that cache entry. Not via getAccessControlledDoors(): it drops the API error, and
+ * a failed door list must not read as "there are no doors".
+ */
+async function getDoorInfos(requestModifiers?: RequestModifiers, sessionId?: string): Promise<DoorInfo[]> {
+  const res = await cachedPostApi<schema["Component_FindAccessControlledDoorsWSResponse"]>({
+    route: "/component/findAccessControlledDoors",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
+  throwIfApiError(res);
+  return (res.accessControlledDoors ?? []).flatMap(d => (d?.uuid ? [toDoorInfo(d)] : []));
+}
+
+export type DoorLabelWithDoors = {
+  label: string;
+  doorCount: number;
+  doors: { doorUuid: string; doorName?: string; locationUuid?: string }[];
+};
+
+/**
+ * label → the doors carrying it, with each door's name and location. The labels
+ * endpoint is keyed the other way (door → labels, see getDoorLabels) because the
+ * access check asks it per door; a caller choosing a label asks what it covers.
+ *
+ * With a location, only that location's doors count, so a label with no door
+ * there is left out: labels are org-wide, and "which labels apply here" is the
+ * usual question.
+ */
+export async function listDoorLabels(
+  locationUuid: string | null | undefined,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<DoorLabelWithDoors[]> {
+  const [doors, labelsByDoor] = await Promise.all([
+    getDoorInfos(requestModifiers, sessionId),
+    getDoorLabels(requestModifiers, sessionId),
+  ]);
+  const doorsByUuid = new Map(doors.map(door => [door.uuid, door]));
+
+  const doorsByLabel = new Map<string, DoorLabelWithDoors["doors"]>();
+  for (const [doorUuid, labels] of labelsByDoor) {
+    const door = doorsByUuid.get(doorUuid);
+    if (locationUuid && door?.locationUuid !== locationUuid) continue;
+    const entry = {
+      doorUuid,
+      ...(door?.name ? { doorName: door.name } : {}),
+      ...(door?.locationUuid ? { locationUuid: door.locationUuid } : {}),
+    };
+    for (const label of labels) doorsByLabel.set(label, [...(doorsByLabel.get(label) ?? []), entry]);
+  }
+
+  return Array.from(doorsByLabel, ([label, labelDoors]) => ({
+    label,
+    doorCount: labelDoors.length,
+    doors: labelDoors,
+  })).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 /** doorUuid → labels. Grant `doorLabelIds` are these label strings. */
 export async function getDoorLabels(
   requestModifiers?: RequestModifiers,
@@ -1128,18 +1189,7 @@ export async function getUserDoorAccess(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  // Same route + body as get-entity-tool, so it shares that cache entry. Not
-  // via getAccessControlledDoors(): it drops the API error, and a failed door
-  // list must not read as "there are no doors".
-  const doorsPromise = cachedPostApi<schema["Component_FindAccessControlledDoorsWSResponse"]>({
-    route: "/component/findAccessControlledDoors",
-    body: {},
-    modifiers: requestModifiers,
-    sessionId,
-  }).then(res => {
-    throwIfApiError(res);
-    return (res.accessControlledDoors ?? []).flatMap(d => (d?.uuid ? [toDoorInfo(d)] : []));
-  });
+  const doorsPromise = getDoorInfos(requestModifiers, sessionId);
   const doorsInScope = doorsPromise.then(doors =>
     doors.filter(d => !locationUuid || d.locationUuid === locationUuid)
   );
