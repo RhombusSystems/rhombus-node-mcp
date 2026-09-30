@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as entity from "../../src/api/get-entity-tool-api.js";
-import { describeEmptyComponentEventResult } from "../../src/api/events-tool-api.js";
+import * as network from "../../src/network/network.js";
+import {
+  COMPONENT_EVENTS_LIMIT,
+  describeCappedComponentEventResult,
+  describeEmptyComponentEventResult,
+  getComponentEventsByLocation,
+} from "../../src/api/events-tool-api.js";
 
 vi.mock("../../src/api/get-entity-tool-api.js");
+vi.mock("../../src/network/network.js");
 
 // The prod failure: the model scoped component-events to a real location that
 // happens to have no access-controlled doors, got {componentEvents: []}, and
@@ -72,5 +79,62 @@ describe("describeEmptyComponentEventResult", () => {
     vi.mocked(entity.getAccessControlledDoors).mockRejectedValue(new Error("boom"));
 
     expect(await describeEmptyComponentEventResult(DOORLESS_LOCATION, DOOR_EVENT_TYPES)).toBeUndefined();
+  });
+});
+
+describe("describeCappedComponentEventResult", () => {
+  const events = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({ timestampMs: 1_000 + i, datetime: `t${i}` }));
+
+  it("stays silent below the API limit", () => {
+    expect(describeCappedComponentEventResult(events(COMPONENT_EVENTS_LIMIT - 1))).toBeUndefined();
+  });
+
+  it("flags a result at the limit as truncated, with the span it does cover", () => {
+    const note = describeCappedComponentEventResult(events(COMPONENT_EVENTS_LIMIT).reverse());
+
+    expect(note).toContain("truncated");
+    expect(note).toContain("lower bounds");
+    expect(note).toContain(`span t0 to t${COMPONENT_EVENTS_LIMIT - 1}`);
+  });
+});
+
+describe("getComponentEventsByLocation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // A report once said a door was held UNLOCKED for half an hour without naming the door:
+  // the mapper dropped the door and the user, and read fields the event does not have.
+  it("maps a door-state change to its door, user and source", async () => {
+    vi.mocked(network.postApi).mockResolvedValue({
+      componentEvents: [
+        {
+          type: "DoorStateChangeEvent",
+          componentUuid: "component",
+          componentCompositeUuid: "door-uuid",
+          newState: "UNLOCKED",
+          source: "ADMIN",
+          originator: { type: "USER", username: "Michael Wasco" },
+          timestampMs: 1_790_000_000_000,
+        },
+      ],
+    } as never);
+
+    const [event] = await getComponentEventsByLocation(
+      "location",
+      ["DoorStateChangeEvent"],
+      undefined,
+      undefined,
+      "America/Los_Angeles"
+    );
+
+    expect(event).toMatchObject({
+      eventType: "DoorStateChangeEvent",
+      newState: "UNLOCKED",
+      doorUuid: "door-uuid",
+      user: "Michael Wasco",
+      source: "ADMIN",
+    });
   });
 });

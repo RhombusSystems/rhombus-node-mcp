@@ -107,10 +107,23 @@ export function parseTimeDescription(time_description: string, timezone?: string
   }
 
   const timestamp = dt.toMillis();
+  const nowIso = DateTime.now()
+    .setZone(timezone || "America/Los_Angeles")
+    .set({ millisecond: 0 })
+    .toISO();
 
   return {
     timestamp,
     iso: dt.toISO(),
     timezone: dt.zoneName,
+    nowIso,
+    // A single instant for "last 24 hours" was once read as the END of the window, and a
+    // report covered the day before the one asked for.
+    ...(RELATIVE_PAST_SPAN.test(time_description.trim())
+      ? { note: "iso is the START of the requested period; the period ends now (nowIso)." }
+      : {}),
   };
 }
+
+const RELATIVE_PAST_SPAN =
+  /^(?:the\s+)?(?:last|past|previous)\s+(?:\d+|a|an|one)?\s*(?:minutes?|hours?|days?|weeks?|months?)\b/i;

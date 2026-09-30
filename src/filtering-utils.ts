@@ -401,8 +401,15 @@ export function applyFilterBy(obj: any, conditions: FilterCondition[]): any {
 				const available = [...new Set(items.slice(0, 50).flatMap((item) =>
 					item && typeof item === "object" ? Object.keys(item) : [],
 				))].sort();
+				// Doors carry locationUuid but not locationName; without this hint a report draft
+				// read the unfiltered, all-location door list as the one location it asked for.
+				const uuidField = c.field.endsWith("Name") ? `${c.field.slice(0, -4)}Uuid` : undefined;
+				const uuidHint =
+					uuidField && available.includes(uuidField)
+						? ` The result is NOT narrowed: items carry ${uuidField} instead, so resolve the name to its UUID first (location-tool for a location), then filter on ${uuidField}.`
+						: "";
 				warnings.push(
-					`filterBy condition on field "${c.field}" was IGNORED — no item in "${arrayKey}" has that field (it would have matched nothing). Available fields: ${available.join(", ")}`,
+					`filterBy condition on field "${c.field}" was IGNORED — no item in "${arrayKey}" has that field (it would have matched nothing). Available fields: ${available.join(", ")}${uuidHint}`,
 				);
 			}
 		}

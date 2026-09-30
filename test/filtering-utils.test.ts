@@ -370,6 +370,19 @@ describe("applyFilterBy — phantom fields and count sync", () => {
     expect(result.filterByWarnings[0]).toContain("connectionStatus"); // advertises real fields
   });
 
+  it("points a name filter at the UUID field the items do carry", () => {
+    const doors = [
+      { uuid: "door-1", name: "Lobby Entry", locationUuid: "loc-a" },
+      { uuid: "door-2", name: "Side Entry", locationUuid: "loc-b" },
+    ];
+    const result = applyFilterBy({ accessControlledDoors: doors }, [
+      { field: "locationName", op: "contains", value: "Ice Blocks - Headquarters" },
+    ]);
+    expect(result.accessControlledDoors).toHaveLength(2);
+    expect(result.filterByWarnings[0]).toContain("NOT narrowed");
+    expect(result.filterByWarnings[0]).toContain("filter on locationUuid");
+  });
+
   it("applies valid conditions while skipping phantom ones", () => {
     const result = applyFilterBy(
       { cameras },

@@ -794,6 +794,37 @@ export async function getClimateEventsForSensor(
   return allClimateEvents;
 }
 
+/** API limit for findComponentEventsByLocation; a result this size is truncated. */
+export const COMPONENT_EVENTS_LIMIT = 1000;
+
+/**
+ * Flags a component-events result that hit the API limit.
+ *
+ * A busy location fills the limit well inside a day, and the bare list reads as the
+ * complete window: a report once presented "1,000 component events (exact counts)"
+ * for 24 hours of door telemetry, when 1,000 was only where the API stopped.
+ */
+export function describeCappedComponentEventResult(
+  events: { datetime?: string; timestampMs?: number | null }[]
+): string | undefined {
+  if (events.length < COMPONENT_EVENTS_LIMIT) return undefined;
+
+  const times = events
+    .filter(e => e.timestampMs)
+    .sort((a, b) => a.timestampMs! - b.timestampMs!);
+  const span =
+    times.length > 0
+      ? ` The returned events span ${times[0].datetime} to ${times[times.length - 1].datetime}.`
+      : "";
+
+  return (
+    `This result reached the ${COMPONENT_EVENTS_LIMIT}-event API limit, so it is truncated ` +
+    `and does not cover the whole requested window.${span} Counts taken from it are lower ` +
+    `bounds, not totals. Before stating totals or per-type counts, re-query with shorter ` +
+    `time ranges or fewer componentEventTypes until each result is below the limit.`
+  );
+}
+
 export async function getComponentEventsByLocation(
   locationUuid: string,
   eventTypes: string[], // Still accept string[] for flexibility
@@ -803,13 +834,12 @@ export async function getComponentEventsByLocation(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
-  const MAX_LIMIT = 1000; // API limit for component events
   const body: schema["Component_FindComponentEventsByLocationWSRequest"] = {
     locationUuid,
     typeFilter: eventTypes.length > 0 ? (eventTypes as any) : undefined, // API accepts string array
     ...(startTime ? { createdAfterMs: startTime } : {}),
     ...(endTime ? { createdBeforeMs: endTime } : {}),
-    limit: MAX_LIMIT,
+    limit: COMPONENT_EVENTS_LIMIT,
   };
 
   const response = await postApi<schema["Component_FindComponentEventsByLocationWSResponse"]>({
@@ -850,12 +880,14 @@ export async function getComponentEventsByLocation(
         doorbellCameraUuid: event.componentUuid,
       };
     } else if (event.type === "DoorStateChangeEvent") {
-      const doorEvent = event as any;
+      // A door-mode change (e.g. held UNLOCKED) is only actionable with the door and who made it.
+      const doorEvent = event as schema["DoorStateChangeEvent"];
       return {
         ...baseEvent,
-        previousState: doorEvent?.previousState,
         newState: doorEvent?.newState,
-        reason: doorEvent?.reason,
+        doorUuid: doorEvent?.componentCompositeUuid,
+        user: (doorEvent?.originator as schema["UserEventOriginator"] | undefined)?.username,
+        source: doorEvent?.source,
       };
     } else if (event.type === "ButtonEvent" || event.type === "PanicButtonEvent") {
       const buttonEvent = event as any;

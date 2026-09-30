@@ -5,6 +5,7 @@ import {
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
   getComponentEventsByLocation,
+  describeCappedComponentEventResult,
   describeEmptyComponentEventResult,
   getCameraFootageSeekpointEvents,
   resolveCameraWindow,
@@ -272,7 +273,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra.sessionId
         );
         // An empty result from a doorless location reads identically to "nothing
-        // happened" — say which it is rather than letting the model guess.
+        // happened", and a capped one reads as the whole window — say which it is
+        // rather than letting the model guess.
         const note =
           events.length === 0
             ? await describeEmptyComponentEventResult(
@@ -281,7 +283,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
                 extra._meta?.requestModifiers as RequestModifiers,
                 extra.sessionId
               )
-            : undefined;
+            : describeCappedComponentEventResult(events);
         return createToolStructuredContent({
           eventType: "component-events",
           componentEvents: events,

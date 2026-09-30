@@ -50,6 +50,7 @@ const ConnectedDeviceSchema = z.object({
   healthStatus: z.string().optional(),
   healthStatusDetails: z.string().optional(),
   locationUuid: z.string().optional(),
+  locationName: z.string().nullable().optional(),
   floorNumber: z.number().optional(),
   policyUuid: z.string().optional(),
 });
@@ -72,6 +73,7 @@ const AccessControlledDoorSchema = z.object({
   uuid: z.string().optional(),
   name: z.string().optional(),
   locationUuid: z.string().optional(),
+  locationName: z.string().nullable().optional(),
   policyUuid: z.string().optional(),
   remoteUnlockEnabled: z.boolean().optional(),
   geofenceEnabled: z.boolean().optional(),

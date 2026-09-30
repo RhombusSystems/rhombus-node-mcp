@@ -43,6 +43,8 @@ export function createTool(server: McpServer) {
         timestamp: z.number().optional().describe("Epoch milliseconds of the resolved time"),
         iso: z.string().nullable().optional().describe("ISO 8601 form of the resolved time"),
         timezone: z.string().nullable().optional().describe("IANA timezone the time was resolved in"),
+        nowIso: z.string().nullable().optional().describe("ISO 8601 form of the current time"),
+        note: z.string().optional().describe("How to read iso for a relative period"),
       },
       annotations: { readOnlyHint: true },
     },

@@ -114,3 +114,43 @@ describe("get-entity-tool — environmental sensor output validation", () => {
     ]);
   });
 });
+
+describe("get-entity-tool — locationName output validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(orgCache.cachedPostApi).mockImplementation((async ({ route }: { route: string }) =>
+      route === "/location/getLocationsV2"
+        ? { locations: [{ uuid: "loc-1", name: "Ice Blocks - Headquarters" }] }
+        : {
+            // A raw state that already carries a null locationName, as detail=full passes it on.
+            keypads: [
+              { uuid: "keypad-1", name: "Alarm Pad", locationUuid: "loc-1", locationName: null },
+            ],
+          }) as never);
+  });
+
+  it("fills a null locationName and stays valid at detail=full", async () => {
+    const result = await callGetEntityTool(
+      withNulledArgs({ entityTypes: ["keypad"], detail: "full", tempUnit: null })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const payload = JSON.parse((result.content as { text: string }[])[0].text);
+    expect(payload.keypadStates[0].locationName).toBe("Ice Blocks - Headquarters");
+  });
+
+  it("narrows on the advertised locationName filter", async () => {
+    const result = await callGetEntityTool(
+      withNulledArgs({
+        entityTypes: ["keypad"],
+        tempUnit: null,
+        filterBy: [{ field: "locationName", op: "contains", value: "Ice Blocks - Headquarters" }],
+      })
+    );
+
+    expect(result.isError).toBeFalsy();
+    const payload = JSON.parse((result.content as { text: string }[])[0].text);
+    expect(payload.keypadStates).toHaveLength(1);
+    expect(payload.filterByWarnings).toBeUndefined();
+  });
+});

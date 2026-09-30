@@ -68,3 +68,26 @@ describe("time-tool — null timezone means the organization's, not the server's
     expect(vi.mocked(locationApi.getLocations)).not.toHaveBeenCalled();
   });
 });
+
+describe("time-tool — relative periods", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("labels a 'last N hours' instant as the start of a period that ends now", async () => {
+    const { payload } = await callTimeTool({
+      time_description: "last 24 hours",
+      timezone: "America/Los_Angeles",
+    });
+    expect(payload.note).toContain("START");
+    const spanMs = Date.parse(payload.nowIso) - payload.timestamp;
+    expect(spanMs).toBeGreaterThanOrEqual(24 * 3600_000 - 2000);
+  });
+
+  it("adds no period note to a point in time", async () => {
+    const { payload } = await callTimeTool({
+      time_description: "now",
+      timezone: "America/Los_Angeles",
+    });
+    expect(payload.note).toBeUndefined();
+    expect(payload.nowIso).toBeDefined();
+  });
+});
