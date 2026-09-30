@@ -115,7 +115,7 @@ describe("getComponentEventsByLocation", () => {
           componentCompositeUuid: "door-uuid",
           newState: "UNLOCKED",
           source: "ADMIN",
-          originator: { type: "USER", username: "Michael Wasco" },
+          originator: { type: "USER", username: "Pat Example" },
           timestampMs: 1_790_000_000_000,
         },
       ],
@@ -133,7 +133,7 @@ describe("getComponentEventsByLocation", () => {
       eventType: "DoorStateChangeEvent",
       newState: "UNLOCKED",
       doorUuid: "door-uuid",
-      user: "Michael Wasco",
+      user: "Pat Example",
       source: "ADMIN",
     });
   });
