@@ -66,6 +66,7 @@ type MappedAccessControlEvent = {
   authenticationResult?: string | null;
   authorizationResult?: string | null;
   doorUuid?: string | null;
+  doorName?: string;
   locationUuid?: string | null;
   user?: string | null;
   credSource?: string | null;
@@ -97,7 +98,7 @@ function mapAccessControlEvent(
 
 // Newest-N cap per door: the pagination loop below walks backwards through a
 // door's history and would otherwise fetch every event in a wide time window.
-const MAX_ACCESS_CONTROL_EVENTS_PER_DOOR = 500;
+export const MAX_ACCESS_CONTROL_EVENTS_PER_DOOR = 500;
 // Defensive default window when no startTime reaches this layer.
 const DEFAULT_ACCESS_CONTROL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -412,10 +413,67 @@ export async function getAccessControlEvents(
   );
 
   // Flatten all componentEvents into a single array
-  const accessControlEvents = responses.flatMap(events => events);
+  const doorNames = await getDoorNames(requestModifiers, sessionId);
+  const accessControlEvents = responses
+    .flatMap(events => events)
+    .map(event => {
+      const doorName = event.doorUuid ? doorNames.get(event.doorUuid) : undefined;
+      return doorName ? { ...event, doorName } : event;
+    });
   accessControlEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
   logger.debug(`componentEvents: ${accessControlEvents.length} access-control events`);
   return accessControlEvents;
+}
+
+/**
+ * Names the doors whose access-event list stopped at the per-door cap. Without it a
+ * capped list reads as the door's whole window, and a report's record table and totals
+ * would silently undercount a busy door.
+ */
+export function describeCappedAccessControlEvents(
+  events: { doorUuid?: string | null; doorName?: string }[]
+): string | undefined {
+  const perDoor = new Map<string, { name: string; count: number }>();
+  for (const event of events) {
+    if (!event.doorUuid) continue;
+    const entry = perDoor.get(event.doorUuid) ?? {
+      name: event.doorName ?? event.doorUuid,
+      count: 0,
+    };
+    entry.count++;
+    perDoor.set(event.doorUuid, entry);
+  }
+  const capped = [...perDoor.values()].filter(
+    door => door.count >= MAX_ACCESS_CONTROL_EVENTS_PER_DOOR
+  );
+  if (capped.length === 0) return undefined;
+
+  return (
+    `Only the newest ${MAX_ACCESS_CONTROL_EVENTS_PER_DOOR} events per door are returned, and ` +
+    `these doors reached that cap, so their lists and counts do not cover the whole window: ` +
+    `${capped.map(door => door.name).join(", ")}. Re-query those doors with shorter time windows.`
+  );
+}
+
+/**
+ * Door names for access events, so a record table can show doors without a second lookup
+ * (MIND report access logs are built from these records by code, not by the model).
+ */
+async function getDoorNames(
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<Map<string, string>> {
+  try {
+    const { accessControlledDoors } = await getAccessControlledDoors(requestModifiers, sessionId);
+    return new Map(
+      (accessControlledDoors ?? []).flatMap(door =>
+        door?.uuid && door.name ? [[door.uuid, door.name] as const] : []
+      )
+    );
+  } catch (error) {
+    logger.debug(`Could not load door names for access-control events: ${error}`);
+    return new Map();
+  }
 }
 
 export async function getCameraFootageSeekpointEvents(

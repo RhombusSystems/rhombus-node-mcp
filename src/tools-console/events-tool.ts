@@ -5,6 +5,7 @@ import {
   getEventsForEnvironmentalGateway,
   getClimateEventsForSensor,
   getComponentEventsByLocation,
+  describeCappedAccessControlEvents,
   describeCappedComponentEventResult,
   describeEmptyComponentEventResult,
   getCameraFootageSeekpointEvents,
@@ -212,7 +213,12 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        return createToolStructuredContent({ eventType: "access-control", accessControlEvents: events });
+        const note = describeCappedAccessControlEvents(events);
+        return createToolStructuredContent({
+          eventType: "access-control",
+          accessControlEvents: events,
+          ...(note ? { note } : {}),
+        });
       }
     }
     case "environmental-gateway": {

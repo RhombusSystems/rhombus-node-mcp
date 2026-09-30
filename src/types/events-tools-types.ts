@@ -267,6 +267,7 @@ export const OUTPUT_SCHEMA = z.object({
             .string()
             .optional()
             .describe("The unique identifier for the access controlled door"),
+          doorName: z.string().optional().describe("The name of the access controlled door"),
           locationUuid: z
             .string()
             .optional()

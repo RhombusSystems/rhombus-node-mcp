@@ -4,9 +4,12 @@ import * as entity from "../../src/api/get-entity-tool-api.js";
 import * as network from "../../src/network/network.js";
 import {
   COMPONENT_EVENTS_LIMIT,
+  describeCappedAccessControlEvents,
   describeCappedComponentEventResult,
   describeEmptyComponentEventResult,
+  getAccessControlEvents,
   getComponentEventsByLocation,
+  MAX_ACCESS_CONTROL_EVENTS_PER_DOOR,
 } from "../../src/api/events-tool-api.js";
 
 vi.mock("../../src/api/get-entity-tool-api.js");
@@ -136,5 +139,66 @@ describe("getComponentEventsByLocation", () => {
       user: "Pat Example",
       source: "ADMIN",
     });
+  });
+});
+
+describe("getAccessControlEvents", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("names each event's door", async () => {
+    vi.mocked(entity.getAccessControlledDoors).mockResolvedValue({
+      accessControlledDoors: [{ uuid: "door-uuid", name: "Lobby Entry" }],
+    } as never);
+    vi.mocked(network.postApi).mockResolvedValue({
+      componentEvents: [
+        {
+          type: "CredentialReceivedEvent",
+          componentCompositeUuid: "door-uuid",
+          authenticationResult: "ACCEPTED",
+          timestampMs: 1_790_000_000_000,
+        },
+      ],
+    } as never);
+
+    const [event] = await getAccessControlEvents(
+      ["door-uuid"],
+      1_789_900_000_000,
+      undefined,
+      "America/Los_Angeles"
+    );
+
+    expect(event).toMatchObject({ doorUuid: "door-uuid", doorName: "Lobby Entry" });
+  });
+
+  it("keeps the events when the door names cannot be loaded", async () => {
+    vi.mocked(entity.getAccessControlledDoors).mockRejectedValue(new Error("boom"));
+    vi.mocked(network.postApi).mockResolvedValue({
+      componentEvents: [{ type: "CredentialReceivedEvent", componentCompositeUuid: "door-uuid" }],
+    } as never);
+
+    const events = await getAccessControlEvents(["door-uuid"], 1, undefined, "America/Los_Angeles");
+
+    expect(events).toHaveLength(1);
+    expect(events[0].doorName).toBeUndefined();
+  });
+});
+
+describe("describeCappedAccessControlEvents", () => {
+  it("names the doors that reached the per-door cap", () => {
+    const busy = Array.from({ length: MAX_ACCESS_CONTROL_EVENTS_PER_DOOR }, () => ({
+      doorUuid: "busy",
+      doorName: "Lobby Entry",
+    }));
+    const quiet = { doorUuid: "quiet", doorName: "Side" };
+    const note = describeCappedAccessControlEvents([...busy, quiet]);
+
+    expect(note).toContain("Lobby Entry");
+    expect(note).not.toContain("Side");
+  });
+
+  it("stays silent below the cap", () => {
+    expect(describeCappedAccessControlEvents([{ doorUuid: "d", doorName: "D" }])).toBeUndefined();
   });
 });
