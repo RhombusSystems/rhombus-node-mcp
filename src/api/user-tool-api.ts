@@ -2,6 +2,19 @@ import { apiWarning, postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
+/**
+ * The user's display name. `name` is the field an organization's user rows reliably
+ * carry; firstName/lastName can be empty, so they are only a fallback.
+ */
+function userName(user: {
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}): string | undefined {
+  if (user.name) return user.name;
+  return [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || undefined;
+}
+
 export async function listUsers(
   requestModifiers?: RequestModifiers,
   sessionId?: string
@@ -18,6 +31,7 @@ export async function listUsers(
   return (
     res.users?.map(user => ({
       uuid: user.uuid ?? undefined,
+      name: userName(user),
       email: user.email ?? undefined,
       firstName: user.firstName ?? undefined,
       lastName: user.lastName ?? undefined,
@@ -44,6 +58,7 @@ export async function findUserByEmail(
 
   return {
     uuid: user.uuid ?? undefined,
+    name: userName(user),
     email: user.email ?? undefined,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
