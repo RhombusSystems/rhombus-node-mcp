@@ -118,6 +118,12 @@ export const OUTPUT_SCHEMA = z.object({
     .array(
       z.object({
         uuid: z.string().optional(),
+        name: z
+          .string()
+          .optional()
+          .describe(
+            "The user's display name: the field to find a person by. firstName/lastName can be empty."
+          ),
         email: z.string().optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
@@ -128,6 +134,7 @@ export const OUTPUT_SCHEMA = z.object({
   user: z
     .object({
       uuid: z.string().optional(),
+      name: z.string().optional().describe("The user's display name."),
       email: z.string().optional(),
       firstName: z.string().optional(),
       lastName: z.string().optional(),

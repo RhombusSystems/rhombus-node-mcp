@@ -26,7 +26,7 @@ const TOOL_DESCRIPTION = `
 This tool manages Rhombus user operations including listing users, finding users by email, and viewing permissions.
 
 It has the following modes of operation, determined by the "requestType" parameter:
-- ${UserToolRequestType.LIST_USERS}: List all users in the organization with their details and roles.
+- ${UserToolRequestType.LIST_USERS}: List all users in the organization with their details and roles. To find a person by name, filter on users.name: it is always set, while firstName/lastName can be empty.
 - ${UserToolRequestType.FIND_BY_EMAIL}: Find a specific user by their email address. Requires the email parameter.
 - ${UserToolRequestType.GET_PERMISSIONS}: Get the permissions for the current API user/token.
 - ${UserToolRequestType.GET_PERMISSION_GROUPS}: List all permission groups defined in the organization. Each row can be very large — see below.
@@ -46,8 +46,13 @@ Each permission group row includes five access maps whose size scales with the o
 Typical usage when just picking a role uuid: 'includeFields: ["permissionGroups.uuid", "permissionGroups.name", "permissionGroups.description"]'.
 `;
 
-/** Users carry firstName/lastName, not a single name field. */
-function displayName(user: { firstName?: string; lastName?: string }): string | undefined {
+/** The display name when there is one; firstName/lastName can be empty. */
+function displayName(user: {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+}): string | undefined {
+  if (user.name) return user.name;
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
   return name || undefined;
 }
