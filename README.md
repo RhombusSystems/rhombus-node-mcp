@@ -181,7 +181,7 @@ npm run test:watch
 
 Check out Claude's fantastic [troubleshooting guide](https://modelcontextprotocol.io/docs/tools/debugging) for quick fixes! Still stuck? Our team of experts is ready to help!
 
-* Email us: developer@rhombus.com 📧
+* Email us: support@rhombus.com 📧
 * Share your feedback via our [beta test form](https://rhmbs.link/beta_test) 🌟
 
 We're committed to making your experience absolutely seamless and are SUPER excited to hear what amazing applications you're building with our tools!
