@@ -10817,7 +10817,7 @@ After creating the shared stream, you have the option to "Copy Embed Code." This
 
 ![Screenshot 2025-04-16 at 10.48.16 AM.png](https://support.rhombussystems.com/hc/article_attachments/35906675731981)
 
-For more information on embedding live streams in the Rhombus developer center, please visit [this documentation](https://apidocs.rhombussystems.com/docs/video-media#embedding-shared-streams-as-iframes).
+For more information on embedding live streams in the Rhombus developer center, please visit [this documentation](https://developer.rhombus.com/implementations/streaming-video#embedding-shared-streams-as-iframes-recommended).
 
 ### Additional URL Parameters
 
@@ -10837,15 +10837,15 @@ You will follow the structure of _https://url/?variable=true&variable=false&vari
 
 ### API Information for Doorbell Shared Streams
 
-The Rhombus API can be used to create a shared live video stream for a DR40. Please visit the following [documentation](https://apidocs.rhombussystems.com/reference/createdoorbellcamerasharedlivevideostream) for more information.
+The Rhombus API can be used to create a shared live video stream for a DR40. Please visit the following [documentation](https://developer.rhombus.com/api-reference/doorbell-camera-webservice/share-an-live-video-stream-for-a-doorbell-camera) for more information.
 
 ## Helpful Links
 
 - [Managing Video Walls](https://support.rhombussystems.com/hc/en-us/articles/360004103891-Managing-Video-Walls)
 - [Save, Share, and Delete Video Clips](https://support.rhombussystems.com/hc/en-us/articles/115000635271-Cut-Save-Share-and-Delete-Video-Clips)
 - [Audio Gateway Walkthrough](https://support.rhombussystems.com/hc/en-us/articles/4404880101261-Audio-Gateway-Walkthrough)
-- [API Documentation](https://apidocs.rhombussystems.com/reference/createdoorbellcamerasharedlivevideostream)
-- [Embedding Streams as iFrames](https://apidocs.rhombussystems.com/docs/video-media#embedding-shared-streams-as-iframes)
+- [API Documentation](https://developer.rhombus.com/api-reference/doorbell-camera-webservice/share-an-live-video-stream-for-a-doorbell-camera)
+- [Embedding Streams as iFrames](https://developer.rhombus.com/implementations/streaming-video#embedding-shared-streams-as-iframes-recommended)
 
 ## Contact Support or Sales
 
