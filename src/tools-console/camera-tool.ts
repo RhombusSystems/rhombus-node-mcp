@@ -20,7 +20,7 @@ Acts on a camera's video stream. Set "requestType":
 - **get-ai-thresholds** — the camera's AI detection threshold configuration (confidence thresholds for detection events). Use when diagnosing why a camera is or isn't generating AI events.
 
 **This tool is REQUIRED, not optional, for two situations** (the exact steps are on the requestType parameter):
-1. **Camera image quality** — "doesn't look great", poor image quality, dark, bright, blurry, washed out, "fix the image", "adjust settings to be optimal", or any mention of image appearance problems: snapshot immediately without asking, then call get-workflows — a guided camera-tuning workflow exists for this; follow its playbook rather than improvising a fix.
+1. **Camera image quality** — "doesn't look great", poor image quality, dark, bright, blurry, washed out, "fix the image", "adjust settings to be optimal", or any mention of image appearance problems: snapshot immediately without asking, then call get-workflows — a guided camera-tuning workflow exists for this; follow its playbook rather than improvising a fix. If the user instead names a PURPOSE — "optimize for license plates / LPR", "best settings for face recognition", "set this camera up for a hallway / parking lot", "better at night / low light" — call get-workflows FIRST (a per-model preset workflow exists) and let its playbook decide when to snapshot.
 2. **Filtering cameras by what they see** — interior vs exterior, "facing the street", "with a view of X", parking lot, entrance, or any "I want X using cameras with Y": snapshot each candidate camera and judge the predicate from the images.
 `;
 
