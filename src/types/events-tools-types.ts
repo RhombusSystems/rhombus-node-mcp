@@ -22,7 +22,7 @@ export const TOOL_ARGS = {
     .nativeEnum(EventsToolRequestType)
     .describe(
       "The type of events to retrieve. Every mode takes startTime and endTime (ISO 8601); the per-mode UUID argument is named below and in that argument's own description.\n\n" +
-        "access-control: Access control events (arrivals, badge ins, credentials, unlocks) for the doors in accessControlledDoorUuids. Can return a lot of data — use a narrow time range. The returned `credSource` field says how the event was triggered: REMOTE = Rhombus Key app remote unlock; 'REMOTE (Admin)' = unlock via the Rhombus console or browser/mobile app; BLE_WAVE = user waved a hand over the reader; NFC = user tapped a badge or phone on the reader.\n" +
+        "access-control: Access control events (arrivals, badge ins, credentials, unlocks) for the doors in accessControlledDoorUuids, or for every access-controlled door (optionally only at locationUuid) when that is null. The result also carries `people` — one row per named person with event counts, first/last time and doors — and `summary`; answer 'who came in' from `people`, which is complete even when the event list is long. Can return a lot of data — use a narrow time range. The returned `credSource` field says how the event was triggered: REMOTE = Rhombus Key app remote unlock; 'REMOTE (Admin)' = unlock via the Rhombus console or browser/mobile app; BLE_WAVE = user waved a hand over the reader; NFC = user tapped a badge or phone on the reader.\n" +
         "brivo-access-control: Badge/credential events from Brivo-integrated doors. Does not require door UUIDs — automatically fetches the Brivo integration configuration to determine which locations have Brivo doors mapped. Returns integrationEnabled, brivoDoorsConfigured, the brivoDoors list (Brivo IDs, names, Rhombus location UUIDs), and credential-received events newest first. Events are fetched at the LOCATION level, so results may include events from all access-controlled doors at locations where Brivo is configured.\n" +
         "environmental-gateway: Environmental gateway events (sensor readings and derived values) for deviceUuid.\n" +
         "climate-sensor: Climate sensor events (temperature, humidity, air quality, vape/THC detection, battery) for sensorUuid. Cap the row count with limit (default 1000).\n" +
@@ -52,7 +52,7 @@ export const TOOL_ARGS = {
     .array(z.string())
     .nullable()
     .describe(
-      "The UUIDs (array) of the access controlled doors. Required when eventType is 'access-control'."
+      "The UUIDs (array) of the access controlled doors to search when eventType is 'access-control'. Pass null to search EVERY access-controlled door in the organization (or only the doors at locationUuid when it is given) — do that for 'who came in / who badged in' questions that do not name a door."
     ),
   deviceUuid: z
     .string()
@@ -78,7 +78,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "The UUID of the location. Required when eventType is 'component-events'. Must be a UUID returned by a " +
+      "The UUID of the location. Required when eventType is 'component-events'; for eventType 'access-control' with accessControlledDoorUuids null, limits the door search to this location. Must be a UUID returned by a " +
         "prior tool call in this conversation (get-entity-tool for LOCATION, or the locationUuid on an " +
         "access-control-door) — never guess or reuse a UUID from memory. Scoping to a location that has no " +
         "access-controlled doors silently returns zero door events; to review door activity org-wide, query " +
@@ -251,6 +251,41 @@ export const OUTPUT_SCHEMA = z.object({
         "Brivo access control events. Fetches credential events from all locations that have Brivo doors configured in the integration."
       )
   ),
+  scope: z
+    .string()
+    .optional()
+    .describe(
+      "For eventType 'access-control' with accessControlledDoorUuids null: which doors were searched."
+    ),
+  summary: z
+    .object({
+      events: z.number().describe("Total access-control events returned"),
+      allowed: z.number().describe("Events with authorizationResult ALLOWED"),
+      denied: z.number().describe("Events that were not ALLOWED (rejected or unauthorized)"),
+      named: z.number().describe("Events that carry a user name"),
+      unnamed: z.number().describe("Events with no user name (unknown credential, remote unlock, etc.)"),
+      people: z.number().describe("Distinct named people in `people`"),
+      doors: z.number().describe("Distinct doors with events"),
+    })
+    .optional()
+    .describe("Totals for accessControlEvents."),
+  people: z
+    .array(
+      z.object({
+        user: z.string().describe("The person's name as recorded on the credential"),
+        events: z.number().describe("How many access-control events this person has in the window"),
+        allowed: z.number().describe("How many of those were ALLOWED"),
+        firstTimestampMs: z.number().optional().describe("Timestamp of this person's first event in the window"),
+        firstDatetime: z.string().optional().describe("This person's first event, formatted"),
+        lastTimestampMs: z.number().optional().describe("Timestamp of this person's last event in the window"),
+        lastDatetime: z.string().optional().describe("This person's last event, formatted"),
+        doors: z.array(z.string()).describe("Doors this person used (names when known)"),
+      })
+    )
+    .optional()
+    .describe(
+      "One row per named person in accessControlEvents, ordered by first event. This list is COMPLETE — use it to say who was recorded, even when accessControlEvents is long or was summarized."
+    ),
   accessControlEvents: z.optional(
     z
       .array(

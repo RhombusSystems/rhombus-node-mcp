@@ -6,6 +6,8 @@ import {
   getClimateEventsForSensor,
   getComponentEventsByLocation,
   describeCappedAccessControlEvents,
+  resolveAccessControlledDoorUuids,
+  summarizeAccessControlPeople,
   describeCappedComponentEventResult,
   describeEmptyComponentEventResult,
   getCameraFootageSeekpointEvents,
@@ -199,27 +201,49 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       });
     }
     case "access-control": {
-      if (!accessControlledDoorUuids || accessControlledDoorUuids.length === 0) {
-        return createToolStructuredContent({
-          needUserInput: true,
-          commandForUser: "Which door are you asking about?",
-        });
-      } else {
-        const events = await getAccessControlEvents(
-          accessControlledDoorUuids,
-          startTime ? new Date(startTime).getTime() : undefined,
-          endTime ? new Date(endTime).getTime() : undefined,
-          timeZone,
+      let doorUuids = accessControlledDoorUuids ?? [];
+      let scope: string | undefined;
+      const notes: string[] = [];
+      if (doorUuids.length === 0) {
+        // No door named: search every door (or every door at locationUuid).
+        const resolved = await resolveAccessControlledDoorUuids(
+          locationUuid,
           extra._meta?.requestModifiers as RequestModifiers,
           extra.sessionId
         );
-        const note = describeCappedAccessControlEvents(events);
-        return createToolStructuredContent({
-          eventType: "access-control",
-          accessControlEvents: events,
-          ...(note ? { note } : {}),
-        });
+        if (resolved.doorUuids.length === 0) {
+          return createToolStructuredContent({
+            eventType: "access-control",
+            summary: { events: 0, allowed: 0, denied: 0, named: 0, unnamed: 0, people: 0, doors: 0 },
+            people: [],
+            accessControlEvents: [],
+            ...(resolved.note ? { note: resolved.note } : {}),
+          });
+        }
+        doorUuids = resolved.doorUuids;
+        scope = resolved.scope;
+        if (resolved.note) notes.push(resolved.note);
       }
+      const events = await getAccessControlEvents(
+        doorUuids,
+        startTime ? new Date(startTime).getTime() : undefined,
+        endTime ? new Date(endTime).getTime() : undefined,
+        timeZone,
+        extra._meta?.requestModifiers as RequestModifiers,
+        extra.sessionId
+      );
+      const capNote = describeCappedAccessControlEvents(events);
+      if (capNote) notes.push(capNote);
+      // summary and people lead, so they survive if the event list is compacted.
+      const { people, summary } = summarizeAccessControlPeople(events);
+      return createToolStructuredContent({
+        eventType: "access-control",
+        ...(scope ? { scope } : {}),
+        summary,
+        people,
+        accessControlEvents: events,
+        ...(notes.length > 0 ? { note: notes.join(" ") } : {}),
+      });
     }
     case "environmental-gateway": {
       if (!deviceUuid) {

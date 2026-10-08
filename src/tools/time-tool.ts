@@ -7,6 +7,8 @@ import { resolveOrgTimeZone } from "../utils/org-timezone.js";
 const TOOL_NAME = "time-tool";
 const TOOL_DESCRIPTION = `This tool converts a natural-language description of time ("today", "5 days ago", "last week", "this morning") into concrete timestamps. Use it when you need a timestamp as input to another tool, or when the user explicitly asks for the current time. Keep time_description as close to the user's original phrasing as possible.
 
+**Read the result, not just iso.** dayStartIso/dayEndIso bound the local day for a day-level phrase ("Tuesday last week", "yesterday"), and note explains how the phrase was read — for an ambiguous one like "last Tuesday" it also gives the previous calendar week's date. Check iso against nowIso: a "last week" phrase lands 7 or more days back, never yesterday.
+
 **Call it at most once per distinct time reference.** The current time does not change during this conversation — once you have retrieved "now"/"today", reuse that result and reason about other relative dates from it. Do NOT call time-tool again for a time reference you already resolved, and do not call it at all for questions that have no time component.
 
 **Timezone:** Pass the timezone of the relevant device/location when known; otherwise a timezone the user stated; otherwise null — the organization's timezone is used. Never guess "UTC".`;
@@ -44,7 +46,9 @@ export function createTool(server: McpServer) {
         iso: z.string().nullable().optional().describe("ISO 8601 form of the resolved time"),
         timezone: z.string().nullable().optional().describe("IANA timezone the time was resolved in"),
         nowIso: z.string().nullable().optional().describe("ISO 8601 form of the current time"),
-        note: z.string().optional().describe("How to read iso for a relative period"),
+        dayStartIso: z.string().nullable().optional().describe("Start of the local day that iso falls in"),
+        dayEndIso: z.string().nullable().optional().describe("End of the local day that iso falls in"),
+        note: z.string().optional().describe("How to read iso, or an alternative date for an ambiguous phrase"),
       },
       annotations: { readOnlyHint: true },
     },

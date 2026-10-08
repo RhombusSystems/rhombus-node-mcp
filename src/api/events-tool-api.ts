@@ -89,7 +89,7 @@ function mapAccessControlEvent(
     authorizationResult: credEvent?.authorizationResult,
     doorUuid: credEvent?.componentCompositeUuid,
     locationUuid: credEvent?.locationUuid,
-    user: (credEvent?.originator as { username?: string } | undefined)?.username,
+    user: (credEvent?.originator as { username?: string | null } | undefined)?.username ?? undefined,
     credSource: credEvent?.credSource,
     timestampMs: credEvent?.timestampMs,
     datetime: credEvent?.timestampMs ? formatTimestamp(credEvent.timestampMs, timeZone) : undefined,
@@ -389,6 +389,152 @@ export async function getFaceEvents(
     };
   });
   return response;
+}
+
+// Doors searched per query when the caller names none: Promise.all fans out one
+// paginated request per door, so a very large org is bounded rather than flooded.
+export const MAX_ACCESS_CONTROL_DOORS_PER_QUERY = 100;
+
+/**
+ * The doors to search when the model names none — every access-controlled door in
+ * the organization, or only those at `locationUuid`. Until 2026-10-08 the tool
+ * answered "Which door are you asking about?" instead, which turned "who came into
+ * the office last Tuesday" into a dead end (the model told the user the native door
+ * records "require a specific door" and answered from the vendor feeds alone).
+ */
+export async function resolveAccessControlledDoorUuids(
+  locationUuid: string | null | undefined,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ doorUuids: string[]; scope?: string; note?: string }> {
+  const { accessControlledDoors } = await getAccessControlledDoors(requestModifiers, sessionId);
+  const doors = (accessControlledDoors ?? []).filter(door => door?.uuid);
+  if (doors.length === 0) {
+    return {
+      doorUuids: [],
+      note:
+        "This organization has no access-controlled doors, so there are no native door events to search. " +
+        "Do not report this as nobody having come in — say that no Rhombus doors are configured.",
+    };
+  }
+
+  const scoped = locationUuid ? doors.filter(door => door.locationUuid === locationUuid) : doors;
+  if (scoped.length === 0) {
+    const perLocation = new Map<string, number>();
+    for (const door of doors) {
+      if (door.locationUuid) perLocation.set(door.locationUuid, (perLocation.get(door.locationUuid) ?? 0) + 1);
+    }
+    const listed = [...perLocation.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([uuid, count]) => `${uuid} (${count})`)
+      .join(", ");
+    return {
+      doorUuids: [],
+      note:
+        `Location ${locationUuid} has no access-controlled doors, so this query could not return door events — ` +
+        `the empty result does not mean nobody came in. Doors exist at these locations (locationUuid and door count): ${listed}. ` +
+        `Re-run with accessControlledDoorUuids null and locationUuid null to search every door.`,
+    };
+  }
+
+  const searched = scoped.slice(0, MAX_ACCESS_CONTROL_DOORS_PER_QUERY);
+  const names = searched.map(door => door.name ?? door.uuid).join(", ");
+  const where = locationUuid ? `at location ${locationUuid}` : "in the organization";
+  const omitted = scoped.length - searched.length;
+  return {
+    doorUuids: searched.map(door => door.uuid as string),
+    scope: `Searched all ${searched.length} access-controlled doors ${where}: ${names}.`,
+    ...(omitted > 0
+      ? {
+          note:
+            `${omitted} more doors were not searched (at most ${MAX_ACCESS_CONTROL_DOORS_PER_QUERY} per query); ` +
+            `narrow by locationUuid or pass accessControlledDoorUuids to cover them.`,
+        }
+      : {}),
+  };
+}
+
+export type AccessControlPerson = {
+  user: string;
+  events: number;
+  allowed: number;
+  firstTimestampMs?: number;
+  firstDatetime?: string;
+  lastTimestampMs?: number;
+  lastDatetime?: string;
+  doors: string[];
+};
+
+export type AccessControlSummary = {
+  events: number;
+  allowed: number;
+  denied: number;
+  named: number;
+  unnamed: number;
+  people: number;
+  doors: number;
+};
+
+/**
+ * One row per named person, so "who came in" can be answered from a short, complete
+ * list. A day at one office is ~160 events (~46 KB), which is over the chatbot's
+ * compaction threshold; on 2026-10-07 the model answered such a result with 2 of the
+ * 153 names it had been given and said the rest were unnamed. This list is small
+ * enough to survive, and it leads the result.
+ */
+export function summarizeAccessControlPeople(
+  events: MappedAccessControlEvent[]
+): { people: AccessControlPerson[]; summary: AccessControlSummary } {
+  const byUser = new Map<string, AccessControlPerson>();
+  let unnamed = 0;
+  let allowed = 0;
+  const doorUuids = new Set<string>();
+
+  for (const event of events) {
+    const isAllowed = event.authorizationResult === "ALLOWED";
+    if (isAllowed) allowed++;
+    if (event.doorUuid) doorUuids.add(event.doorUuid);
+
+    const name = event.user?.trim();
+    if (!name) {
+      unnamed++;
+      continue;
+    }
+    const person = byUser.get(name) ?? { user: name, events: 0, allowed: 0, doors: [] };
+    person.events++;
+    if (isAllowed) person.allowed++;
+    const ts = event.timestampMs ?? undefined;
+    if (ts !== undefined) {
+      if (person.firstTimestampMs === undefined || ts < person.firstTimestampMs) {
+        person.firstTimestampMs = ts;
+        person.firstDatetime = event.datetime;
+      }
+      if (person.lastTimestampMs === undefined || ts > person.lastTimestampMs) {
+        person.lastTimestampMs = ts;
+        person.lastDatetime = event.datetime;
+      }
+    }
+    const door = event.doorName ?? event.doorUuid ?? undefined;
+    if (door && !person.doors.includes(door)) person.doors.push(door);
+    byUser.set(name, person);
+  }
+
+  const people = [...byUser.values()].sort(
+    (a, b) => (a.firstTimestampMs ?? Number.MAX_SAFE_INTEGER) - (b.firstTimestampMs ?? Number.MAX_SAFE_INTEGER)
+  );
+  return {
+    people,
+    summary: {
+      events: events.length,
+      allowed,
+      denied: events.length - allowed,
+      named: events.length - unnamed,
+      unnamed,
+      people: people.length,
+      doors: doorUuids.size,
+    },
+  };
 }
 
 export async function getAccessControlEvents(
