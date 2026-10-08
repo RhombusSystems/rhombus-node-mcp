@@ -273,6 +273,7 @@ export const OUTPUT_SCHEMA = z.object({
     .array(
       z.object({
         user: z.string().describe("The person's name as recorded on the credential"),
+        userUuid: z.string().optional().describe("The Rhombus user uuid behind the credential, when known"),
         events: z.number().describe("How many access-control events this person has in the window"),
         allowed: z.number().describe("How many of those were ALLOWED"),
         firstTimestampMs: z.number().optional().describe("Timestamp of this person's first event in the window"),
@@ -311,6 +312,10 @@ export const OUTPUT_SCHEMA = z.object({
             .string()
             .optional()
             .describe("The username of the person who triggered the event"),
+          userUuid: z
+            .string()
+            .optional()
+            .describe("The Rhombus user uuid of the person who triggered the event, when the credential belongs to a user"),
           credSource: z
             .string()
             .optional()

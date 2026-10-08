@@ -91,7 +91,9 @@ const event = (
   authenticationResult = "ACCEPTED"
 ) => ({
   // The API omits the originator on unknown credentials; the schema has no null.
-  ...(user === null ? {} : { user }),
+  ...(user === null
+    ? {}
+    : { user, userUuid: `uuid-${user.replace(/\W/g, "").padEnd(17, "0").slice(0, 17)}` }),
   doorUuid: DOORS[doorIdx].uuid,
   doorName: DOORS[doorIdx].name,
   locationUuid: DOORS[doorIdx].locationUuid,
@@ -172,7 +174,12 @@ describe("events-tool — access-control without a door", () => {
       "Kyle Krueger",
     ]);
     const kyle = payload.people[1];
-    expect(kyle).toMatchObject({ events: 2, allowed: 2, doors: ["Server Room", "Lobby Entry"] });
+    expect(kyle).toMatchObject({
+      events: 2,
+      allowed: 2,
+      doors: ["Server Room", "Lobby Entry"],
+      userUuid: "uuid-KyleKrueger000000",
+    });
     expect(kyle.firstTimestampMs).toBe(T0 + 5 * 60_000);
     expect(kyle.lastTimestampMs).toBe(T0 + 683 * 60_000);
   });
@@ -239,6 +246,13 @@ describe("summarizeAccessControlPeople", () => {
       people: 2,
       doors: 2,
     });
+  });
+
+  it("counts a door without a name but never lists its uuid", () => {
+    const { people } = summarizeAccessControlPeople([
+      { ...event("Zed", 0, 1), doorName: undefined },
+    ]);
+    expect(people[0]).toMatchObject({ user: "Zed", events: 1, doors: [] });
   });
 
   it("handles an empty list", () => {

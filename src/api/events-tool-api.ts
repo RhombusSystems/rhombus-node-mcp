@@ -69,6 +69,8 @@ type MappedAccessControlEvent = {
   doorName?: string;
   locationUuid?: string | null;
   user?: string | null;
+  /** Rhombus org user behind the credential, when the originator was a user. */
+  userUuid?: string;
   credSource?: string | null;
   timestampMs?: number | null;
   datetime?: string;
@@ -90,6 +92,7 @@ function mapAccessControlEvent(
     doorUuid: credEvent?.componentCompositeUuid,
     locationUuid: credEvent?.locationUuid,
     user: (credEvent?.originator as { username?: string | null } | undefined)?.username ?? undefined,
+    userUuid: (credEvent?.originator as { userUuid?: string | null } | undefined)?.userUuid ?? undefined,
     credSource: credEvent?.credSource,
     timestampMs: credEvent?.timestampMs,
     datetime: credEvent?.timestampMs ? formatTimestamp(credEvent.timestampMs, timeZone) : undefined,
@@ -457,12 +460,15 @@ export async function resolveAccessControlledDoorUuids(
 
 export type AccessControlPerson = {
   user: string;
+  /** Rhombus org user uuid (profile photo, user page), when any of their events carried one. */
+  userUuid?: string;
   events: number;
   allowed: number;
   firstTimestampMs?: number;
   firstDatetime?: string;
   lastTimestampMs?: number;
   lastDatetime?: string;
+  /** Door names (doors without a name are counted but not listed). */
   doors: string[];
 };
 
@@ -502,6 +508,7 @@ export function summarizeAccessControlPeople(
       continue;
     }
     const person = byUser.get(name) ?? { user: name, events: 0, allowed: 0, doors: [] };
+    if (event.userUuid && !person.userUuid) person.userUuid = event.userUuid;
     person.events++;
     if (isAllowed) person.allowed++;
     const ts = event.timestampMs ?? undefined;
@@ -515,7 +522,8 @@ export function summarizeAccessControlPeople(
         person.lastDatetime = event.datetime;
       }
     }
-    const door = event.doorName ?? event.doorUuid ?? undefined;
+    // Names only: a uuid is not something to show a person.
+    const door = event.doorName;
     if (door && !person.doors.includes(door)) person.doors.push(door);
     byUser.set(name, person);
   }
