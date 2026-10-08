@@ -15,6 +15,9 @@ startCommand:
         type: string
         default: api2.rhombussystems.com
         description: Optional Rhombus API server URL
+      partnerOrg:
+        type: string
+        description: Optional client org UUID for a partner API key to act in (sent as the x-auth-org header)
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
@@ -23,7 +26,8 @@ startCommand:
       args: ['dist/index.js'],
       env: {
         RHOMBUS_API_KEY: config.rhombusApiKey,
-        RHOMBUS_API_SERVER: config.serverUrl
+        RHOMBUS_API_SERVER: config.serverUrl,
+        ...(config.partnerOrg ? { RHOMBUS_PARTNER_ORG: config.partnerOrg } : {})
       }
     })
   exampleConfig:
