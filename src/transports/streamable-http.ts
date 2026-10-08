@@ -42,6 +42,25 @@ function extractAuth(req: express.Request): AuthPayload | null {
   return null;
 }
 
+/**
+ * `x-auth-org`: the client org a partner credential acts in. Header only —
+ * never a tool argument. Blank means absent (HTTP already strips whitespace).
+ */
+function readPartnerOrg(req: express.Request): string | undefined {
+  const org = req.headers["x-auth-org"];
+  return typeof org === "string" && org ? org : undefined;
+}
+
+/**
+ * Attach the caller's `x-auth-org` to its credential. Only API keys and OAuth
+ * access tokens can act in a client org; null means the pairing is invalid.
+ */
+function withPartnerOrg(auth: AuthPayload, partnerOrg: string | undefined): AuthPayload | null {
+  if (!partnerOrg) return auth;
+  if ("apiKey" in auth || "oauthBearer" in auth) return { ...auth, partnerOrg };
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Transport
 //
@@ -87,6 +106,7 @@ export default function streamableHttpTransport() {
         "x-auth-chat",
         "x-auth-cookie",
         "x-auth-session-alias",
+        "x-auth-org",
       ],
     })
   );
@@ -143,13 +163,20 @@ export default function streamableHttpTransport() {
       logger.info("MCP request authenticated via x-auth-* headers");
     }
 
-    await requestAuthContext.run(auth, async () => {
+    const partnerOrg = readPartnerOrg(req);
+    const orgAuth = withPartnerOrg(auth, partnerOrg);
+    if (!orgAuth) {
+      return reject401(req, res, mcpServerUrl, "x-auth-org needs an API key or OAuth access token");
+    }
+    if (partnerOrg) logger.info(`MCP request acts in partner client org ${partnerOrg}`);
+
+    await requestAuthContext.run(orgAuth, async () => {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         ...(allowedHosts.length > 0 ? { enableDnsRebindingProtection: true, allowedHosts } : {}),
       });
 
-      const server = await createServer();
+      const server = await createServer({ partnerOrg });
       await server.connect(transport);
       logger.info("🔗 Stateless MCP Transport connected");
 
@@ -180,7 +207,7 @@ export default function streamableHttpTransport() {
   });
 
   const PORT = process.env.PORT ?? 3000;
-  app.listen(PORT, () => {
+  return app.listen(PORT, () => {
     logger.info(`rhombus-node-mcp listening on port ${PORT}`);
   });
 }

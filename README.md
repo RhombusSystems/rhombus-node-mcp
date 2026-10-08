@@ -37,6 +37,7 @@ npx -y @smithery/cli install @RhombusSystems/rhombus-node-mcp --client claude
 1. Login to your Rhombus Console  - [Login Here](https://console.rhombus.com)! 🔐
 2. Generate your magic key at [API Key Settings](https://console.rhombus.com/settings/api-management) ✨
 3. Activate your powers by setting `RHOMBUS_API_KEY` in your environment 💪
+4. Partner API key? Also set `RHOMBUS_PARTNER_ORG` to the client org UUID to work in that client's org (over HTTP, send it as the `x-auth-org` header instead) 🤝
 
 ### Step 2: Supercharge Claude Desktop
 

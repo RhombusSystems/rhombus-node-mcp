@@ -48,7 +48,11 @@ export async function serverInit() {
  * Compose the tool set to register based on the caller's accessibleRhombusApps.
  * Shared tools are always included.
  *
- * If **PARTNER** is among the caller's apps (including alongside CONSOLE), only
+ * A partner credential acting in a client org (`x-auth-org` /
+ * `RHOMBUS_PARTNER_ORG`) works inside that org's console, so it gets the
+ * **console** tools whatever its apps are.
+ *
+ * Else if **PARTNER** is among the caller's apps (including alongside CONSOLE), only
  * **partner** tools are added — never the console-only set (partner capability
  * is stricter).
  *
@@ -62,7 +66,13 @@ export async function serverInit() {
  * `resolveAccessibleApps`, so they take the console branch here and never the
  * permissive union.
  */
-function pickToolsForSession(apps: RhombusAppEnum[] | null): ToolFactory[] {
+function pickToolsForSession(
+	apps: RhombusAppEnum[] | null,
+	partnerOrg?: string,
+): ToolFactory[] {
+	if (partnerOrg) {
+		return [...sharedTools, ...consoleTools];
+	}
 	if (apps !== null && apps.length > 0 && apps.includes(RhombusAppEnum.PARTNER)) {
 		return [...sharedTools, ...partnerTools];
 	}
@@ -83,7 +93,11 @@ function isNodeDevEnvironment(): boolean {
 function describeCallerForDevLogs(
 	apps: RhombusAppEnum[] | null,
 	identity: SessionIdentity | null,
+	partnerOrg?: string,
 ): string {
+	if (partnerOrg) {
+		return `caller=partner acting in client org ${partnerOrg}; tool sets=shared + console`;
+	}
 	if (identity?.sessionType === "SUPPORT") {
 		const who = [identity.name, identity.email].filter(Boolean).join(" ");
 		return `caller=support session (${who || "no name"}, id=${identity.userId ?? "?"}); tool sets=shared + console`;
@@ -111,17 +125,21 @@ function logDevToolRegistration(
 	apps: RhombusAppEnum[] | null,
 	identity: SessionIdentity | null,
 	toolsToRegister: ToolFactory[],
+	partnerOrg?: string,
 ): void {
 	if (!isNodeDevEnvironment()) return;
 
 	const names = toolsToRegister.map((t) => path.basename(t.name, ".js")).sort();
 	logger.info(
-		`[dev MCP tools] session=${sessionId ?? "(none)"} — ${describeCallerForDevLogs(apps, identity)} — registering ${names.length} tools`,
+		`[dev MCP tools] session=${sessionId ?? "(none)"} — ${describeCallerForDevLogs(apps, identity, partnerOrg)} — registering ${names.length} tools`,
 	);
 	logger.info(`[dev MCP tools] tool names: ${names.join(", ")}`);
 }
 
-export default async function createServer({ sessionId }: { sessionId?: string } = {}) {
+export default async function createServer({
+	sessionId,
+	partnerOrg,
+}: { sessionId?: string; partnerOrg?: string } = {}) {
 	if (!initiated) {
 		await serverInit();
 	}
@@ -149,8 +167,8 @@ export default async function createServer({ sessionId }: { sessionId?: string }
 	const apps = await resolveAccessibleApps(sessionId);
 	// Same cached getCurrentUser payload — no second API call.
 	const identity = await resolveSessionIdentity(sessionId);
-	const toolsToRegister = pickToolsForSession(apps);
-	logDevToolRegistration(sessionId, apps, identity, toolsToRegister);
+	const toolsToRegister = pickToolsForSession(apps, partnerOrg);
+	logDevToolRegistration(sessionId, apps, identity, toolsToRegister, partnerOrg);
 	const sessionKind = identity?.sessionType === "SUPPORT" ? " sessionType=SUPPORT" : "";
 	logger.info(
 		`🔒 Session ${sessionId ?? "(none)"}:${sessionKind} apps=[${apps?.join(", ") ?? "unknown"}] — registering ${toolsToRegister.length} tools`,

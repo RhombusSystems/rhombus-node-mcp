@@ -9,7 +9,7 @@ The official Model Context Protocol (MCP) server for the [Rhombus](https://www.r
 ## Connecting as an agent
 
 - **Install**: npm package [`rhombus-node-mcp`](https://www.npmjs.com/package/rhombus-node-mcp) (binary `mcp-server-rhombus`), Docker image `rhombussystems/mcp-server-rhombus`, or via [Smithery](https://smithery.ai/server/@RhombusSystems/rhombus-node-mcp).
-- **Auth**: set `RHOMBUS_API_KEY` (create one at <https://console.rhombus.com/settings/api-management>). The key inherits the creating user's permissions.
+- **Auth**: set `RHOMBUS_API_KEY` (create one at <https://console.rhombus.com/settings/api-management>). The key inherits the creating user's permissions. A partner key acts in a client org when `RHOMBUS_PARTNER_ORG` (stdio) or the `x-auth-org` request header (HTTP) names that org.
 - **Transports**: stdio by default; `TRANSPORT_TYPE=streamable-http` serves HTTP.
 - The underlying API: base URL `https://api2.rhombussystems.com/api`, POST + JSON everywhere; OpenAPI spec at <https://api2.rhombussystems.com/api/openapi/public.json>; agent auth guide at <https://www.rhombus.com/auth.md>.
 

@@ -4,6 +4,12 @@ import type { RequestModifiers } from "../util.js";
 
 export const RHOMBUS_API_KEY = process.env.RHOMBUS_API_KEY;
 
+/**
+ * stdio: the client org a partner API key acts in, sent as `x-auth-org`. HTTP
+ * callers send their own `x-auth-org` header instead.
+ */
+export const RHOMBUS_PARTNER_ORG = process.env.RHOMBUS_PARTNER_ORG?.trim() || undefined;
+
 export const serverUrl = process.env.RHOMBUS_API_SERVER || "api2.rhombussystems.com";
 
 export const BASE_URL = `https://${serverUrl}/api`;
@@ -16,8 +22,21 @@ export const STATIC_HEADERS = {
 
 export const AUTH_HEADERS = {
   "x-auth-apikey": RHOMBUS_API_KEY ?? "",
-  "x-auth-scheme": "api-token",
+  ...schemeHeaders("api-token", RHOMBUS_PARTNER_ORG),
 };
+
+/**
+ * A partner credential acting in a client org uses the partner variant of its
+ * scheme and names the org in the `x-auth-org` header.
+ */
+function schemeHeaders(
+  scheme: "api-token" | "api-oauth-token",
+  partnerOrg: string | undefined
+): Record<string, string> {
+  return partnerOrg
+    ? { "x-auth-scheme": `partner-${scheme}`, "x-auth-org": partnerOrg }
+    : { "x-auth-scheme": scheme };
+}
 
 export const appendQueryParams = (url: string, params: object | undefined): string => {
   if (!params || typeof params !== "object") return url;
@@ -51,12 +70,12 @@ export function constructRequestHeaders(
       // OAuth 2.1 authorization server. api2 validates it directly.
       authHeaders = {
         "x-auth-access-token": contextAuth.oauthBearer,
-        "x-auth-scheme": "api-oauth-token",
+        ...schemeHeaders("api-oauth-token", contextAuth.partnerOrg),
       };
     } else if ("apiKey" in contextAuth) {
       authHeaders = {
         "x-auth-apikey": contextAuth.apiKey,
-        "x-auth-scheme": "api-token",
+        ...schemeHeaders("api-token", contextAuth.partnerOrg),
       };
     } else if ("sessionId" in contextAuth) {
       authHeaders = {
