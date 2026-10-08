@@ -9,12 +9,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -25,24 +23,32 @@ jobs:
       - name: Update npm
         run: npm install -g npm@latest
 
-      - name: Configure git
+      # The version is bumped in the commit that lands on main
+      # (`npm version patch --no-git-tag-version` before pushing). This workflow never
+      # pushes: main only accepts changes through a pull request or a bypass, and the
+      # Actions bot has neither, so the old bump-and-push step failed on every run
+      # from 2026-09-30 to 2026-10-08 and nothing was published.
+      - name: Check whether this version is already on npm
+        id: check
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump patch version
-        run: |
-          npm version patch --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
-          git add package.json package-lock.json
-          git commit -m "chore: bump version to v${VERSION} [skip ci]"
-          git push
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          if npm view "rhombus-node-mcp@${VERSION}" version >/dev/null 2>&1; then
+            echo "rhombus-node-mcp@${VERSION} is already on npm; bump the version in package.json to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "rhombus-node-mcp@${VERSION} is not on npm yet; publishing."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install dependencies
+        if: steps.check.outputs.publish == 'true'
         run: npm ci
 
       - name: Build
+        if: steps.check.outputs.publish == 'true'
         run: npm run build
 
       - name: Publish to npm
+        if: steps.check.outputs.publish == 'true'
         run: npm publish --access public --ignore-scripts
