@@ -1,6 +1,7 @@
 import { postApi, throwIfApiError } from "../network/network.js";
 import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
+import { isOrgFeatureFlagEnabled, PLUMERAI_MODEL_SELECTION_ENABLED } from "./org-feature-flags.js";
 
 export async function searchLicensePlates(
   query: string,
@@ -72,6 +73,14 @@ export async function searchObjectsByColor(
   );
 }
 
+// The Console's AI Search request, mirrored (common/state/investigations/ai): CHARON
+// classifies results as matches and streams per location, so it gets the higher ceiling and
+// `onlyMatches`; CLIP returns everything above the similarity threshold, so a flat sea of
+// weak hits unless the cap stays low. AUTO lets the server infer humans or vehicles from the text.
+const SIMILARITY_THRESHOLD = 0.5;
+const MAX_NUM_RESULTS_CLIP = 100;
+const MAX_NUM_RESULTS_CHARON = 500;
+
 export async function searchObjectsByText(
   textQuery: string,
   startTimeMs?: number,
@@ -80,14 +89,18 @@ export async function searchObjectsByText(
   requestModifiers?: RequestModifiers,
   sessionId?: string
 ) {
+  // Same gate as the Console: orgs on the Plumerai cutover search with CHARON, everyone else with CLIP.
+  const charon = await isOrgFeatureFlagEnabled(PLUMERAI_MODEL_SELECTION_ENABLED, requestModifiers, sessionId);
   const body = {
     searchText: textQuery,
-    model: "CLIP_512",
+    model: charon ? "CHARON" : "CLIP_512",
+    objectTypeFilter: ["AUTO"],
     queryStartTimeMs: startTimeMs,
     queryEndTimeMs: endTimeMs,
     queryDeviceUuids: deviceUuids ?? [],
-    maxNumResults: 100,
-    similarityThreshold: 0.5,
+    maxNumResults: charon ? MAX_NUM_RESULTS_CHARON : MAX_NUM_RESULTS_CLIP,
+    similarityThreshold: SIMILARITY_THRESHOLD,
+    ...(charon && { onlyMatches: true }),
   } as any;
 
   const res = await postApi<any>({
