@@ -52,14 +52,21 @@ export const GetFaceEventsArgs = z.object({
         .string()
         .nullable()
         .describe(
-          "Optional filter for face events where the detected face's name contains this substring. The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified. This is case-sensitive."
+          "Optional filter for face events where the detected face's name contains this substring, matched case-insensitively against the organization's registered people (\"jeremy merritt\", \"Merritt\" and \"Jeremy Merrit\" all find \"Jeremy Merritt\"). The search is performed only if the value is at least 3 characters long after trimming spaces. This takes precedence over 'faceNames' if both are specified. Set fuzzyNameMatch true to also tolerate small typos."
         ),
       faceNames: z
         .array(z.string())
         .nullable()
         .describe(
           `Optional filter by a set of specific person names. Only face events associated with these names will be returned. null or an empty array is the same as omitting the filter.
-          This is case-sensitive.`
+          Names are matched ignoring case.`
+        ),
+      fuzzyNameMatch: z
+        .boolean()
+        .nullable()
+        .optional()
+        .describe(
+          "When true, faceNameContains also tolerates small spelling differences (one or two letters per word) against the organization's registered people. Default false. Matching is case-insensitive either way. Use it when a name search returned nothing, or when the user may have mistyped the name."
         ),
       hasEmbedding: z
         .boolean()

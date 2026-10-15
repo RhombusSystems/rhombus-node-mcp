@@ -194,4 +194,52 @@ describe("faces-tool input validation", () => {
     expect(result.isError).toBe(true);
     expect(network.postApi).not.toHaveBeenCalled();
   });
+
+  // Vector Tooling, 2026-10-15: "has jeremy merritt been seen today" → the lower-case
+  // name found nothing because the server matched case-sensitively. The server fix
+  // (face-recognition 3.0.87) is case-insensitive and takes an opt-in fuzzyNameMatch;
+  // the chatbot sets that flag, and until this schema carried it the flag was stripped.
+  it("passes fuzzyNameMatch through to the face-event search", async () => {
+    const result = await callFaces({
+      faceEventFilter: {
+        pageRequest: null,
+        searchFilter: {
+          ...searchFilter,
+          faceNames: null,
+          faceNameContains: "jeremy meritt",
+          fuzzyNameMatch: true,
+        },
+      },
+    });
+    expect(result.isError).not.toBe(true);
+    expect(network.postApi).toHaveBeenCalledWith(
+      expect.objectContaining({
+        route: "/faceRecognition/faceEvent/findFaceEventsByOrg",
+        body: expect.objectContaining({
+          searchFilter: expect.objectContaining({
+            faceNameContains: "jeremy meritt",
+            fuzzyNameMatch: true,
+          }),
+        }),
+      })
+    );
+  });
+
+  it("omits a null fuzzyNameMatch from the request", async () => {
+    const result = await callFaces({
+      faceEventFilter: {
+        pageRequest: null,
+        searchFilter: { ...searchFilter, fuzzyNameMatch: null },
+      },
+    });
+    expect(result.isError).not.toBe(true);
+    const call = vi
+      .mocked(network.postApi)
+      .mock.calls.map(([request]) => request)
+      .find(request => request.route === "/faceRecognition/faceEvent/findFaceEventsByOrg");
+    expect(call).toBeDefined();
+    expect((call?.body as { searchFilter: Record<string, unknown> }).searchFilter).not.toHaveProperty(
+      "fuzzyNameMatch"
+    );
+  });
 });

@@ -242,7 +242,9 @@ export type ExternalUpdateableFacetedUserConfig = z.infer<
 >;
 
 export const BASE_TOOL_ARGS = {
-  cameraUuid: createUuidSchema().describe("the camera uuid requested"),
+  cameraUuid: createUuidSchema().describe(
+    "the camera uuid requested — a real 22-character uuid from a tool result (a camera, or a doorbell-camera / DR40 video intercom, which this tool accepts too). For a badge event, use the event's cameraUuids from events-tool. Never send a placeholder such as REQUIRED_CAMERA_UUID: look the uuid up first (events-tool cameraUuids, or get-entity-tool with entityTypes [\"camera\",\"doorbell-camera\"] filtered by the door's name)."
+  ),
   timestampISO: z
     .string()
     .datetime({ message: "Invalid ISO 8601 date format.", offset: true })

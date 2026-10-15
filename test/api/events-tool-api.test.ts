@@ -183,6 +183,47 @@ describe("getAccessControlEvents", () => {
     expect(events).toHaveLength(1);
     expect(events[0].doorName).toBeUndefined();
   });
+
+  // Vector Tooling, 2026-10-15: after "has jeremy merritt been seen today" found two
+  // badge events, "Show camera footage" failed — the events named the door but no
+  // camera, so MIND sent camera-tool the placeholder "REQUIRED_CAMERA_UUID" and then
+  // searched cameras (not doorbell-cameras) by the door name. The door list already
+  // carried the DR40 intercoms as associatedCameras; now each event carries them.
+  it("attaches the door's associated cameras and intercoms to each event", async () => {
+    vi.mocked(entity.getAccessControlledDoors).mockResolvedValue({
+      accessControlledDoors: [
+        {
+          uuid: "door-uuid",
+          name: "BLD 1 East Office",
+          associatedCameras: ["4FySzqMVTIaPtiy_LVntTA"],
+        },
+        { uuid: "door-no-cam", name: "Annex Door", associatedCameras: [] },
+      ],
+    } as never);
+    vi.mocked(network.postApi).mockImplementation(async ({ body }) => {
+      const door = (body as { accessControlledDoorUuid: string }).accessControlledDoorUuid;
+      return {
+        componentEvents: [
+          { type: "CredentialReceivedEvent", componentCompositeUuid: door, timestampMs: 1 },
+        ],
+      } as never;
+    });
+
+    const events = await getAccessControlEvents(
+      ["door-uuid", "door-no-cam"],
+      1,
+      undefined,
+      "America/Los_Angeles"
+    );
+
+    const byDoor = Object.fromEntries(events.map(event => [event.doorUuid, event]));
+    expect(byDoor["door-uuid"]).toMatchObject({
+      doorName: "BLD 1 East Office",
+      cameraUuids: ["4FySzqMVTIaPtiy_LVntTA"],
+    });
+    expect(byDoor["door-no-cam"].doorName).toBe("Annex Door");
+    expect(byDoor["door-no-cam"]).not.toHaveProperty("cameraUuids");
+  });
 });
 
 describe("describeCappedAccessControlEvents", () => {

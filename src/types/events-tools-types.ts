@@ -22,7 +22,7 @@ export const TOOL_ARGS = {
     .nativeEnum(EventsToolRequestType)
     .describe(
       "The type of events to retrieve. Every mode takes startTime and endTime (ISO 8601); the per-mode UUID argument is named below and in that argument's own description.\n\n" +
-        "access-control: Access control events (arrivals, badge ins, credentials, unlocks) for the doors in accessControlledDoorUuids, or for every access-controlled door (optionally only at locationUuid) when that is null. The result also carries `people` — one row per named person with event counts, first/last time and doors — and `summary`; answer 'who came in' from `people`, which is complete even when the event list is long. Can return a lot of data — use a narrow time range. The returned `credSource` field says how the event was triggered: REMOTE = Rhombus Key app remote unlock; 'REMOTE (Admin)' = unlock via the Rhombus console or browser/mobile app; BLE_WAVE = user waved a hand over the reader; NFC = user tapped a badge or phone on the reader.\n" +
+        "access-control: Access control events (arrivals, badge ins, credentials, unlocks) for the doors in accessControlledDoorUuids, or for every access-controlled door (optionally only at locationUuid) when that is null. The result also carries `people` — one row per named person with event counts, first/last time and doors — and `summary`; answer 'who came in' from `people`, which is complete even when the event list is long. Each event carries `cameraUuids` when the console associates cameras or video intercoms with its door: to show the moment, call camera-tool `image` with one of them and the event's `datetime` as timestampISO — no camera lookup needed, and doorbell-camera (DR40 intercom) uuids work there too. Can return a lot of data — use a narrow time range. The returned `credSource` field says how the event was triggered: REMOTE = Rhombus Key app remote unlock; 'REMOTE (Admin)' = unlock via the Rhombus console or browser/mobile app; BLE_WAVE = user waved a hand over the reader; NFC = user tapped a badge or phone on the reader.\n" +
         "brivo-access-control: Badge/credential events from Brivo-integrated doors. Does not require door UUIDs — automatically fetches the Brivo integration configuration to determine which locations have Brivo doors mapped. Returns integrationEnabled, brivoDoorsConfigured, the brivoDoors list (Brivo IDs, names, Rhombus location UUIDs), and credential-received events newest first. Events are fetched at the LOCATION level, so results may include events from all access-controlled doors at locations where Brivo is configured.\n" +
         "environmental-gateway: Environmental gateway events (sensor readings and derived values) for deviceUuid.\n" +
         "climate-sensor: Climate sensor events (temperature, humidity, air quality, vape/THC detection, battery) for sensorUuid. Cap the row count with limit (default 1000).\n" +
@@ -304,6 +304,12 @@ export const OUTPUT_SCHEMA = z.object({
             .optional()
             .describe("The unique identifier for the access controlled door"),
           doorName: z.string().optional().describe("The name of the access controlled door"),
+          cameraUuids: z
+            .array(z.string())
+            .optional()
+            .describe(
+              "Cameras and video intercoms the console associates with this door (absent when it has none). To show this moment, call camera-tool `image` with one of these and this event's datetime as timestampISO; doorbell-camera (DR40 intercom) uuids are accepted there."
+            ),
           locationUuid: z
             .string()
             .optional()

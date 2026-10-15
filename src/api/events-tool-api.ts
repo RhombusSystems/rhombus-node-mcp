@@ -67,6 +67,12 @@ type MappedAccessControlEvent = {
   authorizationResult?: string | null;
   doorUuid?: string | null;
   doorName?: string;
+  /**
+   * Cameras and video intercoms the console associates with this door (the door's
+   * `associatedCameras`), so footage of the moment is one camera-tool call away.
+   * Present only when the door has at least one.
+   */
+  cameraUuids?: string[];
   locationUuid?: string | null;
   user?: string | null;
   /** Rhombus org user behind the credential, when the originator was a user. */
@@ -567,12 +573,17 @@ export async function getAccessControlEvents(
   );
 
   // Flatten all componentEvents into a single array
-  const doorNames = await getDoorNames(requestModifiers, sessionId);
+  const doors = await getDoorIndex(requestModifiers, sessionId);
   const accessControlEvents = responses
     .flatMap(events => events)
     .map(event => {
-      const doorName = event.doorUuid ? doorNames.get(event.doorUuid) : undefined;
-      return doorName ? { ...event, doorName } : event;
+      const door = event.doorUuid ? doors.get(event.doorUuid) : undefined;
+      if (!door) return event;
+      return {
+        ...event,
+        ...(door.name ? { doorName: door.name } : {}),
+        ...(door.cameraUuids.length > 0 ? { cameraUuids: door.cameraUuids } : {}),
+      };
     });
   accessControlEvents.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
   logger.debug(`componentEvents: ${accessControlEvents.length} access-control events`);
@@ -609,19 +620,39 @@ export function describeCappedAccessControlEvents(
   );
 }
 
+type DoorIndexEntry = { name?: string; cameraUuids: string[] };
+
 /**
- * Door names for access events, so a record table can show doors without a second lookup
- * (MIND report access logs are built from these records by code, not by the model).
+ * Door names and associated cameras for access events, so a record table can show
+ * doors without a second lookup (MIND report access logs are built from these records
+ * by code, not by the model) and footage of an event is one camera-tool call away.
+ * The door list is already fetched for the door scope; before 2026-10-15 its
+ * `associatedCameras` were dropped here, so MIND had no camera for "show me the
+ * footage" after a badge event and guessed a placeholder uuid instead. Door cameras
+ * are often DR40 video intercoms (doorbell-camera entities, not cameras); camera-tool
+ * `image` accepts their uuids.
  */
-async function getDoorNames(
+async function getDoorIndex(
   requestModifiers?: RequestModifiers,
   sessionId?: string
-): Promise<Map<string, string>> {
+): Promise<Map<string, DoorIndexEntry>> {
   try {
     const { accessControlledDoors } = await getAccessControlledDoors(requestModifiers, sessionId);
     return new Map(
       (accessControlledDoors ?? []).flatMap(door =>
-        door?.uuid && door.name ? [[door.uuid, door.name] as const] : []
+        door?.uuid
+          ? [
+              [
+                door.uuid,
+                {
+                  name: door.name ?? undefined,
+                  cameraUuids: (door.associatedCameras ?? []).filter(
+                    (c): c is string => typeof c === "string" && c.length > 0
+                  ),
+                },
+              ] as const,
+            ]
+          : []
       )
     );
   } catch (error) {
