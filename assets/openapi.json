@@ -119526,7 +119526,7 @@
           },
           "faceNameContains" : {
             "type" : "string",
-            "description" : "Optional filter by name substring. The face event is a match if its face name contains the specified value. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence.",
+            "description" : "Optional filter by name. Matching is case-insensitive: the value is resolved against the org's registered people by substring and the face events of the matching people are returned; if no registered person matches, the face event is a match if its face name contains the value ignoring case. Set fuzzyNameMatch to also tolerate small spelling differences. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence.",
             "nullable" : true
           },
           "faceNames" : {
@@ -119537,6 +119537,11 @@
               "description" : "Optional filter by people names.",
               "nullable" : true
             },
+            "nullable" : true
+          },
+          "fuzzyNameMatch" : {
+            "type" : "boolean",
+            "description" : "When true, faceNameContains also tolerates small spelling differences against the org's registered people; default false. Matching is case-insensitive either way.",
             "nullable" : true
           },
           "hasEmbedding" : {
@@ -119622,7 +119627,7 @@
           },
           "faceNameContains" : {
             "type" : "string",
-            "description" : "Optional filter by name substring. The face event is a match if its face name contains the specified value. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence.",
+            "description" : "Optional filter by name. Matching is case-insensitive: the value is resolved against the org's registered people by substring and the face events of the matching people are returned; if no registered person matches, the face event is a match if its face name contains the value ignoring case. Set fuzzyNameMatch to also tolerate small spelling differences. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence.",
             "nullable" : true
           },
           "faceNames" : {
@@ -119633,6 +119638,11 @@
               "description" : "Optional filter by people names.",
               "nullable" : true
             },
+            "nullable" : true
+          },
+          "fuzzyNameMatch" : {
+            "type" : "boolean",
+            "description" : "When true, faceNameContains also tolerates small spelling differences against the org's registered people; default false. Matching is case-insensitive either way.",
             "nullable" : true
           },
           "hasName" : {
