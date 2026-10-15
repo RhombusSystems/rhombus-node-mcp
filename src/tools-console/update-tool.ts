@@ -11,6 +11,9 @@ import {
   getDoorbellCameraConfig,
   getCameraFacetedConfig,
   getCameraFirmwareVersion,
+  getDoorSensorAjarSettings,
+  getDoorSensorDetails,
+  updateDoorSensorAjarSettings,
 } from "../api/update-tool-api.js";
 import {
   buildPrivacyRegionUpdate,
@@ -31,6 +34,7 @@ import {
   CameraDeviceSettings,
   parseFacetedUuid,
   PrivacyRegionsSpec,
+  DoorSensorAjarSettingsInput,
 } from "../types/update-tool-types.js";
 import type { RequestModifiers } from "../util.js";
 import { logger } from "../logger.js";
@@ -43,6 +47,8 @@ Updates configuration settings for Rhombus cameras and doorbell cameras: video s
 MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
 
 PRIVACY REGIONS (blacked-out areas of the image) are set with the privacyRegions parameter — add, replace or clear rectangles or polygons (any simple shape, e.g. a slanted outline) given as percentages of the image. They are NOT a video setting: privacy fields inside cameraVideoSettings are rejected.
+
+DOOR SENSORS: only the ajar threshold — how many seconds a door must stay open before it reports DOOR_AJAR — via entityType door-sensor and the doorSensorSettings parameter. This is the setting behind "when the door stays open N seconds" in door-ajar alerts and automation rules.
 
 Exact field names, LED rules, example payloads and faceted-UUID handling are documented on the parameters. The tool shows current settings before applying updates.
 `;
@@ -187,6 +193,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     cameraAudioSettings,
     cameraDeviceSettings,
     privacyRegions,
+    doorSensorSettings,
     step,
   } = args;
   const hasPrivacyRegions = Boolean(privacyRegions && privacyRegions.trim());
@@ -821,11 +828,102 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     }
   }
 
+  // A door sensor's only setting here is its ajar threshold. It is read and
+  // written through /deviceconfig with the same body the Console's Ajar
+  // Threshold dialog sends, then read back, since DOOR_AJAR rules and alerts
+  // depend on it and a silent no-op would leave them firing at the old delay.
+  if (entityType === "door-sensor") {
+    if (!entityUuid) {
+      return errorResult(
+        "To read or set a door sensor's ajar threshold, pass entityUuid (the sensorUuid from get-entity-tool with entityType door-sensor). No settings were changed."
+      );
+    }
+    const requestModifiers = extra._meta?.requestModifiers as RequestModifiers;
+    const details = await getDoorSensorDetails(entityUuid, requestModifiers, extra.sessionId);
+    if (!details.success) {
+      return errorResult(details.error ?? "Could not verify the door sensor.");
+    }
+    const sensorName = details.name ?? entityUuid;
+
+    const before = await getDoorSensorAjarSettings(entityUuid, requestModifiers, extra.sessionId);
+    if (!before.success || !before.settings) {
+      return errorResult(
+        `Failed to read the door sensor's ajar threshold: ${before.error ?? "unknown error"}`
+      );
+    }
+
+    if (!doorSensorSettings?.trim()) {
+      const current = { ...before.settings, name: sensorName };
+      const readResponse = {
+        needUserInput: false,
+        message: `Door sensor "${sensorName}" reports DOOR_AJAR after ${current.effectiveAjarSeconds} seconds open${current.ajarThresholdEnabled ? "" : " (its ajar threshold is disabled, so the 30-second default applies)"}.`,
+        entityType: "door-sensor",
+        entityUuid,
+        success: true,
+        currentSettings: current,
+      };
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(readResponse) }],
+        structuredContent: readResponse,
+      };
+    }
+
+    const parsed = parseSettingsBlock(
+      "doorSensorSettings",
+      doorSensorSettings,
+      DoorSensorAjarSettingsInput
+    );
+    if (!parsed.ok) return errorResult(parsed.message);
+    const requested = parsed.value;
+    if (requested.ajar_threshold_enabled === undefined && requested.ajar_threshold_sec === undefined) {
+      return errorResult(
+        "Invalid doorSensorSettings: pass ajar_threshold_enabled and/or ajar_threshold_sec. No settings were changed."
+      );
+    }
+    // Setting a threshold only takes effect while it is enabled, so a bare
+    // seconds value means "use this many seconds".
+    const update = {
+      ajar_threshold_enabled: requested.ajar_threshold_enabled ?? (requested.ajar_threshold_sec !== undefined ? true : before.settings.ajarThresholdEnabled),
+      ajar_threshold_sec: requested.ajar_threshold_sec ?? before.settings.ajarThresholdSec,
+    };
+
+    const written = await updateDoorSensorAjarSettings(entityUuid, update, requestModifiers, extra.sessionId);
+    if (!written.success) {
+      return errorResult(
+        `Failed to update the door sensor's ajar threshold: ${written.error ?? "unknown error"}. No settings were changed.`
+      );
+    }
+
+    const after = await getDoorSensorAjarSettings(entityUuid, requestModifiers, extra.sessionId);
+    const applied =
+      after.success &&
+      after.settings?.ajarThresholdEnabled === update.ajar_threshold_enabled &&
+      (update.ajar_threshold_sec === undefined || after.settings?.ajarThresholdSec === update.ajar_threshold_sec);
+    if (!applied) {
+      return errorResult(
+        `The update to door sensor "${sensorName}" was accepted but reading it back does not show it (now: ${JSON.stringify(after.settings ?? after.error)}). Tell the user to check the sensor's Ajar Threshold in the Console.`
+      );
+    }
+    const updateResponse = {
+      needUserInput: false,
+      message: `Door sensor "${sensorName}" now reports DOOR_AJAR after ${after.settings!.effectiveAjarSeconds} seconds open (was ${before.settings.effectiveAjarSeconds}) — verified by reading the config back. This applies to every alert and rule that uses this sensor's door-ajar event.`,
+      entityType: "door-sensor",
+      entityUuid,
+      success: true,
+      previousSettings: before.settings,
+      updatedSettings: after.settings,
+    };
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(updateResponse) }],
+      structuredContent: updateResponse,
+    };
+  }
+
   // Step 0: Show initial form (no entityType provided)
   const entityTypeFormResponse = {
     needUserInput: true,
     message:
-      "Welcome to the Rhombus entity update tool!\n\nWhat type of entity would you like to update?\n\n• **camera** - Update camera video, audio, or device settings\n• **doorbell-camera** - Update doorbell camera video, audio, or device settings\n\nPlease specify the entity type to continue.",
+      "Welcome to the Rhombus entity update tool!\n\nWhat type of entity would you like to update?\n\n• **camera** - Update camera video, audio, or device settings\n• **doorbell-camera** - Update doorbell camera video, audio, or device settings\n• **door-sensor** - Read or set a door sensor's ajar threshold\n\nPlease specify the entity type to continue.",
     requestType: "entity-type-selection",
     submitAction: "update-tool",
   };
