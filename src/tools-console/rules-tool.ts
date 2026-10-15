@@ -46,6 +46,9 @@ A Play Audio action references a saved clip by uuid, never by its text: resolve 
 
 DOOR OPEN DURATION: a DOOR_AJAR trigger fires when the door sensor's own ajar threshold elapses. The trigger's doorAjarThresholdSec field is ignored. 'get' reports each sensor's delay in doorSensorAjarSeconds; to change it ("when the door stays open 15 seconds"), use update-tool with entityType door-sensor — it applies to every rule and alert on that sensor.
 
+LOOPING AND STOPPING AUDIO: an audioPlaybackActions entry also takes "loopDurationSec" (keep repeating the clip for that many seconds) and "playCount" (0 = repeat until stopped; with both set, the first limit reached ends the loop). A loop is stopped by a second rule whose action is {"cancelLoopingAudioPlaybackAction":{"audioDevices":["<audio gateway uuid>"]}} — e.g. DOOR_CLOSED on the same sensor. It stops EVERY loop on those devices. Only short clips loop (about 25 s of speech at most; silence padding is free): audio-tool create-tts-clip with repeatEverySec makes a clip that a loop repeats on a fixed cadence.
+A clip's words are fixed when it is made (no live text-to-speech) and the action plays on a fixed list of gateways, so "announce WHICH door is open on the speakers at THAT door's location, repeating until it closes" needs one clip and one rule pair per door — call get-workflows (door-ajar-announcements) for that request instead of composing rules by hand.
+
 Before changing anything, compare the request with what 'get' returns; if the rule already does what the user asked, say so instead of updating it.
 
 Errors are labelled: "RETRYABLE" means nothing was written and you should call again with corrected arguments.
@@ -98,7 +101,52 @@ function parseRuleConfig(ruleConfig: string): ParsedRuleConfig {
       message: 'ruleConfig.action must be an object, e.g. {"audioPlaybackActions":[...]}.',
     };
   }
+  if (fields.action !== undefined) {
+    const problem = audioActionProblem(fields.action as Record<string, unknown>);
+    if (problem) return { ok: false, message: problem };
+  }
   return { ok: true, value: fields as schema["RuleType"] };
+}
+
+function isNonEmptyStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length > 0 && value.every(item => typeof item === "string" && item);
+}
+
+/**
+ * The API accepts an audio action with no clip or no gateway and stores a rule that never makes a
+ * sound; catch the shapes a model gets wrong before anything is written.
+ */
+function audioActionProblem(action: Record<string, unknown>): string | undefined {
+  const plays = action.audioPlaybackActions;
+  if (plays !== undefined) {
+    if (!Array.isArray(plays)) return "ruleConfig.action.audioPlaybackActions must be an array.";
+    for (const [index, play] of (plays as Record<string, unknown>[]).entries()) {
+      const at = `audioPlaybackActions[${index}]`;
+      if (typeof play !== "object" || play === null) return `${at} must be an object.`;
+      if (typeof play.audioClipUuid !== "string" || !play.audioClipUuid) {
+        return `${at}.audioClipUuid is required — a saved clip's uuid from audio-tool list-clips or create-tts-clip, never the clip's text.`;
+      }
+      if (!isNonEmptyStringArray(play.audioGateways)) {
+        return `${at}.audioGateways must list at least one audio gateway uuid (the field is audioGateways, not audioGatewayUuids).`;
+      }
+      for (const field of ["loopDurationSec", "playCount"] as const) {
+        const value = play[field];
+        if (value !== undefined && value !== null && (!Number.isInteger(value) || (value as number) < 0)) {
+          return `${at}.${field} must be a non-negative integer.`;
+        }
+      }
+    }
+  }
+  const cancel = action.cancelLoopingAudioPlaybackAction;
+  if (cancel !== undefined && cancel !== null) {
+    if (typeof cancel !== "object" || Array.isArray(cancel)) {
+      return 'ruleConfig.action.cancelLoopingAudioPlaybackAction must be an object: {"audioDevices":[...]}.';
+    }
+    if (!isNonEmptyStringArray((cancel as Record<string, unknown>).audioDevices)) {
+      return "cancelLoopingAudioPlaybackAction.audioDevices must list at least one audio device uuid.";
+    }
+  }
+  return undefined;
 }
 
 /** The ajar threshold of every door sensor a DOOR_AJAR trigger names, since that sets the delay. */
@@ -121,6 +169,16 @@ async function getDoorAjarSensorSettings(
   return results.flatMap(result => (result.success && result.settings ? [result.settings] : []));
 }
 
+const RUUID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
+
+/** A rule uuid the model retyped wrongly (too long, mixed from two uuids) fails here, not as an opaque HTTP 400. */
+function badUuid(ruleUuid: string) {
+  if (RUUID_PATTERN.test(ruleUuid)) return undefined;
+  return createToolTextContent(
+    `RETRYABLE — nothing was changed. "${ruleUuid}" is not a rule uuid (a uuid is exactly 22 letters, digits, "-" or "_"). Copy the uuid from 'list' or 'get' exactly.`
+  );
+}
+
 function notFound(ruleUuid: string) {
   return createToolTextContent(
     `No rule in this organization has the uuid "${ruleUuid}". Use requestType 'list' to see the rules that exist — do not guess a uuid.`
@@ -140,6 +198,8 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         if (!args.ruleUuid) {
           return createToolTextContent(JSON.stringify({ error: "ruleUuid is required for get." }));
         }
+        const uuidProblem = badUuid(args.ruleUuid);
+        if (uuidProblem) return uuidProblem;
         const rule = await getRule(args.ruleUuid, requestModifiers, sessionId);
         if (!rule) return notFound(args.ruleUuid);
         const doorSensorAjarSeconds = await getDoorAjarSensorSettings(
@@ -172,7 +232,20 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
           );
         }
         const rule = await createRule(config, requestModifiers, sessionId);
-        return createToolStructuredContent<OUTPUT_SCHEMA>({ rule });
+        // The first firing of a DOOR_AJAR rule waits for the sensor's own ajar delay; report it
+        // with the new rule so the model can tell the user when the first announcement happens.
+        const doorSensorAjarSeconds = await getDoorAjarSensorSettings(
+          config,
+          requestModifiers,
+          sessionId
+        );
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          rule: {
+            ...rule,
+            name: config.name ?? undefined,
+            ...(doorSensorAjarSeconds.length > 0 ? { doorSensorAjarSeconds } : {}),
+          },
+        });
       }
       case RulesToolRequestType.UPDATE: {
         if (!args.ruleUuid || !args.ruleConfig) {
@@ -181,6 +254,8 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
           );
         }
         // Validate before reading anything, so a malformed input costs no calls.
+        const uuidProblem = badUuid(args.ruleUuid);
+        if (uuidProblem) return uuidProblem;
         const parsed = parseRuleConfig(args.ruleConfig);
         if (!parsed.ok) {
           return createToolTextContent(`RETRYABLE — nothing was changed. ${parsed.message}`);
@@ -218,6 +293,8 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
             JSON.stringify({ error: "ruleUuid is required for delete." })
           );
         }
+        const uuidProblem = badUuid(args.ruleUuid);
+        if (uuidProblem) return uuidProblem;
         const rule = await deleteRule(args.ruleUuid, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ rule });
       }
@@ -227,6 +304,8 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
             JSON.stringify({ error: "ruleUuid is required for get-records." })
           );
         }
+        const uuidProblem = badUuid(args.ruleUuid);
+        if (uuidProblem) return uuidProblem;
         const ruleRecords = await getRuleRecords(args.ruleUuid, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ ruleRecords });
       }

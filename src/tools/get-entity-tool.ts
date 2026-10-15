@@ -35,7 +35,9 @@ When the user asks to "describe", "look up", "find", "show me", or "tell me abou
 // type doesn't have are simply absent. "full" skips the projection entirely.
 const CORE_FIELDS = new Set([
   "uuid",
+  "sensorUuid",
   "name",
+  "status",
   "connectionStatus",
   "connected",
   "healthStatus",
@@ -108,6 +110,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         let items = value.map((item: any) =>
           item && typeof item === "object" && "connectionStatus" in item && !("connected" in item)
             ? { ...item, connected: item.connectionStatus !== "RED" }
+            : item,
+        );
+        // Sensor states (door, climate, button, occupancy) carry the device id as sensorUuid and
+        // have no uuid, so the core projection dropped the only id a rule or lookup can use.
+        items = items.map((item: any) =>
+          item && typeof item === "object" && item.uuid == null && typeof item.sensorUuid === "string"
+            ? { uuid: item.sensorUuid, ...item }
             : item,
         );
         // States carry only locationUuid, so the advertised locationName filter matched nothing

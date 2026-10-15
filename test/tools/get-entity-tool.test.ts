@@ -113,3 +113,30 @@ describe("get-entity-tool handler — locationName", () => {
     expect(parsed.cameras[0].locationName).toBeUndefined();
   });
 });
+
+// Door (and climate / button / occupancy) states identify the device as `sensorUuid` and have
+// no `uuid`; the core projection kept only `uuid`, so a listed door sensor came back with no id
+// at all — nothing a rule's deviceUuids or entity-lookup-tool could use.
+describe("get-entity-tool handler — sensor ids", () => {
+  let handler: ReturnType<typeof captureToolHandler<ToolArgs>>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(entityApi.getDoorSensors).mockResolvedValue({
+      doorStates: [
+        { sensorUuid: "door-1", name: "Lobby Door", locationUuid: "loc-1", status: "AJAR", health: "GREEN" },
+      ],
+    });
+    handler = captureToolHandler<ToolArgs>(createTool);
+  });
+
+  it("exposes a door sensor's sensorUuid as uuid and keeps its open/closed status at core detail", async () => {
+    const result = await handler({ ...BASE_ARGS, entityTypes: ["door-sensor"] } as ToolArgs, EMPTY_EXTRA);
+    const text = (result.content ?? []).find((c: any) => c.type === "text");
+    const parsed = JSON.parse((text as any).text);
+    expect(parsed.doorStates).toEqual([
+      expect.objectContaining({ uuid: "door-1", sensorUuid: "door-1", name: "Lobby Door", status: "AJAR" }),
+    ]);
+    expect(parsed.doorStates[0].health).toBeUndefined();
+  });
+});

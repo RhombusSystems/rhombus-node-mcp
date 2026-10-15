@@ -172,7 +172,7 @@ describe("rules-tool", () => {
       const result = await callTool(
         withNulledArgs({
           requestType: "update",
-          ruleUuid: "unknownRu1eS9y2hZpVvGkA",
+          ruleUuid: "unknownRu1eS9y2hZpVvGk",
           ruleConfig: JSON.stringify({ conjunction: "AND" }),
         })
       );
@@ -207,6 +207,86 @@ describe("rules-tool", () => {
       expect(result.isError).toBeFalsy();
       const body = callsTo("/rules/createRule")[0][0].body as { rule: Record<string, unknown> };
       expect(body.rule).toEqual({ ...config, name: "Side Door" });
+    });
+
+    it("reports each DOOR_AJAR sensor's delay with the new rule", async () => {
+      mockRoutes();
+      const { uuid: _uuid, orgUuid: _org, name: _name, ...config } = DOOR_RULE;
+      const result = await callTool(
+        withNulledArgs({ requestType: "create", ruleName: "Side Door", ruleConfig: JSON.stringify(config) })
+      );
+      expect(result.structuredContent).toMatchObject({
+        rule: {
+          uuid: "newRu1eS9y2hZpVvGkAAAA",
+          name: "Side Door",
+          success: true,
+          doorSensorAjarSeconds: [
+            { deviceUuid: SENSOR_LEFT, effectiveAjarSeconds: 15 },
+            { deviceUuid: SENSOR_RIGHT, effectiveAjarSeconds: 15 },
+          ],
+        },
+      });
+    });
+
+    it("passes loop settings and a stop action through to the API", async () => {
+      mockRoutes();
+      const config = {
+        triggers: DOOR_RULE.triggers,
+        action: {
+          audioPlaybackActions: [
+            { audioClipUuid: CLIP_UUID, audioGateways: [GATEWAY_UUID], loopDurationSec: 3600, playCount: 0 },
+          ],
+        },
+      };
+      await callTool(
+        withNulledArgs({ requestType: "create", ruleName: "Loop", ruleConfig: JSON.stringify(config) })
+      );
+      const stop = {
+        triggers: [{ ...DOOR_RULE.triggers[0], activityEvent: { activityEvent: "DOOR_CLOSED" } }],
+        action: { cancelLoopingAudioPlaybackAction: { audioDevices: [GATEWAY_UUID] } },
+      };
+      await callTool(
+        withNulledArgs({ requestType: "create", ruleName: "Stop", ruleConfig: JSON.stringify(stop) })
+      );
+      const bodies = callsTo("/rules/createRule").map(call => (call[0].body as { rule: Record<string, unknown> }).rule);
+      expect(bodies[0].action).toEqual(config.action);
+      expect(bodies[1].action).toEqual(stop.action);
+    });
+
+    it.each([
+      [
+        "a Play Audio action without a gateway",
+        { audioPlaybackActions: [{ audioClipUuid: CLIP_UUID, audioGateways: [] }] },
+        "audioGateways",
+      ],
+      [
+        "a Play Audio action that names the clip by text",
+        { audioPlaybackActions: [{ audioGatewayUuids: [GATEWAY_UUID], message: "Door open" }] },
+        "audioClipUuid",
+      ],
+      [
+        "a negative loop duration",
+        { audioPlaybackActions: [{ audioClipUuid: CLIP_UUID, audioGateways: [GATEWAY_UUID], loopDurationSec: -5 }] },
+        "loopDurationSec",
+      ],
+      [
+        "a stop action without devices",
+        { cancelLoopingAudioPlaybackAction: { audioDevices: [] } },
+        "audioDevices",
+      ],
+    ])("rejects %s before calling the API", async (_label, action, expectedField) => {
+      mockRoutes();
+      const result = await callTool(
+        withNulledArgs({
+          requestType: "create",
+          ruleName: "Bad",
+          ruleConfig: JSON.stringify({ triggers: DOOR_RULE.triggers, action }),
+        })
+      );
+      expect(result.isError).toBe(true);
+      expect(resultText(result)).toContain("RETRYABLE");
+      expect(resultText(result)).toContain(expectedField);
+      expect(callsTo("/rules/createRule")).toHaveLength(0);
     });
 
     it("needs a trigger and an action", async () => {
@@ -269,11 +349,23 @@ describe("rules-tool", () => {
     it("tells the model not to guess an unknown uuid", async () => {
       mockRoutes();
       const result = await callTool(
-        withNulledArgs({ requestType: "get", ruleUuid: "unknownRu1eS9y2hZpVvGkA" })
+        withNulledArgs({ requestType: "get", ruleUuid: "unknownRu1eS9y2hZpVvGk" })
       );
       expect(result.isError).toBe(true);
       expect(resultText(result)).toContain("do not guess");
     });
+  });
+
+  it("catches a retyped rule uuid before it reaches the API", async () => {
+    mockRoutes();
+    // Observed live: the model blended two uuids into a 24-character one and got an opaque HTTP 400.
+    const result = await callTool(
+      withNulledArgs({ requestType: "delete", ruleUuid: "LBavE59gT06HKZz6VEjAoeZw" })
+    );
+    expect(result.isError).toBe(true);
+    expect(resultText(result)).toContain("RETRYABLE");
+    expect(resultText(result)).toContain("exactly 22");
+    expect(vi.mocked(network.postApi)).not.toHaveBeenCalled();
   });
 
   it("get-records asks for this rule's records only", async () => {
