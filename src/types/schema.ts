@@ -57443,10 +57443,12 @@ export interface components {
         Facerecognition_faceevent_ExternalFaceEventSearchFilter: {
             /** @description Optional filter by a set of devices. */
             deviceUuids?: (string | null)[] | null;
-            /** @description Optional filter by name substring. The face event is a match if its face name contains the specified value. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence. */
+            /** @description Optional filter by name. Matching is case-insensitive: the value is resolved against the org's registered people by substring and the face events of the matching people are returned; if no registered person matches, the face event is a match if its face name contains the value ignoring case. Set fuzzyNameMatch to also tolerate small spelling differences. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence. */
             faceNameContains?: string | null;
             /** @description Optional filter by people names. */
             faceNames?: (string | null)[] | null;
+            /** @description When true, faceNameContains also tolerates small spelling differences against the org's registered people; default false. Matching is case-insensitive either way. */
+            fuzzyNameMatch?: boolean | null;
             /** @description Optional filter by the presence or absence of an embedding. */
             hasEmbedding?: boolean | null;
             /** @description Optional filter by the presence or absence of a person name. */
@@ -57473,10 +57475,12 @@ export interface components {
              * @description Optional face match distance threshold used to compare face event images. Defaults to 0.7.Valid range [0,1].
              */
             faceMatchDistanceThreshold?: number | null;
-            /** @description Optional filter by name substring. The face event is a match if its face name contains the specified value. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence. */
+            /** @description Optional filter by name. Matching is case-insensitive: the value is resolved against the org's registered people by substring and the face events of the matching people are returned; if no registered person matches, the face event is a match if its face name contains the value ignoring case. Set fuzzyNameMatch to also tolerate small spelling differences. The search will only be performed if the provided value is at least 3 characters long after trimming leading and trailing spaces. If both faceNameContains and faceNames are specified, faceNameContains takes a precedence. */
             faceNameContains?: string | null;
             /** @description Optional filter by people names. */
             faceNames?: (string | null)[] | null;
+            /** @description When true, faceNameContains also tolerates small spelling differences against the org's registered people; default false. Matching is case-insensitive either way. */
+            fuzzyNameMatch?: boolean | null;
             /** @description Optional filter by the presence or absence of a person name. */
             hasName?: boolean | null;
             /** @description Optional filter by labels. */
