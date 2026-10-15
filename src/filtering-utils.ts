@@ -638,6 +638,18 @@ function withDescription(
  * has to be all-optional. Nothing model-facing changes: `outputSchema` is never
  * forwarded to the LLM, and the includeFields path catalog is derived from the
  * ORIGINAL schema before this runs. Descriptions are preserved.
+ *
+ * Every rebuilt object is also LOOSE (unknown keys allowed). The SDK advertises
+ * `outputSchema` to clients as JSON Schema built in zod's output mode, where a
+ * plain `z.object` becomes `additionalProperties: false`, and MCP clients
+ * validate `structuredContent` against that with a JSON Schema validator. So
+ * the moment the upstream API gains a field the generated schema does not
+ * list, every result carrying it fails on the CLIENT as
+ * `MCP error -32602: Structured content does not match the tool's output
+ * schema: data/<array>/0 must NOT have additional properties` — a working call
+ * discarded over a field nobody asked about (hit in prod on a device listing
+ * whose records had grown 20+ properties past the schema). A loose object
+ * keeps type checking for the fields we know and ignores the rest.
  */
 export function deepOptionalizeSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
 	// Wrappers: unwrap, recurse, re-wrap so nested objects are relaxed too.
@@ -671,7 +683,7 @@ export function deepOptionalizeSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
 				unwrapped = unwrapped.unwrap() as z.ZodTypeAny;
 			}
 			if (unwrapped instanceof z.ZodArray) {
-				relaxed[`${key}Grouped`] = z.object({
+				relaxed[`${key}Grouped`] = z.looseObject({
 					by: z.string(),
 					total: z.number().int().nonnegative(),
 					groups: z.record(z.string(), z.number().int().nonnegative()),
@@ -680,7 +692,7 @@ export function deepOptionalizeSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
 				}).optional();
 			}
 		}
-		return withDescription(z.object(relaxed), schema);
+		return withDescription(z.looseObject(relaxed), schema);
 	}
 
 	if (schema instanceof z.ZodArray) {
@@ -727,7 +739,11 @@ function optionalize(schema: z.ZodTypeAny): z.ZodTypeAny {
 
 /**
  * Applies {@link deepOptionalizeSchema} to either form `registerTool` accepts —
- * a `ZodObject` or a raw `{ key: ZodType }` shape — returning the same form.
+ * a `ZodObject` or a raw `{ key: ZodType }` shape — and always returns a schema
+ * object. A raw shape is deliberately NOT handed back as a shape: the SDK wraps
+ * a shape in its own strict `z.object`, which re-introduces
+ * `additionalProperties: false` at the top level and would reject a new
+ * top-level response field the same way a nested one used to be rejected.
  * A schema we cannot rewrite is left untouched; strict validation is a better
  * failure mode than a broken registration.
  */
@@ -737,10 +753,9 @@ function relaxOutputSchemaForProjection(outputSchema: unknown): unknown {
 			return deepOptionalizeSchema(outputSchema as z.ZodTypeAny);
 		}
 		if (outputSchema && typeof outputSchema === "object") {
-			const relaxed = deepOptionalizeSchema(
+			return deepOptionalizeSchema(
 				z.object(outputSchema as Record<string, z.ZodTypeAny>),
 			);
-			return (relaxed as z.ZodObject).shape;
 		}
 	} catch {
 		// fall through
