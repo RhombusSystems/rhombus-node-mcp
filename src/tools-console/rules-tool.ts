@@ -1,12 +1,17 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   listRules,
+  getRule,
   createRule,
   updateRule,
   deleteRule,
   getRuleRecords,
+  listAudioClips,
 } from "../api/rules-tool-api.js";
+import { getDoorSensorAjarSettings } from "../api/update-tool-api.js";
+import type { schema } from "../types/schema.js";
 import {
+  RULE_FIELDS,
   RulesToolRequestType,
   OUTPUT_SCHEMA,
   TOOL_ARGS,
@@ -16,6 +21,7 @@ import {
   createToolStructuredContent,
   createToolTextContent,
   extractFromToolExtra,
+  type RequestModifiers,
 } from "../util.js";
 
 const TOOL_NAME = "rules-tool";
@@ -24,14 +30,102 @@ const TOOL_DESCRIPTION = `
 This tool manages Rhombus automation rules for triggering actions based on events.
 
 It has the following modes of operation, determined by the "requestType" parameter:
-- ${RulesToolRequestType.LIST}: List all automation rules in the organization.
-- ${RulesToolRequestType.CREATE}: Create a new automation rule. Requires ruleName and ruleConfig (JSON string with the rule definition).
-- ${RulesToolRequestType.UPDATE}: Update an existing rule. Requires ruleUuid and ruleConfig (JSON string with updated fields).
+- ${RulesToolRequestType.LIST}: List all automation rules in the organization (names and uuids only).
+- ${RulesToolRequestType.GET}: Get one rule in full — its triggers, action, conjunction and filters. Requires ruleUuid. Always call this before 'update'.
+- ${RulesToolRequestType.CREATE}: Create a new automation rule. Requires ruleName and ruleConfig.
+- ${RulesToolRequestType.UPDATE}: Update an existing rule. Requires ruleUuid and ruleConfig holding only the top-level fields to change; fields you leave out are kept.
 - ${RulesToolRequestType.DELETE}: Delete a rule. Requires ruleUuid.
 - ${RulesToolRequestType.GET_RECORDS}: Get the event trigger history for a specific rule. Requires ruleUuid.
+- ${RulesToolRequestType.LIST_AUDIO_CLIPS}: List the organization's saved audio clips (uploads and text-to-speech) with their uuids and spoken text.
 
-Rules can trigger notifications, recordings, and other actions based on events from cameras, sensors, doors, etc.
+ruleConfig uses the same shape 'get' returns. Example — when either door sensor reports the door ajar, play a saved clip on an audio gateway:
+{"triggers":[{"type":"DEVICE_ACTIVITY_EVENT","activityEvent":{"activityEvent":"DOOR_AJAR"},"deviceUuids":["<door sensor uuid>","<door sensor uuid>"]}],
+ "conjunction":"OR",
+ "action":{"audioPlaybackActions":[{"audioClipUuid":"<uuid from list-audio-clips>","audioGateways":["<audio gateway uuid>"]}]}}
+A Play Audio action references a saved clip by uuid, never by its text: resolve the clip with ${RulesToolRequestType.LIST_AUDIO_CLIPS}.
+
+DOOR OPEN DURATION: a DOOR_AJAR trigger fires when the door sensor's own ajar threshold elapses. The trigger's doorAjarThresholdSec field is ignored. 'get' reports each sensor's delay in doorSensorAjarSeconds; to change it ("when the door stays open 15 seconds"), use update-tool with entityType door-sensor — it applies to every rule and alert on that sensor.
+
+Before changing anything, compare the request with what 'get' returns; if the rule already does what the user asked, say so instead of updating it.
+
+Errors are labelled: "RETRYABLE" means nothing was written and you should call again with corrected arguments.
 `;
+
+const RULE_FIELD_SET = new Set<string>(RULE_FIELDS);
+
+type ParsedRuleConfig = { ok: true; value: schema["RuleType"] } | { ok: false; message: string };
+
+/**
+ * Parse a ruleConfig string into RuleType fields. Rejects keys the API does not have, so a guessed
+ * shape fails here with the valid field list instead of reaching the API as an empty rule.
+ */
+function parseRuleConfig(ruleConfig: string): ParsedRuleConfig {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(ruleConfig);
+  } catch {
+    return { ok: false, message: "ruleConfig is not valid JSON." };
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { ok: false, message: "ruleConfig must be a JSON object of rule fields." };
+  }
+  // Accept the API's request envelope too, since it holds exactly one rule.
+  const envelope = parsed as Record<string, unknown>;
+  const fields = (
+    Object.keys(envelope).length === 1 &&
+    typeof (envelope.rule ?? envelope.ruleUpdate) === "object" &&
+    (envelope.rule ?? envelope.ruleUpdate) !== null
+      ? (envelope.rule ?? envelope.ruleUpdate)
+      : envelope
+  ) as Record<string, unknown>;
+
+  const unknownKeys = Object.keys(fields).filter(key => !RULE_FIELD_SET.has(key));
+  if (unknownKeys.length > 0) {
+    return {
+      ok: false,
+      message: `ruleConfig has fields a rule does not have: ${unknownKeys.join(", ")}. Valid top-level fields are ${RULE_FIELDS.join(", ")}. Call 'get' on an existing rule to see the shape, and see the example in this tool's description.`,
+    };
+  }
+  if (fields.triggers !== undefined && !Array.isArray(fields.triggers)) {
+    return { ok: false, message: "ruleConfig.triggers must be an array of trigger objects." };
+  }
+  if (
+    fields.action !== undefined &&
+    (typeof fields.action !== "object" || fields.action === null || Array.isArray(fields.action))
+  ) {
+    return {
+      ok: false,
+      message: 'ruleConfig.action must be an object, e.g. {"audioPlaybackActions":[...]}.',
+    };
+  }
+  return { ok: true, value: fields as schema["RuleType"] };
+}
+
+/** The ajar threshold of every door sensor a DOOR_AJAR trigger names, since that sets the delay. */
+async function getDoorAjarSensorSettings(
+  rule: schema["RuleType"],
+  requestModifiers: RequestModifiers | undefined,
+  sessionId: string | undefined
+) {
+  const sensorUuids = new Set<string>();
+  for (const trigger of (rule.triggers ?? []) as Record<string, unknown>[]) {
+    const activityEvent = trigger.activityEvent as { activityEvent?: string } | undefined;
+    if (activityEvent?.activityEvent !== "DOOR_AJAR") continue;
+    for (const uuid of (trigger.deviceUuids as (string | null)[] | undefined) ?? []) {
+      if (uuid) sensorUuids.add(uuid);
+    }
+  }
+  const results = await Promise.all(
+    [...sensorUuids].map(uuid => getDoorSensorAjarSettings(uuid, requestModifiers, sessionId))
+  );
+  return results.flatMap(result => (result.success && result.settings ? [result.settings] : []));
+}
+
+function notFound(ruleUuid: string) {
+  return createToolTextContent(
+    `No rule in this organization has the uuid "${ruleUuid}". Use requestType 'list' to see the rules that exist — do not guess a uuid.`
+  );
+}
 
 const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
   const { requestModifiers, sessionId } = extractFromToolExtra(_extra);
@@ -42,14 +136,41 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         const rules = await listRules(requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ rules });
       }
+      case RulesToolRequestType.GET: {
+        if (!args.ruleUuid) {
+          return createToolTextContent(JSON.stringify({ error: "ruleUuid is required for get." }));
+        }
+        const rule = await getRule(args.ruleUuid, requestModifiers, sessionId);
+        if (!rule) return notFound(args.ruleUuid);
+        const doorSensorAjarSeconds = await getDoorAjarSensorSettings(
+          rule,
+          requestModifiers,
+          sessionId
+        );
+        return createToolStructuredContent<OUTPUT_SCHEMA>({
+          rule: {
+            ...(rule as OUTPUT_SCHEMA["rule"]),
+            ...(doorSensorAjarSeconds.length > 0 ? { doorSensorAjarSeconds } : {}),
+          },
+        });
+      }
       case RulesToolRequestType.CREATE: {
         if (!args.ruleConfig) {
           return createToolTextContent(
             JSON.stringify({ error: "ruleConfig is required for create." })
           );
         }
-        const config = JSON.parse(args.ruleConfig);
+        const parsed = parseRuleConfig(args.ruleConfig);
+        if (!parsed.ok) {
+          return createToolTextContent(`RETRYABLE — nothing was changed. ${parsed.message}`);
+        }
+        const config = parsed.value;
         if (args.ruleName) config.name = args.ruleName;
+        if (!config.triggers?.length || !config.action) {
+          return createToolTextContent(
+            "RETRYABLE — nothing was changed. A new rule needs at least one trigger in ruleConfig.triggers and an action in ruleConfig.action."
+          );
+        }
         const rule = await createRule(config, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ rule });
       }
@@ -59,11 +180,36 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
             JSON.stringify({ error: "ruleUuid and ruleConfig are required for update." })
           );
         }
-        const updateConfig = JSON.parse(args.ruleConfig);
-        updateConfig.ruleUuid = args.ruleUuid;
-        const rule = await updateRule(updateConfig, requestModifiers, sessionId);
+        // Validate before reading anything, so a malformed input costs no calls.
+        const parsed = parseRuleConfig(args.ruleConfig);
+        if (!parsed.ok) {
+          return createToolTextContent(`RETRYABLE — nothing was changed. ${parsed.message}`);
+        }
+        const changes: schema["RuleType"] = { ...parsed.value };
+        if (args.ruleName) changes.name = args.ruleName;
+        delete changes.uuid;
+        delete changes.orgUuid;
+        const changedFields = Object.keys(changes);
+        if (changedFields.length === 0) {
+          return createToolTextContent(
+            "RETRYABLE — nothing was changed. ruleConfig has no fields to change."
+          );
+        }
+
+        // The API replaces the stored rule with the one sent, so sending only the changed
+        // fields would blank the others. Read first and merge.
+        const existing = await getRule(args.ruleUuid, requestModifiers, sessionId);
+        if (!existing) return notFound(args.ruleUuid);
+
+        const merged: schema["RuleType"] = { ...existing, ...changes, uuid: args.ruleUuid };
+        await updateRule(merged, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({
-          rule: { uuid: args.ruleUuid, ...rule },
+          rule: {
+            uuid: args.ruleUuid,
+            name: merged.name ?? undefined,
+            success: true,
+            changedFields,
+          },
         });
       }
       case RulesToolRequestType.DELETE: {
@@ -83,6 +229,10 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         }
         const ruleRecords = await getRuleRecords(args.ruleUuid, requestModifiers, sessionId);
         return createToolStructuredContent<OUTPUT_SCHEMA>({ ruleRecords });
+      }
+      case RulesToolRequestType.LIST_AUDIO_CLIPS: {
+        const audioClips = await listAudioClips(requestModifiers, sessionId);
+        return createToolStructuredContent<OUTPUT_SCHEMA>({ audioClips });
       }
     }
   } catch (error: unknown) {

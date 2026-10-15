@@ -668,3 +668,132 @@ export async function getDoorbellCameraDetails(
     };
   }
 }
+
+/**
+ * Seconds a door must stay open before its sensor reports DOOR_AJAR when the sensor's own
+ * threshold is disabled or unset.
+ */
+export const DEFAULT_DOOR_AJAR_SECONDS = 30;
+
+export type DoorSensorAjarSettings = {
+  deviceUuid: string;
+  name?: string;
+  ajarThresholdEnabled: boolean;
+  ajarThresholdSec?: number;
+  /** What the sensor actually waits before reporting DOOR_AJAR. */
+  effectiveAjarSeconds: number;
+};
+
+/**
+ * A door sensor's ajar threshold. This setting — not a rule's trigger — decides how long a door
+ * must stay open before DOOR_AJAR fires, and only when ajar_threshold_enabled is true.
+ */
+export async function getDoorSensorAjarSettings(
+  deviceUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string; settings?: DoorSensorAjarSettings }> {
+  try {
+    const result = await postApi<schema["Device_config_GetFacetedUserConfigWSResponse"]>({
+      route: "/deviceconfig/getFacetedConfig",
+      body: { deviceUuid } satisfies schema["Device_config_GetConfigWSRequest"],
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return {
+        success: false,
+        error: apiFailureMessage(result) ?? "Failed to read the door sensor's configuration",
+      };
+    }
+
+    const doorSensorSettings = result.config?.doorSensorSettings;
+    const enabled = doorSensorSettings?.ajar_threshold_enabled === true;
+    const seconds = doorSensorSettings?.ajar_threshold_sec ?? undefined;
+    return {
+      success: true,
+      settings: {
+        deviceUuid,
+        ajarThresholdEnabled: enabled,
+        ajarThresholdSec: seconds,
+        effectiveAjarSeconds: enabled && seconds && seconds > 0 ? seconds : DEFAULT_DOOR_AJAR_SECONDS,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+/** Confirm a door sensor exists before writing to it, and get its name. */
+export async function getDoorSensorDetails(
+  deviceUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string; name?: string }> {
+  try {
+    const result = await postApi<{
+      doorStates?: ({ sensorUuid?: string | null; name?: string | null } | null)[] | null;
+      error?: boolean;
+      errorMsg?: string | null;
+    }>({
+      route: "/door/getMinimalDoorStateList",
+      body: {},
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return { success: false, error: result.errorMsg || "Failed to list door sensors" };
+    }
+
+    const match = result.doorStates?.find(state => state?.sensorUuid === deviceUuid);
+    if (!match) {
+      return {
+        success: false,
+        error: `No door sensor in this organization has the uuid "${deviceUuid}". Use get-entity-tool with entityType door-sensor to list them (the uuid is the sensorUuid field) — do not guess a uuid.`,
+      };
+    }
+    return { success: true, name: match.name ?? undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+/** Write a door sensor's ajar threshold — the same request the Console's Ajar Threshold dialog sends. */
+export async function updateDoorSensorAjarSettings(
+  deviceUuid: string,
+  doorSensorSettings: { ajar_threshold_enabled?: boolean; ajar_threshold_sec?: number },
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await postApi<schema["Common_devices_UpdateConfigWSResponse"]>({
+      route: "/deviceconfig/updateFacetedConfig",
+      body: {
+        configUpdate: { deviceUuid, doorSensorSettings },
+      } satisfies schema["Device_config_UpdateFacetedUserConfigWSRequest"],
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return {
+        success: false,
+        error: apiFailureMessage(result) ?? "Failed to update the door sensor's configuration",
+      };
+    }
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}

@@ -10,7 +10,7 @@ import { z } from "zod";
  * stopped the model picking one of those, and each attempt burned a turn on a
  * guaranteed dead end. Add a value here only once its handler exists.
  */
-export const ENTITY_TYPE = z.enum(["camera", "doorbell-camera"]);
+export const ENTITY_TYPE = z.enum(["camera", "doorbell-camera", "door-sensor"]);
 export type EntityType = z.infer<typeof ENTITY_TYPE>;
 
 // Camera-specific update schemas
@@ -162,9 +162,9 @@ export type PrivacyRegionsSpec = z.infer<typeof PrivacyRegionsSpec>;
 // Input schema for the tool
 export const TOOL_ARGS = {
   entityType: ENTITY_TYPE.describe(
-    "Type of entity to update. Only 'camera' and 'doorbell-camera' can be updated through this tool; " +
-      "for climate sensors, door controllers, environmental gateways, audio gateways and badge readers, tell the " +
-      "user the change has to be made in the Rhombus Console rather than attempting it here."
+    "Type of entity to update. Only 'camera', 'doorbell-camera' and 'door-sensor' (its ajar threshold only) can be " +
+      "updated through this tool; for climate sensors, door controllers, environmental gateways, audio gateways and " +
+      "badge readers, tell the user the change has to be made in the Rhombus Console rather than attempting it here."
   ),
   entityUuid: z
     .string()
@@ -214,6 +214,15 @@ export const TOOL_ARGS = {
       `JSON string that adds, replaces or clears PRIVACY REGIONS on a camera (areas blacked out in live and recorded video). This is the ONLY way to change privacy regions — never put privacy fields in cameraVideoSettings. Coordinates are PERCENTAGES (0 to 100) of the image as the user sees it in the Console, measured from the top-left corner; the tool converts them for the camera's rotation and firmware. Shape: {"mode": "add" | "replace" | "clear", "regions": [...]}, where each region is EITHER a rectangle {"leftPercent": n, "topPercent": n, "widthPercent": n, "heightPercent": n} OR a polygon {"points": [{"xPercent": n, "yPercent": n}, ...]} with 3 to 64 vertices listed in order around the outline (any simple shape: triangle, slanted quadrilateral, an outline that follows a window or doorway at an angle; edges must not cross). Use a polygon whenever the area is not an upright rectangle — do not approximate a slanted area with a bounding rectangle. Cameras on firmware older than 2025_0626 accept rectangles only; the tool says so if a polygon is sent to one. "add" keeps existing regions (default choice), "replace" removes existing regions first, "clear" removes all regions (omit "regions"). Examples — the left quarter of the top half: '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'; a slanted quadrilateral: '{"mode": "add", "regions": [{"points": [{"xPercent": 10, "yPercent": 5}, {"xPercent": 40, "yPercent": 15}, {"xPercent": 35, "yPercent": 60}, {"xPercent": 5, "yPercent": 50}]}]}'. The tool reads the camera config back and reports the regions now in effect. Cameras only (not doorbell cameras).`,
     ),
 
+  // Optional so callers built before this field existed keep validating.
+  doorSensorSettings: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      `JSON string that sets a DOOR SENSOR's ajar threshold — how many seconds the door must stay open before the sensor reports DOOR_AJAR. That event drives door-ajar alerts and every automation rule with a DOOR_AJAR trigger on the sensor, so this is how to make "when the door stays open N seconds" happen (a rule trigger's own doorAjarThresholdSec is ignored). Fields: ajar_threshold_enabled: boolean · ajar_threshold_sec: whole seconds, 1 or more. When the threshold is disabled the sensor waits 30 seconds. Example for 15 seconds: '{"ajar_threshold_enabled": true, "ajar_threshold_sec": 15}'. Pass entityType door-sensor and the sensor's uuid (sensorUuid from get-entity-tool) as entityUuid; omit this field to read the current threshold. One sensor per call.`
+    ),
+
   // Step tracking for multi-step updates
   step: z
     .enum(["entity-selection", "settings-configuration", "confirmation"])
@@ -245,6 +254,13 @@ export const OUTPUT_SCHEMA = z.object({
   // same percent units the caller used.
   privacyRegions: z.any().optional(),
 });
+
+export const DoorSensorAjarSettingsInput = z
+  .object({
+    ajar_threshold_enabled: z.boolean().optional(),
+    ajar_threshold_sec: z.number().int().min(1).optional(),
+  })
+  .strict();
 
 // API payload types
 export const UpdateCameraConfigPayload = z.object({
