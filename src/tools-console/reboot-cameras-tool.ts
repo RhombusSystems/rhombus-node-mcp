@@ -11,7 +11,12 @@ const TOOL_DESCRIPTION =
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { cameraUuids, confirmationId } = args;
-  const confirmation = requireConfirmation(confirmationId);
+  // The id is bound to this tool and these cameras: confirming one reboot
+  // never authorizes another.
+  const confirmation = requireConfirmation(confirmationId, {
+    tool: TOOL_NAME,
+    args: { cameraUuids },
+  });
 
   if (!isConfirmed(confirmation)) {
     return confirmation;
@@ -62,7 +67,9 @@ export function createTool(server: McpServer) {
         status: z
           .string()
           .optional()
-          .describe("SUCCESS when every camera rebooted, PARTIAL_SUCCESS when some did, ERROR when none did"),
+          .describe(
+            "SUCCESS when every camera rebooted, PARTIAL_SUCCESS when some did, ERROR when none did"
+          ),
         successCount: z.number().optional(),
         errorCount: z.number().optional(),
       },
