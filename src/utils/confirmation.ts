@@ -107,17 +107,40 @@ export function issueConfirmationId(action: ConfirmationAction, now: number = Da
   return `${TOKEN_VERSION}${issuedAt}${nonce}${signature(issuedAt, nonce, actionDigest(action), keyMaterial())}`;
 }
 
-/** True when `confirmationId` was issued by this caller for exactly this action and has not expired. */
+// Longest input searched for an embedded id; anything longer is rejected outright.
+const MAX_CONFIRMATION_INPUT = 512;
+
+/**
+ * Every id-shaped substring of `value`, in order. Models occasionally mangle an id while copying it
+ * back — a repeated chunk appended, the id wrapped in other text — and the signature check, not the
+ * surrounding characters, is what proves the id was issued for this action.
+ */
+function idCandidates(value: string): string[] {
+  if (value.length > MAX_CONFIRMATION_INPUT) return [];
+  const out: string[] = [];
+  for (let i = value.indexOf(TOKEN_VERSION); i !== -1; i = value.indexOf(TOKEN_VERSION, i + 1)) {
+    if (i + TOKEN_LENGTH > value.length) break;
+    out.push(value.slice(i, i + TOKEN_LENGTH));
+  }
+  return out;
+}
+
+/**
+ * True when `confirmationId` contains an id this caller issued for exactly this action that has not
+ * expired. A valid id surrounded by extra characters still confirms; a tampered, truncated or
+ * foreign id never does.
+ */
 export function verifyConfirmationId(
   confirmationId: string | null | undefined,
   action: ConfirmationAction,
   now: number = Date.now()
 ): boolean {
-  if (
-    !confirmationId ||
-    confirmationId.length !== TOKEN_LENGTH ||
-    !confirmationId.startsWith(TOKEN_VERSION)
-  ) {
+  if (!confirmationId) return false;
+  return idCandidates(confirmationId).some(candidate => verifyExactId(candidate, action, now));
+}
+
+function verifyExactId(confirmationId: string, action: ConfirmationAction, now: number): boolean {
+  if (confirmationId.length !== TOKEN_LENGTH || !confirmationId.startsWith(TOKEN_VERSION)) {
     return false;
   }
   if (!/^[0-9a-f]+$/.test(confirmationId.slice(TOKEN_VERSION.length))) return false;

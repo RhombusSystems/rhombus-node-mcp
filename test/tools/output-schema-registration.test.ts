@@ -212,6 +212,11 @@ describe("get-org-information", () => {
 });
 
 describe("reboot-cameras", () => {
+  // No known connection states (the lookup's failure shape): the handshake runs as before.
+  beforeEach(() => {
+    vi.mocked(rebootApi.getCameraConnections).mockResolvedValue(new Map());
+  });
+
   it("still runs the confirmation handshake, then returns structured counts", async () => {
     vi.mocked(rebootApi.rebootCameras).mockResolvedValue({
       status: "SUCCESS",

@@ -35,3 +35,36 @@ export async function rebootCameras(
 
   return { status, successCount, errorCount };
 }
+
+/**
+ * Name and connection status (GREEN / YELLOW / ORANGE / RED, RED = disconnected) of each requested
+ * camera, from the minimal state list the Console shows. A camera missing from that list (e.g. a
+ * doorbell camera) is absent from the map; a failed lookup returns an empty map, which never blocks
+ * a reboot.
+ */
+export async function getCameraConnections(
+  cameraUuids: string[],
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<Map<string, { name?: string; connectionStatus?: string }>> {
+  const connections = new Map<string, { name?: string; connectionStatus?: string }>();
+  try {
+    const response = await postApi<any>({
+      route: "/camera/getMinimalCameraStateList",
+      body: {},
+      modifiers: requestModifiers,
+      sessionId,
+    });
+    for (const state of response?.cameraStates ?? []) {
+      if (state?.uuid && cameraUuids.includes(state.uuid)) {
+        connections.set(state.uuid, {
+          name: state.name ?? undefined,
+          connectionStatus: state.connectionStatus ?? undefined,
+        });
+      }
+    }
+  } catch {
+    // Lookup failure: fall through with what we have.
+  }
+  return connections;
+}
