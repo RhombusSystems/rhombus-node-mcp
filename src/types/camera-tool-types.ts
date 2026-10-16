@@ -251,7 +251,7 @@ export const BASE_TOOL_ARGS = {
     .nullable()
     .describe(
       `
-      the timestamp for the image. This will default to 5 minutes before the current time. You can also call time-tool to parse the user's time description.
+      the timestamp for the image. Omit it for the current view: the tool fetches a near-live frame (about 10 seconds ago, or ~5 minutes ago if the most recent footage is not available yet) and returns the frame's actual timestampMs. You can also call time-tool to parse the user's time description.
       ` + ISOTimestampFormatDescription
     ),
   requestType: z
