@@ -4,6 +4,13 @@ import type { schema } from "../types/schema.js";
 import { formatTimestamp, RequestModifiers } from "../util.js";
 import { tempFunc, TempUnit } from "../utils/temp.js";
 
+// Every list below returns the device states exactly as the API reports them,
+// including devices that are not assigned to a location (the API omits
+// `locationUuid` for those; the Rhombus Console lists them as "No Location").
+// An earlier version dropped any state without a `locationUuid`, which hid
+// unassigned devices entirely — a registered, online camera that had simply
+// not been placed in a location was reported as not existing.
+
 export async function getCameraList(
 	requestModifiers?: any,
 	sessionId?: string,
@@ -15,9 +22,7 @@ export async function getCameraList(
 		sessionId,
 	});
 	return {
-		cameras: (body.cameraStates ?? []).filter(
-			(camera: { locationUuid?: string }) => !!camera.locationUuid,
-		),
+		cameras: (body.cameraStates ?? []),
 	};
 }
 
@@ -32,10 +37,7 @@ export async function getDoorbellCameras(
 		sessionId,
 	});
 	return {
-		doorbellCameras: (body.minimalStates ?? []).filter(
-			(doorbellCamera: { locationUuid?: string }) =>
-				!!doorbellCamera.locationUuid,
-		),
+		doorbellCameras: (body.minimalStates ?? []),
 	};
 }
 
@@ -50,9 +52,7 @@ export async function getBadgeReaders(
 		sessionId,
 	}).then((response) => {
 		return {
-			badgeReaders: (response.minimalStates ?? []).filter(
-				(badgeReader: { locationUuid?: string }) => !!badgeReader.locationUuid,
-			),
+			badgeReaders: (response.minimalStates ?? []),
 		};
 	});
 }
@@ -102,8 +102,7 @@ export async function getAudioGateways(
 	}).then((response) => {
 		return {
 			audioGateways: (response.audioGatewayStates ?? [])
-				.filter((camera: { locationUuid?: string }) => !!camera.locationUuid)
-				.map((gateway: any) => ({
+					.map((gateway: any) => ({
 					...gateway,
 					createdAtString: gateway.createdAtMillis
 						? formatTimestamp(gateway.createdAtMillis, timeZone)
@@ -124,9 +123,7 @@ export async function getDoorSensors(
 		sessionId,
 	}).then((response) => {
 		return {
-			doorStates: (response.doorStates ?? []).filter(
-				(door: { locationUuid?: string }) => !!door.locationUuid,
-			),
+			doorStates: (response.doorStates ?? []),
 		};
 	});
 }
@@ -146,8 +143,7 @@ export async function getEnvironmentalSensors(
 		logger.info("Using tempUnit: ", tempUnit);
 		return {
 			climateStates: (response.climateStates ?? [])
-				.filter((sensor: { locationUuid?: string }) => !!sensor.locationUuid)
-				.map((_sensor: any) => {
+					.map((_sensor: any) => {
 					const { temperatureCelcius, ...sensor } = _sensor;
 
 					return {
@@ -173,10 +169,7 @@ export async function getMotionSensors(
 		sessionId,
 	}).then((response) => {
 		return {
-			occupancySensorStates: (response.occupancySensorStates ?? []).filter(
-				(occupancySensor: { locationUuid?: string }) =>
-					!!occupancySensor.locationUuid,
-			),
+			occupancySensorStates: (response.occupancySensorStates ?? []),
 		};
 	});
 }
@@ -194,8 +187,7 @@ export async function getButtons(
 	}).then((response) => {
 		return {
 			buttonStates: (response.states ?? [])
-				.filter((button: { locationUuid?: string }) => !!button.locationUuid)
-				.map((button: any) => ({
+					.map((button: any) => ({
 					...button,
 					createdAtString: button.createdAtMillis
 						? formatTimestamp(button.createdAtMillis, timeZone)
@@ -213,9 +205,7 @@ export async function getKeypads(requestModifiers?: any, sessionId?: string) {
 		sessionId,
 	}).then((response) => {
 		return {
-			keypadStates: (response.keypads ?? []).filter(
-				(keypad: { locationUuid?: string }) => !!keypad.locationUuid,
-			),
+			keypadStates: (response.keypads ?? []),
 		};
 	});
 }
@@ -235,9 +225,6 @@ export async function getEnvironmentalGateways(
 			minimalEnvironmentalGatewayStates: (
 				response.minimalEnvironmentalGatewayStates ?? []
 			)
-					.filter(
-						(gateway: { locationUuid?: string }) => !!gateway.locationUuid,
-					)
 					.map((gateway: any) => ({
 						...gateway,
 						createdAtString: gateway.createdAtMillis

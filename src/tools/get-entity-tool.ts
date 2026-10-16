@@ -19,12 +19,15 @@ import { createToolStructuredContent, extractFromToolExtra } from "../util.js";
 
 const TOOL_NAME = "get-entity-tool";
 
+/** Location label for a device that is not assigned to any location (matches the Console). */
+export const NO_LOCATION_LABEL = "No Location";
+
 const TOOL_DESCRIPTION = `
 Retrieves entities (or devices) of certain types — cameras, doorbell cameras, badge readers, access-controlled doors, audio gateways, door sensors, environmental sensors, motion sensors, buttons, keypads, environmental gateways. Can request multiple entity types at once. The return structure is a JSON string that contains the states (including names, UUIDs, location, model, firmware, connection status) of the requested entities. This data is exact.
 
 **Primary use cases:**
 1. **Looking up a device by name.** When the user mentions a specific camera, door, sensor, etc. by name (e.g. "describe camera 1919 Front Door Entrance", "what's the status of HW Lab door"), call this tool with the matching entityType, scan the returned list, and **fuzzy/case-insensitive substring match** the user's reference against the \`name\` field. Don't ask the user to clarify — try this lookup first, and only ask if there are genuinely multiple plausible matches in the results. To describe one device in depth (model, firmware, serial, network), pass \`detail: "full"\` together with a \`filterBy\` name predicate so only that device comes back at full size.
-2. **Listing all devices of a type** (cameras, doors, sensors, etc.) for a location or org-wide. The default \`detail: "core"\` keeps lists compact (uuid, name, connection/health status, location, associations).
+2. **Listing all devices of a type** (cameras, doors, sensors, etc.) for a location or org-wide. Devices not assigned to any location are included with \`locationName: "No Location"\` and no \`locationUuid\`. The default \`detail: "core"\` keeps lists compact (uuid, name, connection/health status, location, associations).
 3. **Checking device health and connectivity.** Devices with a connection state include a \`connected\` boolean (true = online, false = offline). For "how many devices are offline?" / "which are offline?", pass \`filterBy: [{"field": "connected", "op": "=", "value": false}]\` — the returned list and its \`<type>Count\` sibling then reflect exactly the offline devices, so the count needs no manual tallying. For per-group questions ("per location", "which location has the most offline"), add \`groupBy: "locationUuid"\` to get exact server-computed counts per group — never tally rows yourself.
    Access-controlled doors are logical entities with no connection state of their own. For "offline doors", check the hardware that serves them — \`badge-reader\`, \`keypad\` and \`door-sensor\` — with the same filter, and relate each device to its door by name or location.
 
@@ -127,6 +130,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
           item.locationName == null &&
           locationNames.has(item.locationUuid)
             ? { ...item, locationName: locationNames.get(item.locationUuid) }
+            : item,
+        );
+        // A device that is not assigned to a location comes back with no
+        // locationUuid at all. Label it the way the Console does so it is
+        // visible in lists and location groupings instead of silently absent.
+        items = items.map((item: any) =>
+          item &&
+          typeof item === "object" &&
+          item.locationUuid == null &&
+          item.locationName == null &&
+          "uuid" in item
+            ? { ...item, locationName: NO_LOCATION_LABEL }
             : item,
         );
 
