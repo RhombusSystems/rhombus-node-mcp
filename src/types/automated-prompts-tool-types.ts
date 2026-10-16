@@ -45,7 +45,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      "Optional template that guides the shape of MIND's response. Used by 'create' and 'update'."
+      "Optional free-text guidance on the shape of MIND's response (e.g. 'a short Markdown summary'). It is appended to the prompt text as 'Response format guidance:'; the stored responseTemplate field itself is never set by this tool. Used by 'create' and 'update'."
     ),
   frequencyValue: z
     .number()

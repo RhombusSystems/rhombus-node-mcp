@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createTool } from "../../src/tools-console/automated-prompts-tool.js";
+import {
+  createTool,
+  RESPONSE_GUIDANCE_PREFIX,
+} from "../../src/tools-console/automated-prompts-tool.js";
 import * as automatedPromptsApi from "../../src/api/automated-prompts-tool-api.js";
 import {
   AutomatedPromptsRequestType,
@@ -189,7 +192,7 @@ describe("automated-prompts-tool handler", () => {
       });
     });
 
-    it("forwards optional responseTemplate and notifyUserUuids when provided", async () => {
+    it("folds responseTemplate guidance into the prompt and never stores it as a template", async () => {
       vi.mocked(automatedPromptsApi.createAutomatedPrompt).mockResolvedValue({
         uuid: PROMPT_UUID,
       });
@@ -203,8 +206,25 @@ describe("automated-prompts-tool handler", () => {
       );
 
       const [input] = vi.mocked(automatedPromptsApi.createAutomatedPrompt).mock.calls[0];
-      expect(input.responseTemplate).toBe("Use bullet points");
+      // The server's responseTemplate is a serialized report structure; plain
+      // text there fails every scheduled run at submission.
+      expect(input.responseTemplate).toBeUndefined();
+      expect(input.prompt).toBe(
+        `${baseCreateArgs({}).prompt}\n\n${RESPONSE_GUIDANCE_PREFIX} Use bullet points`
+      );
       expect(input.notifyUserUuids).toEqual([USER_UUID_A, USER_UUID_B]);
+    });
+
+    it("leaves the prompt untouched when no guidance is given", async () => {
+      vi.mocked(automatedPromptsApi.createAutomatedPrompt).mockResolvedValue({
+        uuid: PROMPT_UUID,
+      });
+
+      await handler(baseCreateArgs({}), EMPTY_EXTRA);
+
+      const [input] = vi.mocked(automatedPromptsApi.createAutomatedPrompt).mock.calls[0];
+      expect(input.prompt).toBe(baseCreateArgs({}).prompt);
+      expect(input.responseTemplate).toBeUndefined();
     });
 
     it("returns an error listing every missing required field", async () => {
@@ -528,5 +548,37 @@ describe("automated-prompts-tool handler", () => {
       const payload = parsePayload(result);
       expect(payload.error).toBe("Unknown error");
     });
+  });
+});
+
+describe("automated-prompts-tool update: guidance folding", () => {
+  let handler: ReturnType<typeof captureToolHandler<ToolArgs>>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    handler = captureToolHandler<ToolArgs>(createTool);
+  });
+
+  it("folds guidance into the stored prompt when updating without a new prompt", async () => {
+    vi.mocked(automatedPromptsApi.getAutomatedPrompt).mockResolvedValue({
+      uuid: PROMPT_UUID,
+      prompt: "Summarize yesterday's alerts",
+    } as any);
+    vi.mocked(automatedPromptsApi.updateAutomatedPrompt).mockResolvedValue({ uuid: PROMPT_UUID });
+
+    await handler(
+      makeArgs({
+        requestType: AutomatedPromptsRequestType.UPDATE,
+        promptUuid: PROMPT_UUID,
+        responseTemplate: "Keep it to three bullets",
+      }),
+      EMPTY_EXTRA
+    );
+
+    const [input] = vi.mocked(automatedPromptsApi.updateAutomatedPrompt).mock.calls[0];
+    expect(input.responseTemplate).toBeUndefined();
+    expect(input.prompt).toBe(
+      `Summarize yesterday's alerts\n\n${RESPONSE_GUIDANCE_PREFIX} Keep it to three bullets`
+    );
   });
 });
