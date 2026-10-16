@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { RequestModifiers } from "../util.js";
 import { isConfirmed, requireConfirmation } from "../utils/confirmation.js";
-import { rebootCameras } from "../api/reboot-cameras-tool-api.js";
+import { getCameraConnections, rebootCameras } from "../api/reboot-cameras-tool-api.js";
 import { TOOL_ARGS, type ToolArgs } from "../types/reboot-cameras-tool-types.js";
 
 const TOOL_NAME = "reboot-cameras";
@@ -14,6 +14,34 @@ const TOOL_DESCRIPTION =
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { cameraUuids, confirmationId } = args;
+  const requestModifiers = extra._meta?.requestModifiers as RequestModifiers;
+
+  // A reboot is a command the camera has to receive. For a disconnected camera the API still
+  // answers success, so the user was told it rebooted when nothing could have happened.
+  // Disconnected cameras are reported, not rebooted — and with none reachable there is nothing
+  // to confirm.
+  const connections = await getCameraConnections(cameraUuids, requestModifiers, extra.sessionId);
+  const offline = cameraUuids.filter(uuid => connections.get(uuid)?.connectionStatus === "RED");
+  const offlineNames = offline.map(uuid => connections.get(uuid)?.name ?? uuid);
+  const reachable = cameraUuids.filter(uuid => !offline.includes(uuid));
+  const offlineNote =
+    offline.length > 0
+      ? `${offlineNames.join(", ")} ${offline.length === 1 ? "is" : "are"} offline (disconnected), so a reboot cannot reach ${offline.length === 1 ? "it" : "them"} and ${offline.length === 1 ? "it was" : "they were"} not rebooted. Suggest checking power and network on site; a reboot can be retried once it reconnects.`
+      : undefined;
+  if (reachable.length === 0) {
+    const result = {
+      status: "OFFLINE",
+      successCount: 0,
+      errorCount: 0,
+      offlineCameras: offlineNames,
+      message: `${offlineNote} Nothing was rebooted and no confirmation is needed.`,
+    };
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(result) }],
+      structuredContent: result,
+    };
+  }
+
   // The id is bound to this tool and these cameras: confirming one reboot
   // never authorizes another.
   const confirmation = requireConfirmation(confirmationId, {
@@ -25,11 +53,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     return confirmation;
   }
 
-  const cameraRebootData = await rebootCameras(
-    cameraUuids,
-    extra._meta?.requestModifiers as RequestModifiers,
-    extra.sessionId
-  );
+  const cameraRebootData = await rebootCameras(reachable, requestModifiers, extra.sessionId);
 
   if (!cameraRebootData || ("error" in cameraRebootData && cameraRebootData.error)) {
     return {
@@ -46,14 +70,17 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     };
   }
 
+  const result = offlineNote
+    ? { ...cameraRebootData, offlineCameras: offlineNames, message: offlineNote }
+    : cameraRebootData;
   return {
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify(cameraRebootData),
+        text: JSON.stringify(result),
       },
     ],
-    structuredContent: cameraRebootData,
+    structuredContent: result,
   };
 };
 
@@ -71,10 +98,15 @@ export function createTool(server: McpServer) {
           .string()
           .optional()
           .describe(
-            "SUCCESS when every camera rebooted, PARTIAL_SUCCESS when some did, ERROR when none did"
+            "SUCCESS when every reachable camera rebooted, PARTIAL_SUCCESS when some did, ERROR when none did, OFFLINE when every camera was disconnected (nothing sent)"
           ),
         successCount: z.number().optional(),
         errorCount: z.number().optional(),
+        offlineCameras: z
+          .array(z.string())
+          .optional()
+          .describe("Cameras that were disconnected and therefore not rebooted"),
+        message: z.string().optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: true },
     },

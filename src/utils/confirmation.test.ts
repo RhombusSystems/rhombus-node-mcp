@@ -123,6 +123,22 @@ describe("confirmation ids", () => {
     expect(isConfirmed(requireConfirmation(issuedId(result), action))).toBe(true);
   });
 
+  // Prod 2026-10-16: the model echoed the issued id with a repeated chunk appended
+  // (75 characters instead of 54). The signature, not the extra text, decides.
+  it("accepts a valid id surrounded by extra characters", () => {
+    const id = issueConfirmationId(action);
+    expect(verifyConfirmationId(id + id.slice(-21), action)).toBe(true);
+    expect(verifyConfirmationId(`confirmation id: ${id}.`, action)).toBe(true);
+  });
+
+  it("never accepts a damaged or foreign id hidden in extra characters", () => {
+    const id = issueConfirmationId(action);
+    const foreign = issueConfirmationId({ tool: "reboot-cameras", args: { cameraUuids: ["other"] } });
+    expect(verifyConfirmationId(`${id.slice(0, 40)}${id.slice(-21)}`, action)).toBe(false);
+    expect(verifyConfirmationId(`${foreign}${foreign.slice(-21)}`, action)).toBe(false);
+    expect(verifyConfirmationId(`${id}${"0".repeat(600)}`, action)).toBe(false);
+  });
+
   it("re-asks with a new id when the given id does not confirm the action", () => {
     const stale = issueConfirmationId({ tool: "reboot-cameras", args: { cameraUuids: ["other"] } });
     const result = requireConfirmation(stale, action);
