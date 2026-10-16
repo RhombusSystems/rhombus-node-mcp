@@ -41,6 +41,99 @@ Pick one with "requestType". Each type's arguments, response enrichment, and req
 **Interval guidance:** A shorter interval (HOURLY instead of DAILY) gives a better representation of data over time. Balance interval and range so you don't request too much data. For ranges spanning a week or so, HOURLY is appropriate.
 `;
 
+/** How far back an empty summary report looks for the most recent recorded data. */
+export const EMPTY_SUMMARY_LOOKBACK_DAYS = 30;
+
+type SummaryPoints = NonNullable<
+  Awaited<ReturnType<typeof getSummaryCountReport>>
+>["timeSeriesDataPoints"];
+
+function hasAnyCount(points: SummaryPoints): boolean {
+  return (points ?? []).some((dp: { eventCountMap?: Record<string, unknown> }) =>
+    Object.values(dp.eventCountMap ?? {}).some(v => typeof v === "number" && v > 0)
+  );
+}
+
+/**
+ * Explains an empty get-summary-count-report result. Probes the same scope and
+ * types DAILY over the EMPTY_SUMMARY_LOOKBACK_DAYS before the window; if data
+ * exists there, the hint names the last day that has any, so the caller can
+ * tell a recording gap from genuine zero activity.
+ */
+export async function describeEmptySummary({
+  scope,
+  types,
+  uuid,
+  rangeStart,
+  rangeEnd,
+  startTimeMs,
+  endTimeMs,
+  requestModifiers,
+  sessionId,
+  timeZone,
+}: {
+  scope: "REGION" | "LOCATION" | "DEVICE" | "ORG";
+  types: Parameters<typeof getSummaryCountReport>[2];
+  uuid?: string;
+  rangeStart: string;
+  rangeEnd: string;
+  startTimeMs: number;
+  endTimeMs: number;
+  requestModifiers?: Parameters<typeof getSummaryCountReport>[6];
+  sessionId?: string;
+  timeZone?: string;
+}): Promise<{ hint: string; lastRecordedDateUtc?: string }> {
+  const what = types.join("/");
+  const where = `this ${scope.toLowerCase()}${uuid ? ` (${uuid})` : ""}`;
+  const window = `${rangeStart} to ${rangeEnd}`;
+  const isBandwidth = types.includes("BANDWIDTH");
+  const nature = isBandwidth
+    ? " Bandwidth is recorded for every camera that streams to the cloud, so this is a gap in the recorded data, not a feature that is off or unsupported."
+    : "";
+  try {
+    const probe = await getSummaryCountReport(
+      "DAILY",
+      scope,
+      types,
+      uuid,
+      endTimeMs,
+      startTimeMs - EMPTY_SUMMARY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+      requestModifiers,
+      sessionId,
+      timeZone
+    );
+    const daysWithData = (probe?.timeSeriesDataPoints ?? [])
+      .filter(dp => hasAnyCount([dp]) && dp.dateUtcString)
+      .map(dp => dp.dateUtcString as string)
+      .sort();
+    const last = daysWithData.at(-1);
+    if (last) {
+      return {
+        lastRecordedDateUtc: last,
+        hint:
+          `No ${what} data was recorded for ${where} in the requested window (${window}). ` +
+          `The most recent ${what} data on record is the UTC day starting ${last}; nothing has been recorded after that day. ` +
+          `Report this as "no ${what.toLowerCase()} data recorded since ${last.slice(0, 10)}", not as zero activity.` +
+          nature,
+      };
+    }
+    return {
+      hint:
+        `No ${what} data was recorded for ${where} in the requested window (${window}) ` +
+        `or in the ${EMPTY_SUMMARY_LOOKBACK_DAYS} days before it. Report it as "no ${what.toLowerCase()} data recorded", not as zero activity.` +
+        nature,
+    };
+  } catch (err) {
+    logger.error("Failed to probe for the last recorded summary data", err);
+    return {
+      hint:
+        `No ${what} data was recorded for ${where} in the requested window (${window}). ` +
+        `Report it as "no ${what.toLowerCase()} data recorded", not as zero activity.` +
+        nature,
+    };
+  }
+}
+
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { requestType } = args;
 
@@ -74,6 +167,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
         totalFaceEvents: number;
       };
       hint?: string;
+      lastRecordedDateUtc?: string;
       occupancyEnabledCameras?: {
         uuid?: string;
         name?: string;
@@ -120,6 +214,28 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
           logger.error("Failed to fetch occupancy-enabled cameras for hint", err);
         }
       }
+    }
+
+    // An empty success is ambiguous to the caller: "nothing happened" or "nothing
+    // was recorded". Say which. A prod bandwidth outage (events stopped reaching
+    // Timestream 2026-10-12 14:25Z for every org) surfaced in MIND as a report
+    // about telemetry that "may not be enabled for your deployment"; with the
+    // last recorded date in hand the model can say the data stops on that day.
+    if (!enrichedReport.hint && !report?.error && !hasAnyCount(report?.timeSeriesDataPoints)) {
+      const gap = await describeEmptySummary({
+        scope,
+        types,
+        uuid: uuid ?? undefined,
+        rangeStart,
+        rangeEnd,
+        startTimeMs,
+        endTimeMs,
+        requestModifiers,
+        sessionId,
+        timeZone,
+      });
+      enrichedReport.hint = gap.hint;
+      if (gap.lastRecordedDateUtc) enrichedReport.lastRecordedDateUtc = gap.lastRecordedDateUtc;
     }
 
     return {
