@@ -47,13 +47,20 @@ export type ConfirmationAction = {
 export const CONFIRMATION_MAX_AGE_MS = 15 * 60 * 1000; // 15 minutes
 
 // Token layout (one alphanumeric word, so the model echoes it intact and
-// nothing downstream has to escape it): "c1" + issue time (12 hex) + nonce
-// (8 hex) + HMAC-SHA256 truncated to 128 bits (32 hex) = 54 characters.
-const TOKEN_VERSION = "c1";
+// nothing downstream has to escape it): "c2" + issue time (12 hex) + HMAC-SHA256
+// truncated to 64 bits (16 hex) = 30 characters. The first format ("c1",
+// 54 characters with an 8-hex nonce and a 128-bit signature) is still
+// verified for ids in flight across a deploy. Shorter because the model copies
+// the id by hand: one in eight live confirmations came back with the last 21
+// characters of a 54-character id duplicated.
+const TOKEN_VERSION = "c2";
 const TS_HEX = 12;
-const NONCE_HEX = 8;
-const SIG_HEX = 32;
-const TOKEN_LENGTH = TOKEN_VERSION.length + TS_HEX + NONCE_HEX + SIG_HEX;
+const SIG_HEX = 16;
+const TOKEN_LENGTH = TOKEN_VERSION.length + TS_HEX + SIG_HEX;
+const LEGACY_VERSION = "c1";
+const LEGACY_NONCE_HEX = 8;
+const LEGACY_SIG_HEX = 32;
+const LEGACY_TOKEN_LENGTH = LEGACY_VERSION.length + TS_HEX + LEGACY_NONCE_HEX + LEGACY_SIG_HEX;
 
 // Lone local process with no secret at all: a per-process key is all it needs.
 const processFallbackKey = randomBytes(32);
@@ -93,38 +100,56 @@ function actionDigest(action: ConfirmationAction): string {
     .digest("hex");
 }
 
-function signature(issuedAt: string, nonce: string, digest: string, key: Buffer): string {
+function signature(
+  version: string,
+  issuedAt: string,
+  nonce: string,
+  digest: string,
+  key: Buffer,
+  sigHex: number
+): string {
   return createHmac("sha256", key)
-    .update(`${TOKEN_VERSION}.${issuedAt}.${nonce}.${digest}`)
+    .update(`${version}.${issuedAt}.${nonce}.${digest}`)
     .digest("hex")
-    .slice(0, SIG_HEX);
+    .slice(0, sigHex);
 }
 
 /** Mint a confirmation id for `action`, valid for the caller for CONFIRMATION_MAX_AGE_MS. */
 export function issueConfirmationId(action: ConfirmationAction, now: number = Date.now()): string {
   const issuedAt = now.toString(16).padStart(TS_HEX, "0");
-  const nonce = randomBytes(NONCE_HEX / 2).toString("hex");
-  return `${TOKEN_VERSION}${issuedAt}${nonce}${signature(issuedAt, nonce, actionDigest(action), keyMaterial())}`;
+  return `${TOKEN_VERSION}${issuedAt}${signature(TOKEN_VERSION, issuedAt, "", actionDigest(action), keyMaterial(), SIG_HEX)}`;
 }
 
-/** True when `confirmationId` was issued by this caller for exactly this action and has not expired. */
+/**
+ * True when `confirmationId` was issued for exactly this action by this
+ * deployment and has not expired. Only the token's own length is read: a
+ * model that appends stray characters when copying the id (observed: the
+ * last 21 characters duplicated) still confirms, since the signature covers
+ * everything that matters.
+ */
 export function verifyConfirmationId(
   confirmationId: string | null | undefined,
   action: ConfirmationAction,
   now: number = Date.now()
 ): boolean {
-  if (
-    !confirmationId ||
-    confirmationId.length !== TOKEN_LENGTH ||
-    !confirmationId.startsWith(TOKEN_VERSION)
-  ) {
-    return false;
-  }
-  if (!/^[0-9a-f]+$/.test(confirmationId.slice(TOKEN_VERSION.length))) return false;
-  let at = TOKEN_VERSION.length;
-  const issuedAt = confirmationId.slice(at, (at += TS_HEX));
-  const nonce = confirmationId.slice(at, (at += NONCE_HEX));
-  const provided = confirmationId.slice(at);
+  if (!confirmationId) return false;
+  const layout = confirmationId.startsWith(TOKEN_VERSION)
+    ? { version: TOKEN_VERSION, nonceHex: 0, sigHex: SIG_HEX, length: TOKEN_LENGTH }
+    : confirmationId.startsWith(LEGACY_VERSION)
+      ? {
+          version: LEGACY_VERSION,
+          nonceHex: LEGACY_NONCE_HEX,
+          sigHex: LEGACY_SIG_HEX,
+          length: LEGACY_TOKEN_LENGTH,
+        }
+      : undefined;
+  if (!layout || confirmationId.length < layout.length) return false;
+  const token = confirmationId.slice(0, layout.length);
+  if (!/^[0-9a-f]+$/.test(token.slice(layout.version.length))) return false;
+  let at = layout.version.length;
+  const issuedAt = token.slice(at, (at += TS_HEX));
+  const nonce = token.slice(at, (at += layout.nonceHex));
+  const provided = token.slice(at);
   const issuedAtMs = parseInt(issuedAt, 16);
   if (
     !Number.isFinite(issuedAtMs) ||
@@ -134,7 +159,7 @@ export function verifyConfirmationId(
     return false;
   }
   const expected = Buffer.from(
-    signature(issuedAt, nonce, actionDigest(action), keyMaterial()),
+    signature(layout.version, issuedAt, nonce, actionDigest(action), keyMaterial(), layout.sigHex),
     "utf8"
   );
   const given = Buffer.from(provided, "utf8");

@@ -103,11 +103,11 @@ describe("confirmation ids", () => {
 
   it("rejects tampered, truncated and legacy-shaped ids", () => {
     const id = issueConfirmationId(action);
-    expect(id).toMatch(/^c1[0-9a-f]{52}$/); // one plain word: the model echoes it verbatim
+    expect(id).toMatch(/^c2[0-9a-f]{28}$/); // one short plain word: the model copies it by hand
     const flipped = id.slice(0, -1) + (id.endsWith("0") ? "1" : "0");
     expect(verifyConfirmationId(flipped, action)).toBe(false);
     expect(verifyConfirmationId(id.slice(0, -1), action)).toBe(false);
-    expect(verifyConfirmationId("AbCdEfGh", action)).toBe(false); // the old 8-char store key
+    expect(verifyConfirmationId("AbCdEfGh", action)).toBe(false); // the original 8-char store key
     expect(verifyConfirmationId("", action)).toBe(false);
     expect(verifyConfirmationId(null, action)).toBe(false);
   });
@@ -134,5 +134,32 @@ describe("confirmation ids", () => {
     delete process.env.CONFIRMATION_SECRET;
     const id = issueConfirmationId(action);
     expect(verifyConfirmationId(id, action)).toBe(true);
+  });
+
+  it("accepts an id the model padded with stray characters, but not a shortened one", () => {
+    const id = issueConfirmationId(action);
+    expect(verifyConfirmationId(id + id.slice(-21), action)).toBe(true); // observed live: last 21 chars duplicated
+    expect(verifyConfirmationId(id + " ", action)).toBe(true);
+    expect(verifyConfirmationId(id.slice(0, -1), action)).toBe(false);
+  });
+
+  it("still verifies an in-flight first-format (c1) id issued before the format change", () => {
+    // Re-create a c1 token the way the previous build issued it.
+    const { createHmac, createHash } = require("node:crypto") as typeof import("node:crypto");
+    const issuedAt = Date.now().toString(16).padStart(12, "0");
+    const nonce = "0123abcd";
+    const canonical = '{"cameraUuids":["cam-a","cam-b"]}';
+    const digest = createHash("sha256").update(`reboot-cameras\n${canonical}`).digest("hex");
+    const key = Buffer.from(`confirmation:${process.env.CONFIRMATION_SECRET}`, "utf8");
+    const sig = createHmac("sha256", key)
+      .update(`c1.${issuedAt}.${nonce}.${digest}`)
+      .digest("hex")
+      .slice(0, 32);
+    const legacy = `c1${issuedAt}${nonce}${sig}`;
+    expect(legacy).toHaveLength(54);
+    expect(verifyConfirmationId(legacy, action)).toBe(true);
+    expect(
+      verifyConfirmationId(legacy, { tool: "reboot-cameras", args: { cameraUuids: ["cam-a"] } })
+    ).toBe(false);
   });
 });

@@ -261,7 +261,7 @@ describe("third-party-cameras-tool assign", () => {
     const out = result.structuredContent ?? {};
     expect(out.needUserInput).toBe(true);
     expect(out.plan.map((p: { status: string }) => p.status)).toEqual(["ready", "ready", "ready"]);
-    expect(out.commandForUser).toMatch(/confirmationId: c1[0-9a-f]{52}/);
+    expect(out.commandForUser).toMatch(/confirmationId: c2[0-9a-f]{28}/);
     expect(api.assignedNames).toEqual([]);
     expect(JSON.stringify(result)).not.toContain("hunter2");
   });
@@ -269,7 +269,7 @@ describe("third-party-cameras-tool assign", () => {
   it("assigns one camera at a time once confirmed, and continues from nextStartAt", async () => {
     const api = fakeApi(20);
     const ask = await callTool({ requestType: "assign", cameras: SHEET });
-    const id = /confirmationId: (c1[0-9a-f]+)/.exec(ask.structuredContent?.commandForUser)?.[1];
+    const id = /confirmationId: (c[12][0-9a-f]+)/.exec(ask.structuredContent?.commandForUser)?.[1];
 
     // A budget that only lets the first camera start in this call.
     TIMING.startBudgetMs = 5;
@@ -310,7 +310,7 @@ describe("third-party-cameras-tool assign", () => {
   it("does not accept a confirmation issued for a different list", async () => {
     const api = fakeApi();
     const ask = await callTool({ requestType: "assign", cameras: SHEET.slice(0, 1) });
-    const id = /confirmationId: (c1[0-9a-f]+)/.exec(ask.structuredContent?.commandForUser)?.[1];
+    const id = /confirmationId: (c[12][0-9a-f]+)/.exec(ask.structuredContent?.commandForUser)?.[1];
     const result = await callTool({ requestType: "assign", cameras: SHEET, confirmationId: id });
     expect(result.structuredContent?.needUserInput).toBe(true);
     expect(api.assignedNames).toEqual([]);
