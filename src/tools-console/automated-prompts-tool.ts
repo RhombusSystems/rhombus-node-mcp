@@ -29,6 +29,7 @@ import {
   createToolTextContent,
   extractFromToolExtra,
 } from "../util.js";
+import { findSimilarPrompt } from "../utils/automated-prompt-similarity.js";
 
 const TOOL_NAME = "automated-prompts-tool";
 
@@ -103,6 +104,28 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         const parsed = CreateRequestSchema.safeParse(args);
         if (!parsed.success) return validationErrorResponse(parsed.error);
         const data = parsed.data;
+        if (!data.allowDuplicate) {
+          // A rephrased request must not silently become a second schedule
+          // (two emails a day, no idea why): surface the look-alike and let the
+          // user decide to keep both, update the existing one, or cancel.
+          const existing = await listAutomatedPrompts(
+            { maxPageSize: 200 },
+            requestModifiers,
+            sessionId
+          );
+          const match = findSimilarPrompt(data, existing?.settingsList ?? []);
+          if (match) {
+            return createToolTextContent(
+              JSON.stringify({
+                needUserInput: true,
+                possibleDuplicate: match.existing,
+                similarity: Number(match.similarity.toFixed(2)),
+                description:
+                  "An automated prompt that looks like this one already exists (see possibleDuplicate). Nothing was created. Tell the user about the existing prompt (its text, schedule and recipients) and ask whether they want to keep both, change the existing one (use 'update' with its promptUuid), or cancel. Only if they confirm they want both, call 'create' again with allowDuplicate: true.",
+              })
+            );
+          }
+        }
         const settings = await createAutomatedPrompt(
           {
             prompt: foldResponseGuidance(data.prompt, data.responseTemplate),
