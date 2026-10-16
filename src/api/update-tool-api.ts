@@ -59,6 +59,38 @@ export async function updateCameraConfig(
 }
 
 /**
+ * Renames a camera. The name lives on the camera record, not in its device
+ * config: `/camera/updateFacetedConfig` has no name field and answers success
+ * while dropping one, so renames go through `/camera/updateDetailsV2`. The
+ * caller confirms the result by reading the camera list back.
+ */
+export async function updateCameraName(
+  cameraUuid: string,
+  name: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await postApi<schema["Camera_UpdateCameraV2WSResponse"]>({
+      route: "/camera/updateDetailsV2",
+      body: { uuid: cameraUuid, name, nameUpdated: true } satisfies schema["Camera_UpdateCameraV2WSRequest"],
+      modifiers: requestModifiers,
+      sessionId,
+    });
+
+    if (result.error) {
+      return { success: false, error: apiFailureMessage(result) ?? "Failed to rename the camera" };
+    }
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+/**
  * Gets current camera configuration
  */
 export async function getCameraDetails(
@@ -526,14 +558,6 @@ export function formatCameraSettings(settings: any): string {
 
   if (settings.deviceSettings) {
     const deviceItems: string[] = [];
-    if (settings.deviceSettings.camera_name)
-      deviceItems.push(`Name: ${settings.deviceSettings.camera_name}`);
-    if (settings.deviceSettings.camera_timezone)
-      deviceItems.push(`Timezone: ${settings.deviceSettings.camera_timezone}`);
-    if (settings.deviceSettings.led_mode)
-      deviceItems.push(`LED Mode: ${settings.deviceSettings.led_mode}`);
-    if (settings.deviceSettings.led_intensity !== undefined)
-      deviceItems.push(`LED Intensity: ${settings.deviceSettings.led_intensity}`);
     if (settings.deviceSettings.led_stealth_mode !== undefined)
       deviceItems.push(
         `LED Stealth Mode: ${settings.deviceSettings.led_stealth_mode ? "On" : "Off"}`

@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
   updateCameraConfig,
+  updateCameraName,
   getCameraDetails,
   cleanUpdatePayload,
   formatCameraSettings,
@@ -42,7 +43,7 @@ import { logger } from "../logger.js";
 const TOOL_NAME = "update-tool";
 
 const TOOL_DESCRIPTION = `
-Updates configuration settings for Rhombus cameras and doorbell cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, timezone, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
+Updates configuration settings for Rhombus cameras and doorbell cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
 
 MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
 
@@ -164,6 +165,45 @@ function parseSettingsBlock<T extends z.ZodType>(
   return { ok: true, value: result.data };
 }
 
+// Device fields a camera cannot take through this tool: the faceted device
+// config has no field for them, and the API drops them with a success
+// response — so they are refused before anything is written.
+const CAMERA_UNSETTABLE_DEVICE_FIELDS = ["camera_timezone", "led_intensity"] as const;
+
+// Splits validated device settings into what each camera API actually accepts:
+// the rename (camera record, /camera/updateDetailsV2) and led_stealth_mode (the
+// only device field of the faceted config). led_mode is that same on/off
+// switch under another name.
+function toCameraDeviceSettings(
+  settings: Record<string, unknown>
+):
+  | { ok: true; deviceSettings: { led_stealth_mode?: boolean }; rename?: string }
+  | { ok: false; message: string } {
+  const unsettable = CAMERA_UNSETTABLE_DEVICE_FIELDS.filter(key => settings[key] !== undefined);
+  if (unsettable.length > 0) {
+    return {
+      ok: false,
+      message: `${unsettable.join(" and ")} cannot be set on a camera through this tool — tell the user to change it in the Rhombus Console. No settings were changed.`,
+    };
+  }
+
+  let rename: string | undefined;
+  if (settings.camera_name !== undefined) {
+    rename = String(settings.camera_name).trim();
+    if (!rename) {
+      return { ok: false, message: "camera_name cannot be empty. No settings were changed." };
+    }
+  }
+
+  const deviceSettings: { led_stealth_mode?: boolean } = {};
+  if (typeof settings.led_stealth_mode === "boolean") {
+    deviceSettings.led_stealth_mode = settings.led_stealth_mode;
+  } else if (settings.led_mode !== undefined) {
+    deviceSettings.led_stealth_mode = settings.led_mode === "always_off";
+  }
+  return { ok: true, deviceSettings, rename };
+}
+
 function parsePrivacyRegions(
   raw: string
 ): { ok: true; value: PrivacyRegionsSpec } | { ok: false; message: string } {
@@ -250,7 +290,9 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           }
         }
 
-        // Parse and add device settings
+        // Parse and add device settings. A rename is split off here and applied
+        // after the config update (see toCameraDeviceSettings).
+        let rename: string | undefined;
         if (cameraDeviceSettings && cameraDeviceSettings.trim()) {
           const device = parseSettingsBlock(
             "camera device settings",
@@ -283,8 +325,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           const cleaned = cleanUpdatePayload(device.value);
           logger.debug("[update-tool] Cleaned device settings:", cleaned);
 
-          if (Object.keys(cleaned).length > 0) {
-            updatePayload.configUpdate.deviceSettings = cleaned;
+          const cameraDevice = toCameraDeviceSettings(cleaned);
+          if (!cameraDevice.ok) {
+            return errorResult(cameraDevice.message);
+          }
+          rename = cameraDevice.rename;
+          if (Object.keys(cameraDevice.deviceSettings).length > 0) {
+            updatePayload.configUpdate.deviceSettings = cameraDevice.deviceSettings;
           }
         }
 
@@ -362,44 +409,50 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         }
 
         const { deviceUuid: _deviceUuid, ...requestedSettings } = updatePayload.configUpdate;
-        if (Object.keys(requestedSettings).length === 0) {
+        const hasConfigUpdate = Object.keys(requestedSettings).length > 0;
+        if (!hasConfigUpdate && rename === undefined) {
           return errorResult(
             "No camera settings were recognised in the provided values, so nothing was changed."
           );
         }
 
-        // Validate the full payload
-        const validatedPayload = UpdateCameraConfigPayload.parse(updatePayload);
+        let validatedPayload: UpdateCameraConfigPayload | undefined;
+        if (hasConfigUpdate) {
+          // Validate the full payload
+          validatedPayload = UpdateCameraConfigPayload.parse(updatePayload);
 
-        const featureValidation = await validateCameraFeatureSupport(
-          validatedPayload,
-          extra._meta?.requestModifiers as RequestModifiers,
-          extra.sessionId
-        );
-        if (!featureValidation.canProceed) {
-          return errorResult(
-            featureValidation.error ||
-              "This camera does not support one or more requested features."
+          const featureValidation = await validateCameraFeatureSupport(
+            validatedPayload,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
           );
-        }
+          if (!featureValidation.canProceed) {
+            return errorResult(
+              featureValidation.error ||
+                "This camera does not support one or more requested features."
+            );
+          }
 
-        // Apply the updates
-        const result = await updateCameraConfig(
-          validatedPayload,
-          extra._meta?.requestModifiers as RequestModifiers,
-          extra.sessionId
-        );
+          // Apply the updates
+          const result = await updateCameraConfig(
+            validatedPayload,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
+          );
 
-        if (!result.success) {
-          const hasCapabilitySensitiveChange = hasCapabilitySensitiveSettings(validatedPayload);
-          const normalizedError = hasCapabilitySensitiveChange
-            ? "This camera may not support one or more requested settings."
-            : result.error;
-          return errorResult(`Failed to update camera settings: ${normalizedError}`);
+          if (!result.success) {
+            const hasCapabilitySensitiveChange = hasCapabilitySensitiveSettings(validatedPayload);
+            const normalizedError = hasCapabilitySensitiveChange
+              ? "This camera may not support one or more requested settings."
+              : result.error;
+            return errorResult(`Failed to update camera settings: ${normalizedError}`);
+          }
         }
 
         // Format the updated settings for display
-        const formattedSettings = formatCameraSettings(validatedPayload.configUpdate);
+        const formattedSettings = validatedPayload
+          ? formatCameraSettings(validatedPayload.configUpdate)
+          : "";
 
         // updateFacetedConfig answers success even for a write that changes
         // nothing, so privacy regions are confirmed by reading the config back.
@@ -447,15 +500,57 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           }
         }
 
+        // The rename is confirmed against the camera list (where the Console
+        // reads names from): an accepted write that did not apply must never be
+        // reported as done.
+        let renameSection = "";
+        if (rename !== undefined) {
+          const alsoApplied = formattedSettings
+            ? ` The other requested settings WERE applied:\n\n${formattedSettings}`
+            : " No settings were changed.";
+          const renamed = await updateCameraName(
+            baseUuid,
+            rename,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
+          );
+          if (!renamed.success) {
+            return errorResult(`Failed to rename the camera: ${renamed.error}.${alsoApplied}`);
+          }
+          const after = await getCameraFirmwareVersion(
+            baseUuid,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
+          );
+          if (!after.success) {
+            return errorResult(
+              `The rename to "${rename}" was sent, but reading the camera back failed (${after.error}), so it could not be confirmed. Tell the user to check the camera's name in the Console.${alsoApplied}`
+            );
+          }
+          if ((after.name ?? "").trim() !== rename) {
+            return errorResult(
+              `The API accepted the rename, but the camera is still named "${after.name ?? ""}" (requested "${rename}"). Do not retry with the same arguments — tell the user the rename did not take effect.${alsoApplied}`
+            );
+          }
+          renameSection = `**Name (verified by reading the camera back):** ${after.name}`;
+        }
+
         const jsonResultResponse = {
           needUserInput: false,
           success: true,
-          message: `✅ Camera settings updated successfully!\n\n${[formattedSettings, privacySection]
+          message: `✅ Camera settings updated successfully!\n\n${[
+            formattedSettings,
+            privacySection,
+            renameSection,
+          ]
             .filter(Boolean)
             .join("\n\n")}`,
           entityType: "camera",
           entityUuid,
-          updatedSettings: validatedPayload.configUpdate,
+          updatedSettings: {
+            ...(validatedPayload?.configUpdate ?? { deviceUuid: baseUuid }),
+            ...(rename !== undefined ? { name: rename } : {}),
+          },
           ...(privacyRegionsInEffect ? { privacyRegions: privacyRegionsInEffect } : {}),
         };
 
@@ -501,9 +596,6 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         const currentAudioSettings = camera.audioSettings || {};
         const currentDeviceSettings = {
           camera_name: camera.name,
-          camera_timezone: camera.timezone,
-          led_intensity: camera.ledIntensity,
-          led_mode: camera.ledMode,
         };
 
         const jsonResultResponse = {

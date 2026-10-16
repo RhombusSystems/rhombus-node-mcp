@@ -199,7 +199,9 @@ describe("update-tool — error paths survive output validation", () => {
     expect(textOf(result)).toContain("Sharpness: 8");
   });
 
-  it("normalizes ledMode/led_stealth_mode before validating, as before", async () => {
+  // led_mode has no field in the faceted device config (the API drops it with a
+  // success response); for cameras it is folded into led_stealth_mode.
+  it("normalizes ledMode/led_stealth_mode into the camera's led_stealth_mode", async () => {
     vi.mocked(network.postApi).mockResolvedValue({ error: false } as never);
 
     const result = await callUpdateTool(
@@ -215,7 +217,6 @@ describe("update-tool — error paths survive output validation", () => {
       ([arg]) => (arg as { route: string }).route === "/camera/updateFacetedConfig"
     );
     expect((sent?.[0] as { body: any }).body.configUpdate.deviceSettings).toEqual({
-      led_mode: "always_off",
       led_stealth_mode: true,
     });
   });

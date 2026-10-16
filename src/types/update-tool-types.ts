@@ -201,7 +201,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      `JSON string of device settings to update for camera (name, timezone, LED). camera_name / camera_timezone: strings · led_intensity: 0 to 100 · led_mode: one of "auto", "always_on", "always_off" · led_stealth_mode: boolean. LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'.`,
+      `JSON string of device settings to update for camera (name, LED). camera_name: string — renames the camera; the tool reads the name back and reports the rename only once it has taken effect · led_stealth_mode: boolean · led_mode: one of "auto", "always_on", "always_off". LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'. camera_timezone and led_intensity cannot be set on a camera through this tool — tell the user to change them in the Rhombus Console.`,
     ),
 
   // Optional (unlike its siblings) so callers built before this field existed
@@ -322,14 +322,14 @@ export const UpdateCameraConfigPayload = z.object({
         })
       )
       .optional(),
+    // led_stealth_mode is the only device field the faceted config takes; any
+    // other key is dropped by the API with a success response, so it must never
+    // reach the request (renames go through updateCameraName).
     deviceSettings: z
       .object({
-        camera_name: z.string().nullable().optional(),
-        camera_timezone: z.string().nullable().optional(),
-        led_intensity: z.number().nullable().optional(),
-        led_mode: z.string().nullable().optional(),
         led_stealth_mode: z.boolean().nullable().optional(),
       })
+      .strict()
       .optional(),
   }),
 });
