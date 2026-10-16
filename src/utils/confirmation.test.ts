@@ -112,6 +112,17 @@ describe("confirmation ids", () => {
     expect(verifyConfirmationId(null, action)).toBe(false);
   });
 
+  // A client that confirmed through its own form first passed that form's key as the
+  // confirmationId; it must re-ask (never act), and the ask must steer toward ONE plain question.
+  it("treats a form key as no confirmation and asks for one plain yes/no", () => {
+    const result = requireConfirmation("Xk3vT9qLQe2mA7pZr1sYwB:0", action);
+    expect(isConfirmed(result)).toBe(false);
+    const description = JSON.parse((result as { content: { text: string }[] }).content[0].text)
+      .description as string;
+    expect(description).toMatch(/one plain yes\/no question \(no form\)/);
+    expect(isConfirmed(requireConfirmation(issuedId(result), action))).toBe(true);
+  });
+
   it("re-asks with a new id when the given id does not confirm the action", () => {
     const stale = issueConfirmationId({ tool: "reboot-cameras", args: { cameraUuids: ["other"] } });
     const result = requireConfirmation(stale, action);

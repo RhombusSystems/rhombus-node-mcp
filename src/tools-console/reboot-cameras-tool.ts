@@ -6,8 +6,11 @@ import { rebootCameras } from "../api/reboot-cameras-tool-api.js";
 import { TOOL_ARGS, type ToolArgs } from "../types/reboot-cameras-tool-types.js";
 
 const TOOL_NAME = "reboot-cameras";
+// The tool runs its own confirmation step. A model that also asked (or rendered a confirm form)
+// before the first call made the user confirm twice, and passed the form's key as the
+// confirmationId, which can never verify.
 const TOOL_DESCRIPTION =
-  "this tool is for rebooting one or more cameras causing them to reconnect to the server, this is a helpful option when a camera is experiencing connectivity issues or is in need of troubleshooting. THIS TOOL PERFORMS AN ACTION.";
+  "Reboots one or more cameras so they reconnect to the server — useful when a camera has connectivity issues or needs troubleshooting. THIS TOOL PERFORMS AN ACTION and runs its own confirmation step, so the user confirms exactly ONCE: call this tool FIRST, with confirmationId null — do not ask the user or render a form beforehand. It answers with an id; ask the user one plain yes/no question, and when they agree call it again with the same cameraUuids and exactly that id.";
 
 const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
   const { cameraUuids, confirmationId } = args;

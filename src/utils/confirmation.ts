@@ -21,7 +21,12 @@ import { createToolTextContent } from "../util.js";
 import { logger } from "../logger.js";
 
 export const CONFIRMATION_ARGS = {
-  confirmationId: z.string().nullable(),
+  confirmationId: z
+    .string()
+    .nullable()
+    .describe(
+      'null on the first call. On the confirming call, exactly the id this tool returned (it starts with "c1"). Never a form key or any other value.'
+    ),
 };
 
 export function addConfirmationParams<TInputArgs extends object>(
@@ -155,7 +160,7 @@ export function requireConfirmation(
   return createToolTextContent(
     JSON.stringify({
       needUserInput: true,
-      description: `Please request confirmation for the user for performing this action. Upon confirmation, call this tool again with the same arguments and the confirmation id: ${newId} (valid for 15 minutes, for this action only)`,
+      description: `Ask the user to confirm this action with one plain yes/no question (no form). When they agree, call this tool again with the same arguments and the confirmation id: ${newId} (valid for 15 minutes, for this action only)`,
     })
   );
 }
