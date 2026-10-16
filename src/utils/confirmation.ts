@@ -7,14 +7,16 @@
  * second instance and demanded a fresh confirmation every time, so a confirmed action could not be performed at all in a
  * multi-instance deployment.
  *
- * The token is an HMAC over its issue time, a nonce and the action it confirms (tool name + arguments), keyed by the
- * caller's own credential from the request context (API key, chat session, cookie or OAuth bearer). Every instance sees
- * that credential on every request and the model never does, so the model cannot mint a token without going through the
- * ask. A token is valid for 15 minutes and only for the exact action it was issued for.
+ * The token is an HMAC over its issue time, a nonce and the action it confirms (tool name + arguments), keyed by a
+ * deployment-wide secret that every instance holds and the model never sees, so the model cannot mint a token without
+ * going through the ask. The key is CONFIRMATION_SECRET when set; otherwise OPENAI_API_KEY, which the chatbot hands its
+ * bundled MCP server on every instance (a secret is only HMAC key material here, never exposed); otherwise the
+ * single-user RHOMBUS_API_KEY; otherwise a per-process random key for a lone local process. The caller's own request
+ * credential is deliberately NOT used: the chatbot mints a fresh session per turn, so a token issued on one turn would
+ * never validate on the next. A token is valid for 15 minutes and only for the exact action it was issued for.
  */
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { requestAuthContext } from "../auth-context.js";
 import { createToolTextContent } from "../util.js";
 import { logger } from "../logger.js";
 
@@ -48,22 +50,14 @@ const NONCE_HEX = 8;
 const SIG_HEX = 32;
 const TOKEN_LENGTH = TOKEN_VERSION.length + TS_HEX + NONCE_HEX + SIG_HEX;
 
-// Only reached with no request credential and no RHOMBUS_API_KEY (local stdio
-// development): a single process, so a per-process key is all that is needed.
+// Lone local process with no secret at all: a per-process key is all it needs.
 const processFallbackKey = randomBytes(32);
 
+/** Deployment-wide HMAC key material; see the module doc for the precedence. */
 function keyMaterial(): Buffer {
-  const auth = requestAuthContext.getStore();
-  const credential = auth
-    ? "apiKey" in auth
-      ? auth.apiKey
-      : "sessionId" in auth
-        ? auth.sessionId
-        : "cookie" in auth
-          ? auth.cookie
-          : auth.oauthBearer
-    : process.env.RHOMBUS_API_KEY;
-  return credential ? Buffer.from(`confirmation:${credential}`, "utf8") : processFallbackKey;
+  const secret =
+    process.env.CONFIRMATION_SECRET || process.env.OPENAI_API_KEY || process.env.RHOMBUS_API_KEY;
+  return secret ? Buffer.from(`confirmation:${secret}`, "utf8") : processFallbackKey;
 }
 
 /**
