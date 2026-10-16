@@ -45,6 +45,7 @@ function makeArgs(overrides: Partial<ToolArgs>): ToolArgs {
     notifyUserUuids: null,
     lastEvaluatedKey: null,
     maxPageSize: null,
+    allowDuplicate: null,
     ...overrides,
   };
 }
@@ -75,7 +76,11 @@ describe("automated-prompts-tool handler", () => {
     it("returns settingsList and lastEvaluatedKey, forwards pagination args", async () => {
       vi.mocked(automatedPromptsApi.listAutomatedPrompts).mockResolvedValue({
         settingsList: [
-          { uuid: PROMPT_UUID, prompt: "daily face report", invokeAt: "2026-04-22T10:57:00.000-07:00" },
+          {
+            uuid: PROMPT_UUID,
+            prompt: "daily face report",
+            invokeAt: "2026-04-22T10:57:00.000-07:00",
+          },
         ],
         lastEvaluatedKey: "next-page-token",
       });
@@ -580,5 +585,81 @@ describe("automated-prompts-tool update: guidance folding", () => {
     expect(input.prompt).toBe(
       `Summarize yesterday's alerts\n\n${RESPONSE_GUIDANCE_PREFIX} Keep it to three bullets`
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Duplicate detection on create
+// ---------------------------------------------------------------------------
+describe("create: near-duplicate detection", () => {
+  const existing = {
+    uuid: PROMPT_UUID,
+    prompt:
+      "Every weekday, summarize all camera alerts and motion events from the previous 24 hours across the organization. Keep the summary short.",
+    frequency: { frequency: 1, unit: FrequencyUnitEnum.DAYS },
+    invokeAt: "2026-10-19T13:00:00+00:00",
+    permissionGroupUuid: PERMISSION_GROUP_UUID,
+    notifyUserUuids: [USER_UUID_A],
+  };
+  const createArgs = makeArgs({
+    requestType: AutomatedPromptsRequestType.CREATE,
+    prompt:
+      "Give me a short summary of camera alerts and motion events from the previous 24 hours.",
+    invokeAt: "2099-01-01T13:00:00+00:00",
+    frequencyValue: 1,
+    frequencyUnit: FrequencyUnitEnum.DAYS,
+    permissionGroupUuid: PERMISSION_GROUP_UUID,
+    notifyUserUuids: [USER_UUID_A],
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(automatedPromptsApi.createAutomatedPrompt).mockResolvedValue({
+      uuid: "newPromptUuid0000000000",
+    } as never);
+  });
+
+  it("asks before creating a prompt that looks like an existing one", async () => {
+    vi.mocked(automatedPromptsApi.listAutomatedPrompts).mockResolvedValue({
+      settingsList: [existing],
+    } as never);
+    const handler = captureToolHandler(createTool);
+    const result = await handler(createArgs, EMPTY_EXTRA);
+    const payload = parsePayload(result as never);
+    expect(payload.needUserInput).toBe(true);
+    expect(payload.possibleDuplicate.uuid).toBe(PROMPT_UUID);
+    expect(automatedPromptsApi.createAutomatedPrompt).not.toHaveBeenCalled();
+  });
+
+  it("creates once the user has confirmed they want both (allowDuplicate)", async () => {
+    vi.mocked(automatedPromptsApi.listAutomatedPrompts).mockResolvedValue({
+      settingsList: [existing],
+    } as never);
+    const handler = captureToolHandler(createTool);
+    await handler({ ...createArgs, allowDuplicate: true }, EMPTY_EXTRA);
+    expect(automatedPromptsApi.createAutomatedPrompt).toHaveBeenCalledTimes(1);
+    expect(automatedPromptsApi.listAutomatedPrompts).not.toHaveBeenCalled();
+  });
+
+  it("creates when the existing prompts are a different job", async () => {
+    vi.mocked(automatedPromptsApi.listAutomatedPrompts).mockResolvedValue({
+      settingsList: [
+        {
+          ...existing,
+          prompt: "Weekly report of door badge events by person and door for the office.",
+          frequency: { frequency: 1, unit: FrequencyUnitEnum.WEEKS },
+        },
+      ],
+    } as never);
+    const handler = captureToolHandler(createTool);
+    await handler(createArgs, EMPTY_EXTRA);
+    expect(automatedPromptsApi.createAutomatedPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates when the org has no prompts yet or the list is unavailable", async () => {
+    vi.mocked(automatedPromptsApi.listAutomatedPrompts).mockResolvedValue(undefined as never);
+    const handler = captureToolHandler(createTool);
+    await handler(createArgs, EMPTY_EXTRA);
+    expect(automatedPromptsApi.createAutomatedPrompt).toHaveBeenCalledTimes(1);
   });
 });

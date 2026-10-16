@@ -83,6 +83,12 @@ export const TOOL_ARGS = {
     .describe(
       "User UUIDs to email-notify when MIND finishes a run. These users must be members of the permission group set above. Used by 'create' and 'update'. Pass an empty array to clear existing notifyees on 'update'."
     ),
+  allowDuplicate: z
+    .boolean()
+    .nullable()
+    .describe(
+      "For 'create' only. The tool refuses to create a prompt that looks like one the org already has (same job, similar wording) and asks you to check with the user; set true to create it anyway once the user has said they want both."
+    ),
   lastEvaluatedKey: z
     .string()
     .nullable()
@@ -129,6 +135,7 @@ export const CreateRequestSchema = z.object({
   permissionGroupUuid: z.string().min(1, "permissionGroupUuid is required."),
   responseTemplate: z.string().nullish(),
   notifyUserUuids: z.array(z.string()).nullish(),
+  allowDuplicate: z.boolean().nullish(),
 });
 
 export const UpdateRequestSchema = z
