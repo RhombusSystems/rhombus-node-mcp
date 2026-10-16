@@ -14,7 +14,7 @@ const TOOL_NAME = "camera-tool";
 // it is acting. See PERF_MASTER_PLAN P2 #4a.
 const TOOL_DESCRIPTION = `
 Acts on a camera's video stream. Set "requestType":
-- **image** — a frame from the camera at a given time (timestampISO defaults to ~5 minutes before now for a near-live view; pass a historical timestamp for a past moment, e.g. the time of a badge event). A high-resolution capture of what the camera saw — people, vehicles, license plates, any detectable object — for object recognition, anomaly detection, incident investigation, or situational assessment. Optional crop args zoom into a sub-region.
+- **image** — a frame from the camera at a given time (without timestampISO it is near-live — about 10 seconds ago, or ~5 minutes ago when the camera's most recent footage is not available yet; the result's timestampMs is the frame's actual time. Pass a historical timestamp for a past moment, e.g. the time of a badge event). A high-resolution capture of what the camera saw — people, vehicles, license plates, any detectable object — for object recognition, anomaly detection, incident investigation, or situational assessment. Optional crop args zoom into a sub-region.
 - **get-settings** — current configuration of a camera or associated device (sensor, access controller): resolution, bitrate, image/exposure settings, storage. To CHANGE settings use **update-tool** instead.
 - **get-media-uris** — the camera's streaming/playback URIs (LAN and WAN live-stream and VOD URLs, e.g. H.264 and M3U8). Use when the user needs direct stream or playback endpoints.
 - **get-ai-thresholds** — the camera's AI detection threshold configuration (confidence thresholds for detection events). Use when diagnosing why a camera is or isn't generating AI events.
@@ -68,6 +68,13 @@ function compactSettings(value: unknown): unknown {
   return value;
 }
 
+// An image request without a timestamp means "what does it see now". Footage reaches the frame
+// endpoint a couple of seconds behind real time on cameras with on-camera storage; cameras that only
+// archive to the cloud, or sit behind a slow uplink, can lag minutes — so a near-live miss retries at
+// the previous 5-minute default instead of failing.
+const NEAR_LIVE_OFFSET_MS = 10_000;
+const FALLBACK_OFFSET_MS = 5 * 60_000;
+
 const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
   const { cameraUuid, timestampISO, requestType, cropX, cropY, cropWidth, cropHeight, downscaleFactor } =
     args;
@@ -85,21 +92,29 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: unknown) => {
 
   // biome-ignore lint/suspicious/noExplicitAny: this will be returned, and can be any type since it will be JSON.stringify'd
   let response: any;
-  const timestampMs = timestampISO ? new Date(timestampISO).getTime() : Date.now() - 1000 * 60 * 5;
+  const now = Date.now();
+  const frameTimes = timestampISO
+    ? [new Date(timestampISO).getTime()]
+    : [now - NEAR_LIVE_OFFSET_MS, now - FALLBACK_OFFSET_MS];
+  let timestampMs = frameTimes[0];
 
   const { requestModifiers, sessionId } = extractFromToolExtra(extra);
 
   switch (requestType) {
     case "image":
-      response = await getImageForCameraAtTime(cameraUuid, timestampMs, requestModifiers, sessionId, {
-        crop: {
-          x: cropX ?? null,
-          y: cropY ?? null,
-          width: cropWidth ?? null,
-          height: cropHeight ?? null,
-        },
-        downscaleFactor: downscaleFactor ?? null,
-      });
+      for (const frameTime of frameTimes) {
+        timestampMs = frameTime;
+        response = await getImageForCameraAtTime(cameraUuid, timestampMs, requestModifiers, sessionId, {
+          crop: {
+            x: cropX ?? null,
+            y: cropY ?? null,
+            width: cropWidth ?? null,
+            height: cropHeight ?? null,
+          },
+          downscaleFactor: downscaleFactor ?? null,
+        });
+        if (response.success && response.imageData) break;
+      }
 
       if (!response.success || !response.imageData) {
         // isError skips output validation, so the failure detail (status,

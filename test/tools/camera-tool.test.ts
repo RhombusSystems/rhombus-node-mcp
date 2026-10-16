@@ -177,25 +177,66 @@ describe("camera-tool handler", () => {
       expect(calledTimestampMs).toBe(new Date(iso).getTime());
     });
 
-    it("defaults to ~5 minutes ago when timestampISO is null", async () => {
+    // "Show me a live snapshot" used to return a frame from 5 minutes ago.
+    it("defaults to a near-live frame (~10 s ago) and reports its time", async () => {
       vi.mocked(cameraApi.getImageForCameraAtTime).mockResolvedValue({
-        success: false,
-        status: "irrelevant",
-      });
+        success: true,
+        imageData: "aGVsbG8=",
+      } as never);
 
       const before = Date.now();
-
-      await handler(
+      const result = await handler(
         { cameraUuid: CAMERA_UUID, requestType: "image", timestampISO: null },
         EMPTY_EXTRA
       );
-
       const after = Date.now();
-      const [, calledTimestampMs] = vi.mocked(cameraApi.getImageForCameraAtTime).mock.calls[0];
 
+      const calls = vi.mocked(cameraApi.getImageForCameraAtTime).mock.calls;
+      expect(calls).toHaveLength(1);
+      const calledTimestampMs = calls[0][1];
+      expect(calledTimestampMs).toBeGreaterThanOrEqual(before - 10_000 - 500);
+      expect(calledTimestampMs).toBeLessThanOrEqual(after - 10_000 + 500);
+      expect((result as { structuredContent: { timestampMs: number } }).structuredContent.timestampMs).toBe(
+        calledTimestampMs
+      );
+    });
+
+    it("falls back to ~5 minutes ago when near-live footage is not available yet", async () => {
+      vi.mocked(cameraApi.getImageForCameraAtTime)
+        .mockResolvedValueOnce({ success: false, status: "no footage yet" })
+        .mockResolvedValueOnce({ success: true, imageData: "aGVsbG8=" } as never);
+
+      const before = Date.now();
+      const result = await handler(
+        { cameraUuid: CAMERA_UUID, requestType: "image", timestampISO: null },
+        EMPTY_EXTRA
+      );
+      const after = Date.now();
+
+      const calls = vi.mocked(cameraApi.getImageForCameraAtTime).mock.calls;
+      expect(calls).toHaveLength(2);
+      const fallbackMs = calls[1][1];
       const fiveMinutesMs = 5 * 60 * 1000;
-      expect(calledTimestampMs).toBeGreaterThanOrEqual(before - fiveMinutesMs - 500);
-      expect(calledTimestampMs).toBeLessThanOrEqual(after - fiveMinutesMs + 500);
+      expect(fallbackMs).toBeGreaterThanOrEqual(before - fiveMinutesMs - 500);
+      expect(fallbackMs).toBeLessThanOrEqual(after - fiveMinutesMs + 500);
+      // The reported time is the frame actually returned, not the near-live attempt.
+      expect((result as { structuredContent: { timestampMs: number } }).structuredContent.timestampMs).toBe(
+        fallbackMs
+      );
+    });
+
+    it("fetches an explicit timestamp once, without falling back", async () => {
+      vi.mocked(cameraApi.getImageForCameraAtTime).mockResolvedValue({
+        success: false,
+        status: "no footage",
+      });
+
+      await handler(
+        { cameraUuid: CAMERA_UUID, requestType: "image", timestampISO: "2024-06-15T10:30:00.000Z" },
+        EMPTY_EXTRA
+      );
+
+      expect(vi.mocked(cameraApi.getImageForCameraAtTime)).toHaveBeenCalledTimes(1);
     });
 
     it("passes cameraUuid to the API", async () => {
