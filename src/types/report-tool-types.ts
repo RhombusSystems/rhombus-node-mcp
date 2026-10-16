@@ -44,7 +44,7 @@ export const TOOL_ARGS = z.object({
 **PEOPLE type (in GET_SUMMARY_COUNT_REPORT):** not a unique person count; it counts people-detection events, and requires people detection to be enabled on the camera. Use for high-level activity trends, not for deduplicated head counts.
 
 **Summary and occupancy**
-- GET_SUMMARY_COUNT_REPORT: aggregated counts (people, faces, motion, vehicles, etc.) over time at device, location, or org scope. Interval: minutely, hourly, daily, weekly, monthly, yearly. With PEOPLE type at DEVICE scope the response is automatically enriched with face recognition data.
+- GET_SUMMARY_COUNT_REPORT: aggregated counts (people, faces, bandwidth, vehicles, etc.) over time at device, location, or org scope. Interval: minutely, hourly, daily, weekly, monthly, yearly. With PEOPLE type at DEVICE scope the response is automatically enriched with face recognition data. When the window has no data, the response carries a hint and, if earlier data exists, lastRecordedDateUtc (the last UTC day with data in the prior 30 days) — report a recording gap as such, never as zero activity or a missing feature.
 - GET_OCCUPANCY_ENABLED_CAMERAS: cameras with occupancy reporting enabled. **Always call this first** before any people/occupancy counting request to verify camera support.
 - GET_OCCUPANCY_COUNT_REPORT: occupancy count time series for one device over a time range, enriched with face recognition data. If the device does not support occupancy, the response includes a hint and the list of cameras that do.
 
@@ -351,7 +351,14 @@ export const OUTPUT_SCHEMA = z.object({
           ),
         hint: z
           .optional(z.string())
-          .describe("Guidance when primary data source returned empty results"),
+          .describe(
+            "Guidance when the primary data source returned empty results. For an empty window it says whether any data exists in the prior 30 days and, if so, the last UTC day that has data, so a recording gap is not reported as zero activity."
+          ),
+        lastRecordedDateUtc: z
+          .optional(z.string())
+          .describe(
+            "When the requested window is empty but earlier data exists: the start of the most recent UTC day (within the prior 30 days) that has data for this scope and types."
+          ),
         occupancyEnabledCameras: z
           .optional(z.array(OccupancyEnabledCamera))
           .describe(
