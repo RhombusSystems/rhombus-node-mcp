@@ -105,12 +105,11 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         const data = parsed.data;
         const settings = await createAutomatedPrompt(
           {
-            prompt: data.prompt,
+            prompt: foldResponseGuidance(data.prompt, data.responseTemplate),
             invokeAtMs: new Date(data.invokeAt).getTime(),
             frequencyValue: data.frequencyValue,
             frequencyUnit: data.frequencyUnit,
             permissionGroupUuid: data.permissionGroupUuid,
-            responseTemplate: data.responseTemplate ?? undefined,
             notifyUserUuids: data.notifyUserUuids ?? undefined,
           },
           requestModifiers,
@@ -123,15 +122,20 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
         const parsed = UpdateRequestSchema.safeParse(args);
         if (!parsed.success) return validationErrorResponse(parsed.error);
         const data = parsed.data;
+        // Guidance without a new prompt is folded into the prompt as stored.
+        let prompt = data.prompt ?? undefined;
+        if (data.responseTemplate && !prompt) {
+          const current = await getAutomatedPrompt(data.promptUuid, requestModifiers, sessionId);
+          prompt = current?.prompt ?? undefined;
+        }
         const settings = await updateAutomatedPrompt(
           {
             promptUuid: data.promptUuid,
-            prompt: data.prompt ?? undefined,
+            prompt: prompt ? foldResponseGuidance(prompt, data.responseTemplate) : undefined,
             invokeAtMs: data.invokeAt ? new Date(data.invokeAt).getTime() : undefined,
             frequencyValue: data.frequencyValue ?? undefined,
             frequencyUnit: data.frequencyUnit ?? undefined,
             permissionGroupUuid: data.permissionGroupUuid ?? undefined,
-            responseTemplate: data.responseTemplate ?? undefined,
             notifyUserUuids: data.notifyUserUuids ?? undefined,
           },
           requestModifiers,
@@ -203,6 +207,21 @@ const TOOL_HANDLER = async (args: ToolArgs, _extra: unknown) => {
 
   return createToolStructuredContent({ error: "Invalid request type" });
 };
+
+/**
+ * Free-text response guidance is folded into the prompt text. The server's
+ * `responseTemplate` field is a serialized report structure, not prose: a
+ * plain-text value there made every scheduled run of the prompt fail at
+ * submission before the model was called. The guidance still reaches the
+ * model — as part of the prompt it executes.
+ */
+export const RESPONSE_GUIDANCE_PREFIX = "Response format guidance:";
+
+export function foldResponseGuidance(prompt: string, guidance: string | null | undefined): string {
+  const text = guidance?.trim();
+  if (!text) return prompt;
+  return `${prompt.trim()}\n\n${RESPONSE_GUIDANCE_PREFIX} ${text}`;
+}
 
 export function createTool(server: McpServer) {
   server.registerTool(
