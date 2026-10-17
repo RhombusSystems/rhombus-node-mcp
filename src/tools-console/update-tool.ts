@@ -43,7 +43,7 @@ import { logger } from "../logger.js";
 const TOOL_NAME = "update-tool";
 
 const TOOL_DESCRIPTION = `
-Updates configuration settings for Rhombus cameras and doorbell cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation), audio settings (recording, microphone, speaker) and device settings (name, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
+Updates configuration settings for Rhombus cameras and doorbell cameras: video settings (resolution, HDR/WDR, brightness, contrast, saturation, infrared filter and IR LEDs), audio settings (recording, microphone, speaker) and device settings (name, LED control). Use this tool for ALL camera settings changes, including image-quality fixes (too dark, washed out, blurry).
 
 MANDATORY confirmation flow: when you have proposed camera-settings fixes and the user replies with any affirmative ("yes", "confirm", "apply", "go ahead", ...), do not send text first — IMMEDIATELY call this tool with the settings you identified, and only report success after it returns. NEVER claim settings were updated without calling it; one confirmation covers all proposed changes.
 
@@ -369,8 +369,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
             return errorResult(firmware.error ?? "Could not look up the camera.");
           }
           const facetConfig = current.config?.videoFacetSettings?.[facet] as
-            | PrivacyRegionConfig
-            | undefined;
+            PrivacyRegionConfig | undefined;
           if (!current.success || !facetConfig) {
             return errorResult(
               `Could not read the camera's current privacy regions (${
@@ -404,7 +403,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
             cameraName: firmware.name,
           };
           updatePayload.configUpdate.videoFacetSettings = {
-            [facet]: { ...(updatePayload.configUpdate.videoFacetSettings?.[facet] ?? {}), ...update },
+            [facet]: {
+              ...(updatePayload.configUpdate.videoFacetSettings?.[facet] ?? {}),
+              ...update,
+            },
           };
         }
 
@@ -465,8 +467,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
             extra.sessionId
           );
           const afterFacet = after.config?.videoFacetSettings?.[facet] as
-            | PrivacyRegionConfig
-            | undefined;
+            PrivacyRegionConfig | undefined;
           if (!after.success || !afterFacet) {
             privacySection = `**Privacy regions:** the update was accepted, but the config read-back failed (${
               after.error ?? "no facet in response"
@@ -671,8 +672,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
     const hasDoorbellSettings = Boolean(
       (cameraVideoSettings && cameraVideoSettings.trim()) ||
-        (cameraAudioSettings && cameraAudioSettings.trim()) ||
-        (cameraDeviceSettings && cameraDeviceSettings.trim())
+      (cameraAudioSettings && cameraAudioSettings.trim()) ||
+      (cameraDeviceSettings && cameraDeviceSettings.trim())
     );
 
     // Step 2 equivalent: uuid but no settings — show the current config so the
@@ -741,6 +742,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         );
         if (!video.ok) {
           return errorResult(video.message);
+        }
+        // The doorbell config API has no infrared fields; sending them would be
+        // silently ignored and then reported as applied.
+        if (video.value.ir_filter_mode !== undefined || video.value.ir_leds_mode !== undefined) {
+          return errorResult(
+            "Doorbell cameras do not expose infrared settings (ir_filter_mode / ir_leds_mode) through their config, so nothing was changed. Remove them and retry; tell the user the IR behaviour of a doorbell camera is not adjustable here."
+          );
         }
         Object.assign(flatSettings, cleanUpdatePayload(video.value));
       }
@@ -874,8 +882,13 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       if (notApplied.length > 0 && applied.length === 0 && notVerifiable.length === 0) {
         return errorResult(
           `The API accepted the update for doorbell camera "${deviceName}" but a config read-back shows the value(s) unchanged: ${notApplied
-            .map(f => `${f.setting} is still ${JSON.stringify(f.actual)} (requested ${JSON.stringify(f.requested)})`)
-            .join("; ")}. Do not retry with the same arguments — tell the user the setting did not take effect.`
+            .map(
+              f =>
+                `${f.setting} is still ${JSON.stringify(f.actual)} (requested ${JSON.stringify(f.requested)})`
+            )
+            .join(
+              "; "
+            )}. Do not retry with the same arguments — tell the user the setting did not take effect.`
         );
       }
 
@@ -883,7 +896,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
       if (notApplied.length > 0) {
         verificationNotes.push(
           `WARNING — ${notApplied.length} setting(s) did NOT take effect: ${notApplied
-            .map(f => `${f.setting} is still ${JSON.stringify(f.actual)} (requested ${JSON.stringify(f.requested)})`)
+            .map(
+              f =>
+                `${f.setting} is still ${JSON.stringify(f.actual)} (requested ${JSON.stringify(f.requested)})`
+            )
             .join("; ")}`
         );
       }
@@ -967,7 +983,10 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     );
     if (!parsed.ok) return errorResult(parsed.message);
     const requested = parsed.value;
-    if (requested.ajar_threshold_enabled === undefined && requested.ajar_threshold_sec === undefined) {
+    if (
+      requested.ajar_threshold_enabled === undefined &&
+      requested.ajar_threshold_sec === undefined
+    ) {
       return errorResult(
         "Invalid doorSensorSettings: pass ajar_threshold_enabled and/or ajar_threshold_sec. No settings were changed."
       );
@@ -975,11 +994,18 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     // Setting a threshold only takes effect while it is enabled, so a bare
     // seconds value means "use this many seconds".
     const update = {
-      ajar_threshold_enabled: requested.ajar_threshold_enabled ?? (requested.ajar_threshold_sec !== undefined ? true : before.settings.ajarThresholdEnabled),
+      ajar_threshold_enabled:
+        requested.ajar_threshold_enabled ??
+        (requested.ajar_threshold_sec !== undefined ? true : before.settings.ajarThresholdEnabled),
       ajar_threshold_sec: requested.ajar_threshold_sec ?? before.settings.ajarThresholdSec,
     };
 
-    const written = await updateDoorSensorAjarSettings(entityUuid, update, requestModifiers, extra.sessionId);
+    const written = await updateDoorSensorAjarSettings(
+      entityUuid,
+      update,
+      requestModifiers,
+      extra.sessionId
+    );
     if (!written.success) {
       return errorResult(
         `Failed to update the door sensor's ajar threshold: ${written.error ?? "unknown error"}. No settings were changed.`
@@ -990,7 +1016,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
     const applied =
       after.success &&
       after.settings?.ajarThresholdEnabled === update.ajar_threshold_enabled &&
-      (update.ajar_threshold_sec === undefined || after.settings?.ajarThresholdSec === update.ajar_threshold_sec);
+      (update.ajar_threshold_sec === undefined ||
+        after.settings?.ajarThresholdSec === update.ajar_threshold_sec);
     if (!applied) {
       return errorResult(
         `The update to door sensor "${sensorName}" was accepted but reading it back does not show it (now: ${JSON.stringify(after.settings ?? after.error)}). Tell the user to check the sensor's Ajar Threshold in the Console.`

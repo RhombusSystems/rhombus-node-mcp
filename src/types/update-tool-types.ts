@@ -14,6 +14,8 @@ export const ENTITY_TYPE = z.enum(["camera", "doorbell-camera", "door-sensor"]);
 export type EntityType = z.infer<typeof ENTITY_TYPE>;
 
 // Camera-specific update schemas
+const IR_MODE = z.enum(["ON", "OFF", "AUTO"]);
+
 export const CameraVideoSettings = z.object({
   hdr_enabled: z.boolean().optional().describe("Enable HDR (High Dynamic Range)"),
   img_brightness: z
@@ -24,7 +26,12 @@ export const CameraVideoSettings = z.object({
     .describe("Image brightness adjustment (-255 to 255)"),
   img_contrast: z.number().min(0).max(128).optional().describe("Image contrast (0 to 128)"),
   img_saturation: z.number().min(0).max(255).optional().describe("Image saturation (0 to 255)"),
-  img_sharpness: z.number().min(0).max(11).optional().describe("Image sharpness (0 to 11; 6 works for most situations)"),
+  img_sharpness: z
+    .number()
+    .min(0)
+    .max(11)
+    .optional()
+    .describe("Image sharpness (0 to 11; 6 works for most situations)"),
   resolution: z
     .object({
       width: z.number().int().positive().optional(),
@@ -33,7 +40,18 @@ export const CameraVideoSettings = z.object({
     .optional()
     .describe("Video resolution (width x height)"),
   wdr_enabled: z.boolean().optional().describe("Enable Wide Dynamic Range"),
-  wdr_strength: z.number().min(0).max(128).optional().describe("WDR strength (0 minimum to 128 maximum)"),
+  wdr_strength: z
+    .number()
+    .min(0)
+    .max(128)
+    .optional()
+    .describe("WDR strength (0 minimum to 128 maximum)"),
+  ir_filter_mode: IR_MODE.optional().describe(
+    "Infrared cut filter: ON forces night (black-and-white) mode, OFF forces colour, AUTO switches by light level"
+  ),
+  ir_leds_mode: IR_MODE.optional().describe(
+    "Infrared illuminators (IR LEDs): ON, OFF, or AUTO to light the scene only when it is dark"
+  ),
   video_persist_disabled: z.boolean().optional().describe("Disable video persistence"),
   zero_motion_video_bitrate_percent: z
     .number()
@@ -105,7 +123,11 @@ export const CameraDeviceSettings = z.object({
 // geometry (rotation, PTZ, permyriad units, polygon vs legacy window by
 // firmware) lives in api/privacy-region-geometry.ts.
 const percent = (label: string) =>
-  z.number().min(0).max(100).describe(`${label}, as a percentage (0 to 100) of the image as shown in the Console`);
+  z
+    .number()
+    .min(0)
+    .max(100)
+    .describe(`${label}, as a percentage (0 to 100) of the image as shown in the Console`);
 
 export const PrivacyRegionRect = z
   .object({
@@ -118,9 +140,13 @@ export const PrivacyRegionRect = z
   .refine(r => r.widthPercent > 0 && r.heightPercent > 0, {
     message: "widthPercent and heightPercent must both be greater than 0",
   })
-  .refine(r => r.leftPercent + r.widthPercent <= 100.001 && r.topPercent + r.heightPercent <= 100.001, {
-    message: "the region must fit inside the image (leftPercent + widthPercent and topPercent + heightPercent must be at most 100)",
-  });
+  .refine(
+    r => r.leftPercent + r.widthPercent <= 100.001 && r.topPercent + r.heightPercent <= 100.001,
+    {
+      message:
+        "the region must fit inside the image (leftPercent + widthPercent and topPercent + heightPercent must be at most 100)",
+    }
+  );
 
 // Any simple polygon, vertices in drawing order. Shape rules the Console's
 // editor enforces (no self-intersection, non-zero area, rectangles only on old
@@ -149,7 +175,9 @@ export const PrivacyRegionsSpec = z
   .object({
     mode: z
       .enum(["add", "replace", "clear"])
-      .describe('"add" keeps the regions already on the camera, "replace" removes them first, "clear" removes all regions'),
+      .describe(
+        '"add" keeps the regions already on the camera, "replace" removes them first, "clear" removes all regions'
+      ),
     regions: z.array(PrivacyRegionShape).optional(),
   })
   .strict()
@@ -170,7 +198,7 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      'UUID of the entity to update. Faceted UUIDs are supported (e.g. "cameraUuid.v0" / "cameraUuid.v1") to target a specific camera facet; defaults to "v0" when no facet is given.',
+      'UUID of the entity to update. Faceted UUIDs are supported (e.g. "cameraUuid.v0" / "cameraUuid.v1") to target a specific camera facet; defaults to "v0" when no facet is given.'
     ),
 
   // Camera-specific update fields
@@ -189,19 +217,19 @@ export const TOOL_ARGS = {
     .string()
     .nullable()
     .describe(
-      `JSON string of video settings to update for camera. Values outside these ranges are REJECTED — img_brightness: -255 to 255 · img_contrast: 0 to 128 · img_saturation: 0 to 255 · img_sharpness: 0 to 11 (6 is typical — NOT a 0-100 scale) · wdr_strength: 0 to 128 (64 is typical) · zero_motion_video_bitrate_percent: 0 to 100 · hdr_enabled / wdr_enabled / video_persist_disabled: booleans · resolution: {"width": n, "height": n}. The night-mode fields (night_img_brightness, night_img_contrast, night_img_saturation, night_img_sharpness) take the same ranges as their daytime counterparts. Example for a dark image: '{"img_brightness": 0, "wdr_strength": 64}'; for a washed-out image: '{"img_brightness": -50, "img_contrast": 80}'; for a blurry image: '{"img_sharpness": 8}'. Saturation matters — 0 yields grayscale; most cameras look best mid-range, tune from there.`,
+      `JSON string of video settings to update for camera. ir_filter_mode / ir_leds_mode: "ON" | "OFF" | "AUTO" (infrared cut filter and IR illuminators; a black-and-white or black image at night usually means these are OFF) · Values outside these ranges are REJECTED — img_brightness: -255 to 255 · img_contrast: 0 to 128 · img_saturation: 0 to 255 · img_sharpness: 0 to 11 (6 is typical — NOT a 0-100 scale) · wdr_strength: 0 to 128 (64 is typical) · zero_motion_video_bitrate_percent: 0 to 100 · hdr_enabled / wdr_enabled / video_persist_disabled: booleans · resolution: {"width": n, "height": n}. The night-mode fields (night_img_brightness, night_img_contrast, night_img_saturation, night_img_sharpness) take the same ranges as their daytime counterparts. Example for a dark image: '{"img_brightness": 0, "wdr_strength": 64}'; for a washed-out image: '{"img_brightness": -50, "img_contrast": 80}'; for a blurry image: '{"img_sharpness": 8}'. Saturation matters — 0 yields grayscale; most cameras look best mid-range, tune from there.`
     ),
   cameraAudioSettings: z
     .string()
     .nullable()
     .describe(
-      `JSON string of audio settings to update for camera. audio_record / device_mic_enabled / device_speaker_enabled: booleans · audio_internal_mic_volume: 0 to 100 · audio_internal_speaker_volume: 0 to 100. Example: '{"audio_record": true, "audio_internal_mic_volume": 80}'.`,
+      `JSON string of audio settings to update for camera. audio_record / device_mic_enabled / device_speaker_enabled: booleans · audio_internal_mic_volume: 0 to 100 · audio_internal_speaker_volume: 0 to 100. Example: '{"audio_record": true, "audio_internal_mic_volume": 80}'.`
     ),
   cameraDeviceSettings: z
     .string()
     .nullable()
     .describe(
-      `JSON string of device settings to update for camera (name, LED). camera_name: string — renames the camera; the tool reads the name back and reports the rename only once it has taken effect · led_stealth_mode: boolean · led_mode: one of "auto", "always_on", "always_off". LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'. camera_timezone and led_intensity cannot be set on a camera through this tool — tell the user to change them in the Rhombus Console.`,
+      `JSON string of device settings to update for camera (name, LED). camera_name: string — renames the camera; the tool reads the name back and reports the rename only once it has taken effect · led_stealth_mode: boolean · led_mode: one of "auto", "always_on", "always_off". LED control uses EXACTLY these underscore field names (not camelCase): LED off = '{"led_stealth_mode": true}' (recommended) or '{"led_mode": "always_off"}'; LED on = '{"led_stealth_mode": false}' or '{"led_mode": "always_on"}' or '{"led_mode": "auto"}'. camera_timezone and led_intensity cannot be set on a camera through this tool — tell the user to change them in the Rhombus Console.`
     ),
 
   // Optional (unlike its siblings) so callers built before this field existed
@@ -211,7 +239,7 @@ export const TOOL_ARGS = {
     .nullable()
     .optional()
     .describe(
-      `JSON string that adds, replaces or clears PRIVACY REGIONS on a camera (areas blacked out in live and recorded video). This is the ONLY way to change privacy regions — never put privacy fields in cameraVideoSettings. Coordinates are PERCENTAGES (0 to 100) of the image as the user sees it in the Console, measured from the top-left corner; the tool converts them for the camera's rotation and firmware. Shape: {"mode": "add" | "replace" | "clear", "regions": [...]}, where each region is EITHER a rectangle {"leftPercent": n, "topPercent": n, "widthPercent": n, "heightPercent": n} OR a polygon {"points": [{"xPercent": n, "yPercent": n}, ...]} with 3 to 64 vertices listed in order around the outline (any simple shape: triangle, slanted quadrilateral, an outline that follows a window or doorway at an angle; edges must not cross). Use a polygon whenever the area is not an upright rectangle — do not approximate a slanted area with a bounding rectangle. Cameras on firmware older than 2025_0626 accept rectangles only; the tool says so if a polygon is sent to one. "add" keeps existing regions (default choice), "replace" removes existing regions first, "clear" removes all regions (omit "regions"). Examples — the left quarter of the top half: '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'; a slanted quadrilateral: '{"mode": "add", "regions": [{"points": [{"xPercent": 10, "yPercent": 5}, {"xPercent": 40, "yPercent": 15}, {"xPercent": 35, "yPercent": 60}, {"xPercent": 5, "yPercent": 50}]}]}'. The tool reads the camera config back and reports the regions now in effect. Cameras only (not doorbell cameras).`,
+      `JSON string that adds, replaces or clears PRIVACY REGIONS on a camera (areas blacked out in live and recorded video). This is the ONLY way to change privacy regions — never put privacy fields in cameraVideoSettings. Coordinates are PERCENTAGES (0 to 100) of the image as the user sees it in the Console, measured from the top-left corner; the tool converts them for the camera's rotation and firmware. Shape: {"mode": "add" | "replace" | "clear", "regions": [...]}, where each region is EITHER a rectangle {"leftPercent": n, "topPercent": n, "widthPercent": n, "heightPercent": n} OR a polygon {"points": [{"xPercent": n, "yPercent": n}, ...]} with 3 to 64 vertices listed in order around the outline (any simple shape: triangle, slanted quadrilateral, an outline that follows a window or doorway at an angle; edges must not cross). Use a polygon whenever the area is not an upright rectangle — do not approximate a slanted area with a bounding rectangle. Cameras on firmware older than 2025_0626 accept rectangles only; the tool says so if a polygon is sent to one. "add" keeps existing regions (default choice), "replace" removes existing regions first, "clear" removes all regions (omit "regions"). Examples — the left quarter of the top half: '{"mode": "add", "regions": [{"leftPercent": 0, "topPercent": 0, "widthPercent": 25, "heightPercent": 50}]}'; a slanted quadrilateral: '{"mode": "add", "regions": [{"points": [{"xPercent": 10, "yPercent": 5}, {"xPercent": 40, "yPercent": 15}, {"xPercent": 35, "yPercent": 60}, {"xPercent": 5, "yPercent": 50}]}]}'. The tool reads the camera config back and reports the regions now in effect. Cameras only (not doorbell cameras).`
     ),
 
   // Optional so callers built before this field existed keep validating.
@@ -275,6 +303,8 @@ export const UpdateCameraConfigPayload = z.object({
           img_contrast: z.number().nullable().optional(),
           img_saturation: z.number().nullable().optional(),
           img_sharpness: z.number().nullable().optional(),
+          ir_filter_mode: IR_MODE.nullable().optional(),
+          ir_leds_mode: IR_MODE.nullable().optional(),
           resolution: z
             .object({
               width: z.number().nullable().optional(),
