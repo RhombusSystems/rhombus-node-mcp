@@ -73,7 +73,11 @@ export async function updateCameraName(
   try {
     const result = await postApi<schema["Camera_UpdateCameraV2WSResponse"]>({
       route: "/camera/updateDetailsV2",
-      body: { uuid: cameraUuid, name, nameUpdated: true } satisfies schema["Camera_UpdateCameraV2WSRequest"],
+      body: {
+        uuid: cameraUuid,
+        name,
+        nameUpdated: true,
+      } satisfies schema["Camera_UpdateCameraV2WSRequest"],
       modifiers: requestModifiers,
       sessionId,
     });
@@ -195,10 +199,9 @@ async function getOrgCameraConfigOptions(
 
     return {
       success: true,
-      cameraConfigOptions: (result.cameraConfigOptions as Record<
-        string,
-        CameraConfigOption[] | null
-      > | null) ?? undefined,
+      cameraConfigOptions:
+        (result.cameraConfigOptions as Record<string, CameraConfigOption[] | null> | null) ??
+        undefined,
     };
   } catch (error) {
     return {
@@ -524,6 +527,10 @@ export function formatCameraSettings(settings: any): string {
         videoItems.push(`WDR: ${videoSettings.wdr_enabled ? "On" : "Off"}`);
       if (videoSettings.wdr_strength !== undefined)
         videoItems.push(`WDR Strength: ${videoSettings.wdr_strength}`);
+      if (videoSettings.ir_filter_mode !== undefined)
+        videoItems.push(`IR Filter: ${videoSettings.ir_filter_mode}`);
+      if (videoSettings.ir_leds_mode !== undefined)
+        videoItems.push(`IR LEDs: ${videoSettings.ir_leds_mode}`);
       if (videoSettings.video_persist_disabled !== undefined)
         videoItems.push(
           `Video Persist: ${videoSettings.video_persist_disabled ? "Disabled" : "Enabled"}`
@@ -741,7 +748,8 @@ export async function getDoorSensorAjarSettings(
         deviceUuid,
         ajarThresholdEnabled: enabled,
         ajarThresholdSec: seconds,
-        effectiveAjarSeconds: enabled && seconds && seconds > 0 ? seconds : DEFAULT_DOOR_AJAR_SECONDS,
+        effectiveAjarSeconds:
+          enabled && seconds && seconds > 0 ? seconds : DEFAULT_DOOR_AJAR_SECONDS,
       },
     };
   } catch (error) {
