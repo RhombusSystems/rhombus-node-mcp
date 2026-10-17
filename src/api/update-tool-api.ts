@@ -527,10 +527,6 @@ export function formatCameraSettings(settings: any): string {
         videoItems.push(`WDR: ${videoSettings.wdr_enabled ? "On" : "Off"}`);
       if (videoSettings.wdr_strength !== undefined)
         videoItems.push(`WDR Strength: ${videoSettings.wdr_strength}`);
-      if (videoSettings.ir_filter_mode !== undefined)
-        videoItems.push(`IR Filter: ${videoSettings.ir_filter_mode}`);
-      if (videoSettings.ir_leds_mode !== undefined)
-        videoItems.push(`IR LEDs: ${videoSettings.ir_leds_mode}`);
       if (videoSettings.video_persist_disabled !== undefined)
         videoItems.push(
           `Video Persist: ${videoSettings.video_persist_disabled ? "Disabled" : "Enabled"}`
@@ -541,6 +537,17 @@ export function formatCameraSettings(settings: any): string {
       if (videoItems.length > 0) {
         sections.push("**Video Settings:**\n" + videoItems.map(item => `• ${item}`).join("\n"));
       }
+    }
+  }
+
+  if (settings.deviceVideoSettings) {
+    const infraredItems: string[] = [];
+    if (settings.deviceVideoSettings.ir_filter_mode !== undefined)
+      infraredItems.push(`IR Filter: ${settings.deviceVideoSettings.ir_filter_mode}`);
+    if (settings.deviceVideoSettings.ir_leds_mode !== undefined)
+      infraredItems.push(`IR LEDs: ${settings.deviceVideoSettings.ir_leds_mode}`);
+    if (infraredItems.length > 0) {
+      sections.push("**Infrared:**\n" + infraredItems.map(item => `• ${item}`).join("\n"));
     }
   }
 

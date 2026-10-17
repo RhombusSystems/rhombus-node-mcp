@@ -294,6 +294,14 @@ export const DoorSensorAjarSettingsInput = z
 export const UpdateCameraConfigPayload = z.object({
   configUpdate: z.object({
     deviceUuid: z.string(),
+    // Infrared settings are device-level: the API reads them here and ignores
+    // them under videoFacetSettings (while still answering success).
+    deviceVideoSettings: z
+      .object({
+        ir_filter_mode: IR_MODE.nullable().optional(),
+        ir_leds_mode: IR_MODE.nullable().optional(),
+      })
+      .optional(),
     videoFacetSettings: z
       .record(
         z.string(),
@@ -303,8 +311,6 @@ export const UpdateCameraConfigPayload = z.object({
           img_contrast: z.number().nullable().optional(),
           img_saturation: z.number().nullable().optional(),
           img_sharpness: z.number().nullable().optional(),
-          ir_filter_mode: IR_MODE.nullable().optional(),
-          ir_leds_mode: IR_MODE.nullable().optional(),
           resolution: z
             .object({
               width: z.number().nullable().optional(),
