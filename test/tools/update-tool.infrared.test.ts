@@ -55,26 +55,31 @@ function callsTo(route: string) {
 }
 
 /**
- * Serves a faceted config that remembers what updateFacetedConfig wrote, so the
- * tool's read-back verification sees the change it made.
+ * Serves a config that remembers what updateFacetedConfig wrote, so the tool's
+ * read-back verification sees the change. `appliesInfrared: false` models a
+ * camera without infrared controls: the API answers success and stores nothing.
  */
-function mockCameraApi() {
-  const stored: Record<string, unknown> = {
-    img_brightness: 0,
-    ir_filter_mode: "AUTO",
-    ir_leds_mode: "AUTO",
-  };
+function mockCameraApi({ appliesInfrared = true }: { appliesInfrared?: boolean } = {}) {
+  const facet: Record<string, unknown> = { img_brightness: 0 };
+  const infrared: Record<string, unknown> = {};
   vi.mocked(network.postApi).mockImplementation(async (call: unknown) => {
     const { route, body } = call as { route: string; body: any };
     switch (route) {
       case "/camera/getMinimalCameraStateList":
         return { cameraStates: [{ uuid: CAMERA_UUID, name: "Driveway" }] } as never;
       case "/camera/getFacetedConfig":
-        return { config: { videoFacetSettings: { v0: { ...stored } } } } as never;
+        return {
+          config: {
+            videoFacetSettings: { v0: { ...facet } },
+            deviceVideoSettings: { ...infrared },
+          },
+        } as never;
       case "/camera/updateFacetedConfig": {
-        const update = Object.values(body?.configUpdate?.videoFacetSettings ?? {})[0] as
-          Record<string, unknown> | undefined;
-        Object.assign(stored, update ?? {});
+        const facetUpdate = Object.values(body?.configUpdate?.videoFacetSettings ?? {})[0] as
+          | Record<string, unknown>
+          | undefined;
+        Object.assign(facet, facetUpdate ?? {});
+        if (appliesInfrared) Object.assign(infrared, body?.configUpdate?.deviceVideoSettings ?? {});
         return { error: false } as never;
       }
       case "/camera/getDetails":
@@ -92,25 +97,48 @@ describe("update-tool — infrared filter and IR LEDs", () => {
     vi.clearAllMocks();
   });
 
-  // A camera that is black or black-and-white at night is usually one whose IR
-  // filter and illuminators are OFF; the tool could describe that but not fix it.
-  it("writes ir_filter_mode and ir_leds_mode through the video facet", async () => {
+  // The API keeps infrared settings on the device (configUpdate.deviceVideoSettings);
+  // under the per-facet block it ignores them and still answers success.
+  it("sends infrared through deviceVideoSettings and the rest through the video facet", async () => {
     mockCameraApi();
 
     const result = await callUpdateTool(
-      args({ cameraVideoSettings: JSON.stringify({ ir_filter_mode: "OFF", ir_leds_mode: "ON" }) })
+      args({
+        cameraVideoSettings: JSON.stringify({
+          ir_filter_mode: "OFF",
+          ir_leds_mode: "ON",
+          img_brightness: 20,
+        }),
+      })
     );
 
     expect(result.isError).toBeFalsy();
     const writes = callsTo("/camera/updateFacetedConfig").map(call => call.body);
     expect(writes).toHaveLength(1);
-    const written = Object.values(writes[0].configUpdate.videoFacetSettings)[0] as Record<
-      string,
-      unknown
-    >;
-    expect(written).toMatchObject({ ir_filter_mode: "OFF", ir_leds_mode: "ON" });
+    expect(writes[0].configUpdate.deviceVideoSettings).toEqual({
+      ir_filter_mode: "OFF",
+      ir_leds_mode: "ON",
+    });
+    expect(writes[0].configUpdate.videoFacetSettings).toEqual({ v0: { img_brightness: 20 } });
     const structured = result.structuredContent as { success?: boolean; message?: string };
     expect(structured.success).toBe(true);
+    expect(structured.message).toContain("Infrared (verified by reading the camera config back)");
+    expect(structured.message).toContain("IR LEDs ON");
+  });
+
+  // A third-party camera accepted the write and changed nothing; the tool used
+  // to report that as "updated successfully".
+  it("reports an error when the read-back shows the infrared settings unchanged", async () => {
+    mockCameraApi({ appliesInfrared: false });
+
+    const result = await callUpdateTool(
+      args({ cameraVideoSettings: JSON.stringify({ ir_leds_mode: "OFF" }) })
+    );
+
+    expect(result.isError).toBe(true);
+    const text = textOf(result);
+    expect(text).toContain("ir_leds_mode is still AUTO (requested OFF)");
+    expect(text).toContain("may not have infrared controls");
   });
 
   it("refuses infrared settings on a doorbell camera without calling the API", async () => {

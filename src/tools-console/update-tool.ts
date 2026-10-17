@@ -268,9 +268,17 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
           if (!video.ok) {
             return errorResult(video.message);
           }
-          const cleanedVideo = cleanUpdatePayload(video.value);
-          if (Object.keys(cleanedVideo).length > 0) {
-            updatePayload.configUpdate.videoFacetSettings = { [facet]: cleanedVideo };
+          const { ir_filter_mode, ir_leds_mode, ...facetVideo } = cleanUpdatePayload(video.value);
+          // Infrared settings live in configUpdate.deviceVideoSettings, not in the
+          // per-facet block: sent under videoFacetSettings the API ignores them and
+          // still answers success, which is how a "set the IR LEDs" turn once
+          // reported a change that never happened.
+          const infrared = cleanUpdatePayload({ ir_filter_mode, ir_leds_mode });
+          if (Object.keys(infrared).length > 0) {
+            updatePayload.configUpdate.deviceVideoSettings = infrared;
+          }
+          if (Object.keys(facetVideo).length > 0) {
+            updatePayload.configUpdate.videoFacetSettings = { [facet]: facetVideo };
           }
         }
 
@@ -369,7 +377,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
             return errorResult(firmware.error ?? "Could not look up the camera.");
           }
           const facetConfig = current.config?.videoFacetSettings?.[facet] as
-            PrivacyRegionConfig | undefined;
+            | PrivacyRegionConfig
+            | undefined;
           if (!current.success || !facetConfig) {
             return errorResult(
               `Could not read the camera's current privacy regions (${
@@ -467,7 +476,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
             extra.sessionId
           );
           const afterFacet = after.config?.videoFacetSettings?.[facet] as
-            PrivacyRegionConfig | undefined;
+            | PrivacyRegionConfig
+            | undefined;
           if (!after.success || !afterFacet) {
             privacySection = `**Privacy regions:** the update was accepted, but the config read-back failed (${
               after.error ?? "no facet in response"
@@ -504,6 +514,53 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
         // The rename is confirmed against the camera list (where the Console
         // reads names from): an accepted write that did not apply must never be
         // reported as done.
+        // Cameras without infrared controls (third-party cameras, some models)
+        // accept the write and change nothing, so infrared is confirmed by reading
+        // the config back. An absent value renders as AUTO in the Console.
+        let infraredSection = "";
+        const requestedInfrared = validatedPayload?.configUpdate.deviceVideoSettings;
+        if (requestedInfrared && Object.keys(requestedInfrared).length > 0) {
+          const after = await getCameraFacetedConfig(
+            baseUuid,
+            extra._meta?.requestModifiers as RequestModifiers,
+            extra.sessionId
+          );
+          const afterInfrared = (
+            after.config as { deviceVideoSettings?: Record<string, unknown> } | undefined
+          )?.deviceVideoSettings;
+          if (!after.success || !afterInfrared) {
+            infraredSection = `**Infrared:** the update was accepted, but the config read-back failed (${
+              after.error ?? "no device video settings in response"
+            }), so it could not be verified.`;
+          } else {
+            const mismatches = Object.entries(requestedInfrared)
+              .filter(([, value]) => value != null)
+              .filter(([key, value]) => (afterInfrared[key] ?? "AUTO") !== value)
+              .map(
+                ([key, value]) =>
+                  `${key} is still ${afterInfrared[key] ?? "AUTO"} (requested ${value})`
+              );
+            if (mismatches.length > 0) {
+              const alsoApplied = formattedSettings
+                ? ` The other requested settings WERE applied:\n\n${formattedSettings}`
+                : "";
+              return errorResult(
+                `The API accepted the infrared update but a config read-back shows ${mismatches.join(
+                  "; "
+                )}. This camera may not have infrared controls (third-party cameras and some models do not), so tell the user it cannot be changed here.${alsoApplied}`
+              );
+            }
+            infraredSection = `**Infrared (verified by reading the camera config back):** ${Object.entries(
+              requestedInfrared
+            )
+              .filter(([, value]) => value != null)
+              .map(
+                ([key, value]) => `${key === "ir_filter_mode" ? "IR filter" : "IR LEDs"} ${value}`
+              )
+              .join(" · ")}`;
+          }
+        }
+
         let renameSection = "";
         if (rename !== undefined) {
           const alsoApplied = formattedSettings
@@ -543,6 +600,7 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
             formattedSettings,
             privacySection,
             renameSection,
+            infraredSection,
           ]
             .filter(Boolean)
             .join("\n\n")}`,
@@ -672,8 +730,8 @@ const TOOL_HANDLER = async (args: ToolArgs, extra: any) => {
 
     const hasDoorbellSettings = Boolean(
       (cameraVideoSettings && cameraVideoSettings.trim()) ||
-      (cameraAudioSettings && cameraAudioSettings.trim()) ||
-      (cameraDeviceSettings && cameraDeviceSettings.trim())
+        (cameraAudioSettings && cameraAudioSettings.trim()) ||
+        (cameraDeviceSettings && cameraDeviceSettings.trim())
     );
 
     // Step 2 equivalent: uuid but no settings — show the current config so the
