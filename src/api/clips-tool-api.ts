@@ -4,178 +4,174 @@ import type { schema } from "../types/schema.js";
 import type { RequestModifiers } from "../util.js";
 
 export async function getSavedClips(
-	args: ApiPayload,
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  args: ApiPayload,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<schema["Event_GetClipsWithProgressWSResponse"]>({
-		route: "/event/getClipsWithProgress",
-		body: args,
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Event_GetClipsWithProgressWSResponse"]>({
+    route: "/event/getClipsWithProgress",
+    body: args,
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	if (res.error) return { error: res.errorMsg ?? undefined };
+  if (res.error) return { error: res.errorMsg ?? undefined };
 
-	return {
-		savedClips:
-			res.savedClips?.map((clip) => ({
-				...clip,
-				createdAtTimestamp: clip.createdAtMs
-					? new Date(clip.createdAtMs).toISOString()
-					: null,
-			})) ?? [],
-	};
+  return {
+    savedClips:
+      res.savedClips?.map(clip => ({
+        ...clip,
+        createdAtTimestamp: clip.createdAtMs ? new Date(clip.createdAtMs).toISOString() : null,
+      })) ?? [],
+  };
 }
 
 export async function getExpiringClips(
-	args: ApiPayload,
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  args: ApiPayload,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<schema["Event_GetClipsWithProgressWSResponse"]>({
-		route: "/event/getExpiringClipsForOrg",
-		body: args,
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Event_GetClipsWithProgressWSResponse"]>({
+    route: "/event/getExpiringClipsForOrg",
+    body: args,
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	if (res.error) return { error: res.errorMsg ?? undefined };
+  if (res.error) return { error: res.errorMsg ?? undefined };
 
-	return {
-		expiringClips:
-			res.savedClips?.map((clip) => ({
-				...clip,
-				createdAtTimestamp: clip.createdAtMs
-					? new Date(clip.createdAtMs).toISOString()
-					: null,
-			})) ?? [],
-	};
+  return {
+    expiringClips:
+      res.savedClips?.map(clip => ({
+        ...clip,
+        createdAtTimestamp: clip.createdAtMs ? new Date(clip.createdAtMs).toISOString() : null,
+      })) ?? [],
+  };
 }
 
 export async function getSharedLiveStreams(
-	_args: ApiPayload,
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  _args: ApiPayload,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<schema["Camera_FindAllSharedLiveVideoStreamsWSResponse"]>({
-		route: "/camera/findAllSharedLiveVideoStreams",
-		body: {},
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Camera_FindAllSharedLiveVideoStreamsWSResponse"]>({
+    route: "/camera/findAllSharedLiveVideoStreams",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	if (res.error) return { error: res.errorMsg ?? undefined };
+  if (res.error) return { error: res.errorMsg ?? undefined };
 
-	return {
-		sharedLiveVideoStreams: res.sharedLiveVideoStreams ?? [],
-	};
+  return {
+    sharedLiveVideoStreams: res.sharedLiveVideoStreams ?? [],
+  };
 }
 
 export async function getTimelapseClips(
-	_args: ApiPayload,
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  _args: ApiPayload,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<schema["Video_GetTimelapseClipsWSResponse"]>({
-		route: "/video/getTimelapseClips",
-		body: {},
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Video_GetTimelapseClipsWSResponse"]>({
+    route: "/video/getTimelapseClips",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	if (res.error) return { error: res.errorMsg ?? undefined };
+  if (res.error) return { error: res.errorMsg ?? undefined };
 
-	return {
-		timelapseClips: res.timelapseClips ?? [],
-	};
+  return {
+    timelapseClips: res.timelapseClips ?? [],
+  };
 }
 
 export async function getClipGroups(
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<any>({
-		route: "/event/getClipGroupsForOrg",
-		body: {},
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<any>({
+    route: "/event/getClipGroupsForOrg",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	throwIfApiError(res);
+  throwIfApiError(res);
 
-	return {
-		clipGroups: (res.clipGroups || []).map((group: any) => ({
-			uuid: group.uuid ?? undefined,
-			name: group.name ?? undefined,
-			clipCount: group.clipCount ?? undefined,
-		})),
-	};
+  return {
+    clipGroups: (res.clipGroups || []).map((group: any) => ({
+      uuid: group.uuid ?? undefined,
+      name: group.name ?? undefined,
+      clipCount: group.clipCount ?? undefined,
+    })),
+  };
 }
 
 export async function getSharedClipGroups(
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<schema["Event_GetSharedClipGroupsV2WSResponse"]>({
-		route: "/event/getSharedClipGroupsV2",
-		body: {},
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Event_GetSharedClipGroupsV2WSResponse"]>({
+    route: "/event/getSharedClipGroupsV2",
+    body: {},
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	throwIfApiError(res);
+  throwIfApiError(res);
 
-	return {
-		sharedClipGroups: (res.sharedClipGroups || []).map((group: any) => ({
-			uuid: group.uuid ?? undefined,
-			name: group.title ?? undefined,
-		})),
-	};
+  return {
+    sharedClipGroups: (res.sharedClipGroups || []).map((group: any) => ({
+      uuid: group.uuid ?? undefined,
+      name: group.title ?? undefined,
+    })),
+  };
 }
 
 export async function createClip(
-	cameraUuid: string,
-	startTimeMs: number,
-	endTimeMs: number,
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  cameraUuid: string,
+  startTimeMs: number,
+  endTimeMs: number,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const durationSec = Math.round((endTimeMs - startTimeMs) / 1000);
-	const body: schema["Video_SpliceV3WSRequest"] = {
-		deviceUuids: [cameraUuid],
-		startTimeMillis: startTimeMs,
-		durationSec,
-		saveToConsole: true,
-	};
+  const durationSec = Math.round((endTimeMs - startTimeMs) / 1000);
+  const body: schema["Video_SpliceV3WSRequest"] = {
+    deviceUuids: [cameraUuid],
+    startTimeMillis: startTimeMs,
+    durationSec,
+    saveToConsole: true,
+  };
 
-	const res = await postApi<schema["Video_SpliceV3WSResponse"]>({
-		route: "/video/spliceV3",
-		body,
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Video_SpliceV3WSResponse"]>({
+    route: "/video/spliceV3",
+    body,
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	throwIfApiError(res);
+  throwIfApiError(res);
 
-	return { spliceResult: { success: true, clipUuid: (res as any).clipUuid ?? undefined } };
+  return { spliceResult: { success: true, clipUuid: (res as any).clipUuid ?? undefined } };
 }
 
 export async function deleteClip(
-	clipUuid: string,
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  clipUuid: string,
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema> {
-	const res = await postApi<schema["Event_DeleteSavedClipWSResponse"]>({
-		route: "/event/deleteSavedClip",
-		body: { savedClipUuid: clipUuid } satisfies schema["Event_DeleteSavedClipWSRequest"],
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Event_DeleteSavedClipWSResponse"]>({
+    route: "/event/deleteSavedClip",
+    body: { savedClipUuid: clipUuid } satisfies schema["Event_DeleteSavedClipWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	throwIfApiError(res);
+  throwIfApiError(res);
 
-	return { deleteResult: { success: true } };
+  return { deleteResult: { success: true } };
 }
 
 /**
@@ -187,44 +183,108 @@ export async function deleteClip(
  * a silent no-op on a bad uuid.
  */
 export async function updateClip(
-	clipUuid: string,
-	changes: { title?: string; description?: string },
-	requestModifiers?: RequestModifiers,
-	sessionId?: string,
+  clipUuid: string,
+  changes: { title?: string; description?: string },
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
 ): Promise<OutputSchema & { existingTitle?: string }> {
-	const current = await postApi<schema["Event_GetSavedClipDetailsWSResponse"]>({
-		route: "/event/getSavedClipDetails",
-		body: { clipUuid } satisfies schema["Event_GetSavedClipDetailsWSRequest"],
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const current = await postApi<schema["Event_GetSavedClipDetailsWSResponse"]>({
+    route: "/event/getSavedClipDetails",
+    body: { clipUuid } satisfies schema["Event_GetSavedClipDetailsWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	throwIfApiError(current);
+  throwIfApiError(current);
 
-	const existing = current.savedClip;
-	if (!existing) {
-		return {
-			error: `No saved clip has the uuid "${clipUuid}". Use requestType 'saved' to list the clips that exist — do not guess a uuid.`,
-		};
-	}
+  const existing = current.savedClip;
+  if (!existing) {
+    return {
+      error: `No saved clip has the uuid "${clipUuid}". Use requestType 'saved' to list the clips that exist — do not guess a uuid.`,
+    };
+  }
 
-	const res = await postApi<schema["Event_UpdateSavedClipWSResponse"]>({
-		route: "/event/updateSavedClip",
-		body: {
-			savedClipUuid: clipUuid,
-			title: changes.title ?? existing.title ?? undefined,
-			description: changes.description ?? existing.description ?? undefined,
-			accessSettings: existing.accessSettings ?? undefined,
-		} as schema["Event_UpdateSavedClipWSRequest"],
-		modifiers: requestModifiers,
-		sessionId,
-	});
+  const res = await postApi<schema["Event_UpdateSavedClipWSResponse"]>({
+    route: "/event/updateSavedClip",
+    body: {
+      savedClipUuid: clipUuid,
+      title: changes.title ?? existing.title ?? undefined,
+      description: changes.description ?? existing.description ?? undefined,
+      accessSettings: existing.accessSettings ?? undefined,
+    } as schema["Event_UpdateSavedClipWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
 
-	throwIfApiError(res);
+  throwIfApiError(res);
 
-	return {
-		updateResult: { success: true, clipUuid },
-		warningMsg: res.warningMsg ?? undefined,
-		existingTitle: existing.title ?? undefined,
-	};
+  return {
+    updateResult: { success: true, clipUuid },
+    warningMsg: res.warningMsg ?? undefined,
+    existingTitle: existing.title ?? undefined,
+  };
+}
+
+/**
+ * Creates a public share link for one saved clip through the same shared-clip
+ * group the console's Share action uses, so the viewer needs no Rhombus login.
+ */
+export async function shareClip(
+  clipUuid: string,
+  options: { title?: string; password?: string; expirationHours?: number },
+  requestModifiers?: RequestModifiers,
+  sessionId?: string
+): Promise<OutputSchema & { existingTitle?: string }> {
+  const current = await postApi<schema["Event_GetSavedClipDetailsWSResponse"]>({
+    route: "/event/getSavedClipDetails",
+    body: { clipUuid } satisfies schema["Event_GetSavedClipDetailsWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(current);
+
+  const existing = current.savedClip;
+  if (!existing) {
+    return {
+      error: `No saved clip has the uuid "${clipUuid}". Use requestType 'saved' to list the clips that exist — do not guess a uuid.`,
+    };
+  }
+
+  const expirationTimeSecs = options.expirationHours
+    ? Math.floor(Date.now() / 1000 + options.expirationHours * 3600)
+    : undefined;
+
+  const res = await postApi<schema["Event_CreateSharedClipGroupWSResponse"]>({
+    route: "/event/createSharedClipGroupV3",
+    body: {
+      title: options.title ?? existing.title ?? undefined,
+      plaintextPassword: options.password,
+      expirationTimeSecs,
+      uuids: [{ eventUuid: clipUuid }],
+    } satisfies schema["Event_CreateSharedClipGroupWSRequest"],
+    modifiers: requestModifiers,
+    sessionId,
+  });
+
+  throwIfApiError(res);
+
+  if (!res.shareUrl) {
+    return {
+      error:
+        "The share link was created but the API returned no URL, so there is nothing to give the user.",
+    };
+  }
+
+  return {
+    shareResult: {
+      success: true,
+      shareUrl: res.shareUrl,
+      sharedClipGroupUuid: res.uuid ?? undefined,
+      expiresAtMs: expirationTimeSecs ? expirationTimeSecs * 1000 : undefined,
+      passwordProtected: Boolean(options.password),
+    },
+    warningMsg: res.warningMsg ?? undefined,
+    existingTitle: existing.title ?? undefined,
+  };
 }
